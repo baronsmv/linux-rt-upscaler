@@ -1,0 +1,4 @@
+compushady
+numpy
+pyside6
+xlib
