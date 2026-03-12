@@ -32,21 +32,13 @@ class SRCNN:
     def _load_shaders(self):
         """Load HLSL shader source from files."""
         shader_dir = os.path.dirname(__file__)
-        with open(
-            os.path.join(shader_dir, "CuNNy-veryfast-NVL_Pass1.hlsl"), "r"
-        ) as f:
+        with open(os.path.join(shader_dir, "CuNNy-veryfast-NVL_Pass1.hlsl"), "r") as f:
             self.shader1 = hlsl.compile(f.read())
-        with open(
-            os.path.join(shader_dir, "CuNNy-veryfast-NVL_Pass2.hlsl"), "r"
-        ) as f:
+        with open(os.path.join(shader_dir, "CuNNy-veryfast-NVL_Pass2.hlsl"), "r") as f:
             self.shader2 = hlsl.compile(f.read())
-        with open(
-            os.path.join(shader_dir, "CuNNy-veryfast-NVL_Pass3.hlsl"), "r"
-        ) as f:
+        with open(os.path.join(shader_dir, "CuNNy-veryfast-NVL_Pass3.hlsl"), "r") as f:
             self.shader3 = hlsl.compile(f.read())
-        with open(
-            os.path.join(shader_dir, "CuNNy-veryfast-NVL_Pass4.hlsl"), "r"
-        ) as f:
+        with open(os.path.join(shader_dir, "CuNNy-veryfast-NVL_Pass4.hlsl"), "r") as f:
             self.shader4 = hlsl.compile(f.read())
 
     def _create_resources(self):
@@ -160,3 +152,55 @@ class SRCNN:
         self.pass2.dispatch((w + 7) // 8, (h + 7) // 8, 1)
         self.pass3.dispatch((w + 7) // 8, (h + 7) // 8, 1)
         self.pass4.dispatch((w * 2 + 15) // 16, (h * 2 + 15) // 16, 1)
+
+    def _init_lanczos(self):
+        """Lazy initialisation of Lanczos scaling resources."""
+        if hasattr(self, "_lanczos_pipeline"):
+            return
+        shader_dir = os.path.dirname(__file__)
+        with open(os.path.join(shader_dir, "lanczos2.hlsl"), "r") as f:
+            self._lanczos_shader = hlsl.compile(f.read())
+
+        self._lanczos_sampler = Sampler(
+            filter_min=SAMPLER_FILTER_POINT,
+            filter_mag=SAMPLER_FILTER_POINT,
+            address_mode_u=SAMPLER_ADDRESS_MODE_CLAMP,
+            address_mode_v=SAMPLER_ADDRESS_MODE_CLAMP,
+            address_mode_w=SAMPLER_ADDRESS_MODE_CLAMP,
+        )
+        # Constant buffer will be updated per call, so we just create a placeholder.
+        self._lanczos_cb = Buffer(20, HEAP_UPLOAD)  # 5 * 4 bytes (4 uint + 1 float)
+
+    def scale_to(self, target_tex, target_width, target_height, blur=1.0):
+        """
+        Scale the internal 2× upscaled texture (self.output) to `target_tex`
+        using Lanczos2+antiring, preserving aspect ratio and centering.
+        `target_tex` must be a Texture2D of size (target_width, target_height).
+        """
+        self._init_lanczos()
+
+        # Update constant buffer with current dimensions and blur
+        cb_data = struct.pack(
+            "IIIIf",
+            self.width * 2,  # input width  (upscaled)
+            self.height * 2,  # input height (upscaled)
+            target_width,
+            target_height,
+            blur,
+        )
+        self._lanczos_cb.upload(cb_data)
+
+        # Create or recreate the compute pipeline if the target size changed
+        groups_x = (target_width + 15) // 16
+        groups_y = (target_height + 15) // 16
+
+        # The pipeline uses self.output as SRV, target_tex as UAV
+        self._lanczos_pipeline = Compute(
+            self._lanczos_shader,
+            srv=[self.output],
+            uav=[target_tex],
+            cbv=[self._lanczos_cb],
+            samplers=[self._lanczos_sampler],
+        )
+
+        self._lanczos_pipeline.dispatch(groups_x, groups_y, 1)

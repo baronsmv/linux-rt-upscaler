@@ -24,10 +24,8 @@ from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QApplication, QMainWindow
 from Xlib import X, display
 from Xlib.protocol import event as xevent
-from compushady import SAMPLER_FILTER_LINEAR, SAMPLER_ADDRESS_MODE_CLAMP
-from compushady import Swapchain, Compute, Texture2D, Sampler
+from compushady import Swapchain, Texture2D
 from compushady.formats import R8G8B8A8_UNORM
-from compushady.shaders import hlsl
 
 from .capture import capture as cap
 from .shaders import srcnn
@@ -312,63 +310,6 @@ def compute_worker(
     count = 0
     total_compute_time = 0.0
 
-    groups_x = (screen_w + 15) // 16
-    groups_y = (screen_h + 15) // 16
-
-    # Aspect‑preserving scaling shader (same as before)
-    scale_shader_source = """
-    Texture2D<float4> InputTex : register(t0);
-    SamplerState LinearSampler : register(s0);
-    RWTexture2D<float4> OutputTex : register(u0);
-
-    [numthreads(16,16,1)]
-    void main(uint3 dtid : SV_DispatchThreadID) {
-        uint2 screenSize;
-        OutputTex.GetDimensions(screenSize.x, screenSize.y);
-        uint2 srcSize;
-        InputTex.GetDimensions(srcSize.x, srcSize.y);
-
-        float srcAspect = (float)srcSize.x / srcSize.y;
-        float screenAspect = (float)screenSize.x / screenSize.y;
-        uint2 dstSize;
-        uint2 dstOffset;
-        if (srcAspect > screenAspect) {
-            dstSize.x = screenSize.x;
-            dstSize.y = (uint)(screenSize.x / srcAspect);
-            dstOffset.x = 0;
-            dstOffset.y = (screenSize.y - dstSize.y) / 2;
-        } else {
-            dstSize.y = screenSize.y;
-            dstSize.x = (uint)(screenSize.y * srcAspect);
-            dstOffset.x = (screenSize.x - dstSize.x) / 2;
-            dstOffset.y = 0;
-        }
-
-        uint2 outPos = dtid.xy;
-        if (outPos.x >= dstOffset.x && outPos.x < dstOffset.x + dstSize.x &&
-            outPos.y >= dstOffset.y && outPos.y < dstOffset.y + dstSize.y) {
-            float2 uv = (float2(outPos - dstOffset) + 0.5) / float2(dstSize);
-            OutputTex[outPos] = InputTex.SampleLevel(LinearSampler, uv, 0);
-        } else {
-            OutputTex[outPos] = float4(0,0,0,1);
-        }
-    }
-    """
-    scale_shader = hlsl.compile(scale_shader_source)
-    linear_sampler = Sampler(
-        filter_min=SAMPLER_FILTER_LINEAR,
-        filter_mag=SAMPLER_FILTER_LINEAR,
-        address_mode_u=SAMPLER_ADDRESS_MODE_CLAMP,
-        address_mode_v=SAMPLER_ADDRESS_MODE_CLAMP,
-        address_mode_w=SAMPLER_ADDRESS_MODE_CLAMP,
-    )
-    scale_compute = Compute(
-        scale_shader,
-        srv=[upscaler.output],
-        uav=[screen_tex],
-        samplers=[linear_sampler],
-    )
-
     # For mouse opacity control, we need the window's root position (only when not mapping clicks).
     if not map_clicks:
         disp = display.Display()
@@ -405,7 +346,7 @@ def compute_worker(
             scaling_rect[:] = [dst_x, dst_y, dst_w, dst_h]
 
         # Full‑screen scaling (aspect‑preserving)
-        scale_compute.dispatch(groups_x, groups_y, 1)
+        upscaler.scale_to(screen_tex, screen_w, screen_h, blur=1.0)
 
         compute_time = time.perf_counter() - frame_start
         total_compute_time += compute_time
