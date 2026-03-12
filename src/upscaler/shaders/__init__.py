@@ -1,4 +1,4 @@
-"""CuNNy shader modules and files"""
+"""HLSL shaders and CuNNy implementation."""
 
 from .srcnn import SRCNN
 

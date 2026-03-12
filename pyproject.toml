@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "linux-rt-upscaler"
-version = "0.1.0"
+version = "0.1.1"
 description = "Real-time AI upscaler for any Linux window using CuNNy"
 readme = "README.md"
 authors = [
@@ -29,6 +29,8 @@ keywords = ["upscaler", "ai", "cunny", "linux", "x11", "vulkan"]
 requires-python = ">=3.8"
 dependencies = [
     "compushady",
+    "ewmh",
+    "psutil",
     "pyside6",
     "numpy",
     "xlib",
@@ -44,8 +46,12 @@ upscale = "upscaler.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-packages = ["upscaler", "upscaler.capture", "upscaler.shaders"]
+packages = [
+    "upscaler",
+    "upscaler.capture",
+    "upscaler.shaders"
+]
 
 [tool.setuptools.package-data]
-"upscaler.shaders" = ["*.hlsl", "*.py"]
+"upscaler.shaders" = ["*.hlsl"]
 "upscaler.capture" = ["*.c", "*.so"]

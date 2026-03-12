@@ -1,8 +1,3 @@
-"""
-Window detection using EWMH (Extended Window Manager Hints).
-Requires: pip install python-xlib-ewmh psutil
-"""
-
 import time
 
 import psutil
@@ -12,10 +7,20 @@ from Xlib.error import XError
 from ewmh import EWMH
 
 
-def get_all_windows(disp=None):
+class WindowInfo:
+    def __init__(self, handle, width, height, title):
+        self.handle = handle
+        self.width = width
+        self.height = height
+        self.title = title
+
+    @property
+    def size(self):
+        return self.width, self.height
+
+
+def _get_all_windows(disp):
     """Recursively collect all windows (including children) from the root."""
-    if disp is None:
-        disp = Display()
     root = disp.screen().root
     windows = []
 
@@ -31,12 +36,12 @@ def get_all_windows(disp=None):
     return windows
 
 
-def by_pid(pid, pid_timeout=5, class_hint=None, class_timeout=5):
+def find_by_pid(pid, pid_timeout=5, class_hint=None, class_timeout=5):
     """
-    Find a viewable window whose _NET_WM_PID matches the given PID or any of its descendants.
-    If class_hint is provided, also check WM_CLASS during the same period, and if PID fails,
+    Find a viewable window whose _NET_WM_PID matches the given PID or any descendant.
+    If class_hint is given, also check WM_CLASS during the same period, and if PID fails,
     continue with pure class‑based search for class_timeout seconds.
-    Returns (handle, width, height, title).
+    Returns a WindowInfo object.
     """
     # Gather all PIDs in the process tree
     try:
@@ -53,7 +58,7 @@ def by_pid(pid, pid_timeout=5, class_hint=None, class_timeout=5):
 
     # Phase 1: try both PID and (if given) class hint simultaneously
     while time.time() - start < pid_timeout:
-        windows = get_all_windows(disp)
+        windows = _get_all_windows(disp)
         for win in windows:
             try:
                 attrs = win.get_attributes()
@@ -65,7 +70,7 @@ def by_pid(pid, pid_timeout=5, class_hint=None, class_timeout=5):
                 if win_pid_list and win_pid_list[0] in pids:
                     geom = win.get_geometry()
                     name = ewmh.getWmName(win) or "unknown"
-                    return win.id, geom.width, geom.height, name
+                    return WindowInfo(win.id, geom.width, geom.height, name)
 
                 # Class hint check (if provided)
                 if class_hint_lower:
@@ -81,13 +86,10 @@ def by_pid(pid, pid_timeout=5, class_hint=None, class_timeout=5):
                             ):
                                 geom = win.get_geometry()
                                 name = ewmh.getWmName(win) or "unknown"
-                                return win.id, geom.width, geom.height, name
+                                return WindowInfo(win.id, geom.width, geom.height, name)
             except (XError, TypeError, IndexError):
                 continue
 
-        # Progress message every 2 seconds
-        if int(time.time() - start) % 2 == 0:
-            print("Still searching for window (PID/class)...")
         time.sleep(0.2)
 
     # Phase 2: if class hint given and still not found, do pure class‑based search
@@ -95,25 +97,22 @@ def by_pid(pid, pid_timeout=5, class_hint=None, class_timeout=5):
         print(
             f"PID‑based detection timed out. Falling back to class hint '{class_hint}'"
         )
-        return by_class(class_hint, timeout=class_timeout)
+        return find_by_class(class_hint, timeout=class_timeout)
 
     raise TimeoutError(
         f"No viewable window with PID in {pids} found within {pid_timeout} seconds"
     )
 
 
-def by_class(class_hint, timeout=5):
-    """
-    Find a viewable window whose WM_CLASS (instance or class) contains class_hint (case‑insensitive).
-    Returns (handle, width, height, title).
-    """
+def find_by_class(class_hint, timeout=5):
+    """Find a viewable window whose WM_CLASS contains class_hint (case‑insensitive)."""
     disp = Display()
     ewmh = EWMH(disp)
     start = time.time()
     class_hint_lower = class_hint.lower()
 
     while time.time() - start < timeout:
-        windows = get_all_windows(disp)
+        windows = _get_all_windows(disp)
         for win in windows:
             try:
                 attrs = win.get_attributes()
@@ -132,7 +131,7 @@ def by_class(class_hint, timeout=5):
                         ):
                             geom = win.get_geometry()
                             name = ewmh.getWmName(win) or "unknown"
-                            return win.id, geom.width, geom.height, name
+                            return WindowInfo(win.id, geom.width, geom.height, name)
             except XError:
                 continue
 
@@ -144,9 +143,7 @@ def by_class(class_hint, timeout=5):
 
 
 def get_active_window():
-    """
-    Return (handle, width, height, title) of the currently active window.
-    """
+    """Return WindowInfo for the currently active window."""
     disp = Display()
     ewmh = EWMH(disp)
     active = ewmh.getActiveWindow()
@@ -154,4 +151,4 @@ def get_active_window():
         raise RuntimeError("No active window found")
     geom = active.get_geometry()
     name = ewmh.getWmName(active) or "unknown"
-    return active.id, geom.width, geom.height, name
+    return WindowInfo(active.id, geom.width, geom.height, name)

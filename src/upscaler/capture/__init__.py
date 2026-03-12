@@ -1,5 +1,5 @@
-"""X11 window capture module"""
+"""X11 window capture module using custom C library."""
 
-from .capture import capture_worker, running
+from .capture import FrameGrabber
 
-__all__ = ["capture_worker", "running"]
+__all__ = ["FrameGrabber"]
