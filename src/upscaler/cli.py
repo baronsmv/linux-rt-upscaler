@@ -27,17 +27,9 @@ from Xlib.protocol import event as xevent
 from compushady import Swapchain, Texture2D
 from compushady.formats import R8G8B8A8_UNORM
 
+from . import find_window
 from .capture import capture as cap
 from .shaders import srcnn
-
-# Optional psutil for process tree tracking
-try:
-    import psutil
-
-    HAVE_PSUTIL = True
-except ImportError:
-    HAVE_PSUTIL = False
-    print("psutil not installed; PID tracking limited to original process only.")
 
 # Global flags and queues
 running = True
@@ -54,90 +46,6 @@ disp_events = None
 target_window_handle = 0
 client_width = 0
 client_height = 0
-
-
-def get_active_window():
-    """Return (handle, width, height, title) of the currently active X11 window."""
-    disp = display.Display()
-    root = disp.screen().root
-    active_atom = disp.intern_atom("_NET_ACTIVE_WINDOW")
-    prop = root.get_full_property(active_atom, X.AnyPropertyType)
-    if not prop:
-        raise RuntimeError("Could not get active window")
-    handle = prop.value[0]
-    window = disp.create_resource_object("window", handle)
-    geom = window.get_geometry()
-    name_prop = window.get_full_property(disp.intern_atom("_NET_WM_NAME"), 0)
-    title = name_prop.value.decode("utf-8") if name_prop else "unknown"
-    return handle, geom.width, geom.height, title
-
-
-def find_window_by_pid(pid, timeout=20):
-    """PID‑based window detection (includes process tree if psutil available)."""
-    pids_to_check = {pid}
-    if HAVE_PSUTIL:
-        try:
-            proc = psutil.Process(pid)
-            pids_to_check = {pid} | {
-                child.pid for child in proc.children(recursive=True)
-            }
-        except psutil.NoSuchProcess:
-            pass
-    disp = display.Display()
-    root = disp.screen().root
-    pid_atom = disp.intern_atom("_NET_WM_PID")
-    name_atom = disp.intern_atom("_NET_WM_NAME")
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        for win in root.query_tree().children:
-            attrs = win.get_attributes()
-            if not attrs or attrs.map_state != X.IsViewable:
-                continue
-            pid_prop = win.get_full_property(pid_atom, X.AnyPropertyType)
-            if pid_prop and pid_prop.value and pid_prop.value[0] in pids_to_check:
-                geom = win.get_geometry()
-                name_prop = win.get_full_property(name_atom, 0)
-                title = name_prop.value.decode("utf-8") if name_prop else "unknown"
-                return win.id, geom.width, geom.height, title
-        time.sleep(0.2)
-    raise TimeoutError(
-        f"No viewable window with PID in {pids_to_check} found within {timeout} seconds"
-    )
-
-
-def find_window_by_class(class_hint, timeout=10):
-    """Fallback: match any viewable window whose WM_CLASS contains class_hint."""
-    disp = display.Display()
-    root = disp.screen().root
-    class_atom = disp.intern_atom("WM_CLASS")
-    name_atom = disp.intern_atom("_NET_WM_NAME")
-    start_time = time.time()
-    class_hint_lower = class_hint.lower()
-    while time.time() - start_time < timeout:
-        for win in root.query_tree().children:
-            attrs = win.get_attributes()
-            if not attrs or attrs.map_state != X.IsViewable:
-                continue
-            class_prop = win.get_full_property(class_atom, 0)
-            if class_prop:
-                data = class_prop.value
-                strings = data.decode("latin1").split("\x00")
-                if len(strings) >= 2:
-                    instance, klass = strings[0], strings[1]
-                    if (
-                        class_hint_lower in instance.lower()
-                        or class_hint_lower in klass.lower()
-                    ):
-                        geom = win.get_geometry()
-                        name_prop = win.get_full_property(name_atom, 0)
-                        title = (
-                            name_prop.value.decode("utf-8") if name_prop else "unknown"
-                        )
-                        return win.id, geom.width, geom.height, title
-        time.sleep(0.2)
-    raise TimeoutError(
-        f"No viewable window with class hint '{class_hint}' found within {timeout} seconds"
-    )
 
 
 class OverlayWindow(QMainWindow):
@@ -406,38 +314,35 @@ def main():
         print(f"Launching: {' '.join(args.program)}")
         target_process = subprocess.Popen(args.program)
 
-        # Try PID‑based detection first
-        print("Waiting for window (PID‑based detection)...")
+        print("Waiting for window...")
         try:
-            handle, client_w, client_h, title = find_window_by_pid(
-                target_process.pid, timeout=15
+            handle, client_w, client_h, title = find_window.by_pid(
+                target_process.pid,
+                pid_timeout=5,
+                class_hint=program_name,
+                class_timeout=5,
             )
             print(
-                f"Found window via PID: handle={handle}, {client_w}x{client_h}, title={title}"
+                f"Found window: handle={handle}, {client_w}x{client_h}, title={title}"
             )
-        except TimeoutError:
-            print(
-                "PID‑based detection timed out. Falling back to class‑based matching..."
-            )
-            try:
-                handle, client_w, client_h, title = find_window_by_class(
-                    program_name, timeout=10
-                )
-                print(
-                    f"Found window via class: handle={handle}, {client_w}x{client_h}, title={title}"
-                )
-            except TimeoutError as e:
-                print(e)
-                if target_process:
-                    target_process.terminate()
-                sys.exit(1)
+        except TimeoutError as e:
+            print(e)
+            if target_process:
+                target_process.terminate()
+            sys.exit(1)
     else:
         print(
             "No program specified. Will scale the currently active window in 5 seconds..."
         )
         time.sleep(5)
-        handle, client_w, client_h, title = get_active_window()
-        print(f"Target window: handle={handle}, {client_w}x{client_h}, title={title}")
+        try:
+            handle, client_w, client_h, title = find_window.get_active_window()
+            print(
+                f"Active window: handle={handle}, {client_w}x{client_h}, title={title}"
+            )
+        except RuntimeError as e:
+            print(e)
+            sys.exit(1)
 
     # Store globally for event forwarding
     target_window_handle = handle

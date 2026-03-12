@@ -8,6 +8,8 @@ compushady = "*"
 numpy = "*"
 pyside6 = "*"
 xlib = "*"
+ewmh = "*"
+psutil = "*"
 
 [dev-packages]
 
