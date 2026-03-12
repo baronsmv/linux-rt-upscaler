@@ -1,0 +1,84 @@
+// CuNNy fast NVL - Pass 4 (out‑shuffle, 8x4 -> 2x upscale)
+// Adapted for Compushady compute shader
+// Each thread writes a 2x2 tile to the output.
+
+Texture2D<float4> InputOrig : register(t0); // original INPUT
+Texture2D<float4> Input0 : register(t1);    // T0
+Texture2D<float4> Input1 : register(t2);    // T1
+RWTexture2D<float4> OutputTex : register(u0);
+
+cbuffer Constants : register(b0)
+{
+    uint inputWidth;    // original input width
+    uint inputHeight;   // original input height
+    uint outputWidth;   // 2 * inputWidth
+    uint outputHeight;  // 2 * inputHeight
+    float2 inputPt;     // 1.0 / inputWidth, 1.0 / inputHeight
+    float2 outputPt;    // 1.0 / outputWidth, 1.0 / outputHeight
+};
+
+SamplerState PointSampler : register(s0);
+SamplerState LinearSampler : register(s1); // for sampling the original INPUT with linear filter
+
+#define L0(x, y) Input0.SampleLevel(PointSampler, pos + float2(x, y) * inputPt, 0)
+#define L1(x, y) Input1.SampleLevel(PointSampler, pos + float2(x, y) * inputPt, 0)
+
+#define M4 float4x4
+
+static const float3x3 RY = {0.299, 0.587, 0.114, -0.169, -0.331, 0.5, 0.5, -0.419, -0.081};
+static const float3x3 YR = {1, -0.00093, 1.401687, 1, -0.3437, -0.71417, 1, 1.77216, 0.00099};
+
+[numthreads(8, 8, 1)]
+void main(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID)
+{
+    // Each group covers 16x16 output pixels (since we shift by 1)
+    uint2 gxy = (groupThreadId.xy << 1) + (groupId.xy << 4); // groupId * 16 + threadId*2
+    if (gxy.x >= outputWidth || gxy.y >= outputHeight) return;
+
+    // Corresponding input pixel center (original size)
+    float2 pos = ((gxy >> 1) + 0.5) * inputPt;
+
+    float4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2;
+    float4 s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
+
+    s0_0_0 = L0(-1.0, -1.0); s0_0_1 = L0(0.0, -1.0); s0_0_2 = L0(1.0, -1.0);
+    s0_1_0 = L0(-1.0, 0.0); s0_1_1 = L0(0.0, 0.0); s0_1_2 = L0(1.0, 0.0);
+    s0_2_0 = L0(-1.0, 1.0); s0_2_1 = L0(0.0, 1.0); s0_2_2 = L0(1.0, 1.0);
+    s1_0_0 = L1(-1.0, -1.0); s1_0_1 = L1(0.0, -1.0); s1_0_2 = L1(1.0, -1.0);
+    s1_1_0 = L1(-1.0, 0.0); s1_1_1 = L1(0.0, 0.0); s1_1_2 = L1(1.0, 0.0);
+    s1_2_0 = L1(-1.0, 1.0); s1_2_1 = L1(0.0, 1.0); s1_2_2 = L1(1.0, 1.0);
+
+    float4 r0 = 0.0;
+
+    r0 += mul(s0_0_0, M4(3.741e-03, 5.866e-04, 2.648e-03, 1.144e-04, 1.055e-02, 2.425e-03, -1.035e-03, 7.247e-04, 4.286e-03, 7.976e-04, 1.069e-03, 5.542e-03, 3.409e-03, -3.953e-03, 7.755e-04, -3.020e-05));
+	r0 += mul(s0_0_1, M4(3.601e-02, -8.697e-03, -1.087e-02, 1.124e-02, 2.676e-02, -2.642e-02, -1.256e-02, 1.485e-02, 3.578e-01, 5.654e-03, 1.356e-01, 2.935e-02, -2.653e-02, 6.470e-02, -1.233e-02, -1.639e-02));
+	r0 += mul(s0_0_2, M4(4.610e-02, -2.455e-02, -1.130e-02, 2.881e-02, 2.069e-02, -7.457e-03, -8.038e-03, 5.325e-03, -3.481e-02, -2.939e-01, -3.746e-02, -2.194e-01, 1.151e-02, -5.162e-03, -5.544e-03, 1.244e-03));
+	r0 += mul(s0_1_0, M4(7.907e-03, -4.481e-04, -3.254e-03, -3.453e-03, 1.157e-03, 1.170e-02, 1.012e-02, 1.580e-02, 1.365e-03, 1.084e-03, 4.064e-04, -3.055e-03, 9.949e-02, -6.345e-03, 5.574e-02, -4.991e-03));
+	r0 += mul(s0_1_1, M4(1.749e-01, -2.387e-02, -1.319e-02, -1.106e-02, -4.150e-01, -2.087e-01, 4.982e-01, 1.520e-03, -6.009e-03, 8.814e-04, 2.085e-01, -1.788e-02, -3.820e-01, 2.979e-01, -2.021e-01, 3.330e-01));
+	r0 += mul(s0_1_2, M4(7.048e-02, 4.515e-01, -1.053e-02, -6.358e-01, -2.292e-02, -1.536e-01, -5.298e-03, -2.485e-02, 4.661e-03, 2.978e-03, 2.260e-04, -6.045e-02, 9.325e-03, -9.051e-02, 6.002e-03, -8.521e-02));
+	r0 += mul(s0_2_0, M4(1.565e-03, 1.418e-03, 2.219e-03, -1.811e-04, 4.890e-03, -8.743e-04, -5.843e-03, -5.832e-03, -1.695e-03, 1.729e-03, -4.146e-03, -4.989e-04, -6.485e-03, 1.259e-03, 4.504e-02, -6.028e-04));
+	r0 += mul(s0_2_1, M4(-3.102e-03, -6.804e-04, 1.017e-02, -1.139e-03, 5.383e-03, 2.252e-03, 1.372e-01, 9.245e-02, 1.987e-03, -6.083e-04, -7.208e-03, -3.656e-03, -8.123e-03, -7.642e-03, -9.009e-02, 2.874e-02));
+	r0 += mul(s0_2_2, M4(-2.117e-03, -1.959e-02, -2.767e-03, 4.210e-02, 1.034e-02, 1.822e-03, -3.723e-04, 6.470e-02, 2.540e-03, -3.475e-03, 9.204e-03, -1.421e-02, -2.866e-03, -3.754e-03, 4.325e-04, -2.993e-02));
+	r0 += mul(s1_0_0, M4(-1.284e-02, -4.104e-03, 1.434e-03, -2.444e-03, 9.155e-02, 1.227e-02, 8.387e-04, -8.046e-03, -2.250e-02, 4.783e-02, -9.662e-03, -6.025e-03, 3.898e-02, -7.349e-02, -1.642e-02, -5.431e-03));
+	r0 += mul(s1_0_1, M4(-5.652e-02, 4.965e-02, 1.942e-02, -2.387e-02, 7.837e-02, 1.851e-01, 1.836e-02, -9.800e-03, -9.615e-03, -8.222e-04, -4.612e-03, 1.515e-04, -1.703e-02, 1.200e-02, 1.066e-02, -1.133e-02));
+	r0 += mul(s1_0_2, M4(-2.579e-02, 2.372e-03, 1.084e-02, -7.557e-03, 8.790e-03, 2.068e-02, -1.045e-02, 3.378e-03, -4.854e-04, -8.998e-04, 6.668e-04, -2.874e-03, -2.926e-03, -4.730e-03, 1.697e-03, 1.414e-03));
+	r0 += mul(s1_1_0, M4(2.229e-03, 6.917e-03, 2.198e-03, -2.034e-03, -2.333e-01, 2.329e-02, 1.260e-01, 1.584e-03, -5.918e-01, 3.740e-01, -2.588e-01, 3.624e-01, 3.584e-01, -4.073e-01, 3.227e-01, -3.896e-01));
+	r0 += mul(s1_1_1, M4(2.134e-01, 9.497e-02, -8.021e-01, 2.938e-04, -1.368e-01, -5.176e-01, 1.027e-01, 4.642e-01, 4.381e-02, 5.017e-02, 8.275e-03, 3.704e-02, 6.880e-03, 1.624e-01, -9.403e-03, 1.626e-01));
+	r0 += mul(s1_1_2, M4(8.708e-03, 1.597e-02, 2.212e-02, 1.849e-02, -1.707e-03, 3.498e-03, -5.001e-03, -2.777e-02, 2.176e-03, -1.078e-03, -7.163e-04, 1.797e-03, 3.529e-03, 5.778e-03, 3.343e-04, 1.572e-03));
+	r0 += mul(s1_2_0, M4(-5.705e-03, -4.977e-03, 2.634e-03, 1.665e-03, 5.469e-03, -1.187e-04, -5.286e-02, -2.218e-02, 1.828e-03, -2.050e-02, -1.773e-01, 3.577e-02, -2.070e-02, 2.156e-02, 7.056e-02, -4.847e-02));
+	r0 += mul(s1_2_1, M4(-1.343e-03, 6.211e-03, 1.753e-01, 1.096e-01, 2.327e-03, 1.498e-02, -5.847e-02, -9.741e-02, -8.382e-03, -7.616e-03, 2.692e-03, -2.095e-02, -4.169e-03, -1.512e-02, -1.273e-02, 1.195e-02));
+	r0 += mul(s1_2_2, M4(-3.463e-03, 1.175e-02, 2.032e-02, 7.348e-02, 5.903e-04, -2.427e-03, -2.540e-03, -1.895e-02, 2.446e-05, 2.223e-03, 2.481e-03, -6.374e-04, 7.946e-04, -3.773e-03, -2.345e-03, -4.211e-03));
+
+    r0 += float4(-1.380e-05, 1.142e-05, -1.284e-05, 4.672e-07);
+
+    // Sample the original INPUT at four positions (linear filter)
+    float3 yuv00 = mul(RY, InputOrig.SampleLevel(LinearSampler, (gxy + 0.5) * outputPt, 0).rgb);
+    float3 yuv10 = mul(RY, InputOrig.SampleLevel(LinearSampler, (gxy + int2(1,0) + 0.5) * outputPt, 0).rgb);
+    float3 yuv01 = mul(RY, InputOrig.SampleLevel(LinearSampler, (gxy + int2(0,1) + 0.5) * outputPt, 0).rgb);
+    float3 yuv11 = mul(RY, InputOrig.SampleLevel(LinearSampler, (gxy + int2(1,1) + 0.5) * outputPt, 0).rgb);
+
+    OutputTex[gxy + int2(0,0)] = float4(mul(YR, float3(saturate(yuv00.r + r0.x), yuv00.yz)), 1.0);
+    OutputTex[gxy + int2(1,0)] = float4(mul(YR, float3(saturate(yuv10.r + r0.y), yuv10.yz)), 1.0);
+    OutputTex[gxy + int2(0,1)] = float4(mul(YR, float3(saturate(yuv01.r + r0.z), yuv01.yz)), 1.0);
+    OutputTex[gxy + int2(1,1)] = float4(mul(YR, float3(saturate(yuv11.r + r0.w), yuv11.yz)), 1.0);
+}
