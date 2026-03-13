@@ -24,7 +24,7 @@ Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L655
 - **Full‑Screen Output** – The upscaled image is displayed in a transparent overlay that covers your entire monitor, scaled to fill the screen while preserving aspect ratio.
 - **Input Forwarding** – Click, move, and drag on the upscaled image as if you were interacting directly with the original window.
 - **Hardware Accelerated** – GPU compute via Compushady (Vulkan) works on NVIDIA, AMD, and Intel GPUs.
-- **Low Overhead** – Minimal CPU/GPU usage; the final scaling pass uses hardware bilinear filtering.
+- **Low Overhead** – Minimal CPU/GPU usage; the final scaling pass uses hardware Lanczos2 filtering.
 
 ## Requirements
 
@@ -107,7 +107,7 @@ upscale -h
 1. **Window Selection** – Uses X11 to find the target window by PID or WM_CLASS.
 2. **Capture** – Grabs the window's pixels using a fast custom C library.
 3. **AI Upscaling** – Four CuNNy compute shaders (written in HLSL, compiled via Compushady) produce a 2× larger image.
-4. **Aspect‑Preserving Scaling** – A lightweight bilinear compute shader scales the upscaled image to fill the monitor, adding black bars to maintain the original aspect ratio.
+4. **Aspect‑Preserving Scaling** – A lightweight Lanczos2 compute shader scales the upscaled image to fill the monitor, adding black bars to maintain the original aspect ratio.
 5. **Display** – The result is rendered in a transparent overlay window that bypasses the window manager (so it always stays on top).
 6. **Input Forwarding** – Mouse events are transformed using the scaling ratios and sent to the original window via `XSendEvent`.
 
