@@ -179,44 +179,6 @@ def find_by_pid(
             phase = 1
 
 
-def find_by_class(class_hint, timeout=5):
-    """Find a viewable window whose WM_CLASS contains class_hint (case‑insensitive)."""
-    disp = Display()
-    ewmh = EWMH(disp)
-    start = time.time()
-    class_hint_lower = class_hint.lower()
-
-    while time.time() - start < timeout:
-        windows = _get_all_windows(disp)
-        for win in windows:
-            try:
-                attrs = win.get_attributes()
-                if not attrs or attrs.map_state != X.IsViewable:
-                    continue
-
-                class_prop = win.get_full_property(disp.intern_atom("WM_CLASS"), 0)
-                if class_prop:
-                    data = class_prop.value
-                    strings = data.decode("latin1").split("\x00")
-                    if len(strings) >= 2:
-                        instance, klass = strings[0], strings[1]
-                        if (
-                            class_hint_lower in instance.lower()
-                            or class_hint_lower in klass.lower()
-                        ):
-                            geom = win.get_geometry()
-                            name = ewmh.getWmName(win) or "unknown"
-                            return WindowInfo(win.id, geom.width, geom.height, name)
-            except XError:
-                continue
-
-        time.sleep(0.2)
-
-    raise TimeoutError(
-        f"No viewable window with class hint '{class_hint}' found within {timeout} seconds"
-    )
-
-
 def get_active_window():
     """Return WindowInfo for the currently active window."""
     disp = Display()
