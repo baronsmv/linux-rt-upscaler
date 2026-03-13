@@ -1,16 +1,18 @@
 import argparse
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
 class Config:
     program: List[str]
-    map_clicks: bool = True
-    pid_timeout: int = 5
-    class_timeout: int = 5
-    target_delay: int = 5
-    model: str = "fast"  # new field
+    map_clicks: bool
+    starting_phase: int  # 1: Search by PID; 2: Class‑based search
+    pid_timeout: int  # Timeout for PID search
+    class_timeout: int  # Timeout for class search
+    total_timeout: Optional[int]  # Timeout to stop searching (infinite if None)
+    target_delay: int  # Delay to upscale active window
+    model: str  # Model to use to upscale
 
     @classmethod
     def from_cli(cls):
@@ -27,7 +29,17 @@ class Config:
             "-m",
             "--model",
             default="8x32",
-            choices=("8x32", "fast", "veryfast"),
+            choices=(
+                "8x32",
+                "4x32",
+                "4x24",
+                "4x16",
+                "4x12",
+                "3x12",
+                "fast",
+                "faster",
+                "veryfast",
+            ),
             help="Upscaling model to use (ordered from best to worst quality)",
         )
         parser.add_argument(
@@ -38,8 +50,10 @@ class Config:
         return cls(
             program=args.program,
             map_clicks=not args.disable_forwarding,
+            starting_phase=1,
             pid_timeout=5,
             class_timeout=5,
+            total_timeout=5,
             target_delay=5,
             model=args.model,
         )

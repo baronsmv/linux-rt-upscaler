@@ -1,5 +1,5 @@
 {
-  "name": "fast",
+  "name": "CuNNy-fast-NVL",
   "passes": 4,
   "num_textures": 6,
   "srv_uav": [

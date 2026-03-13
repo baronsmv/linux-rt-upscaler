@@ -1,4 +1,4 @@
-// CuNNy fast NVL - Pass 3
+// CuNNy-fast-NVL - Pass 3
 // Adapted for Compushady compute shader
 
 cbuffer Constants : register(b0) {
@@ -17,6 +17,12 @@ float2 GetOutputPt() { return float2(out_dx, out_dy); }
 uint2 GetInputSize() { return uint2(in_width, in_height); }
 uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
+#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)
+#define V4 min16float4
+#define M4 min16float4x4
+#define V3 min16float3
+#define M3x4 min16float3x4
+
 Texture2D<float4> T3 : register(t0);
 Texture2D<float4> T4 : register(t1);
 Texture2D<float4> T5 : register(t2);
@@ -27,25 +33,19 @@ RWTexture2D<float4> T1 : register(u1);
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);
 
-#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)
-#define V4 min16float4
-#define M4 min16float4x4
-#define V3 min16float3
-#define M3x4 min16float3x4
-
 #define L0(x, y) V4(O(T3, x, y))
 #define L1(x, y) V4(O(T4, x, y))
 #define L2(x, y) V4(O(T5, x, y))
 
-[numthreads(8, 8, 1)]
+[numthreads(8,8,1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
     float2 pt = float2(GetInputPt());
     uint2 gxy = id.xy;
     float2 pos = (gxy + 0.5) * pt;
 
-    float4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2,
-           s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
+    V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
+    V4 r0 = 0.0, r1 = 0.0;
 
     s0_0_0 = L0(-1.0, -1.0); s0_0_1 = L0(0.0, -1.0); s0_0_2 = L0(1.0, -1.0);
     s0_1_0 = L0(-1.0, 0.0); s0_1_1 = L0(0.0, 0.0); s0_1_2 = L0(1.0, 0.0);
@@ -53,8 +53,6 @@ void main(uint3 id : SV_DispatchThreadID)
     s1_0_0 = L1(-1.0, -1.0); s1_0_1 = L1(0.0, -1.0); s1_0_2 = L1(1.0, -1.0);
     s1_1_0 = L1(-1.0, 0.0); s1_1_1 = L1(0.0, 0.0); s1_1_2 = L1(1.0, 0.0);
     s1_2_0 = L1(-1.0, 1.0); s1_2_1 = L1(0.0, 1.0); s1_2_2 = L1(1.0, 1.0);
-
-    V4 r0 = 0.0, r1 = 0.0;
 
     r0 += mul(s0_0_0, M4(1.822e-01, -9.367e-02, 2.348e-02, -2.559e-02, -3.986e-01, 2.835e-01, 1.210e-02, 1.341e-01, -1.470e-01, 1.372e-01, 9.642e-03, -2.817e-02, -1.243e-02, -1.646e-01, -3.588e-03, -1.152e-01));
     r1 += mul(s0_0_0, M4(3.211e-02, 4.272e-02, 8.060e-02, -2.935e-02, -6.896e-02, 8.732e-02, -4.310e-02, -1.225e-02, 1.259e-02, 3.308e-02, -4.288e-02, 9.862e-04, -2.845e-02, -3.626e-02, 2.243e-02, 4.322e-02));
@@ -141,6 +139,11 @@ void main(uint3 id : SV_DispatchThreadID)
     r0 += mul(s0_2_2, M4(4.717e-02, 2.009e-02, -1.428e-02, -6.013e-02, -4.588e-02, -6.070e-03, -3.269e-03, -6.253e-03, 1.886e-02, -2.228e-02, 2.374e-02, 2.005e-02, -1.221e-02, 1.754e-02, -4.475e-02, -3.688e-02));
     r1 += mul(s0_2_2, M4(8.522e-02, 7.913e-04, -6.880e-02, 8.276e-02, -3.837e-02, -2.257e-03, -4.842e-02, -6.665e-02, 4.141e-03, -5.308e-02, -5.090e-02, -2.725e-01, -1.082e-02, 1.860e-03, 1.146e-02, 1.880e-01));
 
-    T0[gxy] = max(r0, 0.0);
-    T1[gxy] = max(r1, 0.0);
+    r0 = max(r0, 0.0);
+
+    T0[gxy] = r0;
+
+    r1 = max(r1, 0.0);
+
+    T1[gxy] = r1;
 }

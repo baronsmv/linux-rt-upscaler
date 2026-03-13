@@ -1,4 +1,4 @@
-// CuNNy 8x32 NVL - Pass 10
+// CuNNy-8x32-NVL - Pass 10
 // Adapted for Compushady compute shader
 
 cbuffer Constants : register(b0) {
@@ -17,6 +17,12 @@ float2 GetOutputPt() { return float2(out_dx, out_dy); }
 uint2 GetInputSize() { return uint2(in_width, in_height); }
 uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
+#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)
+#define V4 min16float4
+#define M4 min16float4x4
+#define V3 min16float3
+#define M3x4 min16float3x4
+
 Texture2D<float4> INPUT : register(t0);
 Texture2D<float4> T0 : register(t1);
 Texture2D<float4> T1 : register(t2);
@@ -31,12 +37,6 @@ RWTexture2D<float4> OUTPUT : register(u0);
 
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);
-
-#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)
-#define V4 min16float4
-#define M4 min16float4x4
-#define V3 min16float3
-#define M3x4 min16float3x4
 
 #define L0(x, y) V4(O(T0, x, y))
 #define L1(x, y) V4(O(T1, x, y))
@@ -54,9 +54,8 @@ void main(uint3 id : SV_DispatchThreadID)
     uint2 gxy = id.xy * 2;
     float2 pos = ((gxy >> 1) + 0.5) * pt;
 
-    V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2,
-       s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
-    V4 r0 = 0.0, r1 = 0.0, r2 = 0.0, r3 = 0.0, r4 = 0.0, r5 = 0.0, r6 = 0.0, r7 = 0.0;
+    V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
+    V4 r0 = 0.0, r1 = 0.0, r2 = 0.0;
 
     s0_0_0 = L0(-1.0, -1.0); s0_0_1 = L0(0.0, -1.0); s0_0_2 = L0(1.0, -1.0);
     s0_1_0 = L0(-1.0, 0.0); s0_1_1 = L0(0.0, 0.0); s0_1_2 = L0(1.0, 0.0);

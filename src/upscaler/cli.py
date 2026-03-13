@@ -23,7 +23,7 @@ def get_x11_display_id():
 
 
 def main():
-    config = Config.from_cli()
+    config: Config = Config.from_cli()
 
     # Window detection
     if config.program:
@@ -38,6 +38,8 @@ def main():
                 pid_timeout=config.pid_timeout,
                 class_hint=program_name,
                 class_timeout=config.class_timeout,
+                total_timeout=config.total_timeout,
+                starting_phase=config.starting_phase,
             )
         except TimeoutError as e:
             print(e)

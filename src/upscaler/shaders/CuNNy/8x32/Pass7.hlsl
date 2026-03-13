@@ -1,4 +1,4 @@
-// CuNNy 8x32 NVL - Pass 7
+// CuNNy-8x32-NVL - Pass 7
 // Adapted for Compushady compute shader
 
 cbuffer Constants : register(b0) {
@@ -16,6 +16,12 @@ float2 GetInputPt() { return float2(in_dx, in_dy); }
 float2 GetOutputPt() { return float2(out_dx, out_dy); }
 uint2 GetInputSize() { return uint2(in_width, in_height); }
 uint2 GetOutputSize() { return uint2(out_width, out_height); }
+
+#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)
+#define V4 min16float4
+#define M4 min16float4x4
+#define V3 min16float3
+#define M3x4 min16float3x4
 
 Texture2D<float4> T8 : register(t0);
 Texture2D<float4> T9 : register(t1);
@@ -38,12 +44,6 @@ RWTexture2D<float4> T7 : register(u7);
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);
 
-#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)
-#define V4 min16float4
-#define M4 min16float4x4
-#define V3 min16float3
-#define M3x4 min16float3x4
-
 #define L0(x, y) V4(O(T8, x, y))
 #define L1(x, y) V4(O(T9, x, y))
 #define L2(x, y) V4(O(T10, x, y))
@@ -60,8 +60,7 @@ void main(uint3 id : SV_DispatchThreadID)
     uint2 gxy = id.xy;
     float2 pos = (gxy + 0.5) * pt;
 
-    V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2,
-       s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
+    V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
     V4 r0 = 0.0, r1 = 0.0, r2 = 0.0, r3 = 0.0, r4 = 0.0, r5 = 0.0, r6 = 0.0, r7 = 0.0;
 
     s0_0_0 = L0(-1.0, -1.0); s0_0_1 = L0(0.0, -1.0); s0_0_2 = L0(1.0, -1.0);
@@ -740,12 +739,35 @@ void main(uint3 id : SV_DispatchThreadID)
     r6 += mul(s1_2_2, M4(2.999e-02, -8.032e-02, -1.265e-02, 3.097e-02, 5.162e-02, 4.260e-02, 5.971e-02, 1.775e-02, 1.199e-01, 8.231e-03, -1.252e-01, 3.797e-02, 9.026e-02, -4.499e-02, -7.362e-02, -3.069e-02));
     r7 += mul(s1_2_2, M4(1.596e-02, 3.236e-04, 8.575e-02, 2.852e-02, 2.102e-02, 1.427e-02, 1.507e-03, 1.249e-02, -3.732e-02, 4.335e-02, 7.945e-02, 4.483e-02, 5.558e-03, -1.232e-02, -1.468e-01, 2.083e-02));
 
-    r0 = max(r0, 0.0); T0[gxy] = r0;
-    r1 = max(r1, 0.0); T1[gxy] = r1;
-    r2 = max(r2, 0.0); T2[gxy] = r2;
-    r3 = max(r3, 0.0); T3[gxy] = r3;
-    r4 = max(r4, 0.0); T4[gxy] = r4;
-    r5 = max(r5, 0.0); T5[gxy] = r5;
-    r6 = max(r6, 0.0); T6[gxy] = r6;
-    r7 = max(r7, 0.0); T7[gxy] = r7;
+    r0 = max(r0, 0.0);
+
+    T0[gxy] = r0;
+
+    r1 = max(r1, 0.0);
+
+    T1[gxy] = r1;
+
+    r2 = max(r2, 0.0);
+
+    T2[gxy] = r2;
+
+    r3 = max(r3, 0.0);
+
+    T3[gxy] = r3;
+
+    r4 = max(r4, 0.0);
+
+    T4[gxy] = r4;
+
+    r5 = max(r5, 0.0);
+
+    T5[gxy] = r5;
+
+    r6 = max(r6, 0.0);
+
+    T6[gxy] = r6;
+
+    r7 = max(r7, 0.0);
+
+    T7[gxy] = r7;
 }

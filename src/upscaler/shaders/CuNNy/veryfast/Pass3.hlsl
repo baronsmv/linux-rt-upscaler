@@ -1,155 +1,93 @@
-cbuffer __CB1 : register(b0) {
-	uint2 __inputSize;
-	uint2 __outputSize;
-	float2 __inputPt;
-	float2 __outputPt;
-	float2 __scale;
+// CuNNy-veryfast-NVL - Pass 3
+// Adapted for Compushady compute shader
+
+cbuffer Constants : register(b0) {
+    uint in_width;
+    uint in_height;
+    uint out_width;
+    uint out_height;
+    float in_dx;
+    float in_dy;
+    float out_dx;
+    float out_dy;
 };
 
-#define MF float
-#define MF1 float1
-#define MF2 float2
-#define MF3 float3
-#define MF4 float4
-#define MF1x1 float1x1
-#define MF1x2 float1x2
-#define MF1x3 float1x3
-#define MF1x4 float1x4
-#define MF2x1 float2x1
-#define MF2x2 float2x2
-#define MF2x3 float2x3
-#define MF2x4 float2x4
-#define MF3x1 float3x1
-#define MF3x2 float3x2
-#define MF3x3 float3x3
-#define MF3x4 float3x4
-#define MF4x1 float4x1
-#define MF4x2 float4x2
-#define MF4x3 float4x3
-#define MF4x4 float4x4
-Texture2D<MF4> T2 : register(t0);
-Texture2D<MF4> T3 : register(t1);
-RWTexture2D<unorm MF4> T0 : register(u0);
-SamplerState SP : register(s0);
-SamplerState SL : register(s1);
-
-uint __Bfe(uint src, uint off, uint bits) { uint mask = (1u << bits) - 1; return (src >> off) & mask; }
-uint __BfiM(uint src, uint ins, uint bits) { uint mask = (1u << bits) - 1; return (ins & mask) | (src & (~mask)); }
-uint2 Rmp8x8(uint a) { return uint2(__Bfe(a, 1u, 3u), __BfiM(__Bfe(a, 3u, 3u), a, 1u)); }
-uint2 GetInputSize() { return __inputSize; }
-float2 GetInputPt() { return __inputPt; }
-uint2 GetOutputSize() { return __outputSize; }
-float2 GetOutputPt() { return __outputPt; }
-float2 GetScale() { return __scale; }
-MF2 MulAdd(MF2 x, MF2x2 y, MF2 a) {
-	MF2 result = a;
-	result = mad(x.x, y._m00_m01, result);
-	result = mad(x.y, y._m10_m11, result);
-	return result;
-}
-MF3 MulAdd(MF2 x, MF2x3 y, MF3 a) {
-	MF3 result = a;
-	result = mad(x.x, y._m00_m01_m02, result);
-	result = mad(x.y, y._m10_m11_m12, result);
-	return result;
-}
-MF4 MulAdd(MF2 x, MF2x4 y, MF4 a) {
-	MF4 result = a;
-	result = mad(x.x, y._m00_m01_m02_m03, result);
-	result = mad(x.y, y._m10_m11_m12_m13, result);
-	return result;
-}
-MF2 MulAdd(MF3 x, MF3x2 y, MF2 a) {
-	MF2 result = a;
-	result = mad(x.x, y._m00_m01, result);
-	result = mad(x.y, y._m10_m11, result);
-	result = mad(x.z, y._m20_m21, result);
-	return result;
-}
-MF3 MulAdd(MF3 x, MF3x3 y, MF3 a) {
-	MF3 result = a;
-	result = mad(x.x, y._m00_m01_m02, result);
-	result = mad(x.y, y._m10_m11_m12, result);
-	result = mad(x.z, y._m20_m21_m22, result);
-	return result;
-}
-MF4 MulAdd(MF3 x, MF3x4 y, MF4 a) {
-	MF4 result = a;
-	result = mad(x.x, y._m00_m01_m02_m03, result);
-	result = mad(x.y, y._m10_m11_m12_m13, result);
-	result = mad(x.z, y._m20_m21_m22_m23, result);
-	return result;
-}
-MF2 MulAdd(MF4 x, MF4x2 y, MF2 a) {
-	MF2 result = a;
-	result = mad(x.x, y._m00_m01, result);
-	result = mad(x.y, y._m10_m11, result);
-	result = mad(x.z, y._m20_m21, result);
-	result = mad(x.w, y._m30_m31, result);
-	return result;
-}
-MF3 MulAdd(MF4 x, MF4x3 y, MF3 a) {
-	MF3 result = a;
-	result = mad(x.x, y._m00_m01_m02, result);
-	result = mad(x.y, y._m10_m11_m12, result);
-	result = mad(x.z, y._m20_m21_m22, result);
-	result = mad(x.w, y._m30_m31_m32, result);
-	return result;
-}
-MF4 MulAdd(MF4 x, MF4x4 y, MF4 a) {
-	MF4 result = a;
-	result = mad(x.x, y._m00_m01_m02_m03, result);
-	result = mad(x.y, y._m10_m11_m12_m13, result);
-	result = mad(x.z, y._m20_m21_m22_m23, result);
-	result = mad(x.w, y._m30_m31_m32_m33, result);
-	return result;
-}
+float2 GetInputPt() { return float2(in_dx, in_dy); }
+float2 GetOutputPt() { return float2(out_dx, out_dy); }
+uint2 GetInputSize() { return uint2(in_width, in_height); }
+uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
 #define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)
-#define V4 MF4
-#define M4 MF4x4
+#define V4 min16float4
+#define M4 min16float4x4
+#define V3 min16float3
+#define M3x4 min16float3x4
+
+Texture2D<float4> T2 : register(t0);
+Texture2D<float4> T3 : register(t1);
+
+RWTexture2D<float4> T0 : register(u0);
+
+SamplerState SP : register(s0);
+SamplerState SL : register(s1);
 
 #define L0(x, y) V4(O(T2, x, y))
 #define L1(x, y) V4(O(T3, x, y))
 
-void Pass3(uint2 blockStart, uint3 tid) {
-	float2 pt = float2(GetInputPt());
-	uint2 gxy = Rmp8x8(tid.x) + blockStart;
-	uint2 sz = GetInputSize();
-	if (gxy.x >= sz.x || gxy.y >= sz.y)
-		return;
-	float2 pos = (gxy + 0.5) * pt;
-	V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
-	V4 r0 = 0.0;
-	s0_0_0 = L0(-1.0, -1.0); s0_0_1 = L0(0.0, -1.0); s0_0_2 = L0(1.0, -1.0);
-	s0_1_0 = L0(-1.0, 0.0); s0_1_1 = L0(0.0, 0.0); s0_1_2 = L0(1.0, 0.0);
-	s0_2_0 = L0(-1.0, 1.0); s0_2_1 = L0(0.0, 1.0); s0_2_2 = L0(1.0, 1.0);
-	s1_0_0 = L1(-1.0, -1.0); s1_0_1 = L1(0.0, -1.0); s1_0_2 = L1(1.0, -1.0);
-	s1_1_0 = L1(-1.0, 0.0); s1_1_1 = L1(0.0, 0.0); s1_1_2 = L1(1.0, 0.0);
-	s1_2_0 = L1(-1.0, 1.0); s1_2_1 = L1(0.0, 1.0); s1_2_2 = L1(1.0, 1.0);
-	r0 = MulAdd(s0_0_0, M4(-8.148e-03, 2.568e-02, 4.651e-02, -7.485e-02, 1.790e-02, -8.190e-02, -1.489e-01, 1.323e-01, 3.400e-02, 6.812e-02, 3.208e-02, -2.434e-02, 6.154e-02, 8.815e-02, 6.566e-02, 5.507e-02), r0);
-	r0 = MulAdd(s0_0_1, M4(3.119e-02, -4.280e-03, -6.519e-03, 1.538e-01, -2.105e-01, -1.431e-01, -1.406e-01, -4.139e-01, 8.038e-02, -1.392e-01, 9.856e-03, -9.555e-02, 1.765e-01, 2.941e-01, 9.466e-02, 3.756e-01), r0);
-	r0 = MulAdd(s0_0_2, M4(-1.209e-01, 4.339e-02, -7.104e-02, -6.860e-02, 4.313e-02, -1.887e-01, 1.963e-02, -4.690e-02, -6.567e-02, -1.265e-01, -4.360e-02, -1.146e-01, -5.670e-02, 1.087e-01, -4.472e-02, 1.739e-02), r0);
-	r0 = MulAdd(s0_1_0, M4(-4.968e-02, -1.421e-01, 3.657e-02, -2.672e-01, -7.897e-04, -3.623e-01, 3.450e-02, -2.245e-01, -4.632e-03, -1.128e-01, -1.792e-01, 5.298e-01, 1.125e-01, -1.141e-01, -8.822e-02, 6.274e-02), r0);
-	r0 = MulAdd(s0_1_1, M4(-1.880e-01, -3.701e-01, -1.155e-01, 3.115e-01, 3.475e-01, 8.071e-01, 7.021e-01, -3.410e-01, -2.617e-01, 1.043e+00, -3.493e-01, -2.318e-01, -4.900e-01, -5.969e-01, -1.215e-01, -3.721e-01), r0);
-	r0 = MulAdd(s0_1_2, M4(3.329e-01, 1.936e-01, 1.228e-01, -1.891e-02, -3.213e-01, -4.152e-01, -1.440e-01, 4.134e-02, 2.842e-01, -5.296e-02, 3.641e-01, 5.137e-01, 1.812e-01, 8.146e-02, 1.061e-01, 3.798e-02), r0);
-	r0 = MulAdd(s0_2_0, M4(-6.376e-03, 2.285e-01, 5.671e-02, -8.081e-02, -9.302e-02, -1.174e-01, -1.714e-01, 2.654e-02, -1.334e-02, 1.460e-01, 5.519e-02, -1.432e-01, 3.235e-02, 5.162e-02, 3.121e-02, 6.723e-03), r0);
-	r0 = MulAdd(s0_2_1, M4(1.175e-01, -3.771e-02, 5.432e-02, 3.030e-01, 1.248e-01, 3.087e-02, -5.464e-02, 9.374e-02, 1.291e-01, 2.582e-02, 2.026e-01, 3.218e-02, -3.019e-02, -6.113e-02, 1.022e-03, -1.526e-02), r0);
-	r0 = MulAdd(s0_2_2, M4(-4.480e-02, 4.266e-02, -1.878e-02, -7.446e-02, 4.263e-02, -1.403e-01, -1.898e-01, -1.598e-01, -4.898e-02, -1.334e-01, -4.467e-03, 2.087e-02, 6.375e-03, 8.764e-02, 7.014e-02, 3.828e-02), r0);
-	r0 = MulAdd(s1_0_0, M4(-1.823e-02, -5.078e-02, -4.285e-02, 4.404e-02, -9.971e-03, -3.043e-02, -1.849e-02, 1.066e-01, 1.313e-02, 2.819e-02, 6.397e-02, -4.005e-02, -2.264e-02, -4.141e-02, -6.211e-02, 2.856e-02), r0);
-	r0 = MulAdd(s1_0_1, M4(-1.643e-01, -6.951e-02, -5.324e-02, -1.595e-01, 4.259e-02, 1.606e-01, 2.015e-02, -3.517e-04, 7.591e-02, 1.665e-01, 1.284e-01, 1.572e-01, -8.479e-02, -9.076e-02, -3.720e-02, -7.167e-02), r0);
-	r0 = MulAdd(s1_0_2, M4(1.875e-01, 4.330e-02, 7.509e-02, 9.155e-02, 1.067e-01, -9.226e-03, 6.569e-02, 1.057e-01, 9.918e-02, 2.543e-03, 6.361e-02, 4.849e-02, -3.967e-02, 9.021e-02, -2.580e-02, -8.976e-03), r0);
-	r0 = MulAdd(s1_1_0, M4(7.936e-03, 4.667e-02, 1.710e-01, -5.760e-01, 5.680e-03, 6.270e-01, 3.174e-01, 4.808e-02, 7.891e-03, -5.142e-03, 1.486e-02, -1.813e-02, -2.654e-02, -6.394e-01, -8.960e-02, -4.404e-01), r0);
-	r0 = MulAdd(s1_1_1, M4(-9.929e-04, -5.820e-01, 1.195e-01, 4.442e-01, 9.473e-01, -7.623e-01, 3.154e-01, -6.255e-01, 4.396e-04, 7.951e-01, -1.909e-01, 1.098e+00, -2.184e-02, -4.709e-01, -1.576e-01, -5.169e-01), r0);
-	r0 = MulAdd(s1_1_2, M4(3.076e-01, 2.549e-01, 2.183e-01, 2.803e-01, -6.310e-01, -3.174e-01, -4.287e-01, -4.186e-01, 1.036e-02, 1.632e-01, -9.137e-04, -2.596e-02, -2.581e-02, -9.876e-03, 6.714e-02, 3.123e-02), r0);
-	r0 = MulAdd(s1_2_0, M4(7.675e-03, 5.052e-03, -3.337e-02, 9.983e-02, 1.332e-02, 1.577e-01, 1.304e-01, 1.257e-01, -6.344e-03, 1.044e-01, 5.069e-02, 2.343e-02, 8.552e-02, -9.318e-01, -1.662e-02, -5.734e-01), r0);
-	r0 = MulAdd(s1_2_1, M4(-3.231e-02, 9.578e-02, -6.091e-02, -1.283e-01, 8.889e-02, -7.374e-02, 1.334e-01, 2.598e-02, 2.393e-01, 8.617e-02, 3.545e-01, 9.125e-02, 3.194e-01, 6.674e-01, -2.021e-02, -1.412e-01), r0);
-	r0 = MulAdd(s1_2_2, M4(9.790e-02, 1.380e-02, 4.626e-02, 9.249e-02, 8.255e-03, 6.021e-02, 2.871e-04, 1.201e-01, 1.724e-01, 1.096e-01, 1.130e-01, 1.430e-01, -4.326e-01, -3.163e-01, -1.880e-01, -1.765e-01), r0);
-	r0 = max(r0, 0.0);
-	T0[gxy] = r0;
-}
+[numthreads(8,8,1)]
+void main(uint3 id : SV_DispatchThreadID)
+{
+    float2 pt = float2(GetInputPt());
+    uint2 gxy = id.xy;
+    float2 pos = (gxy + 0.5) * pt;
 
-[numthreads(64, 1, 1)]
-void main(uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID) {
-	Pass3((gid.xy << 3), tid);
+    V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
+    V4 r0 = 0.0;
+
+    s0_0_0 = L0(-1.0, -1.0); s0_0_1 = L0(0.0, -1.0); s0_0_2 = L0(1.0, -1.0);
+    s0_1_0 = L0(-1.0, 0.0); s0_1_1 = L0(0.0, 0.0); s0_1_2 = L0(1.0, 0.0);
+    s0_2_0 = L0(-1.0, 1.0); s0_2_1 = L0(0.0, 1.0); s0_2_2 = L0(1.0, 1.0);
+    s1_0_0 = L1(-1.0, -1.0); s1_0_1 = L1(0.0, -1.0); s1_0_2 = L1(1.0, -1.0);
+    s1_1_0 = L1(-1.0, 0.0); s1_1_1 = L1(0.0, 0.0); s1_1_2 = L1(1.0, 0.0);
+    s1_2_0 = L1(-1.0, 1.0); s1_2_1 = L1(0.0, 1.0); s1_2_2 = L1(1.0, 1.0);
+
+    r0 += mul(s0_0_0, M4(4.652e-02, 2.118e-02, 1.777e-02, -2.906e-02, 3.834e-03, 1.011e-02, -6.713e-02, 1.085e-02, -1.450e-01, -1.499e-01, 2.302e-03, 2.583e-02, -3.711e-04, 2.741e-02, -3.458e-02, 3.259e-02));
+
+    r0 += mul(s0_0_1, M4(-2.569e-04, 4.004e-02, 7.850e-02, -2.020e-01, 5.387e-02, 6.909e-02, -8.329e-02, -3.478e-02, 5.662e-03, -2.999e-02, -1.608e-01, -8.773e-03, -3.874e-02, -6.909e-02, 6.379e-02, 2.815e-02));
+
+    r0 += mul(s0_0_2, M4(-2.328e-02, -3.024e-02, 2.104e-01, -1.535e-01, -9.687e-03, 3.121e-02, 9.264e-05, -2.195e-02, -1.682e-02, -2.241e-02, 3.162e-02, -7.546e-02, 2.338e-02, 1.218e-03, 3.072e-03, 3.387e-02));
+
+    r0 += mul(s0_1_0, M4(3.568e-02, 1.605e-02, -3.021e-02, 1.744e-01, 3.682e-01, 3.291e-01, 1.265e-01, -1.594e-02, -1.668e-01, -9.767e-03, 3.429e-02, -6.392e-01, -1.191e+00, -1.490e-01, -1.627e-01, -2.411e-02));
+
+    r0 += mul(s0_1_1, M4(1.743e-01, 2.075e-02, 6.223e-02, 4.957e-01, -2.777e-01, -2.362e-02, 2.783e-01, 1.053e-01, 7.803e-02, -1.213e-01, -2.707e-02, -9.065e-02, -2.023e-01, -3.512e-01, 1.473e-02, -5.604e-01));
+
+    r0 += mul(s0_1_2, M4(1.044e-01, 1.391e-01, 6.655e-01, 1.817e-01, 5.310e-02, -2.680e-02, 1.876e-02, 1.084e-01, -3.514e-02, 2.059e-02, 3.658e-02, -5.265e-04, -5.674e-02, -3.518e-02, 3.321e-03, -6.615e-02));
+
+    r0 += mul(s0_2_0, M4(-8.915e-02, 6.793e-03, 2.528e-02, -9.072e-02, 7.012e-01, 6.113e-01, 4.309e-02, 8.535e-01, -4.912e-01, -2.744e-01, 1.652e-02, 2.939e-01, -4.359e-02, 8.894e-02, 3.203e-02, -6.715e-02));
+
+    r0 += mul(s0_2_1, M4(-5.987e-01, -4.502e-01, -5.588e-02, -8.027e-01, -4.131e-01, 5.164e-02, -3.366e-02, 3.236e-02, 2.901e-02, -6.327e-02, 7.825e-03, -5.461e-02, -5.164e-02, -1.558e-01, -8.130e-02, -9.202e-01));
+
+    r0 += mul(s0_2_2, M4(2.355e-01, 3.057e-01, 1.048e-01, 4.131e-01, -6.700e-03, -4.599e-02, -1.574e-03, -1.018e-01, -1.610e-02, -8.160e-03, 2.584e-03, 7.788e-02, -2.354e-02, -2.492e-02, 6.279e-04, -3.643e-02));
+
+    r0 += mul(s1_0_0, M4(2.251e-02, 1.874e-02, -4.000e-02, 1.636e-01, -4.309e-02, 1.593e-02, -3.397e-02, -8.663e-03, 6.238e-02, 5.182e-02, 9.493e-02, -2.822e-01, -2.524e-02, -7.151e-02, 1.067e-01, -1.929e-01));
+
+    r0 += mul(s1_0_1, M4(8.030e-02, 3.430e-02, 3.593e-02, 2.046e-01, 6.406e-02, -2.345e-02, 2.400e-02, -1.655e-02, -8.327e-02, 3.853e-02, -1.762e-01, -3.678e-01, 6.226e-02, 4.112e-02, -3.545e-01, -1.427e-02));
+
+    r0 += mul(s1_0_2, M4(-1.224e-02, 4.359e-02, -4.925e-02, 1.750e-02, -3.504e-02, 4.967e-03, -1.392e-02, -6.436e-03, 3.428e-02, 1.307e-02, 4.165e-02, -1.347e-01, 6.182e-03, 6.040e-02, 3.111e-02, 2.771e-02));
+
+    r0 += mul(s1_1_0, M4(4.014e-01, 1.840e-01, 9.982e-02, -3.458e-02, -1.155e-01, 5.106e-02, -9.400e-02, 1.850e-01, -1.450e-01, -9.890e-02, -8.620e-02, 1.938e-01, -1.958e-01, -1.578e-01, -1.347e-01, 8.244e-02));
+
+    r0 += mul(s1_1_1, M4(-2.377e-01, 2.027e-01, 1.880e-01, -1.763e-01, 2.454e-01, -1.255e-01, 2.336e-01, -2.347e-01, 2.803e-01, 2.202e-01, 1.830e-01, 5.304e-01, -2.529e-01, -2.555e-01, -4.357e-02, -1.778e-01));
+
+    r0 += mul(s1_1_2, M4(3.724e-02, -4.195e-03, 6.167e-02, 7.180e-02, -1.265e-01, 2.753e-02, -1.161e-01, -2.013e-03, 4.700e-02, 8.615e-02, -9.542e-03, 6.567e-02, 4.040e-02, -5.118e-02, -1.865e-02, -2.315e-02));
+
+    r0 += mul(s1_2_0, M4(3.271e-01, -1.629e-02, 8.649e-05, 8.125e-02, 5.761e-01, 5.176e-01, 5.844e-02, 3.115e-01, -7.564e-02, -3.276e-03, -1.355e-02, 6.944e-02, -1.690e-01, -1.606e-01, -1.097e-02, -3.740e-01));
+
+    r0 += mul(s1_2_1, M4(-1.664e-01, 2.162e-02, 1.268e-02, 2.446e-01, 2.339e-01, 4.658e-01, 1.592e-02, 5.684e-01, -3.451e-02, -5.517e-02, -4.687e-04, -3.574e-02, -1.812e-01, -1.304e-01, -1.155e-02, -2.764e-01));
+
+    r0 += mul(s1_2_2, M4(1.367e-02, -1.998e-02, -4.510e-02, -6.963e-02, 1.960e-02, 9.689e-02, -3.869e-02, 9.008e-02, 1.116e-01, 4.511e-02, 1.789e-02, 1.987e-01, -3.034e-02, -6.239e-02, -3.647e-03, -1.205e-01));
+
+    r0 = max(r0, 0.0);
+
+    T0[gxy] = r0;
 }

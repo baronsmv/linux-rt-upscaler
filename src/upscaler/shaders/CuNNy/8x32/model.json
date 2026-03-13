@@ -1,4 +1,5 @@
 {
+  "name": "CuNNy-8x32-NVL",
   "passes": 10,
   "num_textures": 16,
   "srv_uav": [
