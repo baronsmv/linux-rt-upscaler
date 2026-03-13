@@ -1,8 +1,4 @@
-"""
-CuNNy upscaler using Compushady.
-Supports multiple models (veryfast, fast). Loads four HLSL shaders from files.
-"""
-
+import json
 import os
 import struct
 
@@ -20,80 +16,81 @@ from compushady.formats import R8G8B8A8_UNORM, get_pixel_size
 from compushady.shaders import hlsl
 
 
+def _pack_cb(in_w, in_h, out_w, out_h):
+    return struct.pack(
+        "IIIIffff",
+        in_w,
+        in_h,
+        out_w,
+        out_h,
+        1.0 / in_w,
+        1.0 / in_h,
+        1.0 / out_w,
+        1.0 / out_h,
+    )
+
+
 class SRCNN:
-    def __init__(self, width, height, model="fast"):
+    def __init__(self, width, height, model_name):
+        self._lanczos_pipeline = None
         self.width = width
         self.height = height
-        self.model = model
+        self.model_name = model_name
+        self._get_model_dir()
+        self._load_config()
         self._load_shaders()
         self._create_resources()
         self._create_pipelines()
 
-    def _load_shaders(self):
-        """Load HLSL shader source from files."""
-        # Directory structure: shaders/CuNNy/<model>/Pass*.hlsl
-        shader_dir = os.path.join(os.path.dirname(__file__), "CuNNy", self.model)
-
-        with open(os.path.join(shader_dir, "Pass1.hlsl"), "r") as f:
-            self.shader1 = hlsl.compile(f.read())
-        with open(os.path.join(shader_dir, "Pass2.hlsl"), "r") as f:
-            self.shader2 = hlsl.compile(f.read())
-        with open(os.path.join(shader_dir, "Pass3.hlsl"), "r") as f:
-            self.shader3 = hlsl.compile(f.read())
-        with open(os.path.join(shader_dir, "Pass4.hlsl"), "r") as f:
-            self.shader4 = hlsl.compile(f.read())
-
-    def _pack_cb(self, in_w, in_h, out_w, out_h):
-        """Pack constant buffer data for the shaders."""
-        return struct.pack(
-            "IIIIffff",
-            in_w,
-            in_h,
-            out_w,
-            out_h,
-            1.0 / in_w,
-            1.0 / in_h,  # inputPt
-            1.0 / out_w,
-            1.0 / out_h,  # outputPt (only used in pass4)
+    def _get_model_dir(self):
+        # Path: shaders/CuNNy/<model_name>/
+        self.model_dir = os.path.join(
+            os.path.dirname(__file__), "CuNNy", self.model_name
         )
+        if not os.path.isdir(self.model_dir):
+            raise FileNotFoundError(f"Model directory not found: {self.model_dir}")
+
+    def _load_config(self):
+        config_path = os.path.join(str(self.model_dir), "model.json")
+        with open(config_path, "r") as f:
+            self.cfg = json.load(f)
+        # Validate required fields
+        required = ["passes", "num_textures", "srv_uav", "samplers"]
+        for key in required:
+            if key not in self.cfg:
+                raise ValueError(f"Missing required field '{key}' in model.json")
+
+    def _load_shaders(self):
+        self.shaders = []
+        for i in range(self.cfg["passes"]):
+            pass_file = os.path.join(self.model_dir, f"Pass{i + 1}.hlsl")
+            with open(pass_file, "r") as f:
+                self.shaders.append(hlsl.compile(f.read()))
 
     def _create_resources(self):
         w, h = self.width, self.height
-
-        # Input and output textures
         self.input = Texture2D(w, h, R8G8B8A8_UNORM)
-        self.output = Texture2D(w * 2, h * 2, R8G8B8A8_UNORM)  # 2× upscaled
-
-        # Staging buffer for CPU uploads
+        self.output = Texture2D(w * 2, h * 2, R8G8B8A8_UNORM)
         self.staging = Buffer(self.input.size, HEAP_UPLOAD)
 
-        # Intermediate textures – the fast model needs 6 of them
-        self.t0 = Texture2D(w, h, R8G8B8A8_UNORM)
-        self.t1 = Texture2D(w, h, R8G8B8A8_UNORM)
-        self.t2 = Texture2D(w, h, R8G8B8A8_UNORM)
-        self.t3 = Texture2D(w, h, R8G8B8A8_UNORM)
-        self.t4 = Texture2D(w, h, R8G8B8A8_UNORM)
-        self.t5 = Texture2D(w, h, R8G8B8A8_UNORM)
+        self.textures = {}
+        for i in range(self.cfg["num_textures"]):
+            self.textures[f"t{i}"] = Texture2D(w, h, R8G8B8A8_UNORM)
 
-        # Constant buffers – one per pass
-        cb_size = struct.calcsize("IIIIffff")  # 32 bytes
-        self.cb1 = Buffer(cb_size, HEAP_UPLOAD)
-        self.cb1.upload(self._pack_cb(w, h, w, h))  # pass1: output size = input size
+        cb_size = struct.calcsize("IIIIffff")
+        self.cbs = []
+        for i in range(self.cfg["passes"]):
+            cb = Buffer(cb_size, HEAP_UPLOAD)
+            if i < self.cfg["passes"] - 1:
+                cb.upload(_pack_cb(w, h, w, h))
+            else:
+                cb.upload(_pack_cb(w, h, w * 2, h * 2))
+            self.cbs.append(cb)
 
-        self.cb2 = Buffer(cb_size, HEAP_UPLOAD)
-        self.cb2.upload(self._pack_cb(w, h, w, h))  # pass2: same
-
-        self.cb3 = Buffer(cb_size, HEAP_UPLOAD)
-        self.cb3.upload(self._pack_cb(w, h, w, h))  # pass3: same
-
-        self.cb4 = Buffer(cb_size, HEAP_UPLOAD)
-        self.cb4.upload(self._pack_cb(w, h, w * 2, h * 2))  # pass4: output 2x
-
-        # Samplers
         self.sampler_point = Sampler(
             filter_min=SAMPLER_FILTER_POINT,
             filter_mag=SAMPLER_FILTER_POINT,
-            address_mode_u=SAMPLER_ADDRESS_MODE_CLAMP,  # clamp for safe sampling
+            address_mode_u=SAMPLER_ADDRESS_MODE_CLAMP,
             address_mode_v=SAMPLER_ADDRESS_MODE_CLAMP,
             address_mode_w=SAMPLER_ADDRESS_MODE_CLAMP,
         )
@@ -106,49 +103,41 @@ class SRCNN:
         )
 
     def _create_pipelines(self):
-        """Create compute pipelines for the four passes."""
-        # Pass1: input -> t0, t1, t2
-        self.pass1 = Compute(
-            self.shader1,
-            cbv=[self.cb1],
-            srv=[self.input],
-            uav=[self.t0, self.t1, self.t2],
-            samplers=[self.sampler_point],  # only point sampler needed
-        )
+        self.pipelines = []
+        for i, (srv_names, uav_names) in enumerate(self.cfg["srv_uav"]):
+            srv_list = []
+            for name in srv_names:
+                if name == "input":
+                    srv_list.append(self.input)
+                elif name == "output":
+                    srv_list.append(self.output)
+                else:
+                    srv_list.append(self.textures[name])
 
-        # Pass2: t0, t1, t2 -> t3, t4, t5
-        self.pass2 = Compute(
-            self.shader2,
-            cbv=[self.cb2],
-            srv=[self.t0, self.t1, self.t2],
-            uav=[self.t3, self.t4, self.t5],
-            samplers=[self.sampler_point],
-        )
+            uav_list = []
+            for name in uav_names:
+                if name == "output":
+                    uav_list.append(self.output)
+                else:
+                    uav_list.append(self.textures[name])
 
-        # Pass3: t3, t4, t5 -> t0, t1
-        self.pass3 = Compute(
-            self.shader3,
-            cbv=[self.cb3],
-            srv=[self.t3, self.t4, self.t5],
-            uav=[self.t0, self.t1],
-            samplers=[self.sampler_point],
-        )
+            sampler_list = []
+            sampler_indices = self.cfg["samplers"][i]
+            if "point" in sampler_indices:
+                sampler_list.append(self.sampler_point)
+            if "linear" in sampler_indices:
+                sampler_list.append(self.sampler_linear)
 
-        # Pass4: input + t0, t1 -> output
-        # This pass uses both samplers: point for t0/t1, linear for original input
-        self.pass4 = Compute(
-            self.shader4,
-            cbv=[self.cb4],
-            srv=[self.input, self.t0, self.t1],
-            uav=[self.output],
-            samplers=[self.sampler_point, self.sampler_linear],
-        )
+            pipe = Compute(
+                self.shaders[i],
+                cbv=[self.cbs[i]],
+                srv=srv_list,
+                uav=uav_list,
+                samplers=sampler_list,
+            )
+            self.pipelines.append(pipe)
 
     def upload(self, data):
-        """
-        Copy raw RGBX data into the input texture.
-        data: contiguous buffer of size width*height*4.
-        """
         self.staging.upload2d(
             data,
             self.input.row_pitch,
@@ -159,14 +148,12 @@ class SRCNN:
         self.staging.copy_to(self.input)
 
     def compute(self):
-        """Execute the four CuNNy passes."""
         w, h = self.width, self.height
-        # Passes 1‑3: input-sized dispatch (8×8 threads per group)
-        self.pass1.dispatch((w + 7) // 8, (h + 7) // 8, 1)
-        self.pass2.dispatch((w + 7) // 8, (h + 7) // 8, 1)
-        self.pass3.dispatch((w + 7) // 8, (h + 7) // 8, 1)
-        # Pass4: output-sized dispatch, each group covers 16×16 output pixels
-        self.pass4.dispatch((w * 2 + 15) // 16, (h * 2 + 15) // 16, 1)
+        for i, pipe in enumerate(self.pipelines):
+            if i < self.cfg["passes"] - 1:
+                pipe.dispatch((w + 7) // 8, (h + 7) // 8, 1)
+            else:
+                pipe.dispatch((w * 2 + 15) // 16, (h * 2 + 15) // 16, 1)
 
     def _init_lanczos(self):
         if hasattr(self, "_lanczos_pipeline"):
@@ -181,7 +168,7 @@ class SRCNN:
             address_mode_v=SAMPLER_ADDRESS_MODE_CLAMP,
             address_mode_w=SAMPLER_ADDRESS_MODE_CLAMP,
         )
-        self._lanczos_cb = Buffer(20, HEAP_UPLOAD)  # 5 * 4 bytes
+        self._lanczos_cb = Buffer(20, HEAP_UPLOAD)
 
     def scale_to(self, target_tex, target_width, target_height, blur=1.0):
         self._init_lanczos()

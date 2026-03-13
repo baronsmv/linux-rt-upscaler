@@ -24,7 +24,14 @@ from .shaders.srcnn import SRCNN
 
 class Pipeline:
     def __init__(
-        self, window_info, screen_width, screen_height, overlay, swapchain, map_clicks
+        self,
+        window_info,
+        screen_width,
+        screen_height,
+        overlay,
+        swapchain,
+        map_clicks,
+        model_name,
     ):
         self.window_info = window_info
         self.screen_width = screen_width
@@ -32,12 +39,13 @@ class Pipeline:
         self.overlay = overlay
         self.swapchain = swapchain
         self.map_clicks = map_clicks
+        self.model_name = model_name
 
         # Create screen texture
         self.screen_tex = Texture2D(screen_width, screen_height, R8G8B8A8_UNORM)
 
         # Create upscaler (CuNNy)
-        self.upscaler = SRCNN(window_info.width, window_info.height)
+        self.upscaler = SRCNN(window_info.width, window_info.height, model_name)
 
         # Load Lanczos shader
         shader_dir = os.path.dirname(__file__)

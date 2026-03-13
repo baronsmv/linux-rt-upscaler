@@ -136,6 +136,7 @@ void Pass4(uint2 blockStart, uint3 tid) {
 	static const MF3x3 RY = {0.299, 0.587, 0.114, -0.169, -0.331, 0.5, 0.5, -0.419, -0.081}, YR = {1, -0.00093, 1.401687, 1, -0.3437, -0.71417, 1, 1.77216, 0.00099};
 	float2 opt = float2(GetOutputPt()), fpos = (float2(gxy) + 0.5) * opt;
 	MF3 yuv;
+
 	yuv = mul(RY, INPUT.SampleLevel(SL, fpos + float2(0.0, 0.0) * opt, 0).rgb);
 	OUTPUT[gxy + int2(0, 0)] = MF4(mul(YR, MF3(saturate(yuv.r + r0.x), yuv.yz)), 1.0);
 	yuv = mul(RY, INPUT.SampleLevel(SL, fpos + float2(1.0, 0.0) * opt, 0).rgb);

@@ -10,6 +10,7 @@ class Config:
     pid_timeout: int = 5
     class_timeout: int = 5
     target_delay: int = 5
+    model: str = "fast"  # new field
 
     @classmethod
     def from_cli(cls):
@@ -23,6 +24,13 @@ class Config:
             help="Disable mouse forwarding (overlay becomes transparent to input)",
         )
         parser.add_argument(
+            "-m",
+            "--model",
+            default="8x32",
+            choices=("8x32", "fast", "veryfast"),
+            help="Upscaling model to use (ordered from best to worst quality)",
+        )
+        parser.add_argument(
             "program", nargs="*", help="Program to launch and scale (optional)"
         )
         args = parser.parse_args()
@@ -33,4 +41,5 @@ class Config:
             pid_timeout=5,
             class_timeout=5,
             target_delay=5,
+            model=args.model,
         )

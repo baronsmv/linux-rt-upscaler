@@ -53,5 +53,5 @@ packages = [
 ]
 
 [tool.setuptools.package-data]
-"upscaler.shaders" = ["*.hlsl"]
+"upscaler.shaders" = ["*.hlsl", "*/*/*.hlsl", "*/*/model.json"]
 "upscaler.capture" = ["*.c", "*.so"]

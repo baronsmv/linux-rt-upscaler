@@ -80,7 +80,13 @@ def main():
 
     # Pipeline
     pipeline = Pipeline(
-        win_info, screen_w, screen_h, overlay, swapchain, map_clicks=config.map_clicks
+        win_info,
+        screen_w,
+        screen_h,
+        overlay,
+        swapchain,
+        map_clicks=config.map_clicks,
+        model_name=config.model,
     )
     pipeline.start()
     signal.signal(signal.SIGINT, signal.SIG_DFL)

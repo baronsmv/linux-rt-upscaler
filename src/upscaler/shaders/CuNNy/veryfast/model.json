@@ -1,0 +1,59 @@
+{
+  "name": "veryfast",
+  "passes": 4,
+  "num_textures": 4,
+  "srv_uav": [
+    [
+      [
+        "input"
+      ],
+      [
+        "t0",
+        "t1"
+      ]
+    ],
+    [
+      [
+        "t0",
+        "t1"
+      ],
+      [
+        "t2",
+        "t3"
+      ]
+    ],
+    [
+      [
+        "t2",
+        "t3"
+      ],
+      [
+        "t0"
+      ]
+    ],
+    [
+      [
+        "input",
+        "t0"
+      ],
+      [
+        "output"
+      ]
+    ]
+  ],
+  "samplers": [
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point",
+      "linear"
+    ]
+  ]
+}
