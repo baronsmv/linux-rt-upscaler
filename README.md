@@ -4,28 +4,31 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/linux-rt-upscaler.svg)](https://pypi.org/project/linux-rt-upscaler/)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-A real‑time AI upscaler for any application window on GNU/Linux. Uses **CuNNy‑veryfast** neural networks to perform 2× upscaling, with full‑screen stretching and optional click/motion forwarding.
+A real‑time AI upscaler for any application window on GNU/Linux. It uses CuNNy neural networks to perform 2× upscaling, then scales the result to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
 
 ## Based on
 
 Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) by L65536, with the following differences:
 
 - **Full‑screen scaling** – The upscaled image now fills the monitor, applying a second scaling layer while preserving aspect ratio.
-- **Click/motion forwarding** – With the `-m` flag, mouse clicks and motion are forwarded to the original window with proper coordinate transformation.
+- **Click/motion forwarding** – Mouse clicks and motion are forwarded to the original window with proper coordinate transformation. This can be deactivated with the `-d` option.
 
 ## Features
 
-- **AI‑Powered Upscaling** – Uses CuNNy‑veryfast (4‑pass) neural network for high‑quality 2× upscaling.
-- **Any Window** – Attach to an existing window or launch a new program.
-- **Full‑Screen Output** – Stretch the upscaled image to fill your monitor (aspect‑ratio preserved, black bars).
-- **Click/Motion Forwarding** (`-m`) – Click and move the mouse on the upscaled image as if it were the real window.
-- **Opacity Control** – Overlay dims when mouse leaves the source window (optional, disabled with `-m`).
-- **Hardware Accelerated** – GPU‑based compute via Compushady (Vulkan) – works on NVIDIA, AMD, and Intel.
-- **Low Overhead** – Minimal performance impact; scaling pass uses hardware bilinear filtering.
+- **AI‑Powered Upscaling** – Uses the CuNNy neural network family, trained specifically for high‑quality 2× upscaling (ideal for visual novels, illustrations, and general content).
+- **Model Selection** – Choose between quality/performance trade‑offs:
+  - `8x32` (highest quality but slowest),
+  - `fast` (balanced),
+  - `veryfast` (fastest but lowest quality).
+- **Attach to Any Window** – Either grab the currently active window or launch a new program and capture its window automatically.
+- **Full‑Screen Output** – The upscaled image is displayed in a transparent overlay that covers your entire monitor, scaled to fill the screen while preserving aspect ratio.
+- **Input Forwarding** – Click, move, and drag on the upscaled image as if you were interacting directly with the original window.
+- **Hardware Accelerated** – GPU compute via Compushady (Vulkan) works on NVIDIA, AMD, and Intel GPUs.
+- **Low Overhead** – Minimal CPU/GPU usage; the final scaling pass uses hardware bilinear filtering.
 
 ## Requirements
 
-- GNU/Linux with X11 (Wayland not supported)
+- GNU/Linux with X11 (Wayland is **not** supported)
 - Vulkan-capable GPU from any vendor (NVIDIA, AMD, Intel)
 - Vulkan drivers (`libvulkan-dev` on Debian/Ubuntu)
 - X11 development libraries (`libx11-dev`)
@@ -71,30 +74,47 @@ After installation, the `upscale` command will be available globally:
 # Upscale the currently active window
 upscale
 
-# Enable click/motion forwarding (mouse interacts with upscaled window)
-upscale -m
+# Run a command and upscale its window
+upscale <command>
+
+# Choose a specific model
+upscale -m fast
+
+# Disable mouse‑click forwarding (also enables dimming/click‑through)
+upscale -d
+
+# Show help
+upscale -h
 ```
+
+### Command‑Line Options
+
+| Option                        | Description                                                                                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-m, --model`                 | Select upscaling model: `8x32` (best quality, slower), `fast` (balanced), `veryfast` (fastest, lower quality). Default is `8x32`.              |
+| `-d, --disable-click-forward` | Disable forwarding mouse clicks to the original window. Also enables overlay dimming (20% opacity when mouse leaves source) and click‑through. |
+| `-h, --help`                  | Show the help message and exit.                                                                                                                |
 
 ### Controls
 
-- **Exit** – Press Ctrl+C in terminal
-- **Opacity** – Without `-m`, overlay dims to 20% when mouse leaves source window
-- **Click‑through** – Without `-m`, clicks pass through to underlying windows
+- **Exit**: Press `Ctrl+C` in the terminal where the upscaler is running.
+- **Dimming/Click‑through** (only when `-d` is used):
+  - The overlay becomes semi‑transparent (20% opacity) when the mouse leaves the source window.
+  - Clicks then pass through to whatever window is underneath (e.g., your desktop or other applications).
 
 ## How It Works
 
-1. **Window Selection** – Uses X11 to find the target window by PID or WM_CLASS
-2. **Capture** – Fast X11 window capture via custom C library
-3. **AI Upscaling** – Four CuNNy compute shaders produce 2× image
-4. **Aspect Scaling** – Lightweight bilinear compute shader scales to full screen (preserves ratio)
-5. **Display** – Rendered in a transparent overlay (bypasses window manager)
-6. **Input Forwarding** – With `-m`, mouse events are transformed and sent to original window using XSendEvent
+1. **Window Selection** – Uses X11 to find the target window by PID or WM_CLASS.
+2. **Capture** – Grabs the window's pixels using a fast custom C library.
+3. **AI Upscaling** – Four CuNNy compute shaders (written in HLSL, compiled via Compushady) produce a 2× larger image.
+4. **Aspect‑Preserving Scaling** – A lightweight bilinear compute shader scales the upscaled image to fill the monitor, adding black bars to maintain the original aspect ratio.
+5. **Display** – The result is rendered in a transparent overlay window that bypasses the window manager (so it always stays on top).
+6. **Input Forwarding** – Mouse events are transformed using the scaling ratios and sent to the original window via `XSendEvent`.
 
 ## Acknowledgments
 
 - **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) project, which provided the foundational scripts and CuNNy integration
-- **CuNNy** – Neural network upscaling models
-- **Compushady** – Python GPU compute library
-- **PySide6** – Qt bindings for the overlay
-- **python‑xlib** – X11 client library
-
+- **CuNNy** – Neural network upscaling models, especially the `NVL` variants trained for visual novel content.
+- **Compushady** – Python library for GPU compute (Vulkan backend).
+- **PySide6** – Qt bindings used for the overlay window.
+- **python‑xlib** – X11 client library for window management and input forwarding.
