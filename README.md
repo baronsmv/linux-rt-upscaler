@@ -8,7 +8,7 @@ A real‑time AI upscaler for any application window on GNU/Linux. It uses CuNNy
 
 ## Based on
 
-Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) by L65536, with the following differences:
+Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) by [L65536](https://github.com/L65536), with the following differences:
 
 - **Full‑screen scaling** – The upscaled image now fills the monitor, applying a second scaling layer while preserving aspect ratio.
 - **Click/motion forwarding** – Mouse clicks and motion are forwarded to the original window with proper coordinate transformation. This can be deactivated with the `-d` option.
@@ -114,7 +114,9 @@ upscale -h
 ## Acknowledgments
 
 - **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) project, which provided the foundational scripts and CuNNy integration
-- **CuNNy** – Neural network upscaling models, especially the `NVL` variants trained for visual novel content.
-- **Compushady** – Python library for GPU compute (Vulkan backend).
-- **PySide6** – Qt bindings used for the overlay window.
-- **python‑xlib** – X11 client library for window management and input forwarding.
+- **[CuNNy](https://github.com/funnyplanter/CuNNy)** – Neural network upscaling models, especially the `NVL` variants trained for visual novel content.
+- **[Compushady](https://github.com/rdeioris/compushady)** – Python library for GPU compute (Vulkan backend).
+- **[PySide6](https://pypi.org/project/PySide6/)** – Qt bindings used for the overlay window.
+- **[python‑xlib](https://github.com/python-xlib/python-xlib)** – X11 client library for window management and input forwarding.
+- **[pyewmh](https://github.com/parkouss/pyewmh)** – Query and control of window manager.
+- **[psutil](https://github.com/giampaolo/psutil)** – Library for retrieving information on running processes.
