@@ -119,6 +119,7 @@ def main():
         swapchain,
         map_clicks=not config.disable_forwarding,
         model_name=config.model,
+        double_upscale=config.double_upscale,
     )
     pipeline.start()
     signal.signal(signal.SIGINT, signal.SIG_DFL)

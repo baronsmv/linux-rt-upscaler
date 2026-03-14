@@ -1,7 +1,6 @@
 import os
 import struct
 import threading
-import time
 from queue import Queue, Empty
 
 from PySide6.QtGui import QCursor
@@ -32,6 +31,7 @@ class Pipeline:
         swapchain,
         map_clicks,
         model_name,
+        double_upscale,
     ):
         self.window_info = window_info
         self.screen_width = screen_width
@@ -40,12 +40,18 @@ class Pipeline:
         self.swapchain = swapchain
         self.map_clicks = map_clicks
         self.model_name = model_name
+        self.double_upscale = double_upscale
 
         # Create screen texture
-        self.screen_tex = Texture2D(screen_width, screen_height, R8G8B8A8_UNORM)
+        self.screen_tex = Texture2D(screen_width, screen_height, format=R8G8B8A8_UNORM)
 
-        # Create upscaler (CuNNy)
-        self.upscaler = SRCNN(window_info.width, window_info.height, model_name)
+        # Create upscaler (CuNNy) with double_upscale flag
+        self.upscaler = SRCNN(
+            width=window_info.width,
+            height=window_info.height,
+            model_name=model_name,
+            double_upscale=double_upscale,
+        )
 
         # Load Lanczos shader
         shader_dir = os.path.dirname(__file__)
@@ -88,8 +94,13 @@ class Pipeline:
         groups_x = (self.screen_width + 15) // 16
         groups_y = (self.screen_height + 15) // 16
 
-        src_w = self.window_info.width * 2
-        src_h = self.window_info.height * 2
+        # Source dimensions depend on whether we double‑upscaled
+        if self.double_upscale:
+            src_w = self.window_info.width * 4
+            src_h = self.window_info.height * 4
+        else:
+            src_w = self.window_info.width * 2
+            src_h = self.window_info.height * 2
 
         # For opacity control (if not mapping clicks)
         if not self.map_clicks:
@@ -107,9 +118,9 @@ class Pipeline:
             except Empty:
                 continue
 
-            start_time = time.perf_counter()
+            # start_time = time.perf_counter()
 
-            # CuNNy upscale
+            # CuNNy upscale (internally does one or two passes)
             self.upscaler.upload(frame)
             self.upscaler.compute()  # result in self.upscaler.output
 
@@ -149,7 +160,7 @@ class Pipeline:
             )
             scale_compute.dispatch(groups_x, groups_y, 1)
 
-            compute_time = time.perf_counter() - start_time
+            # compute_time = time.perf_counter() - start_time
 
             # Opacity control
             if self.map_clicks:

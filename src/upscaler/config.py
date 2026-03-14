@@ -9,7 +9,8 @@ class Config:
     def __init__(self):
         # Default values
         self.select: bool = False
-        self.model: str = "CuNNy-4x12"
+        self.model: str = "8x32"
+        self.double_upscale: bool = False
         self.disable_forwarding: bool = False
         self.config_file: Optional[str] = None
         self.target_delay: int = 5
@@ -51,6 +52,13 @@ class Config:
             "--disable-forwarding",
             action="store_true",
             help="Disable mouse forwarding (overlay becomes transparent to input)",
+        )
+        parser.add_argument(
+            "-2",
+            "--double-upscale",
+            action="store_true",
+            help="EXPERIMENTAL: Perform two 2× passes (total 4×) for higher"
+            " resolutions screens (4k, 1440p) or low‑resolution sources.",
         )
         parser.add_argument("-c", "--config", help="Path to config file (YAML)")
         parser.add_argument(
@@ -134,6 +142,8 @@ class Config:
             self.select = True
         if args.model:
             self.model = args.model
+        if args.double_upscale:
+            self.double_upscale = True
         if args.disable_forwarding:
             self.disable_forwarding = True
         if args.target_delay != 5:

@@ -1,6 +1,9 @@
-model: CuNNy-8x32
+model: 8x32
+
 select: false
+double_upscale: false
 disable_forwarding: false
+benchmark: false
 
 target_delay: 5
 pid_timeout: 5
