@@ -8,7 +8,7 @@ A real‑time AI upscaler for any application window on GNU/Linux. It uses CuNNy
 
 ## Based on
 
-Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) by [L65536](https://github.com/L65536) ---specifically its [v07linux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux/tree/main/v07linux), with the following differences:
+Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) by [L65536](https://github.com/L65536) (specifically its [v07linux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux/tree/main/v07linux)), with the following differences:
 
 - **Full‑screen scaling** – The upscaled image now fills the monitor, applying a second scaling layer while preserving aspect ratio.
 - **Click/motion forwarding** – Mouse clicks and motion are forwarded to the original window with proper coordinate transformation. This can be deactivated with the `-d` option.
