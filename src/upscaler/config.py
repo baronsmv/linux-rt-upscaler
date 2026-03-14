@@ -22,7 +22,7 @@ class Config:
 
     @classmethod
     def from_cli(cls):
-        parser = argparse.ArgumentParser(description="Real‑time Vulkan upscaler")
+        parser = argparse.ArgumentParser(description="Real‑Time Upscaler for Linux")
         parser.add_argument("program", nargs="*", help="Program to launch and scale")
         parser.add_argument(
             "-s",
@@ -58,7 +58,7 @@ class Config:
             "--double-upscale",
             action="store_true",
             help="EXPERIMENTAL: Perform two 2× passes (total 4×) for higher"
-            " resolutions screens (4k, 1440p) or low‑resolution sources.",
+            " resolutions screens (4k, 1440p) or low‑resolution sources",
         )
         parser.add_argument("-c", "--config", help="Path to config file (YAML)")
         parser.add_argument(
