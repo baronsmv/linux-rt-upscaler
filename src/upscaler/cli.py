@@ -24,9 +24,39 @@ def get_x11_display_id():
 
 def main():
     config: Config = Config.from_cli()
+    win_info = None
+
+    if config.select:
+        print("Enumerating open windows...")
+        windows = window.list_windows()
+        if not windows:
+            print("No visible windows found.")
+            sys.exit(1)
+
+        # Sort by title for easier browsing
+        windows.sort(key=lambda w: w.title.lower())
+
+        print("\nAvailable windows:")
+        for i, w in enumerate(windows):
+            print(f"{i:3d}: {w.title} ({w.width}x{w.height})")
+
+        while True:
+            try:
+                choice = input("\nEnter window number (or 'q' to quit): ").strip()
+                if choice.lower() == "q":
+                    sys.exit(0)
+                idx = int(choice)
+                if 0 <= idx < len(windows):
+                    win_info = windows[idx]
+                    break
+                else:
+                    print(f"Please enter a number between 0 and {len(windows)-1}")
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+        print(f"Selected: {win_info.title}")
 
     # Window detection
-    if config.program:
+    elif config.program:
         program_name = config.program[0]
         print(f"Launching: {' '.join(config.program)}")
         proc = subprocess.Popen(config.program)

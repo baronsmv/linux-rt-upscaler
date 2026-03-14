@@ -1,5 +1,5 @@
 import time
-from typing import Optional
+from typing import Optional, List
 
 import psutil
 from Xlib import X
@@ -34,6 +34,122 @@ def _get_all_windows(disp):
             pass
 
     recurse(root)
+    return windows
+
+
+def list_windows() -> List[WindowInfo]:
+    """
+    Enumerate all visible X11 application windows and return a list of WindowInfo.
+    Filters out panels, desktops, and other non‑normal windows.
+    """
+    from Xlib import X
+    from Xlib.display import Display
+    from Xlib.error import XError
+    from Xlib.xobject.drawable import Window
+
+    # Atoms we need
+    _NET_WM_WINDOW_TYPE = None
+    _NET_WM_WINDOW_TYPE_NORMAL = None
+    _NET_WM_WINDOW_TYPE_DESKTOP = None
+    _NET_WM_WINDOW_TYPE_DOCK = None
+    _NET_WM_WINDOW_TYPE_TOOLBAR = None
+    _NET_WM_WINDOW_TYPE_MENU = None
+    _NET_WM_WINDOW_TYPE_UTILITY = None
+    _NET_WM_WINDOW_TYPE_SPLASH = None
+    _NET_WM_WINDOW_TYPE_DIALOG = None
+
+    disp = Display()
+    root = disp.screen().root
+
+    # Intern atoms
+    def get_atom(name):
+        return disp.intern_atom(name)
+
+    _NET_WM_WINDOW_TYPE = get_atom("_NET_WM_WINDOW_TYPE")
+    _NET_WM_WINDOW_TYPE_NORMAL = get_atom("_NET_WM_WINDOW_TYPE_NORMAL")
+    _NET_WM_WINDOW_TYPE_DESKTOP = get_atom("_NET_WM_WINDOW_TYPE_DESKTOP")
+    _NET_WM_WINDOW_TYPE_DOCK = get_atom("_NET_WM_WINDOW_TYPE_DOCK")
+    _NET_WM_WINDOW_TYPE_TOOLBAR = get_atom("_NET_WM_WINDOW_TYPE_TOOLBAR")
+    _NET_WM_WINDOW_TYPE_MENU = get_atom("_NET_WM_WINDOW_TYPE_MENU")
+    _NET_WM_WINDOW_TYPE_UTILITY = get_atom("_NET_WM_WINDOW_TYPE_UTILITY")
+    _NET_WM_WINDOW_TYPE_SPLASH = get_atom("_NET_WM_WINDOW_TYPE_SPLASH")
+    _NET_WM_WINDOW_TYPE_DIALOG = get_atom("_NET_WM_WINDOW_TYPE_DIALOG")
+
+    windows = []
+
+    def is_application_window(win: Window) -> bool:
+        """Return True if the window is a normal application window."""
+        try:
+            # Must be viewable
+            attrs = win.get_attributes()
+            if not attrs or attrs.map_state != X.IsViewable:
+                return False
+
+            # Must have reasonable size
+            geom = win.get_geometry()
+            if geom.width < 100 or geom.height < 100:
+                return False
+
+            # Check window type
+            type_prop = win.get_full_property(_NET_WM_WINDOW_TYPE, 0)
+            if type_prop:
+                for atom in type_prop.value:
+                    if atom == _NET_WM_WINDOW_TYPE_NORMAL:
+                        return True
+                    if atom in (
+                        _NET_WM_WINDOW_TYPE_DESKTOP,
+                        _NET_WM_WINDOW_TYPE_DOCK,
+                        _NET_WM_WINDOW_TYPE_TOOLBAR,
+                        _NET_WM_WINDOW_TYPE_MENU,
+                        _NET_WM_WINDOW_TYPE_UTILITY,
+                        _NET_WM_WINDOW_TYPE_SPLASH,
+                    ):
+                        return False
+                return False
+            else:
+                pass
+        except XError:
+            return False
+
+        return True
+
+    def recurse(win):
+        try:
+            if is_application_window(win):
+                # Get name
+                name = None
+                try:
+                    name_prop = win.get_full_property(
+                        disp.intern_atom("_NET_WM_NAME"), 0
+                    )
+                    if name_prop:
+                        name = name_prop.value.decode("utf-8", errors="ignore")
+                except:
+                    pass
+                if not name:
+                    try:
+                        name_prop = win.get_full_property(
+                            disp.intern_atom("WM_NAME"), 0
+                        )
+                        if name_prop:
+                            name = name_prop.value.decode("utf-8", errors="ignore")
+                    except:
+                        pass
+
+                if name and name.strip():
+                    geom = win.get_geometry()
+                    windows.append(
+                        WindowInfo(win.id, geom.width, geom.height, name.strip())
+                    )
+
+            # Recurse children
+            for child in win.query_tree().children:
+                recurse(child)
+        except XError:
+            pass
+
+    recurse(root)
+    disp.close()
     return windows
 
 

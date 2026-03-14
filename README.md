@@ -27,7 +27,7 @@ Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L655
   - `fast` – Recommended for slower machines, good balance.
   - `faster` – Prioritizes speed over quality.
   - `veryfast` – Fastest option, lowest quality .
-- **Attach to Any Window** – Either grab the currently active window or launch a new program and capture its window automatically.
+- **Attach to Any Window** – Either grab the currently active window, select from visible windows or launch a new program and capture its window automatically.
 - **Full‑Screen Output** – The upscaled image is displayed in a transparent overlay that covers your entire monitor, scaled to fill the screen while preserving aspect ratio.
 - **Input Forwarding** – Click, move, and drag on the upscaled image as if you were interacting directly with the original window.
 - **Hardware Accelerated** – GPU compute via Compushady (Vulkan) works on NVIDIA, AMD, and Intel GPUs.
@@ -81,6 +81,9 @@ After installation, the `upscale` command will be available globally:
 # Upscale the currently active window
 upscale
 
+# Interactively select from visible windows at startup
+upscale -s
+
 # Run a command and upscale its window
 upscale <command>
 
@@ -122,7 +125,6 @@ upscale -h
 
 ## Future Plans
 
-- [ ] **Window selection GUI** – Add an option to interactively select from visible windows at startup
 - [ ] **Configuration YAML** – Implement a config file for persistent settings (default model, forwarding options, etc.)
 - [ ] **Standalone GUI application** – Create a windowed app interface for easier management of the upscaler
 
