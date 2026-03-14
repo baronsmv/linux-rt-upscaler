@@ -122,7 +122,6 @@ upscale -h
 
 ## Future Plans
 
-- [ ] **Wayland support** – Add compatibility for Wayland display servers (currently X11 only)
 - [ ] **Window selection GUI** – Add an option to interactively select from visible windows at startup
 - [ ] **Configuration YAML** – Implement a config file for persistent settings (default model, forwarding options, etc.)
 - [ ] **Standalone GUI application** – Create a windowed app interface for easier management of the upscaler
