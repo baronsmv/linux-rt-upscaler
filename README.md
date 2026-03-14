@@ -8,7 +8,7 @@ A real‑time AI upscaler for any application window on GNU/Linux. It uses CuNNy
 
 ## Motivation
 
-While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their **frame generation** capabilities to Linux. On the other part, this project focuses on the **upscaling** features to deliver a native solution that Linux has been missing, a [Gamescope](https://github.com/ValveSoftware/gamescope)-like experience that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
+While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their **frame generation** capabilities to Linux. This project tackles the other half of the equation: **AI-powered upscaling** to deliver a native solution Linux has been missing, a fullscreen [Gamescope](https://github.com/ValveSoftware/gamescope)-like experience that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
 
 ## Based on
 
