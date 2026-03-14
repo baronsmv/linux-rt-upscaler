@@ -117,7 +117,6 @@ upscale -h
 
 ## Future Plans
 
-- [ ] **Configuration YAML** – Implement a config file for persistent settings (default model, forwarding options, etc.)
 - [ ] **Standalone GUI application** – Create a windowed app interface for easier management of the upscaler
 
 ## Acknowledgments
