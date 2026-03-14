@@ -1,0 +1,9 @@
+model: CuNNy-8x32
+select: false
+disable_forwarding: false
+
+target_delay: 5
+pid_timeout: 5
+class_timeout: 5
+total_timeout: 120
+starting_phase: 1

@@ -10,6 +10,7 @@ pyside6 = "*"
 xlib = "*"
 ewmh = "*"
 psutil = "*"
+pyyaml = "*"
 
 [dev-packages]
 

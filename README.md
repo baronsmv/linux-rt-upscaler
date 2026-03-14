@@ -95,7 +95,7 @@ upscale -m veryfast   # Maximum performance
 # Disable mouse‑click forwarding (also enables dimming/click‑through)
 upscale -d
 
-# Show help
+# Show help and other options
 upscale -h
 ```
 

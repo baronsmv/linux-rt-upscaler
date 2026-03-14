@@ -100,10 +100,10 @@ def main():
     overlay = OverlayWindow(
         screen_w,
         screen_h,
-        map_clicks=config.map_clicks,
-        target_handle=win_info.handle if config.map_clicks else None,
+        map_clicks=not config.disable_forwarding,
+        target_handle=win_info.handle if not config.disable_forwarding else None,
     )
-    if config.map_clicks:
+    if not config.disable_forwarding:
         overlay.set_client_size(win_info.width, win_info.height)
 
     # Swapchain
@@ -117,7 +117,7 @@ def main():
         screen_h,
         overlay,
         swapchain,
-        map_clicks=config.map_clicks,
+        map_clicks=not config.disable_forwarding,
         model_name=config.model,
     )
     pipeline.start()

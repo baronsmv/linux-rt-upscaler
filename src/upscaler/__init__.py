@@ -1,3 +1,3 @@
 """Real‑Time Upscaler for Linux"""
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
