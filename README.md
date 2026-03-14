@@ -99,6 +99,9 @@ upscale -m veryfast   # Maximum performance
 # Disable mouse‑click forwarding (also enables dimming/click‑through)
 upscale -d
 
+# Perform two 2× passes (total 4×) (Experimental)
+upscale -2
+
 # Show help and other options
 upscale -h
 ```
@@ -121,6 +124,7 @@ upscale -h
 
 ## Future Plans
 
+- [ ] **Addition of more models** – Parse and include other models and shaders
 - [ ] **Standalone GUI application** – Create a windowed app interface for easier management of the upscaler
 
 ## Acknowledgments
