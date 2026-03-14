@@ -22,9 +22,6 @@ from dataclasses import dataclass
 from typing import List, Tuple, Dict, Optional, Any
 
 
-# ----------------------------------------------------------------------
-# Configuration
-# ----------------------------------------------------------------------
 @dataclass
 class Config:
     """Configuration options for the converter."""
@@ -42,9 +39,6 @@ class Config:
     special_output: str = "OUTPUT"
 
 
-# ----------------------------------------------------------------------
-# Data classes
-# ----------------------------------------------------------------------
 @dataclass
 class PassInfo:
     """Information about a single rendering pass."""
@@ -64,9 +58,6 @@ class SamplerInfo:
     filter_type: str  # 'point' or 'linear'
 
 
-# ----------------------------------------------------------------------
-# Parser
-# ----------------------------------------------------------------------
 class ShaderParser:
     """Parses the original Magpie shader and extracts passes, samplers, texture indices."""
 
@@ -150,9 +141,6 @@ class ShaderParser:
         return in_tex, out_tex
 
 
-# ----------------------------------------------------------------------
-# Model.json builder
-# ----------------------------------------------------------------------
 class ModelJsonBuilder:
     """Constructs the model.json data from parsed information."""
 
@@ -209,9 +197,6 @@ class ModelJsonBuilder:
         return None
 
 
-# ----------------------------------------------------------------------
-# HLSL generator
-# ----------------------------------------------------------------------
 class HlslGenerator:
     """Generates the final HLSL source for a single pass."""
 
@@ -596,9 +581,6 @@ void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
 """
 
 
-# ----------------------------------------------------------------------
-# Main
-# ----------------------------------------------------------------------
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Convert Magpie CuNNy shader to Compushady format."
