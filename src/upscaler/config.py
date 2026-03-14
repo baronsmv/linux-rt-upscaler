@@ -30,7 +30,21 @@ class Config:
             help="Select a window from the list of open windows",
         )
         parser.add_argument(
-            "-m", "--model", default="CuNNy-4x12", help="Upscaling model name"
+            "-m",
+            "--model",
+            choices=(
+                "8x32",
+                "4x32",
+                "4x24",
+                "4x16",
+                "4x12",
+                "3x12",
+                "fast",
+                "faster",
+                "veryfast",
+            ),
+            default="8x32",
+            help="Upscaling model to use (ordered from best to worst quality)",
         )
         parser.add_argument(
             "-d",
