@@ -153,3 +153,6 @@ testing/
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# Local configuration
+config.yaml

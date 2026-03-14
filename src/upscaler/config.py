@@ -63,7 +63,11 @@ class Config:
             help="EXPERIMENTAL: Perform two 2× passes (total 4×) for higher"
             " resolutions screens (4k, 1440p) or low‑resolution sources",
         )
-        parser.add_argument("-c", "--config", help="Path to config file (YAML)")
+        parser.add_argument(
+            "-c",
+            "--config",
+            help="Path to config file (YAML)",
+        )
         parser.add_argument(
             "--target-delay",
             type=int,
