@@ -22,7 +22,10 @@ class Config:
 
     @classmethod
     def from_cli(cls):
-        parser = argparse.ArgumentParser(description="Real‑Time Upscaler for Linux")
+        parser = argparse.ArgumentParser(
+            description="Real‑Time Upscaler for Linux",
+            epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler",
+        )
         parser.add_argument("program", nargs="*", help="Program to launch and scale")
         parser.add_argument(
             "-s",
