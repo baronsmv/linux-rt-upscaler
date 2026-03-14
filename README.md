@@ -6,6 +6,10 @@
 
 A real‑time AI upscaler for any application window on GNU/Linux. It uses CuNNy neural networks to perform 2× upscaling, then scales the result to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
 
+## Motivation
+
+While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their **frame generation** capabilities to Linux. On the other part, this project focuses on the **upscaling** features to deliver a native solution that Linux has been missing, a [Gamescope](https://github.com/ValveSoftware/gamescope)-like experience that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
+
 ## Based on
 
 Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) by [L65536](https://github.com/L65536), with the following differences:
