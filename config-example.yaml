@@ -1,4 +1,4 @@
-model: 4x24
+model: fast
 
 select: false
 disable_forwarding: false
@@ -7,5 +7,5 @@ double_upscale: false
 target_delay: 5
 pid_timeout: 5
 class_timeout: 5
-total_timeout: 120
+total_timeout: 60
 starting_phase: 1

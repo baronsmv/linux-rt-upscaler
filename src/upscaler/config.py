@@ -9,7 +9,7 @@ class Config:
     def __init__(self):
         # Default values
         self.select: bool = False
-        self.model: str = "8x32"
+        self.model: str = "fast"
         self.double_upscale: bool = False
         self.disable_forwarding: bool = False
         self.config_file: Optional[str] = None
@@ -47,7 +47,7 @@ class Config:
                 "faster",
                 "veryfast",
             ),
-            default="8x32",
+            default="fast",
             help="Upscaling model to use (ordered from best to worst quality)",
         )
         parser.add_argument(

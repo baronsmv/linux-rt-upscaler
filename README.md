@@ -6,31 +6,27 @@
 
 A real‑time AI upscaler for any application window on GNU/Linux. It uses CuNNy neural networks to perform 2× upscaling, then scales the result to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
 
-## Motivation
-
-While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their **frame generation** capabilities to Linux. This project tackles the other half of the equation: **AI-powered upscaling** to deliver a native solution Linux has been missing, a fullscreen [Gamescope](https://github.com/ValveSoftware/gamescope)-like experience that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
-
 ## Based on
 
-Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) by [L65536](https://github.com/L65536), with the following differences:
+Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) by [L65536](https://github.com/L65536) ---specifically its [v07linux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux/tree/main/v07linux), with the following differences:
 
 - **Full‑screen scaling** – The upscaled image now fills the monitor, applying a second scaling layer while preserving aspect ratio.
 - **Click/motion forwarding** – Mouse clicks and motion are forwarded to the original window with proper coordinate transformation. This can be deactivated with the `-d` option.
-- **Support all CuNNy NVL models** – All NVL models have been translated to pure HLSL to use.
+- **Support all CuNNy NVL models** – All NVL models have been translated to work in Compushady.
 
 ## Features
 
-- **AI‑Powered Upscaling** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high‑quality 2× upscaling of visual novels and illustrations .
-- **Complete Model Selection** – Choose from all nine CuNNy NVL variants, offering a range of quality/performance trade‑offs:
-  - `8x32` – Highest quality, slowest. Uses 8 internal convolutions with 32 feature layers.
-  - `4x32` – Excellent quality, slightly faster than 8x32.
-  - `4x24` – Balanced high quality with reduced layer size.
-  - `4x16` – Good quality, moderate speed.
-  - `4x12` – Lower quality, faster performance.
-  - `3x12` – Reduced convolution count for better speed.
-  - `fast` – Recommended for slower machines, good balance.
-  - `faster` – Prioritizes speed over quality.
-  - `veryfast` – Fastest option, lowest quality .
+- **AI‑Powered Upscaling** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high‑quality 2× upscaling of visual novels and illustrations.
+- **Complete Model Selection** – Choose from the CuNNy NVL variants, offering a range of quality/performance trade‑offs:
+  - `8x32` – Highest quality, slowest.
+  - `4x32`
+  - `4x24`
+  - `4x16`
+  - `4x12`
+  - `3x12`
+  - `fast` – Default. Recommended for slow machines.
+  - `faster`
+  - `veryfast` – Fastest option, lowest quality.
 - **Attach to Any Window** – Either grab the currently active window, select from visible windows or launch a new program and capture its window automatically.
 - **Full‑Screen Output** – The upscaled image is displayed in a transparent overlay that covers your entire monitor, scaled to fill the screen while preserving aspect ratio.
 - **Input Forwarding** – Click, move, and drag on the upscaled image as if you were interacting directly with the original window.
@@ -92,9 +88,9 @@ upscale -s
 upscale <command>
 
 # Choose a specific model (examples)
-upscale -m 4x32      # High quality, balanced performance
-upscale -m fast       # Recommended for slower machines
-upscale -m veryfast   # Maximum performance
+upscale -m 8x32      # Highest quality, slowest
+upscale -m 4x24      # A balanced option
+upscale -m veryfast  # Maximum performance
 
 # Disable mouse‑click forwarding (also enables dimming/click‑through)
 upscale -d
@@ -113,6 +109,11 @@ upscale -h
   - The overlay becomes semi‑transparent (20% opacity) when the mouse leaves the source window.
   - Clicks then pass through to whatever window is underneath (e.g., your desktop or other applications).
 
+## Future Plans
+
+- [ ] **Standalone GUI application** – Create a windowed app interface for easier management of the upscaler
+- [ ] **Addition of more models** – Parse and include other models and shaders
+
 ## How It Works
 
 1. **Window Selection** – Uses X11 to find the target window by PID or WM_CLASS.
@@ -122,15 +123,14 @@ upscale -h
 5. **Display** – The result is rendered in a transparent overlay window that bypasses the window manager (so it always stays on top).
 6. **Input Forwarding** – Mouse events are transformed using the scaling ratios and sent to the original window via `XSendEvent`.
 
-## Future Plans
+## Motivation
 
-- [ ] **Addition of more models** – Parse and include other models and shaders
-- [ ] **Standalone GUI application** – Create a windowed app interface for easier management of the upscaler
+While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their **frame generation** capabilities to Linux. This project tackles the other half of the equation: **AI-powered upscaling** to deliver a native solution Linux has been missing, a fullscreen [Gamescope](https://github.com/ValveSoftware/gamescope)-like experience that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
 
 ## Acknowledgments
 
 - **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) project, which provided the foundational scripts and CuNNy integration 
-- **[funnyplanter](https://github.com/funnyplanter)** – For [CuNNy](https://github.com/funnyplanter/CuNNy), the neural network upscaling models, especially the NVL variants trained for visual novel content 
+- **[funnyplanter](https://github.com/funnyplanter)** – For [CuNNy](https://github.com/funnyplanter/CuNNy), the neural network upscaling models, especially the Magpie NVL variants trained for visual novel content 
 - **[Compushady](https://github.com/rdeioris/compushady)** – Python library for GPU compute (Vulkan backend)
 - **[PySide6](https://pypi.org/project/PySide6/)** – Qt bindings used for the overlay window
 - **[python‑xlib](https://github.com/python-xlib/python-xlib)** – X11 client library for window management and input forwarding
