@@ -99,14 +99,6 @@ upscale -d
 upscale -h
 ```
 
-### Command‑Line Options
-
-| Option                        | Description                                                                                                                                    |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-m, --model`                 | Select upscaling model: `8x32`, `4x32`, `4x24`, `4x16`, `4x12`, `3x12`, `fast`, `faster`, `veryfast`. Default is `8x32`.                    |
-| `-d, --disable-click-forward` | Disable forwarding mouse clicks to the original window. Also enables overlay dimming (20% opacity when mouse leaves source) and click‑through. |
-| `-h, --help`                  | Show the help message and exit.                                                                                                                |
-
 ### Controls
 
 - **Exit**: Press `Ctrl+C` in the terminal where the upscaler is running.
