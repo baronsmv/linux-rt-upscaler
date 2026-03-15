@@ -122,7 +122,7 @@ upscale -h
 ## Future Plans
 
 - [ ] **XWayland support** – Upscale X11 windows from a Wayland environment
-- [ ] **Option to force screen aspect ratio** – With a --deform option
+- [ ] **Option to force screen aspect ratio**
 - [ ] **Standalone GUI application** – Create a windowed app interface for easier management of the upscaler
 - [ ] **Addition of more models** – Parse and include other models and shaders
 
