@@ -1,7 +1,7 @@
 import argparse
 import logging
 import os
-from typing import Optional, List, Any
+from typing import Any, List, Optional, Self
 
 import yaml
 
@@ -31,7 +31,7 @@ class Config:
         logger.debug("Config object created with default values")
 
     @classmethod
-    def from_cli(cls) -> Config:
+    def from_cli(cls) -> Self:
         """Parse command line and config files, returning a fully populated Config."""
         parser = argparse.ArgumentParser(
             description="Real‑Time Upscaler for Linux",

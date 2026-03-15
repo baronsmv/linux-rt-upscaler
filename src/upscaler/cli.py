@@ -115,9 +115,10 @@ def _get_active_window_with_delay(config: Config) -> Optional[window.WindowInfo]
 
 def main() -> None:
     """Main entry point."""
-    logger.info("Starting Linux RT Upscaler")
+    logger.info("Starting Real‑Time Upscaler for Linux")
     config: Config = Config.from_cli()
     win_info: Optional[window.WindowInfo] = None
+    proc: Optional[subprocess.Popen] = None
 
     # Obtain target window
     if config.select:
@@ -134,7 +135,7 @@ def main() -> None:
         print(f"Selected: {win_info.title}")
 
     elif config.program:
-        win_info = _launch_program_and_find_window(config)
+        win_info, proc = _launch_program_and_find_window(config)
         if win_info is None:
             sys.exit(1)
 
@@ -143,7 +144,6 @@ def main() -> None:
         if win_info is None:
             sys.exit(1)
 
-    # At this point we must have a valid window
     assert win_info is not None
     print(
         f"Target window: handle={win_info.handle}, {win_info.width}x{win_info.height}, title={win_info.title}"
@@ -200,9 +200,10 @@ def main() -> None:
     finally:
         pipeline.stop()
         logger.debug("Pipeline stopped")
-        if config.program:
-            pass
-        print("Clean exit.")
+        if proc is not None:
+            logger.info(f"Terminating launched process {proc.pid}")
+            proc.terminate()
+            proc.wait()
 
 
 if __name__ == "__main__":
