@@ -47,6 +47,8 @@ class Config:
             description="Real‑Time Upscaler for Linux",
             epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler",
         )
+        parser._positionals.title = "POSITIONAL ARGUMENTS"
+        parser._optionals.title = "GENERAL OPTIONS"
         parser.add_argument(
             "-c",
             "--config",
@@ -57,7 +59,7 @@ class Config:
         parser.add_argument("program", nargs="*", help="Program to launch and scale")
 
         # General section
-        general_group = parser.add_argument_group("General options")
+        general_group = parser.add_argument_group("INTERACTION OPTIONS")
         general_group.add_argument(
             "-s",
             "--select",
@@ -72,7 +74,7 @@ class Config:
         )
 
         # Upscaling section
-        upscaling_group = parser.add_argument_group("Upscaling options")
+        upscaling_group = parser.add_argument_group("UPSCALING OPTIONS")
         upscaling_group.add_argument(
             "-m",
             "--model",
@@ -99,7 +101,7 @@ class Config:
         )
 
         # Logging section
-        log_group = parser.add_argument_group("Logging options")
+        log_group = parser.add_argument_group("LOGGING OPTIONS")
         log_group.add_argument(
             "-q",
             "--quiet",
@@ -117,7 +119,7 @@ class Config:
         )
 
         # Timeout / window detection section
-        timeout_group = parser.add_argument_group("Window detection options")
+        timeout_group = parser.add_argument_group("WINDOW DETECTION OPTIONS")
         timeout_group.add_argument(
             "--target-delay",
             type=int,
