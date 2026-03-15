@@ -6,6 +6,7 @@ import signal
 import subprocess
 import sys
 import time
+from pathlib import Path
 from typing import Optional, List
 
 from PySide6.QtWidgets import QApplication
@@ -17,10 +18,22 @@ from .config import Config
 from .overlay import OverlayWindow
 from .pipeline import Pipeline
 
-logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
+
+
+def setup_logging(level: str, log_file: Optional[str]) -> None:
+    """Configure logging with the given level and optional file."""
+    handlers = [logging.StreamHandler(sys.stderr)]
+    if log_file:
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_file, encoding="utf-8"))
+
+    logging.basicConfig(
+        level=getattr(logging, level.upper(), logging.WARNING),
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=handlers,
+    )
 
 
 def get_x11_display_id() -> int:
@@ -99,9 +112,10 @@ def _get_active_window_with_delay(config: Config) -> Optional[window.WindowInfo]
     """
     Wait target_delay seconds and then return the currently active window.
     """
-    print(
-        f"No program specified. Will scale the currently active window in {config.target_delay} seconds..."
-    )
+    if config.log_level != "ERROR":
+        print(
+            f"No program specified. Will scale the currently active window in {config.target_delay} seconds..."
+        )
     time.sleep(config.target_delay)
     try:
         win_info = window.get_active_window()
@@ -115,8 +129,12 @@ def _get_active_window_with_delay(config: Config) -> Optional[window.WindowInfo]
 
 def main() -> None:
     """Main entry point."""
-    logger.info("Starting Real‑Time Upscaler for Linux")
-    config: Config = Config.from_cli()
+    config = Config.from_cli()
+    setup_logging(config.log_level, config.log_file)
+
+    logger = logging.getLogger(__name__)
+    logger.info("Starting Linux RT Upscaler")
+
     win_info: Optional[window.WindowInfo] = None
     proc: Optional[subprocess.Popen] = None
 
@@ -132,7 +150,8 @@ def main() -> None:
         win_info = _select_window_interactive(windows)
         if win_info is None:
             sys.exit(0)
-        print(f"Selected: {win_info.title}")
+        if config.log_level != "ERROR":
+            print(f"Selected: {win_info.title}")
 
     elif config.program:
         win_info, proc = _launch_program_and_find_window(config)
@@ -145,9 +164,11 @@ def main() -> None:
             sys.exit(1)
 
     assert win_info is not None
-    print(
-        f"Target window: handle={win_info.handle}, {win_info.width}x{win_info.height}, title={win_info.title}"
-    )
+
+    if config.log_level != "ERROR":
+        print(
+            f"Target window: handle={win_info.handle}, {win_info.width}x{win_info.height}, title={win_info.title}"
+        )
     logger.info(f"Target window confirmed: {win_info}")
 
     # Qt and overlay setup
@@ -155,7 +176,9 @@ def main() -> None:
     screen = app.primaryScreen()
     screen_size = screen.size()
     screen_w, screen_h = screen_size.width(), screen_size.height()
-    print(f"Screen resolution: {screen_w}x{screen_h}")
+
+    if config.log_level != "ERROR":
+        print(f"Screen resolution: {screen_w}x{screen_h}")
     logger.debug(f"Screen size: {screen_w}x{screen_h}")
 
     map_clicks = not config.disable_forwarding

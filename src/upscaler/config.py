@@ -15,18 +15,28 @@ class Config:
     """
 
     def __init__(self) -> None:
-        # Default values
+        # General
+        self.program: Optional[List[str]] = None
         self.select: bool = False
+        self.disable_forwarding: bool = False
+
+        # Upscaling
         self.model: str = "fast"
         self.double_upscale: bool = False
-        self.disable_forwarding: bool = False
-        self.config_file: Optional[str] = None
+
+        # Search window
         self.target_delay: int = 5
         self.pid_timeout: int = 5
         self.class_timeout: int = 5
         self.total_timeout: Optional[int] = 60
         self.starting_phase: int = 1
-        self.program: Optional[List[str]] = None
+
+        # Logging
+        self.log_level: str = "WARNING"
+        self.log_file: Optional[str] = None
+
+        # Configuration
+        self.config_file: Optional[str] = None
 
         logger.debug("Config object created with default values")
 
@@ -37,14 +47,33 @@ class Config:
             description="Real‑Time Upscaler for Linux",
             epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler",
         )
-        parser.add_argument("program", nargs="*", help="Program to launch and scale")
         parser.add_argument(
+            "-c",
+            "--config",
+            help="Path to config file (YAML)",
+        )
+
+        # Program argument
+        parser.add_argument("program", nargs="*", help="Program to launch and scale")
+
+        # General section
+        general_group = parser.add_argument_group("General options")
+        general_group.add_argument(
             "-s",
             "--select",
             action="store_true",
             help="Select a window from the list of open windows",
         )
-        parser.add_argument(
+        general_group.add_argument(
+            "-d",
+            "--disable-forwarding",
+            action="store_true",
+            help="Disable mouse forwarding (overlay becomes transparent to input)",
+        )
+
+        # Upscaling section
+        upscaling_group = parser.add_argument_group("Upscaling options")
+        upscaling_group.add_argument(
             "-m",
             "--model",
             choices=(
@@ -61,55 +90,66 @@ class Config:
             default="fast",
             help="Upscaling model to use (ordered from best to worst quality)",
         )
-        parser.add_argument(
-            "-d",
-            "--disable-forwarding",
-            action="store_true",
-            help="Disable mouse forwarding (overlay becomes transparent to input)",
-        )
-        parser.add_argument(
+        upscaling_group.add_argument(
             "-2",
             "--double-upscale",
             action="store_true",
             help="EXPERIMENTAL: Perform two 2× passes (total 4×) for higher"
             " resolutions screens (4k, 1440p) or low‑resolution sources",
         )
-        parser.add_argument(
-            "-c",
-            "--config",
-            help="Path to config file (YAML)",
+
+        # Logging section
+        log_group = parser.add_argument_group("Logging options")
+        log_group.add_argument(
+            "-q",
+            "--quiet",
+            action="store_true",
+            help="Decrease log verbosity (ERROR level)",
         )
-        parser.add_argument(
+        log_group.add_argument(
+            "--debug",
+            action="store_true",
+            help="Increase log verbosity (DEBUG level)",
+        )
+        log_group.add_argument(
+            "--log-file",
+            help="Write logs to this file (parent directories are created)",
+        )
+
+        # Timeout / window detection section
+        timeout_group = parser.add_argument_group("Window detection options")
+        timeout_group.add_argument(
             "--target-delay",
             type=int,
             default=5,
             help="Seconds to wait before capturing active window",
         )
-        parser.add_argument(
+        timeout_group.add_argument(
             "--pid-timeout",
             type=int,
             default=5,
             help="Seconds to try PID‑based window detection",
         )
-        parser.add_argument(
+        timeout_group.add_argument(
             "--class-timeout",
             type=int,
             default=5,
             help="Seconds to try class‑based window detection",
         )
-        parser.add_argument(
+        timeout_group.add_argument(
             "--total-timeout",
             type=int,
             default=60,
             help="Total seconds before giving up",
         )
-        parser.add_argument(
+        timeout_group.add_argument(
             "--starting-phase",
             type=int,
             choices=[1, 2],
             default=1,
             help="Start with phase 1 (PID) or 2 (class)",
         )
+
         args = parser.parse_args()
 
         config = cls()
@@ -119,6 +159,15 @@ class Config:
 
         # Override with CLI arguments
         config._apply_args(args)
+
+        # Log level and file
+        if args.debug:
+            config.log_level = "DEBUG"
+        elif args.quiet:
+            config.log_level = "ERROR"
+        if args.log_file:
+            config.log_file = args.log_file
+
         return config
 
     def _load_config_file(self, custom_path: Optional[str] = None) -> None:
