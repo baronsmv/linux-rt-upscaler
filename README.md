@@ -4,7 +4,17 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/linux-rt-upscaler.svg)](https://pypi.org/project/linux-rt-upscaler/)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-A real‑time AI upscaler for any application window on GNU/Linux. It uses CuNNy neural networks to perform 2× upscaling, then scales the result to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
+A real‑time AI upscaler for any application window on GNU/Linux. It uses [CuNNy](https://github.com/funnyplanter/CuNNy) neural networks to perform 2× (or 4×) upscaling, then scales the result to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
+
+## Results at 400% magnification
+
+![](./docs/comparisons/gurikaji/w40-60_h20-50_4x_comparison.png)
+
+![](./docs/comparisons/fatamoru/w30-50_h10-50_4x_comparison.png)
+
+![](./docs/comparisons/konosora/w10-30_h20-50_4x_comparison.png)
+
+![](./docs/comparisons/diagram/w40-70_h40-90_4x_comparison.png)
 
 ## Based on
 
@@ -17,7 +27,7 @@ Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L655
 ## Features
 
 - **AI‑Powered Upscaling** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high‑quality 2× upscaling of visual novels and illustrations.
-- **Complete Model Selection** – Choose from the CuNNy NVL variants, offering a range of quality/performance trade‑offs:
+- **Complete Model Selection** – Choose from 9 variants, offering a range of quality/performance trade‑offs:
   - `8x32` – Highest quality, slowest.
   - `4x32`
   - `4x24`
@@ -35,7 +45,7 @@ Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L655
 
 ## Requirements
 
-- GNU/Linux with X11 (Wayland is **not** supported)
+- GNU/Linux with X11 (Wayland is **not** supported currently)
 - Vulkan-capable GPU from any vendor (NVIDIA, AMD, Intel)
 - Vulkan drivers (`libvulkan-dev` on Debian/Ubuntu)
 - X11 development libraries (`libx11-dev`)
@@ -111,6 +121,8 @@ upscale -h
 
 ## Future Plans
 
+- [ ] **XWayland support** – Upscale X11 windows from a Wayland environment
+- [ ] **Option to force screen aspect ratio** – With a --deform option
 - [ ] **Standalone GUI application** – Create a windowed app interface for easier management of the upscaler
 - [ ] **Addition of more models** – Parse and include other models and shaders
 
