@@ -1,12 +1,20 @@
 import argparse
+import logging
 import os
-from typing import Optional, List
+from typing import Optional, List, Any
 
 import yaml
 
+logger = logging.getLogger(__name__)
+
 
 class Config:
-    def __init__(self):
+    """
+    Configuration container that loads defaults, then a YAML file,
+    then overrides with command‑line arguments.
+    """
+
+    def __init__(self) -> None:
         # Default values
         self.select: bool = False
         self.model: str = "fast"
@@ -20,8 +28,11 @@ class Config:
         self.starting_phase: int = 1
         self.program: Optional[List[str]] = None
 
+        logger.debug("Config object created with default values")
+
     @classmethod
-    def from_cli(cls):
+    def from_cli(cls) -> Config:
+        """Parse command line and config files, returning a fully populated Config."""
         parser = argparse.ArgumentParser(
             description="Real‑Time Upscaler for Linux",
             epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler",
@@ -102,15 +113,21 @@ class Config:
         args = parser.parse_args()
 
         config = cls()
+
         # Load config file if specified or default
         config._load_config_file(args.config)
+
         # Override with CLI arguments
         config._apply_args(args)
         return config
 
-    def _load_config_file(self, custom_path: Optional[str] = None):
-        """Load settings from YAML file. If custom_path is None, look in default locations."""
-        paths = []
+    def _load_config_file(self, custom_path: Optional[str] = None) -> None:
+        """
+        Load settings from a YAML file.
+        If custom_path is given, try that path; otherwise search default locations.
+        Only the first found file is loaded.
+        """
+        paths: List[str] = []
         if custom_path:
             paths.append(custom_path)
         else:
@@ -130,36 +147,50 @@ class Config:
                         data = yaml.safe_load(f)
                         if data:
                             self._update_from_dict(data)
-                    print(f"Loaded config from {path}")
+                    logger.info(f"Loaded config from {path}")
                 except Exception as e:
-                    print(f"Warning: Failed to load config {path}: {e}")
+                    logger.warning(f"Failed to load config {path}: {e}")
                 break  # use first found
 
-    def _update_from_dict(self, data: dict):
+    def _update_from_dict(self, data: dict[str, Any]) -> None:
         """Update config attributes from a dictionary (YAML contents)."""
         for key, value in data.items():
             if hasattr(self, key):
                 setattr(self, key, value)
+                logger.debug(f"Config set from file: {key} = {value!r}")
+            else:
+                logger.debug(f"Ignoring unknown config key: {key}")
 
-    def _apply_args(self, args):
+    def _apply_args(self, args: argparse.Namespace) -> None:
         """Override config with command‑line arguments."""
+        # Note: args.program can be an empty list; we preserve None if not set
         if args.program:
             self.program = args.program
+            logger.debug(f"CLI set program = {self.program}")
         if args.select:
             self.select = True
-        if args.model:
+            logger.debug("CLI set select = True")
+        if args.model != "fast":
             self.model = args.model
+            logger.debug(f"CLI set model = {self.model}")
         if args.double_upscale:
             self.double_upscale = True
+            logger.debug("CLI set double_upscale = True")
         if args.disable_forwarding:
             self.disable_forwarding = True
+            logger.debug("CLI set disable_forwarding = True")
         if args.target_delay != 5:
             self.target_delay = args.target_delay
+            logger.debug(f"CLI set target_delay = {self.target_delay}")
         if args.pid_timeout != 5:
             self.pid_timeout = args.pid_timeout
+            logger.debug(f"CLI set pid_timeout = {self.pid_timeout}")
         if args.class_timeout != 5:
             self.class_timeout = args.class_timeout
+            logger.debug(f"CLI set class_timeout = {self.class_timeout}")
         if args.total_timeout != 60:
             self.total_timeout = args.total_timeout
+            logger.debug(f"CLI set total_timeout = {self.total_timeout}")
         if args.starting_phase != 1:
             self.starting_phase = args.starting_phase
+            logger.debug(f"CLI set starting_phase = {self.starting_phase}")
