@@ -6,6 +6,8 @@
 
 A real‑time AI upscaler for any application window on GNU/Linux. It uses [CuNNy](https://github.com/funnyplanter/CuNNy) neural networks to perform 2× (or 4×) upscaling, then scales the result to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
 
+Now with full **XWayland support** – works seamlessly under Wayland compositors!
+
 ## Results at 400% magnification
 
 ![](https://github.com/baronsmv/linux-rt-upscaler/blob/main/docs/comparisons/gurikaji/w40-60_h20-50_4x_comparison.png)
@@ -41,11 +43,12 @@ Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L655
 - **Full‑Screen Output** – The upscaled image is displayed in a transparent overlay that covers your entire monitor, scaled to fill the screen while preserving aspect ratio.
 - **Input Forwarding** – Click, move, and drag on the upscaled image as if you were interacting directly with the original window.
 - **Hardware Accelerated** – GPU compute via Compushady (Vulkan) works on NVIDIA, AMD, and Intel GPUs.
+- **XWayland Compatible** – Runs under Wayland compositors by automatically forcing X11 platform for Qt and disabling Wayland Vulkan extensions.
 - **Low Overhead** – Minimal CPU/GPU usage; the final scaling pass uses hardware Lanczos2 filtering.
 
 ## Requirements
 
-- GNU/Linux with X11 (Wayland is **not** supported currently)
+- GNU/Linux (X11 or Wayland with XWayland)
 - Vulkan-capable GPU from any vendor (NVIDIA, AMD, Intel)
 - Vulkan drivers (`libvulkan-dev` on Debian/Ubuntu)
 - X11 development libraries (`libx11-dev`)
@@ -53,30 +56,61 @@ Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L655
 
 ## Installation
 
-### Option 1: Install from PyPI (Recommended)
+### 1. System dependencies
 
-```bash
-# Install system dependencies (Debian/Ubuntu)
+#### Debian / Ubuntu / Linux Mint
+
+```sh
+sudo apt update
 sudo apt install libvulkan-dev libx11-dev
+```
 
-# Install with pipx (recommended)
+#### Fedora / RHEL / CentOS (with EPEL)
+
+```sh
+sudo dnf install vulkan-loader-devel libX11-devel
+```
+
+#### Arch Linux
+
+```sh
+sudo pacman -S vulkan-devel libx11
+```
+
+#### openSUSE
+
+```sh
+sudo zypper install vulkan-devel libX11-devel
+```
+
+#### Alpine Linux
+
+```sh
+sudo apk add vulkan-headers libx11-dev
+```
+
+### 2. Python package
+
+#### Install with pipx (recommended)
+
+```sh
 pipx install linux-rt-upscaler
+```
 
-# Or with regular pip
+#### Or with regular pip (inside a virtual environment is advised)
+
+```sh
 pip install linux-rt-upscaler
 ```
 
-### Option 2: Install from source
+#### Or install from source
 
-```bash
+```sh
 # Clone the repository
 git clone https://github.com/baronsmv/linux-rt-upscaler.git
 cd linux-rt-upscaler
 
-# Install system dependencies (Debian/Ubuntu)
-sudo apt install libvulkan-dev libx11-dev
-
-# Install Python packages
+# Install Python dependencies
 pip install -r requirements.txt
 
 # Install the package in development mode
@@ -119,32 +153,34 @@ upscale -h
   - The overlay becomes semi‑transparent (20% opacity) when the mouse leaves the source window.
   - Clicks then pass through to whatever window is underneath (e.g., your desktop or other applications).
 
-## Future Plans
-
-- [ ] **XWayland support** – Upscale X11 windows from a Wayland environment
-- [ ] **Option to force screen aspect ratio**
-- [ ] **Standalone GUI application** – Create a windowed app interface for easier management of the upscaler
-- [ ] **Addition of more models** – Parse and include other models and shaders
-
 ## How It Works
 
 1. **Window Selection** – Uses X11 to find the target window by PID or WM_CLASS.
 2. **Capture** – Grabs the window's pixels using a fast custom C library.
-3. **AI Upscaling** – CuNNy compute shaders (written in HLSL, compiled via Compushady) produce a 2× larger image .
+3. **AI Upscaling** – CuNNy compute shaders (written in HLSL, compiled via Compushady) produce a 2× (or 4×) larger image .
 4. **Aspect‑Preserving Scaling** – A lightweight Lanczos2 compute shader scales the upscaled image to fill the monitor, adding black bars to maintain the original aspect ratio.
 5. **Display** – The result is rendered in a transparent overlay window that bypasses the window manager (so it always stays on top).
 6. **Input Forwarding** – Mouse events are transformed using the scaling ratios and sent to the original window via `XSendEvent`.
 
+## Future Plans
+
+- [ ] **Standalone GUI application** – Create a windowed app interface for easier management.
+- [ ] **Addition of more models** – Parse and include other models and shaders.
+- [ ] **Native Wayland support** – Support pure Wayland windows without XWayland.
+- [ ] **Option to force screen aspect ratio** – Let users choose between letterboxing or stretching.
+
 ## Motivation
 
-While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their **frame generation** capabilities to Linux. This project tackles the other half of the equation: **AI-powered upscaling** to deliver a native solution Linux has been missing, a fullscreen [Gamescope](https://github.com/ValveSoftware/gamescope)-like experience that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
+While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their **frame generation** capabilities to Linux.
+
+This project tackles the other half of the equation: **AI-powered upscaling** to deliver a native solution Linux has been missing, a fullscreen [Gamescope](https://github.com/ValveSoftware/gamescope)-like experience that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
 
 ## Acknowledgments
 
-- **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) project, which provided the foundational scripts and CuNNy integration 
-- **[funnyplanter](https://github.com/funnyplanter)** – For [CuNNy](https://github.com/funnyplanter/CuNNy), the neural network upscaling models, especially the Magpie NVL variants trained for visual novel content 
-- **[Compushady](https://github.com/rdeioris/compushady)** – Python library for GPU compute (Vulkan backend)
-- **[PySide6](https://pypi.org/project/PySide6/)** – Qt bindings used for the overlay window
-- **[python‑xlib](https://github.com/python-xlib/python-xlib)** – X11 client library for window management and input forwarding
-- **[pyewmh](https://github.com/parkouss/pyewmh)** – Query and control of window manager
-- **[psutil](https://github.com/giampaolo/psutil)** – Library for retrieving information on running processes
+- **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) project, which provided the foundational scripts and CuNNy integration.
+- **[funnyplanter](https://github.com/funnyplanter)** – For [CuNNy](https://github.com/funnyplanter/CuNNy), the neural network upscaling models, especially the Magpie NVL variants trained for visual novel content.
+- **[Compushady](https://github.com/rdeioris/compushady)** – Python library for GPU compute (Vulkan backend).
+- **[PySide6](https://pypi.org/project/PySide6/)** – Qt bindings used for the overlay window.
+- **[python‑xlib](https://github.com/python-xlib/python-xlib)** – X11 client library for window management and input forwarding.
+- **[pyewmh](https://github.com/parkouss/pyewmh)** – Query and control of window manager.
+- **[psutil](https://github.com/giampaolo/psutil)** – Library for retrieving information on running processes.
