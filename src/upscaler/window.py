@@ -122,8 +122,8 @@ def _check_window_for_match(
 
 def list_windows() -> List[WindowInfo]:
     """
-    Enumerate all visible X11 application windows and return a list of WindowInfo.
-    Filters out panels, desktops, and other non‑normal windows.
+    Enumerate all visible top‑level X11 application windows using _NET_CLIENT_LIST.
+    Returns a list of WindowInfo objects.
     """
     logger.info("Starting window enumeration")
 
@@ -132,7 +132,7 @@ def list_windows() -> List[WindowInfo]:
     root = disp.screen().root
     logger.debug(f"Root window ID: {root.id}")
 
-    # Intern all needed atoms at once
+    # Atoms we need
     atom_names = [
         "_NET_WM_WINDOW_TYPE",
         "_NET_WM_WINDOW_TYPE_NORMAL",
@@ -143,45 +143,57 @@ def list_windows() -> List[WindowInfo]:
         "_NET_WM_WINDOW_TYPE_UTILITY",
         "_NET_WM_WINDOW_TYPE_SPLASH",
         "_NET_WM_WINDOW_TYPE_DIALOG",
+        "_NET_CLIENT_LIST",
+        "_NET_WM_NAME",
+        "WM_NAME",
+        "WM_CLASS",
     ]
     atoms = _intern_atoms(disp, atom_names)
 
+    # Get the list of top‑level client windows
+    client_list_prop = root.get_full_property(atoms["_NET_CLIENT_LIST"], 0)
+    if not client_list_prop:
+        logger.warning(
+            "No _NET_CLIENT_LIST property found (EWMH not supported?). Falling back to recursive enumeration."
+        )
+        return []
+
+    client_windows = client_list_prop.value  # list of window IDs (integers)
+    logger.debug(f"Found {len(client_windows)} windows in _NET_CLIENT_LIST")
+
     windows: List[WindowInfo] = []
 
-    def is_application_window(win: Window) -> bool:
-        """Return True if the window is a normal application window."""
+    for wid in client_windows:
         try:
+            win = disp.create_resource_object("window", wid)
+
             # Must be viewable
             attrs = win.get_attributes()
-            if not attrs:
-                logger.debug(f"Window {win.id}: no attributes")
-                return False
-            if attrs.map_state != X.IsViewable:
+            if not attrs or attrs.map_state != X.IsViewable:
                 logger.debug(
-                    f"Window {win.id}: map_state={attrs.map_state} not viewable"
+                    f"Window {wid}: map_state={attrs.map_state if attrs else 'None'} not viewable"
                 )
-                return False
+                continue
 
-            # Must have reasonable size
+            # Must have reasonable size (>=200x200 to exclude small helpers)
             geom = win.get_geometry()
-            if geom.width < 100 or geom.height < 100:
+            if geom.width < 200 or geom.height < 200:
                 logger.debug(
-                    f"Window {win.id}: geometry {geom.width}x{geom.height} too small"
+                    f"Window {wid}: geometry {geom.width}x{geom.height} too small"
                 )
-                return False
+                continue
 
-            # Check window type
+            # Check window type (if present)
             type_prop = win.get_full_property(atoms["_NET_WM_WINDOW_TYPE"], 0)
             if type_prop:
                 atom_list = type_prop.value
-                logger.debug(
-                    f"Window {win.id} has _NET_WM_WINDOW_TYPE atoms: {atom_list}"
-                )
+                logger.debug(f"Window {wid} has _NET_WM_WINDOW_TYPE atoms: {atom_list}")
+                is_normal = False
+                reject = False
                 for atom in atom_list:
                     if atom == atoms["_NET_WM_WINDOW_TYPE_NORMAL"]:
-                        logger.debug(f"Window {win.id} is type NORMAL, accepting")
-                        return True
-                    if atom in (
+                        is_normal = True
+                    elif atom in (
                         atoms["_NET_WM_WINDOW_TYPE_DESKTOP"],
                         atoms["_NET_WM_WINDOW_TYPE_DOCK"],
                         atoms["_NET_WM_WINDOW_TYPE_TOOLBAR"],
@@ -189,74 +201,66 @@ def list_windows() -> List[WindowInfo]:
                         atoms["_NET_WM_WINDOW_TYPE_UTILITY"],
                         atoms["_NET_WM_WINDOW_TYPE_SPLASH"],
                     ):
-                        logger.debug(f"Window {win.id} is non-normal type, rejecting")
-                        return False
-                logger.debug(f"Window {win.id} has unknown type atoms, falling through")
-                return False
+                        reject = True
+                if reject:
+                    logger.debug(f"Window {wid} is non‑normal type, rejecting")
+                    continue
+                if not is_normal:
+                    # Unknown type – reject
+                    logger.debug(f"Window {wid} has unknown type atoms, rejecting")
+                    continue
             else:
-                logger.debug(
-                    f"Window {win.id} has no _NET_WM_WINDOW_TYPE, assuming normal"
-                )
-        except XError as e:
-            logger.warning(f"XError checking window {win.id}: {e}")
-            return False
-        except Exception as e:
-            logger.error(
-                f"Unexpected error checking window {win.id}: {e}", exc_info=True
-            )
-            return False
-
-        return True
-
-    def recurse(win: Window) -> None:
-        try:
-            if is_application_window(win):
-                # Get name
-                name = None
+                # No type property – check WM_CLASS to exclude XWayland helpers
                 try:
-                    name_prop = win.get_full_property(
-                        disp.intern_atom("_NET_WM_NAME"), 0
-                    )
+                    class_prop = win.get_full_property(atoms["WM_CLASS"], 0)
+                    if class_prop:
+                        data = class_prop.value
+                        strings = data.decode("latin1").split("\x00")
+                        if len(strings) >= 2:
+                            instance, klass = strings[0], strings[1]
+                            if (
+                                "xwayland" in instance.lower()
+                                or "xwayland" in klass.lower()
+                            ):
+                                logger.debug(
+                                    f"Window {wid} appears to be XWayland helper (class={klass}), rejecting"
+                                )
+                                continue
+                except:
+                    pass
+
+            # Get window title
+            name = None
+            try:
+                name_prop = win.get_full_property(atoms["_NET_WM_NAME"], 0)
+                if name_prop:
+                    name = name_prop.value.decode("utf-8", errors="ignore")
+            except Exception:
+                pass
+            if not name:
+                try:
+                    name_prop = win.get_full_property(atoms["WM_NAME"], 0)
                     if name_prop:
                         name = name_prop.value.decode("utf-8", errors="ignore")
-                        logger.debug(f"Window {win.id} _NET_WM_NAME: '{name}'")
-                except Exception as e:
-                    logger.debug(f"Failed to get _NET_WM_NAME for {win.id}: {e}")
+                except Exception:
+                    pass
 
-                if not name:
-                    try:
-                        name_prop = win.get_full_property(
-                            disp.intern_atom("WM_NAME"), 0
-                        )
-                        if name_prop:
-                            name = name_prop.value.decode("utf-8", errors="ignore")
-                            logger.debug(f"Window {win.id} WM_NAME: '{name}'")
-                    except Exception as e:
-                        logger.debug(f"Failed to get WM_NAME for {win.id}: {e}")
+            if name and name.strip():
+                winfo = WindowInfo(wid, geom.width, geom.height, name.strip())
+                windows.append(winfo)
+                logger.info(
+                    f"Found application window: {winfo.title} ({winfo.width}x{winfo.height})"
+                )
+            else:
+                logger.debug(f"Window {wid} passed filter but has no name, skipping")
 
-                if name and name.strip():
-                    geom = win.get_geometry()
-                    winfo = WindowInfo(win.id, geom.width, geom.height, name.strip())
-                    windows.append(winfo)
-                    logger.info(
-                        f"Found application window: {winfo.title} ({winfo.width}x{winfo.height})"
-                    )
-                else:
-                    logger.debug(
-                        f"Window {win.id} passed filter but has no name, skipping"
-                    )
-
-            # Recurse children
-            for child in win.query_tree().children:
-                recurse(child)
         except XError as e:
-            logger.warning(f"XError during recursion on window {win.id}: {e}")
+            logger.warning(f"XError processing window {wid}: {e}")
         except Exception as e:
             logger.error(
-                f"Unexpected error in recurse for window {win.id}: {e}", exc_info=True
+                f"Unexpected error processing window {wid}: {e}", exc_info=True
             )
 
-    recurse(root)
     disp.close()
     logger.info(f"Enumeration complete, found {len(windows)} windows")
     return windows
