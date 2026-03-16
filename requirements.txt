@@ -1,6 +1,0 @@
-compushady
-ewmh
-numpy
-psutil
-pyside6
-xlib

@@ -44,7 +44,14 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 - Vulkan-capable GPU from any vendor (NVIDIA, AMD, Intel)
 - Vulkan drivers (`libvulkan-dev` on Debian/Ubuntu)
 - X11 development libraries (`libx11-dev`)
-- Python 3.8 or newer
+- GCC and basic tools to compile C extensions (`build-essential`).
+- Python 3.8 - 3.13
+
+### Python 3.14 compatibility
+
+The current release does not support Python 3.14 due to a low‑level incompatibility with the Vulkan backend. If you have Python 3.14 installed, please use a Python 3.13 virtual environment. See #1 for more details on that.
+
+We are tracking the issue and will update once compatibility is restored.
 
 ## Installation
 
@@ -54,31 +61,31 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 
 ```sh
 sudo apt update
-sudo apt install libvulkan-dev libx11-dev
+sudo apt install build-essential libvulkan-dev libx11-dev
 ```
 
-#### Fedora / RHEL / CentOS (with EPEL)
+#### Fedora / RHEL / CentOS
 
 ```sh
-sudo dnf install vulkan-loader-devel libX11-devel
+sudo dnf install gcc make vulkan-loader-devel libX11-devel
 ```
 
 #### Arch Linux
 
 ```sh
-sudo pacman -S vulkan-devel libx11
+sudo pacman -S base-devel vulkan-devel libx11
 ```
 
 #### openSUSE
 
 ```sh
-sudo zypper install vulkan-devel libX11-devel
+sudo zypper install gcc make vulkan-devel libX11-devel
 ```
 
 #### Alpine Linux
 
 ```sh
-sudo apk add vulkan-headers libx11-dev
+sudo apk add build-base vulkan-headers libx11-dev
 ```
 
 ### 2. Python package
@@ -102,10 +109,7 @@ pip install linux-rt-upscaler
 git clone https://github.com/baronsmv/linux-rt-upscaler.git
 cd linux-rt-upscaler
 
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Install the package in development mode
+# Install the dependencies and the package in development mode
 pip install -e .
 ```
 

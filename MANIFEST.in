@@ -1,5 +1,5 @@
 include README.md
 include LICENSE
 recursive-include upscaler/shaders *.hlsl
-recursive-include upscaler/capture *.c *.so
+recursive-include upscaler/capture *.c
 prune docs
