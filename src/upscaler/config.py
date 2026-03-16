@@ -1,11 +1,25 @@
 import argparse
 import logging
 import os
+from importlib.metadata import version, PackageNotFoundError
 from typing import Any, List, Optional, Self
 
 import yaml
 
 logger = logging.getLogger(__name__)
+
+
+def get_version() -> str:
+    """Return the package version, with a fallback for development."""
+    try:
+        return version("linux-rt-upscaler")
+    except PackageNotFoundError:
+        try:
+            from . import __version__
+
+            return __version__
+        except ImportError:
+            return "unknown (development mode)"
 
 
 class Config:
@@ -49,6 +63,9 @@ class Config:
         )
         parser._positionals.title = "POSITIONAL ARGUMENTS"
         parser._optionals.title = "GENERAL OPTIONS"
+        parser.add_argument(
+            "-v", "--version", action="version", version=f"%(prog)s {get_version()}"
+        )
         parser.add_argument(
             "-c",
             "--config",
