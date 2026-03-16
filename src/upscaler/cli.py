@@ -8,16 +8,18 @@ import os
 import sys
 
 # --- Environment overrides (must be set before any imports that load X11/Vulkan) ---
-# Force Qt to use X11
-os.environ["QT_QPA_PLATFORM"] = "xcb"
-# Ensure X11 display is set (usually :0)
-os.environ["DISPLAY"] = ":0"
-# Tell the system we're in an X11 session (helps some toolkits)
-os.environ["XDG_SESSION_TYPE"] = "x11"
-# Remove Wayland environment variable to prevent Vulkan from picking Wayland
-os.environ.pop("WAYLAND_DISPLAY", None)
-# For AMD RADV driver, explicitly disable Wayland WSI
+os.environ["QT_QPA_PLATFORM"] = "xcb"  # Qt → X11
+os.environ["DISPLAY"] = ":0"  # Ensure X11 display
+os.environ["XDG_SESSION_TYPE"] = "x11"  # Tell toolkits we're in X11
+os.environ.pop("WAYLAND_DISPLAY", None)  # Remove Wayland socket reference
+
+# Vulkan driver‑specific overrides
+# Mesa drivers (RADV/ANV) – force X11 WSI
+os.environ["MESA_VK_WSI"] = "x11"
+# For older Mesa versions, also set RADV_DEBUG as fallback (ignored by non‑RADV)
 os.environ["RADV_DEBUG"] = "no_wayland_wsi"
+# NVIDIA proprietary driver – ensure GLX uses NVIDIA (optional, may help with interop)
+os.environ["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
 # -----------------------------------------------------------------------------------
 
 import ctypes
