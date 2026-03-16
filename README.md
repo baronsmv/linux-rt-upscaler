@@ -18,14 +18,6 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 
 ![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/comparisons/diagram/w40-70_h40-90_4x_comparison.png)
 
-## Based on
-
-Based on [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) by [L65536](https://github.com/L65536) (specifically its [v07linux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux/tree/main/v07linux)), with the following differences:
-
-- **Full‑screen scaling** – The upscaled image now fills the monitor, applying a second scaling layer while preserving aspect ratio.
-- **Click/motion forwarding** – Mouse clicks and motion are forwarded to the original window with proper coordinate transformation. This can be deactivated with the `-d` option.
-- **Support all CuNNy NVL models** – All NVL models have been translated to work in Compushady.
-
 ## Features
 
 - **AI‑Powered Upscaling** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high‑quality 2× upscaling of visual novels and illustrations.
@@ -177,7 +169,9 @@ This project tackles the other half of the equation: **AI-powered upscaling** to
 
 ## Acknowledgments
 
-- **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux) project, which provided the foundational scripts and CuNNy integration.
+This project stands on the shoulders of several open‑source works:
+
+- **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real‑time CuNNy upscaling on Linux. This project extends that foundation with full‑screen scaling, accurate input forwarding, and support for all CuNNy NVL models and GPU vendors.
 - **[funnyplanter](https://github.com/funnyplanter)** – For [CuNNy](https://github.com/funnyplanter/CuNNy), the neural network upscaling models, especially the Magpie NVL variants trained for visual novel content.
 - **[Compushady](https://github.com/rdeioris/compushady)** – Python library for GPU compute (Vulkan backend).
 - **[PySide6](https://pypi.org/project/PySide6/)** – Qt bindings used for the overlay window.
