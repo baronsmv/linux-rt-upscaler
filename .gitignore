@@ -9,7 +9,6 @@ __pycache__/
 
 # C extensions
 *.so
-!src/upscaler/capture/captureRGBX.so  # Keep the compiled library
 
 # Distribution / packaging
 .Python
