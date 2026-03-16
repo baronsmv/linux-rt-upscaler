@@ -36,7 +36,7 @@ from compushady.formats import R8G8B8A8_UNORM
 
 from . import window
 from .config import Config
-from .monitor import get_monitor_geometry
+from .monitor import get_monitor_list, get_monitor, get_monitor_geometry
 from .overlay import OverlayWindow
 from .pipeline import Pipeline
 
@@ -201,7 +201,11 @@ def main() -> None:
 
     # Qt and overlay setup
     app = QApplication([])
-    screen_x, screen_y, screen_w, screen_h = get_monitor_geometry(config.monitor)
+    if config.log_level != "ERROR":
+        print(f"Detected monitors: {get_monitor_list()}")
+
+    monitor = get_monitor(config.monitor)
+    screen_x, screen_y, screen_w, screen_h = get_monitor_geometry(monitor)
     logger.info(f"Overlay geometry: ({screen_x},{screen_y}) {screen_w}x{screen_h}")
 
     if config.log_level != "ERROR":

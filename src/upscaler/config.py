@@ -99,8 +99,8 @@ class Config:
             "--monitor",
             type=str,
             default="primary",
-            help="Monitor to cover: 'primary', 'all', or monitor name/index "
-            "(e.g., 'HDMI-1', 0). Default: primary.",
+            help="Monitor to cover: 'primary', 'all' (to cover all multi-monitor space),"
+            " or monitor name/index (e.g., 'HDMI-1', 0). Default: primary.",
         )
 
         # Upscaling section

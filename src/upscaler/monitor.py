@@ -1,4 +1,5 @@
 import logging
+from typing import List, Tuple
 
 from PySide6.QtCore import QRect
 from PySide6.QtGui import QGuiApplication
@@ -6,9 +7,13 @@ from PySide6.QtGui import QGuiApplication
 logger = logging.getLogger(__name__)
 
 
-def get_monitor_geometry(monitor_spec: str) -> tuple[int, int, int, int]:
+def get_monitor_list() -> List[str]:
+    return [screen.name() for screen in QGuiApplication.screens()]
+
+
+def get_monitor(monitor_spec: str) -> QRect:
     """
-    Return (x, y, width, height) of the monitor(s) specified.
+    Return the monitor specified.
     - 'primary'          → primary screen
     - 'all'              → union of all screens (virtual desktop)
     - integer as string  → screen at that index (e.g., '0')
@@ -23,20 +28,20 @@ def get_monitor_geometry(monitor_spec: str) -> tuple[int, int, int, int]:
 
     if monitor_spec == "primary":
         geom = primary.geometry()
-        return geom.x(), geom.y(), geom.width(), geom.height()
+        return geom
 
     if monitor_spec == "all":
         virtual = QRect()
         for screen in screens:
             virtual = virtual.united(screen.geometry())
-        return virtual.x(), virtual.y(), virtual.width(), virtual.height()
+        return virtual
 
     # Try as integer index
     try:
         idx = int(monitor_spec)
         if 0 <= idx < len(screens):
             geom = screens[idx].geometry()
-            return geom.x(), geom.y(), geom.width(), geom.height()
+            return geom
         else:
             logger.warning(f"Monitor index {idx} out of range. Using primary.")
     except ValueError:
@@ -47,9 +52,14 @@ def get_monitor_geometry(monitor_spec: str) -> tuple[int, int, int, int]:
     for screen in screens:
         if spec_lower in screen.name().lower():
             geom = screen.geometry()
-            return geom.x(), geom.y(), geom.width(), geom.height()
+            return geom
 
     # Fallback
     logger.warning(f"Monitor spec '{monitor_spec}' not recognised. Using primary.")
     geom = primary.geometry()
-    return geom.x(), geom.y(), geom.width(), geom.height()
+    return geom
+
+
+def get_monitor_geometry(monitor: QRect) -> Tuple[int, int, int, int]:
+    """Return (x, y, width, height) of the monitor(s) specified."""
+    return monitor.x(), monitor.y(), monitor.width(), monitor.height()
