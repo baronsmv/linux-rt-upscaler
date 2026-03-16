@@ -61,31 +61,31 @@ We are tracking the issue and will update once compatibility is restored.
 
 ```sh
 sudo apt update
-sudo apt install build-essential libvulkan-dev libx11-dev
+sudo apt install libvulkan-dev libx11-dev
 ```
 
 #### Fedora / RHEL / CentOS
 
 ```sh
-sudo dnf install gcc make vulkan-loader-devel libX11-devel
+sudo dnf install vulkan-loader-devel libX11-devel
 ```
 
 #### Arch Linux
 
 ```sh
-sudo pacman -S base-devel vulkan-devel libx11
+sudo pacman -S vulkan-devel libx11
 ```
 
 #### openSUSE
 
 ```sh
-sudo zypper install gcc make vulkan-devel libX11-devel
+sudo zypper install vulkan-devel libX11-devel
 ```
 
 #### Alpine Linux
 
 ```sh
-sudo apk add build-base vulkan-headers libx11-dev
+sudo apk add vulkan-headers libx11-dev
 ```
 
 ### 2. Python package
@@ -105,6 +105,9 @@ pip install linux-rt-upscaler
 #### Or install from source
 
 ```sh
+# Install additional system dependencies for C compilation
+sudo apt install gcc make
+
 # Clone the repository
 git clone https://github.com/baronsmv/linux-rt-upscaler.git
 cd linux-rt-upscaler

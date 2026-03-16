@@ -1,0 +1,61 @@
+name: Build and upload to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'               # Build on version tags
+  workflow_dispatch:        # Allow manual trigger
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel
+
+      - name: Build wheels (Linux)
+        env:
+          # Install libX11-devel before building on Linux
+          CIBW_BEFORE_ALL_LINUX: >
+            yum install -y libX11-devel || dnf install -y libX11-devel
+          # Build for manylinux x86_64 and aarch64
+          CIBW_ARCHS_LINUX: auto
+          # Test the wheels
+          CIBW_TEST_COMMAND: "python -c 'import upscaler.capture'"
+        run: python -m cibuildwheel --output-dir wheelhouse
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  upload_pypi:
+    name: Upload wheels to PyPI
+    needs: [build_wheels]
+    runs-on: ubuntu-22.04
+    # Upload only if the run was triggered by a tag
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      id-token: write   # Required for trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
