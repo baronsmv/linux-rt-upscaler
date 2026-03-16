@@ -8,13 +8,13 @@ A real‑time AI upscaler for any application window on GNU/Linux. It uses [CuNN
 
 ## Results at 400% magnification
 
-![](./docs/comparisons/gurikaji/w40-60_h20-50_4x_comparison.png)
+![](https://github.com/baronsmv/linux-rt-upscaler/blob/main/docs/comparisons/gurikaji/w40-60_h20-50_4x_comparison.png)
 
-![](./docs/comparisons/fatamoru/w30-50_h10-50_4x_comparison.png)
+![](https://github.com/baronsmv/linux-rt-upscaler/blob/main/docs/comparisons/fatamoru/w30-50_h10-50_4x_comparison.png)
 
-![](./docs/comparisons/konosora/w10-30_h20-50_4x_comparison.png)
+![](https://github.com/baronsmv/linux-rt-upscaler/blob/main/docs/comparisons/konosora/w10-30_h20-50_4x_comparison.png)
 
-![](./docs/comparisons/diagram/w40-70_h40-90_4x_comparison.png)
+![](https://github.com/baronsmv/linux-rt-upscaler/blob/main/docs/comparisons/diagram/w40-70_h40-90_4x_comparison.png)
 
 ## Based on
 
