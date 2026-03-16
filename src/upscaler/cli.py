@@ -1,10 +1,29 @@
 #!/usr/bin/env python3
 
+import faulthandler
+
+faulthandler.enable()
+
+import os
+import sys
+
+# --- Environment overrides (must be set before any imports that load X11/Vulkan) ---
+# Force Qt to use X11
+os.environ["QT_QPA_PLATFORM"] = "xcb"
+# Ensure X11 display is set (usually :0)
+os.environ["DISPLAY"] = ":0"
+# Tell the system we're in an X11 session (helps some toolkits)
+os.environ["XDG_SESSION_TYPE"] = "x11"
+# Remove Wayland environment variable to prevent Vulkan from picking Wayland
+os.environ.pop("WAYLAND_DISPLAY", None)
+# For AMD RADV driver, explicitly disable Wayland WSI
+os.environ["RADV_DEBUG"] = "no_wayland_wsi"
+# -----------------------------------------------------------------------------------
+
 import ctypes
 import logging
 import signal
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Optional, List
@@ -43,7 +62,13 @@ def get_x11_display_id() -> int:
     """
     logger.debug("Opening X11 display for swapchain")
     xlib = ctypes.cdll.LoadLibrary("libX11.so")
+
     display_ptr = xlib.XOpenDisplay(ctypes.c_int(0))
+    # XOpenDisplay returns a pointer; NULL (0) on failure
+    if display_ptr == 0:
+        logger.error("XOpenDisplay failed. Is X11 running?")
+        raise RuntimeError("Cannot open X display – is XWayland running?")
+
     logger.debug(f"XOpenDisplay returned: {display_ptr}")
     return display_ptr
 
@@ -188,14 +213,24 @@ def main() -> None:
         map_clicks=map_clicks,
         target_handle=win_info.handle if map_clicks else None,
     )
+
     if map_clicks:
         overlay.set_client_size(win_info.width, win_info.height)
         logger.debug("Client size set on overlay for click mapping")
     else:
         logger.debug("Click mapping disabled, overlay is transparent to input")
 
-    # Swapchain creation
+    # Give Qt time to map the window and process events
+    time.sleep(0.5)
+    QApplication.processEvents()
+    logger.debug("Overlay window should now be mapped")
+
+    # Swapchain – use a fresh X display
     display_id = get_x11_display_id()
+    logger.debug(
+        f"Creating swapchain with display_id={display_id}, overlay.xid={overlay.xid}"
+    )
+
     swapchain = Swapchain((display_id, overlay.xid), R8G8B8A8_UNORM, 3)
     logger.debug("Swapchain created")
 

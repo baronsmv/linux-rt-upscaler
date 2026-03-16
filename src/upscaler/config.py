@@ -114,7 +114,7 @@ class Config:
             "--double-upscale",
             action="store_true",
             help="EXPERIMENTAL: Perform two 2× passes (total 4×) for higher"
-            " resolutions screens (4k, 1440p) or low‑resolution sources",
+            " resolution screens (4k, 1440p) or low‑resolution sources",
         )
 
         # Logging section

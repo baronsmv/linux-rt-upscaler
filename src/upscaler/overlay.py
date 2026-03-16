@@ -79,6 +79,13 @@ class OverlayWindow(QMainWindow):
                 raise ValueError("target_handle must be provided when map_clicks=True")
             logger.debug("Opening X display for event forwarding.")
             self.disp = display.Display()
+
+            # Store the raw X display pointer when the display is opened
+            if map_clicks:
+                self.disp = display.Display()
+                logger.debug("Opening X display for event forwarding.")
+                self.installEventFilter(self)
+
             self.installEventFilter(self)
 
     def set_scaling_rect(self, rect: List[int]) -> None:
