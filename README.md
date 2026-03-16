@@ -49,7 +49,7 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 
 ### Python 3.14 compatibility
 
-The current release does not support Python 3.14 due to a low‑level incompatibility with the Vulkan backend. If you have Python 3.14 installed, please use a Python 3.13 virtual environment. See #1 for more details on that.
+The current release does not support Python 3.14 due to a low‑level incompatibility with the Vulkan backend. If you have Python 3.14 installed, please use a Python 3.13 virtual environment. See [this report](https://github.com/baronsmv/linux-rt-upscaler/issues/1) for more details on that.
 
 We are tracking the issue and will update once compatibility is restored.
 
