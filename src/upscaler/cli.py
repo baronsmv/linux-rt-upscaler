@@ -36,6 +36,7 @@ from compushady.formats import R8G8B8A8_UNORM
 
 from . import window
 from .config import Config
+from .monitor import get_monitor_geometry
 from .overlay import OverlayWindow
 from .pipeline import Pipeline
 
@@ -200,9 +201,8 @@ def main() -> None:
 
     # Qt and overlay setup
     app = QApplication([])
-    screen = app.primaryScreen()
-    screen_size = screen.size()
-    screen_w, screen_h = screen_size.width(), screen_size.height()
+    screen_x, screen_y, screen_w, screen_h = get_monitor_geometry(config.monitor)
+    logger.info(f"Overlay geometry: ({screen_x},{screen_y}) {screen_w}x{screen_h}")
 
     if config.log_level != "ERROR":
         print(f"Screen resolution: {screen_w}x{screen_h}")
@@ -213,7 +213,9 @@ def main() -> None:
         screen_w,
         screen_h,
         map_clicks=map_clicks,
-        target_handle=win_info.handle if map_clicks else None,
+        target_handle=win_info.handle if not config.disable_forwarding else None,
+        initial_x=screen_x,
+        initial_y=screen_y,
     )
 
     if map_clicks:

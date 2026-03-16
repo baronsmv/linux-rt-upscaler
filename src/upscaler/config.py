@@ -34,6 +34,9 @@ class Config:
         self.select: bool = False
         self.disable_forwarding: bool = False
 
+        # Display
+        self.monitor: str = "primary"
+
         # Upscaling
         self.model: str = "fast"
         self.double_upscale: bool = False
@@ -90,6 +93,16 @@ class Config:
             help="Disable mouse forwarding (overlay becomes transparent to input)",
         )
 
+        # Display section
+        display_group = parser.add_argument_group("DISPLAY OPTIONS")
+        display_group.add_argument(
+            "--monitor",
+            type=str,
+            default="primary",
+            help="Monitor to cover: 'primary', 'all', or monitor name/index "
+            "(e.g., 'HDMI-1', 0). Default: primary.",
+        )
+
         # Upscaling section
         upscaling_group = parser.add_argument_group("UPSCALING OPTIONS")
         upscaling_group.add_argument(
@@ -107,7 +120,8 @@ class Config:
                 "veryfast",
             ),
             default="fast",
-            help="Upscaling model to use (ordered from best to worst quality)",
+            help="Upscaling model to use (ordered from best to worst quality)."
+            " Default: fast",
         )
         upscaling_group.add_argument(
             "-2",
@@ -247,6 +261,9 @@ class Config:
         if args.disable_forwarding:
             self.disable_forwarding = True
             logger.debug("CLI set disable_forwarding = True")
+        if args.monitor != "primary":
+            self.monitor = args.monitor
+            logger.debug(f"CLI set monitor = {self.monitor}")
         if args.target_delay != 5:
             self.target_delay = args.target_delay
             logger.debug(f"CLI set target_delay = {self.target_delay}")

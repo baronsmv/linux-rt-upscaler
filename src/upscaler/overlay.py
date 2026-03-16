@@ -32,6 +32,8 @@ class OverlayWindow(QMainWindow):
         screen_height: int,
         map_clicks: bool = False,
         target_handle: Optional[int] = None,
+        initial_x: int = 0,
+        initial_y: int = 0,
     ) -> None:
         """
         Create and show the overlay window.
@@ -56,7 +58,7 @@ class OverlayWindow(QMainWindow):
 
         # Basic window properties
         self.setWindowOpacity(1.0)
-        self.setGeometry(0, 0, screen_width, screen_height)
+        self.setGeometry(initial_x, initial_y, screen_width, screen_height)
 
         # Window flags: always bypass window manager (to stay on top),
         # and optionally transparent for input if not mapping clicks.
