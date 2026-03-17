@@ -19,11 +19,11 @@ from PySide6.QtWidgets import QApplication
 from compushady import Swapchain
 from compushady.formats import R8G8B8A8_UNORM
 
-from .monitor import get_monitor, get_monitor_geometry, get_monitor_list
 from .overlay import OverlayWindow
 from .pipeline import Pipeline
 from .utils.config import Config
 from .utils.logging import setup_logging
+from .utils.monitor import get_monitor, get_monitor_geometry, get_monitor_list
 from .utils.x11 import get_display
 from .window import (
     list_windows,

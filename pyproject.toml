@@ -51,7 +51,8 @@ package-dir = { "" = "src" }
 packages = [
     "upscaler",
     "upscaler.capture",
-    "upscaler.shaders"
+    "upscaler.shaders",
+    "upscaler.utils"
 ]
 
 [tool.setuptools.package-data]
