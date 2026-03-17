@@ -64,7 +64,7 @@ class OverlayWindow(QMainWindow):
         )
 
         self.mode = mode
-        self.map_clicks = mode != OverlayMode.ALWAYS_ON_TOP_TRANSPARENT
+        self.map_events = mode != OverlayMode.ALWAYS_ON_TOP_TRANSPARENT
 
         self.scaling_rect: List[int] = [0, 0, 0, 0]  # x, y, w, h
         self.target_handle = target.handle
@@ -76,20 +76,18 @@ class OverlayWindow(QMainWindow):
         self._x_root: Optional[int] = None
 
         # Forwarding enabled (disabled when minimized)
-        self._forwarding_enabled = self.map_clicks
+        self._forwarding_enabled = self.map_events
 
         # Set window flags and geometry according to mode
         self._setup_window(width, height, initial_x, initial_y)
 
-        self.setMouseTracking(self.map_clicks)  # track mouse moves only if mapping
+        self.setMouseTracking(self.map_events)  # track mouse moves only if mapping
         self.show()
 
         self.xid = int(self.winId())
         logger.debug(f"Overlay XID: {self.xid}")
 
-        if self.map_clicks:
-            if self.target_handle is None:
-                raise ValueError("target_handle required when map_clicks=True")
+        if self.map_events:
             self._open_x_display()
             self.installEventFilter(self)
 
@@ -158,7 +156,7 @@ class OverlayWindow(QMainWindow):
             logger.error(f"Failed to open X display: {e}", exc_info=True)
             self._x_display = None
             self._x_root = None
-            self.map_clicks = False
+            self.map_events = False
             self._forwarding_enabled = False
             # Fallback to click‑through
             flags = self.windowFlags() | Qt.WindowTransparentForInput
@@ -179,9 +177,9 @@ class OverlayWindow(QMainWindow):
 
     def disable_click_forwarding(self) -> None:
         """Permanently disable forwarding (e.g., target window destroyed)."""
-        if self.map_clicks:
+        if self.map_events:
             logger.info("Disabling click forwarding.")
-            self.map_clicks = False
+            self.map_events = False
             self._forwarding_enabled = False
             self.target_handle = None
             self._close_x_display()
@@ -208,8 +206,8 @@ class OverlayWindow(QMainWindow):
         logger.debug(f"Client size set to {w}x{h}")
 
     def eventFilter(self, obj: Any, event: QEvent) -> bool:
-        """Filter mouse events and forward them when map_clicks is enabled."""
-        if not self.map_clicks or not self._forwarding_enabled:
+        """Filter mouse events and forward them when map_events is enabled."""
+        if not self.map_events or not self._forwarding_enabled:
             return super().eventFilter(obj, event)
 
         if event.type() in (

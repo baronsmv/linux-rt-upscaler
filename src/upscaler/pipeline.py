@@ -146,10 +146,10 @@ class Pipeline:
         self.frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
         self.stopped_event = threading.Event()
 
-        # X11 connection for geometry queries (used only if map_clicks is False)
+        # X11 connection for geometry queries (used only if map_events is False)
         self._x_display: Optional[Display] = None
         self._x_window: Optional[XlibWindow] = None
-        if not self.overlay.map_clicks:
+        if not self.overlay.map_events:
             self._open_x_display()
 
     def _open_x_display(self) -> None:
@@ -206,7 +206,7 @@ class Pipeline:
         Update overlay opacity based on mouse position relative to target window.
         If the window is gone, set opacity to 1.0 and log a warning.
         """
-        if self.overlay.map_clicks:
+        if self.overlay.map_events:
             self.overlay.setWindowOpacity(1.0)
             return
 
