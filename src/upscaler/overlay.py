@@ -4,6 +4,7 @@ from typing import Optional, List, Tuple, Any
 from PySide6.QtCore import Qt, QEvent, QPoint
 from PySide6.QtWidgets import QMainWindow, QApplication
 from Xlib import X, display
+from Xlib.error import BadWindow, XError
 from Xlib.protocol import event as xevent
 
 logger = logging.getLogger(__name__)
@@ -16,12 +17,11 @@ class OverlayWindow(QMainWindow):
       - Forward mouse events to a target X11 window (for click mapping).
     """
 
-    # Mapping from Qt button to X11 button number
+    # Mapping from Qt button to X11 button number (1–3, 4–5 for scroll, 8–9 for extra)
     _BUTTON_MAP = {
         Qt.LeftButton: 1,
         Qt.MiddleButton: 2,
         Qt.RightButton: 3,
-        # Qt.XButton1 and Qt.XButton2 map to 8 and 9 (common X11 buttons 4/5 are scroll)
         Qt.XButton1: 8,
         Qt.XButton2: 9,
     }
@@ -51,10 +51,18 @@ class OverlayWindow(QMainWindow):
 
         self.map_clicks = map_clicks
         self.target_handle = target_handle
-        self.scaling_rect: List[int] = [0, 0, 0, 0]  # x, y, w, h
+        self.scaling_rect: List[int] = [
+            0,
+            0,
+            0,
+            0,
+        ]  # x, y, w, h (in screen coordinates)
         self.client_width: Optional[int] = None
         self.client_height: Optional[int] = None
-        self.disp: Optional[display.Display] = None
+
+        # X11 connection for event forwarding (only opened if map_clicks is True)
+        self._x_display: Optional[display.Display] = None
+        self._x_root: Optional[int] = None
 
         # Basic window properties
         self.setWindowOpacity(1.0)
@@ -75,20 +83,62 @@ class OverlayWindow(QMainWindow):
         self.xid = int(self.winId())
         logger.debug(f"Overlay XID: {self.xid}")
 
+        # If forwarding is enabled, open X display and install event filter
         if map_clicks:
             if target_handle is None:
                 logger.error("map_clicks=True requires a target_handle")
                 raise ValueError("target_handle must be provided when map_clicks=True")
-            logger.debug("Opening X display for event forwarding.")
-            self.disp = display.Display()
 
-            # Store the raw X display pointer when the display is opened
-            if map_clicks:
-                self.disp = display.Display()
-                logger.debug("Opening X display for event forwarding.")
-                self.installEventFilter(self)
-
+            self._open_x_display()
             self.installEventFilter(self)
+
+    def _open_x_display(self) -> None:
+        """Open a connection to the X server for sending events."""
+        try:
+            self._x_display = display.Display()
+            self._x_root = int(self._x_display.screen().root.id)
+            logger.debug("Opened X display for event forwarding.")
+        except Exception as e:
+            logger.error(f"Failed to open X display: {e}", exc_info=True)
+            self._x_display = None
+            self._x_root = None
+            # Disable forwarding because we can't send events
+            self.map_clicks = False
+            # Update window flags to become click‑through
+            self.setWindowFlags(self.windowFlags() | Qt.WindowTransparentForInput)
+            self.show()  # re‑apply flags
+
+    def closeEvent(self, event: Any) -> None:
+        """Ensure X display is closed when the window is destroyed."""
+        self._close_x_display()
+        super().closeEvent(event)
+
+    def _close_x_display(self) -> None:
+        """Safely close the X display connection."""
+        if self._x_display is not None:
+            try:
+                self._x_display.close()
+                logger.debug("Closed X display.")
+            except Exception as e:
+                logger.warning(f"Error closing X display: {e}")
+            finally:
+                self._x_display = None
+                self._x_root = None
+
+    def disable_click_forwarding(self) -> None:
+        """
+        Permanently disable mouse forwarding (e.g., when target window is destroyed).
+        This also makes the overlay click‑through.
+        """
+        if self.map_clicks:
+            logger.info("Disabling click forwarding.")
+            self.map_clicks = False
+            self.target_handle = None
+            self._close_x_display()
+            # Make window transparent for input
+            flags = self.windowFlags() | Qt.WindowTransparentForInput
+            self.setWindowFlags(flags)
+            self.show()  # re‑apply flags
 
     def set_scaling_rect(self, rect: List[int]) -> None:
         """
@@ -128,7 +178,7 @@ class OverlayWindow(QMainWindow):
         Returns (target_x, target_y, inside_flag). If the point is outside the
         scaling rectangle or client size is not set, inside_flag is False.
         """
-        if not self.scaling_rect:
+        if not self.scaling_rect or self.scaling_rect[2] == 0:
             logger.debug("_map_coordinates: scaling_rect not set")
             return 0, 0, False
 
@@ -167,7 +217,7 @@ class OverlayWindow(QMainWindow):
             state |= X.Button3Mask
         if buttons & Qt.MiddleButton:
             state |= X.Button2Mask
-        # Xlib also defines Button4Mask and Button5Mask for scroll, but Qt doesn't map them directly
+        # Scroll buttons are not usually in the button state mask, but we could add them if needed
         logger.debug(f"Current button state mask: {state}")
         return state
 
@@ -182,30 +232,38 @@ class OverlayWindow(QMainWindow):
         return x11_btn
 
     def _send_event(self, ev: Any) -> None:
-        """Send an X11 event to the target window and flush the display."""
-        if self.disp is None or self.target_handle is None:
+        """
+        Send an X11 event to the target window and flush the display.
+        Catches X errors and disables forwarding if the target window is gone.
+        """
+        if self._x_display is None or self.target_handle is None:
             logger.error("Cannot send event: no X display or target handle")
             return
 
         try:
-            self.disp.send_event(
+            self._x_display.send_event(
                 int(self.target_handle),
                 ev,
                 event_mask=X.ButtonPressMask
                 | X.ButtonReleaseMask
                 | X.PointerMotionMask,
             )
-            self.disp.flush()
+            self._x_display.flush()
             logger.debug(f"Sent event: {ev}")
+        except (BadWindow, XError) as e:
+            logger.warning(
+                f"Target window disappeared; disabling click forwarding: {e}"
+            )
+            self.disable_click_forwarding()
         except Exception as e:
-            logger.error(f"Failed to send X11 event: {e}", exc_info=True)
+            logger.error(f"Unexpected error sending X11 event: {e}", exc_info=True)
 
     def _handle_mouse(self, event: QEvent) -> None:
         """
         Convert a Qt mouse event to an X11 event and forward it.
         """
-        if self.disp is None:
-            logger.warning("_handle_mouse called but X display not open")
+        if self._x_display is None or self.target_handle is None:
+            logger.debug("_handle_mouse called but forwarding not available")
             return
 
         # Get global screen coordinates from the event
@@ -221,9 +279,9 @@ class OverlayWindow(QMainWindow):
             return
 
         # Common X11 fields
-        root_id = int(self.disp.screen().root.id)
+        root_id = self._x_root
         window_id = int(self.target_handle)
-        time = X.CurrentTime  # we could use event.timestamp() if needed
+        time = X.CurrentTime  # could use event.timestamp() if needed
 
         if event.type() == QEvent.MouseMove:
             state = self._get_current_button_state()
@@ -263,7 +321,7 @@ class OverlayWindow(QMainWindow):
                     root_y=screen_y,
                     time=time,
                     detail=x11_button,
-                    state=0,  # no modifiers for press (releases also 0)
+                    state=0,  # no modifiers for press
                     event_x=target_x,
                     event_y=target_y,
                     child=0,

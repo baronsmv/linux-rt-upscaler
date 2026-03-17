@@ -4,10 +4,11 @@ import struct
 import threading
 import time
 from queue import Queue, Empty
-from typing import Optional, Any
+from typing import Optional, Any, Tuple
 
 from PySide6.QtGui import QCursor
 from Xlib.display import Display
+from Xlib.error import XError, BadWindow
 from Xlib.xobject.drawable import Window as XlibWindow
 from compushady import (
     Compute,
@@ -24,17 +25,16 @@ from compushady.shaders import hlsl
 from .capture.capture import FrameGrabber
 from .shaders.srcnn import SRCNN
 
-# Module logger
 logger = logging.getLogger(__name__)
 
 
 def _calculate_scaling_rect(
     src_w: int, src_h: int, dst_w: int, dst_h: int
-) -> tuple[int, int, int, int]:
+) -> Tuple[int, int, int, int]:
     """
     Calculate the letterboxed destination rectangle that preserves aspect ratio.
 
-    Returns (x, y, w, h) where (x,y) is the top‑left corner and (w,h) the size.
+    Returns (x, y, w, h) where (x, y) is the top‑left corner and (w, h) the size.
     """
     src_aspect = src_w / src_h
     screen_aspect = dst_w / dst_h
@@ -66,7 +66,7 @@ class Pipeline:
 
     def __init__(
         self,
-        window_info: Any,  # actually WindowInfo from the window module
+        window_info: Any,  # Actually WindowInfo from window module
         screen_width: int,
         screen_height: int,
         overlay: Any,  # OverlayWindow instance
@@ -103,12 +103,12 @@ class Pipeline:
             f"double_upscale={double_upscale}"
         )
 
-        # Create screen texture (output of the pipeline)
+        # Screen texture (output of the pipeline)
         logger.debug("Creating screen texture...")
         self.screen_tex = Texture2D(screen_width, screen_height, format=R8G8B8A8_UNORM)
         logger.debug("Screen texture created.")
 
-        # Create upscaler (CuNNy / SRCNN)
+        # Create upscaler (SRCNN)
         logger.debug(f"Creating upscaler with model '{model_name}'...")
         self.upscaler = SRCNN(
             width=window_info.width,
@@ -143,22 +143,29 @@ class Pipeline:
         # For click mapping rectangle (updated each frame)
         self.overlay.scaling_rect = [0, 0, 0, 0]  # x, y, w, h
 
-        # Threading
+        # Threading control
         self.running = False
         self.thread: Optional[threading.Thread] = None
         self.frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
 
-        # X11 connection for geometry queries (only used if map_clicks is False)
+        # X11 connection for geometry queries (used only if map_clicks is False)
         self._x_display: Optional[Display] = None
         self._x_window: Optional[XlibWindow] = None
         if not self.map_clicks:
-            logger.debug(
-                "Opening X display for window geometry queries (opacity control)."
-            )
+            self._open_x_display()
+
+    def _open_x_display(self) -> None:
+        """Open a connection to the X server for opacity control."""
+        try:
             self._x_display = Display()
             self._x_window = self._x_display.create_resource_object(
                 "window", self.window_info.handle
             )
+            logger.debug("Opened X display for opacity control.")
+        except XError as e:
+            logger.error(f"Failed to open X display for opacity: {e}")
+            self._x_display = None
+            self._x_window = None
 
     def start(self) -> None:
         """Start the pipeline thread."""
@@ -176,22 +183,37 @@ class Pipeline:
         self.frame_queue.put(dummy)
 
         if self.thread is not None:
-            self.thread.join()
-            logger.debug("Pipeline thread joined.")
+            self.thread.join(timeout=2.0)
+            if self.thread.is_alive():
+                logger.warning("Pipeline thread did not stop gracefully.")
+            else:
+                logger.debug("Pipeline thread joined.")
 
         # Close X11 connection if open
+        self._close_x_display()
+
+    def _close_x_display(self) -> None:
         if self._x_display is not None:
-            self._x_display.close()
-            logger.debug("Closed X display.")
+            try:
+                self._x_display.close()
+                logger.debug("Closed X display.")
+            except Exception as e:
+                logger.warning(f"Error closing X display: {e}")
+            finally:
+                self._x_display = None
+                self._x_window = None
 
     def _update_opacity(self) -> None:
-        """Update overlay opacity based on mouse position relative to target window."""
+        """
+        Update overlay opacity based on mouse position relative to target window.
+        If the window is gone, set opacity to 1.0 and log a warning.
+        """
         if self.map_clicks:
             self.overlay.setWindowOpacity(1.0)
             return
 
         if self._x_window is None or self._x_display is None:
-            logger.warning("X11 resources not available for opacity check.")
+            # No valid X connection – keep overlay visible
             self.overlay.setWindowOpacity(1.0)
             return
 
@@ -211,16 +233,28 @@ class Pipeline:
                 f"Opacity set to {opacity:.2f} (mouse at ({mouse.x()},{mouse.y()}), "
                 f"window at ({win_x},{win_y})"
             )
+        except (BadWindow, XError) as e:
+            # Target window no longer exists – treat as gone and keep overlay visible
+            logger.warning(f"Target window disappeared during opacity update: {e}")
+            self.overlay.setWindowOpacity(1.0)
+            self._close_x_display()  # release stale resources
         except Exception as e:
-            logger.error(f"Error updating opacity: {e}", exc_info=True)
+            logger.error(f"Unexpected error in opacity update: {e}", exc_info=True)
             self.overlay.setWindowOpacity(1.0)
 
     def _run(self) -> None:
         """Main pipeline loop – runs in a separate thread."""
         logger.info("Pipeline thread started.")
-        grabber = FrameGrabber(self.window_info)
-        logger.debug(f"FrameGrabber created for window {self.window_info.handle}")
 
+        # Create grabber inside thread to avoid sharing X connections across threads
+        try:
+            grabber = FrameGrabber(self.window_info)
+            logger.debug(f"FrameGrabber created for window {self.window_info.handle}")
+        except Exception as e:
+            logger.error(f"Failed to create FrameGrabber: {e}", exc_info=True)
+            return
+
+        # Compute dispatch groups for Lanczos pass
         groups_x = (self.screen_width + 15) // 16
         groups_y = (self.screen_height + 15) // 16
         logger.debug(f"Compute dispatch groups: {groups_x}x{groups_y}")
@@ -235,70 +269,90 @@ class Pipeline:
         logger.debug(f"Source dimensions after upscaling: {src_w}x{src_h}")
 
         while self.running:
-            # Grab frame from target window
             try:
-                frame = grabber.grab()
-                logger.debug(f"Frame grabbed, size={len(frame)} bytes")
-            except Exception as e:
-                logger.error(f"Frame grab failed: {e}", exc_info=True)
-                time.sleep(0.1)
-                continue
-
-            if not self.running:
+                self._process_one_frame(grabber, src_w, src_h, groups_x, groups_y)
+            except BadWindow:
+                # Target window was destroyed – exit the loop cleanly
+                logger.info("Target window destroyed, stopping pipeline loop.")
                 break
-
-            # Put frame into queue (blocks if queue is full, but we set maxsize=1 so it replaces)
-            self.frame_queue.put(frame)
-
-            # Retrieve frame (the most recent) from queue
-            try:
-                frame = self.frame_queue.get_nowait()
-            except Empty:
-                logger.debug("Frame queue empty, skipping this cycle")
-                continue
-
-            # Upscale with SRCNN
-            logger.debug("Uploading frame to upscaler...")
-            self.upscaler.upload(frame)
-
-            logger.debug("Running SRCNN compute...")
-            self.upscaler.compute()  # result in self.upscaler.output
-
-            # Calculate scaling rectangle for click mapping
-            dst_x, dst_y, dst_w, dst_h = _calculate_scaling_rect(
-                src_w, src_h, self.screen_width, self.screen_height
-            )
-            self.overlay.scaling_rect[:] = [dst_x, dst_y, dst_w, dst_h]
-
-            # Lanczos scaling
-            # Prepare constant buffer
-            cb_data = struct.pack(
-                "IIIIf",
-                src_w,
-                src_h,
-                self.screen_width,
-                self.screen_height,
-                1.0,  # blur factor (1.0 = no extra blur)
-            )
-            self.cb.upload(cb_data)
-            logger.debug("Constant buffer updated for Lanczos scaling.")
-
-            # Create compute pipeline for this frame (recreated each frame; can be cached if needed)
-            scale_compute = Compute(
-                self.lanczos_shader,
-                srv=[self.upscaler.output],
-                uav=[self.screen_tex],
-                cbv=[self.cb],
-                samplers=[self.lanczos_sampler],
-            )
-            scale_compute.dispatch(groups_x, groups_y, 1)
-            logger.debug("Lanczos scaling dispatched.")
-
-            # Opacity control
-            self._update_opacity()
-
-            # Present to swapchain
-            self.swapchain.present(self.screen_tex)
-            logger.debug("Presented to swapchain.")
+            except XError as e:
+                # Any other X error – log and exit
+                logger.error(f"X error in pipeline loop: {e}")
+                break
+            except Exception as e:
+                logger.error(f"Unexpected error in pipeline loop: {e}", exc_info=True)
+                time.sleep(0.1)  # avoid busy loop on persistent errors
 
         logger.info("Pipeline thread finished.")
+        # Ensure overlay is visible (opacity reset) when we exit
+        self.overlay.setWindowOpacity(1.0)
+
+    def _process_one_frame(
+        self,
+        grabber: FrameGrabber,
+        src_w: int,
+        src_h: int,
+        groups_x: int,
+        groups_y: int,
+    ) -> None:
+        """
+        Grab a frame, upscale, scale, and present. May raise XError/BadWindow.
+        """
+        # Grab frame from target window
+        frame = grabber.grab()
+        logger.debug(f"Frame grabbed, size={len(frame)} bytes")
+
+        if not self.running:
+            return
+
+        # Put frame into queue (maxsize=1 ensures we only keep the most recent)
+        self.frame_queue.put(frame)
+
+        # Retrieve the latest frame (if any)
+        try:
+            frame = self.frame_queue.get_nowait()
+        except Empty:
+            logger.debug("Frame queue empty, skipping this cycle")
+            return
+
+        # Upscale with SRCNN
+        logger.debug("Uploading frame to upscaler...")
+        self.upscaler.upload(frame)
+        logger.debug("Running SRCNN compute...")
+        self.upscaler.compute()  # result in self.upscaler.output
+
+        # Calculate scaling rectangle (for click mapping)
+        dst_x, dst_y, dst_w, dst_h = _calculate_scaling_rect(
+            src_w, src_h, self.screen_width, self.screen_height
+        )
+        self.overlay.scaling_rect[:] = [dst_x, dst_y, dst_w, dst_h]
+
+        # Lanczos scaling (constant buffer)
+        cb_data = struct.pack(
+            "IIIIf",
+            src_w,
+            src_h,
+            self.screen_width,
+            self.screen_height,
+            1.0,  # blur factor (1.0 = no extra blur)
+        )
+        self.cb.upload(cb_data)
+        logger.debug("Constant buffer updated for Lanczos scaling.")
+
+        # Create compute pipeline
+        scale_compute = Compute(
+            self.lanczos_shader,
+            srv=[self.upscaler.output],
+            uav=[self.screen_tex],
+            cbv=[self.cb],
+            samplers=[self.lanczos_sampler],
+        )
+        scale_compute.dispatch(groups_x, groups_y, 1)
+        logger.debug("Lanczos scaling dispatched.")
+
+        # Opacity control
+        self._update_opacity()
+
+        # Present to swapchain
+        self.swapchain.present(self.screen_tex)
+        logger.debug("Presented to swapchain.")

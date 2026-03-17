@@ -1,6 +1,7 @@
 import logging
 import time
-from typing import Optional, List, Set, Dict
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Set, Tuple
 
 import psutil
 from Xlib import X
@@ -12,258 +13,251 @@ from ewmh import EWMH
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class WindowInfo:
-    """Holds information about an X11 window."""
+    """Immutable information about an X11 window."""
 
-    def __init__(self, handle: int, width: int, height: int, title: str) -> None:
-        self.handle = handle
-        self.width = width
-        self.height = height
-        self.title = title
-        logger.debug(
-            f"WindowInfo created: handle={handle}, {width}x{height}, title='{title}'"
-        )
+    handle: int
+    width: int
+    height: int
+    title: str
 
     @property
-    def size(self) -> tuple[int, int]:
+    def size(self) -> Tuple[int, int]:
         return self.width, self.height
 
 
-def _get_all_windows(disp: Display) -> List[Window]:
-    """Recursively collect all windows (including children) from the root."""
-    logger.debug("Starting to collect all windows recursively")
-    root = disp.screen().root
-    windows: List[Window] = []
-    count = 0
+class AtomCache:
+    """Caches interned atoms for a given X display."""
 
-    def recurse(win: Window) -> None:
-        nonlocal count
-        windows.append(win)
-        count += 1
-        try:
-            children = win.query_tree().children
-            logger.debug(f"Window {win.id} has {len(children)} children")
-            for child in children:
-                recurse(child)
-        except XError as e:
-            logger.warning(f"XError while querying children of window {win.id}: {e}")
-        except Exception as e:
-            logger.error(
-                f"Unexpected error while recursing window {win.id}: {e}", exc_info=True
-            )
+    def __init__(self, display: Display) -> None:
+        self._display = display
+        self._cache: Dict[str, int] = {}
 
-    recurse(root)
-    logger.info(f"Collected {count} windows total")
-    return windows
+    def get(self, name: str) -> int:
+        """Return the atom ID for the given name, interning if necessary."""
+        if name not in self._cache:
+            self._cache[name] = self._display.intern_atom(name)
+            logger.debug(f"Interned atom '{name}' -> {self._cache[name]}")
+        return self._cache[name]
 
 
-def _intern_atoms(disp: Display, atom_names: List[str]) -> Dict[str, int]:
-    """Intern a list of atom names and return a dict mapping name -> atom."""
-    atoms = {}
-    for name in atom_names:
-        atoms[name] = disp.intern_atom(name)
-        logger.debug(f"Interned atom '{name}' -> {atoms[name]}")
-    return atoms
-
-
-def _check_window_for_match(
-    win: Window,
-    disp: Display,
-    ewmh: EWMH,
-    pids: Set[int],
-    class_hint_lower: Optional[str],
-    check_pid: bool = True,
-    check_class: bool = True,
-) -> Optional[WindowInfo]:
+def get_window_geometry(window: Window) -> Optional[Tuple[int, int, int, int]]:
     """
-    Check a single window against PID set and/or class hint.
-    Returns a WindowInfo if it matches, otherwise None.
+    Safely get geometry (x, y, width, height) of a window.
+    Returns None on X error.
     """
     try:
-        attrs = win.get_attributes()
-        if not attrs or attrs.map_state != X.IsViewable:
-            return None
+        geom = window.get_geometry()
+        return geom.x, geom.y, geom.width, geom.height
+    except XError as e:
+        logger.debug(f"Failed to get geometry for window {window.id}: {e}")
+        return None
 
-        # PID check (if enabled)
-        if check_pid:
-            win_pid_list = ewmh.getWmPid(win)
-            if win_pid_list and win_pid_list[0] in pids:
-                geom = win.get_geometry()
-                name = ewmh.getWmName(win) or "unknown"
-                logger.debug(f"Window {win.id} matched by PID")
-                return WindowInfo(win.id, geom.width, geom.height, name)
 
-        # Class hint check (if enabled and hint provided)
-        if check_class and class_hint_lower:
-            class_prop = win.get_full_property(disp.intern_atom("WM_CLASS"), 0)
-            if class_prop:
-                data = class_prop.value
-                strings = data.decode("latin1").split("\x00")
-                if len(strings) >= 2:
-                    instance, klass = strings[0], strings[1]
-                    logger.debug(
-                        f"Window {win.id} WM_CLASS: instance='{instance}', class='{klass}'"
-                    )
-                    if (
-                        class_hint_lower in instance.lower()
-                        or class_hint_lower in klass.lower()
-                    ):
-                        geom = win.get_geometry()
-                        name = ewmh.getWmName(win) or "unknown"
-                        logger.debug(f"Window {win.id} matched by class hint")
-                        return WindowInfo(win.id, geom.width, geom.height, name)
-    except (XError, TypeError, IndexError) as e:
-        logger.debug(f"Error while checking window {getattr(win, 'id', '?')}: {e}")
-    except Exception as e:
-        logger.error(f"Unexpected error in _check_window_for_match: {e}", exc_info=True)
-
+def get_window_name(window: Window, atoms: AtomCache) -> Optional[str]:
+    """
+    Retrieve the window title using _NET_WM_NAME or WM_NAME.
+    Returns None if unavailable.
+    """
+    try:
+        # Prefer _NET_WM_NAME (UTF‑8)
+        name_prop = window.get_full_property(atoms.get("_NET_WM_NAME"), 0)
+        if name_prop:
+            return name_prop.value.decode("utf-8", errors="ignore").strip()
+        # Fallback to WM_NAME (legacy)
+        name_prop = window.get_full_property(atoms.get("WM_NAME"), 0)
+        if name_prop:
+            return name_prop.value.decode("latin1", errors="ignore").strip()
+    except (XError, TypeError, UnicodeDecodeError) as e:
+        logger.debug(f"Error getting name for window {window.id}: {e}")
     return None
+
+
+def get_window_class(window: Window, atoms: AtomCache) -> Optional[Tuple[str, str]]:
+    """
+    Return (instance, class) from WM_CLASS property, or None.
+    """
+    try:
+        class_prop = window.get_full_property(atoms.get("WM_CLASS"), 0)
+        if class_prop:
+            data = class_prop.value
+            strings = data.decode("latin1").split("\x00")
+            if len(strings) >= 2:
+                return strings[0], strings[1]
+    except (XError, TypeError, UnicodeDecodeError) as e:
+        logger.debug(f"Error getting WM_CLASS for window {window.id}: {e}")
+    return None
+
+
+def get_window_pid(window: Window, ewmh: EWMH) -> Optional[int]:
+    """Return the PID of the window using EWMH, if available."""
+    try:
+        pid_list = ewmh.getWmPid(window)
+        if pid_list:
+            return pid_list[0]
+    except (XError, TypeError) as e:
+        logger.debug(f"Error getting PID for window {window.id}: {e}")
+    return None
+
+
+def is_viewable(window: Window) -> bool:
+    """Check if the window is mapped (viewable)."""
+    try:
+        attrs = window.get_attributes()
+        return attrs is not None and attrs.map_state == X.IsViewable
+    except XError:
+        return False
+
+
+def is_application_window(
+    window: Window,
+    atoms: AtomCache,
+    min_width: int = 200,
+    min_height: int = 200,
+) -> bool:
+    """
+    Heuristic to decide if a window is a normal application window.
+    Checks size, viewable state, and excludes known non‑application types.
+    """
+    if not is_viewable(window):
+        return False
+
+    geom = get_window_geometry(window)
+    if geom is None:
+        return False
+    _, _, w, h = geom
+    if w < min_width or h < min_height:
+        logger.debug(f"Window {window.id} too small ({w}x{h})")
+        return False
+
+    # Check window type via _NET_WM_WINDOW_TYPE
+    type_prop = window.get_full_property(atoms.get("_NET_WM_WINDOW_TYPE"), 0)
+    if type_prop:
+        atom_list = type_prop.value
+        is_normal = False
+        for atom in atom_list:
+            if atom == atoms.get("_NET_WM_WINDOW_TYPE_NORMAL"):
+                is_normal = True
+            elif atom in (
+                atoms.get("_NET_WM_WINDOW_TYPE_DESKTOP"),
+                atoms.get("_NET_WM_WINDOW_TYPE_DOCK"),
+                atoms.get("_NET_WM_WINDOW_TYPE_TOOLBAR"),
+                atoms.get("_NET_WM_WINDOW_TYPE_MENU"),
+                atoms.get("_NET_WM_WINDOW_TYPE_UTILITY"),
+                atoms.get("_NET_WM_WINDOW_TYPE_SPLASH"),
+            ):
+                logger.debug(f"Window {window.id} excluded by type")
+                return False
+        if not is_normal:
+            # If we have a type but it's not normal, reject
+            logger.debug(f"Window {window.id} has unknown type, rejecting")
+            return False
+    else:
+        # No type property – check class to exclude XWayland helpers
+        klass = get_window_class(window, atoms)
+        if klass:
+            instance, cls = klass
+            if "xwayland" in instance.lower() or "xwayland" in cls.lower():
+                logger.debug(f"Window {window.id} is an XWayland helper, rejecting")
+                return False
+
+    return True
+
+
+def enumerate_all_windows(display: Display) -> List[Window]:
+    """
+    Recursively collect all windows (including children) from the root.
+    """
+    root = display.screen().root
+    result: List[Window] = []
+
+    def recurse(win: Window) -> None:
+        result.append(win)
+        try:
+            children = win.query_tree().children
+            for child in children:
+                recurse(child)
+        except XError:
+            pass  # skip windows that disappeared
+
+    recurse(root)
+    return result
 
 
 def list_windows() -> List[WindowInfo]:
     """
-    Enumerate all visible top‑level X11 application windows using _NET_CLIENT_LIST.
+    Enumerate all visible application windows using _NET_CLIENT_LIST.
     Returns a list of WindowInfo objects.
     """
     logger.info("Starting window enumeration")
+    display = Display()
+    atoms = AtomCache(display)
+    root = display.screen().root
 
-    disp = Display()
-    logger.debug(f"Connected to X display {disp.get_display_name()}")
-    root = disp.screen().root
-    logger.debug(f"Root window ID: {root.id}")
-
-    # Atoms we need
-    atom_names = [
-        "_NET_WM_WINDOW_TYPE",
-        "_NET_WM_WINDOW_TYPE_NORMAL",
-        "_NET_WM_WINDOW_TYPE_DESKTOP",
-        "_NET_WM_WINDOW_TYPE_DOCK",
-        "_NET_WM_WINDOW_TYPE_TOOLBAR",
-        "_NET_WM_WINDOW_TYPE_MENU",
-        "_NET_WM_WINDOW_TYPE_UTILITY",
-        "_NET_WM_WINDOW_TYPE_SPLASH",
-        "_NET_WM_WINDOW_TYPE_DIALOG",
-        "_NET_CLIENT_LIST",
-        "_NET_WM_NAME",
-        "WM_NAME",
-        "WM_CLASS",
-    ]
-    atoms = _intern_atoms(disp, atom_names)
-
-    # Get the list of top‑level client windows
-    client_list_prop = root.get_full_property(atoms["_NET_CLIENT_LIST"], 0)
+    # Get top‑level client windows
+    client_list_prop = root.get_full_property(atoms.get("_NET_CLIENT_LIST"), 0)
     if not client_list_prop:
         logger.warning(
-            "No _NET_CLIENT_LIST property found (EWMH not supported?). Falling back to recursive enumeration."
+            "No _NET_CLIENT_LIST property found; falling back to recursive enumeration."
         )
-        return []
+        windows = enumerate_all_windows(display)
+    else:
+        window_ids = client_list_prop.value  # list of ints
+        windows = [display.create_resource_object("window", wid) for wid in window_ids]
 
-    client_windows = client_list_prop.value  # list of window IDs (integers)
-    logger.debug(f"Found {len(client_windows)} windows in _NET_CLIENT_LIST")
-
-    windows: List[WindowInfo] = []
-
-    for wid in client_windows:
+    result: List[WindowInfo] = []
+    for win in windows:
         try:
-            win = disp.create_resource_object("window", wid)
-
-            # Must be viewable
-            attrs = win.get_attributes()
-            if not attrs or attrs.map_state != X.IsViewable:
-                logger.debug(
-                    f"Window {wid}: map_state={attrs.map_state if attrs else 'None'} not viewable"
-                )
+            if not is_application_window(win, atoms):
                 continue
 
-            # Must have reasonable size (>=200x200 to exclude small helpers)
-            geom = win.get_geometry()
-            if geom.width < 200 or geom.height < 200:
-                logger.debug(
-                    f"Window {wid}: geometry {geom.width}x{geom.height} too small"
-                )
-                continue
-
-            # Check window type (if present)
-            type_prop = win.get_full_property(atoms["_NET_WM_WINDOW_TYPE"], 0)
-            if type_prop:
-                atom_list = type_prop.value
-                logger.debug(f"Window {wid} has _NET_WM_WINDOW_TYPE atoms: {atom_list}")
-                is_normal = False
-                reject = False
-                for atom in atom_list:
-                    if atom == atoms["_NET_WM_WINDOW_TYPE_NORMAL"]:
-                        is_normal = True
-                    elif atom in (
-                        atoms["_NET_WM_WINDOW_TYPE_DESKTOP"],
-                        atoms["_NET_WM_WINDOW_TYPE_DOCK"],
-                        atoms["_NET_WM_WINDOW_TYPE_TOOLBAR"],
-                        atoms["_NET_WM_WINDOW_TYPE_MENU"],
-                        atoms["_NET_WM_WINDOW_TYPE_UTILITY"],
-                        atoms["_NET_WM_WINDOW_TYPE_SPLASH"],
-                    ):
-                        reject = True
-                if reject:
-                    logger.debug(f"Window {wid} is non‑normal type, rejecting")
-                    continue
-                if not is_normal:
-                    # Unknown type – reject
-                    logger.debug(f"Window {wid} has unknown type atoms, rejecting")
-                    continue
-            else:
-                # No type property – check WM_CLASS to exclude XWayland helpers
-                try:
-                    class_prop = win.get_full_property(atoms["WM_CLASS"], 0)
-                    if class_prop:
-                        data = class_prop.value
-                        strings = data.decode("latin1").split("\x00")
-                        if len(strings) >= 2:
-                            instance, klass = strings[0], strings[1]
-                            if (
-                                "xwayland" in instance.lower()
-                                or "xwayland" in klass.lower()
-                            ):
-                                logger.debug(
-                                    f"Window {wid} appears to be XWayland helper (class={klass}), rejecting"
-                                )
-                                continue
-                except:
-                    pass
-
-            # Get window title
-            name = None
-            try:
-                name_prop = win.get_full_property(atoms["_NET_WM_NAME"], 0)
-                if name_prop:
-                    name = name_prop.value.decode("utf-8", errors="ignore")
-            except Exception:
-                pass
+            name = get_window_name(win, atoms)
             if not name:
-                try:
-                    name_prop = win.get_full_property(atoms["WM_NAME"], 0)
-                    if name_prop:
-                        name = name_prop.value.decode("utf-8", errors="ignore")
-                except Exception:
-                    pass
-
-            if name and name.strip():
-                winfo = WindowInfo(wid, geom.width, geom.height, name.strip())
-                windows.append(winfo)
-                logger.info(
-                    f"Found application window: {winfo.title} ({winfo.width}x{winfo.height})"
+                logger.debug(
+                    f"Window {win.id} passed filters but has no name, skipping"
                 )
-            else:
-                logger.debug(f"Window {wid} passed filter but has no name, skipping")
+                continue
 
+            geom = get_window_geometry(win)
+            if geom is None:
+                continue
+            _, _, w, h = geom
+            result.append(WindowInfo(win.id, w, h, name))
+            logger.info(f"Found application window: {name} ({w}x{h})")
         except XError as e:
-            logger.warning(f"XError processing window {wid}: {e}")
-        except Exception as e:
-            logger.error(
-                f"Unexpected error processing window {wid}: {e}", exc_info=True
+            logger.debug(
+                f"XError while processing window {getattr(win, 'id', '?')}: {e}"
             )
 
-    disp.close()
-    logger.info(f"Enumeration complete, found {len(windows)} windows")
-    return windows
+    display.close()
+    logger.info(f"Enumeration complete, found {len(result)} windows")
+    return result
+
+
+def get_active_window() -> WindowInfo:
+    """Return WindowInfo for the currently active window."""
+    logger.info("Getting active window")
+    display = Display()
+    atoms = AtomCache(display)
+    ewmh = EWMH(display)
+
+    active = ewmh.getActiveWindow()
+    if not active:
+        display.close()
+        raise RuntimeError("No active window found")
+
+    geom = get_window_geometry(active)
+    if geom is None:
+        display.close()
+        raise RuntimeError("Failed to get geometry of active window")
+    _, _, w, h = geom
+
+    name = get_window_name(active, atoms) or "unknown"
+    info = WindowInfo(active.id, w, h, name)
+    display.close()
+    logger.info(f"Active window: {info.title} ({info.width}x{info.height})")
+    return info
 
 
 def find_by_pid(
@@ -275,11 +269,18 @@ def find_by_pid(
     starting_phase: int = 1,
 ) -> WindowInfo:
     """
-    Loop indefinitely, alternating between:
-      1. Searching by PID (and also checking WM_CLASS) for `pid_timeout` seconds.
-      2. If `class_hint` is given, searching purely by WM_CLASS for `class_timeout` seconds.
-    If `total_timeout` is provided, the search stops after that time and raises TimeoutError.
-    Returns a WindowInfo as soon as a matching viewable window is found.
+    Locate a window by process ID (and optionally by class hint) using a two‑phase search.
+
+    The search alternates between:
+      1. Phase 1: look for windows whose PID matches the process tree,
+         and optionally also check the class hint.
+      2. Phase 2: if a class hint is given, look purely by class hint
+         (ignoring PID) for `class_timeout` seconds.
+
+    Phases repeat until a window is found or `total_timeout` expires.
+
+    Returns a WindowInfo as soon as a matching, viewable window is found.
+    Raises TimeoutError if no window appears within the total timeout.
     """
     logger.info(
         f"find_by_pid called with pid={pid}, class_hint={class_hint}, "
@@ -292,112 +293,166 @@ def find_by_pid(
         proc = psutil.Process(pid)
         pids: Set[int] = {pid} | {child.pid for child in proc.children(recursive=True)}
         logger.debug(f"Process tree for PID {pid}: {pids}")
-    except psutil.NoSuchProcess as e:
-        logger.warning(f"Process {pid} not found: {e}. Using only provided PID.")
+    except psutil.NoSuchProcess:
+        logger.warning(f"Process {pid} not found; using only the provided PID.")
         pids = {pid}
-    logger.info(f"Tracking PIDs: {pids}")
 
     class_hint_lower = class_hint.lower() if class_hint else None
-    phase = starting_phase
+    phase = starting_phase  # 1 = PID+class, 2 = pure class
 
     overall_start = time.time()
 
-    # Helper to check total timeout
+    # Helper to enforce total timeout
     def check_total_timeout() -> None:
         if total_timeout is not None and (time.time() - overall_start) > total_timeout:
-            logger.error(f"Total timeout {total_timeout}s exceeded")
             raise TimeoutError(
                 f"No matching window found within total timeout of {total_timeout} seconds"
             )
 
-    while True:
-        check_total_timeout()  # before starting a new phase
+    # Single Display for the entire search (more efficient)
+    display = Display()
+    atoms = AtomCache(display)
+    ewmh = EWMH(display)
 
-        disp = Display()
-        logger.debug(f"Opened X display {disp.get_display_name()} for search loop")
-        ewmh = EWMH(disp)
-        phase_start = time.time()
+    try:
+        while True:
+            check_total_timeout()
+            phase_start = time.time()
 
-        if phase == 1:
-            # Phase 1: search by PID and class hint
-            logger.info(f"Phase 1: Trying PID+class for {pid_timeout} seconds...")
-            while time.time() - phase_start < pid_timeout:
-                check_total_timeout()
+            if phase == 1:
+                # Phase 1: search by PID (optionally also check class)
+                logger.info(f"Phase 1: Trying PID+class for {pid_timeout} seconds...")
+                while time.time() - phase_start < pid_timeout:
+                    check_total_timeout()
+                    windows = enumerate_all_windows(display)
+                    for win in windows:
+                        if not is_viewable(win):
+                            continue
 
-                windows = _get_all_windows(disp)
-                logger.debug(f"Phase 1 iteration: checking {len(windows)} windows")
-                for win in windows:
-                    match = _check_window_for_match(
-                        win,
-                        disp,
-                        ewmh,
-                        pids,
-                        class_hint_lower,
-                        check_pid=True,
-                        check_class=(class_hint_lower is not None),
+                        # PID check
+                        win_pid = get_window_pid(win, ewmh)
+                        if win_pid is None or win_pid not in pids:
+                            continue
+
+                        # Optional class check (if hint provided)
+                        if class_hint_lower:
+                            klass = get_window_class(win, atoms)
+                            if not klass:
+                                continue
+                            instance, cls = klass
+                            if not (
+                                class_hint_lower in instance.lower()
+                                or class_hint_lower in cls.lower()
+                            ):
+                                continue
+
+                        # Match found
+                        geom = get_window_geometry(win)
+                        if geom is None:
+                            continue
+                        _, _, w, h = geom
+                        name = get_window_name(win, atoms) or "unknown"
+                        logger.info(f"Found window in phase 1: {name}")
+                        return WindowInfo(win.id, w, h, name)
+
+                    time.sleep(0.2)
+
+                # Phase 1 timed out
+                if class_hint_lower:
+                    phase = 2
+                    logger.info(
+                        "Phase 1 timed out, switching to phase 2 (pure class search)."
                     )
-                    if match:
-                        logger.info(f"Found window in phase 1: {match.title}")
-                        disp.close()
-                        return match
-                time.sleep(0.2)
+                else:
+                    logger.info(
+                        "Phase 1 timed out, restarting (no class hint available)."
+                    )
 
-            # Phase 1 timed out – move to phase 2 if class hint exists, otherwise restart
-            if class_hint_lower:
-                phase = 2
+            else:  # phase == 2
                 logger.info(
-                    "Phase 1 timed out, switching to phase 2 (pure class search)."
+                    f"Phase 2: Trying pure class hint for {class_timeout} seconds..."
                 )
-            else:
-                logger.info("Phase 1 timed out, restarting (no class hint available).")
+                while time.time() - phase_start < class_timeout:
+                    check_total_timeout()
+                    windows = enumerate_all_windows(display)
+                    for win in windows:
+                        if not is_viewable(win):
+                            continue
 
-        else:  # phase == 2
-            # Phase 2: pure class‑based search
-            logger.info(
-                f"Phase 2: Trying pure class hint for {class_timeout} seconds..."
-            )
-            while time.time() - phase_start < class_timeout:
-                check_total_timeout()
+                        # Class check only
+                        if class_hint_lower:
+                            klass = get_window_class(win, atoms)
+                            if not klass:
+                                continue
+                            instance, cls = klass
+                            if not (
+                                class_hint_lower in instance.lower()
+                                or class_hint_lower in cls.lower()
+                            ):
+                                continue
 
-                windows = _get_all_windows(disp)
-                logger.debug(f"Phase 2 iteration: checking {len(windows)} windows")
-                for win in windows:
-                    match = _check_window_for_match(
-                        win,
-                        disp,
-                        ewmh,
-                        pids,
-                        class_hint_lower,
-                        check_pid=False,
-                        check_class=True,
-                    )
-                    if match:
-                        logger.info(f"Found window in phase 2: {match.title}")
-                        disp.close()
-                        return match
-                time.sleep(0.2)
+                            geom = get_window_geometry(win)
+                            if geom is None:
+                                continue
+                            _, _, w, h = geom
+                            name = get_window_name(win, atoms) or "unknown"
+                            logger.info(f"Found window in phase 2: {name}")
+                            return WindowInfo(win.id, w, h, name)
 
-            # Phase 2 timed out – go back to phase 1
-            logger.info("Phase 2 timed out, restarting phase 1.")
-            phase = 1
+                    time.sleep(0.2)
 
-        disp.close()
-        logger.debug("Closed X display at end of phase")
+                # Phase 2 timed out – go back to phase 1
+                logger.info("Phase 2 timed out, restarting phase 1.")
+                phase = 1
+
+    finally:
+        display.close()
+        logger.debug("Closed X display at end of search")
 
 
-def get_active_window() -> WindowInfo:
-    """Return WindowInfo for the currently active window."""
-    logger.info("Getting active window")
-    disp = Display()
-    logger.debug(f"Connected to X display {disp.get_display_name()}")
-    ewmh = EWMH(disp)
-    active = ewmh.getActiveWindow()
-    if not active:
-        logger.error("No active window found")
-        raise RuntimeError("No active window found")
-    geom = active.get_geometry()
-    name = ewmh.getWmName(active) or "unknown"
-    winfo = WindowInfo(active.id, geom.width, geom.height, name)
-    logger.info(f"Active window: {winfo.title} ({winfo.width}x{winfo.height})")
-    disp.close()
-    return winfo
+class WindowWatcher:
+    """
+    Monitors an X11 window for destruction using an X event loop.
+    Call check_events() periodically to update the alive status.
+    """
+
+    def __init__(self, window_handle: int):
+        self.handle = window_handle
+        self._display = Display()
+        self._window = self._display.create_resource_object("window", window_handle)
+        # Request StructureNotify to receive DestroyNotify
+        self._window.change_attributes(event_mask=X.StructureNotifyMask)
+        self._display.flush()
+        self._destroyed = False
+
+    def check_events(self) -> bool:
+        """
+        Process pending X events and update internal state.
+        Returns True if the window still exists, False if it has been destroyed.
+        """
+        if self._destroyed:
+            return False
+        try:
+            while self._display.pending_events():
+                event = self._display.next_event()
+                if event.type == X.DestroyNotify and event.window.id == self.handle:
+                    self._destroyed = True
+                    return False
+        except XError:
+            # Window already gone
+            self._destroyed = True
+            return False
+        return True
+
+    @property
+    def is_alive(self) -> bool:
+        """Return True if the window is still believed to exist."""
+        return not self._destroyed
+
+    def close(self) -> None:
+        """Explicitly close the X display connection."""
+        if hasattr(self, "_display"):
+            self._display.close()
+
+    def __del__(self) -> None:
+        self.close()

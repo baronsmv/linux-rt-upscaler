@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
 
 import faulthandler
+import sys
 
 faulthandler.enable()
 
-import os
-import sys
 
-# --- Environment overrides (must be set before any imports that load X11/Vulkan) ---
-os.environ["QT_QPA_PLATFORM"] = "xcb"  # Qt → X11
-os.environ["DISPLAY"] = ":0"  # Ensure X11 display
-os.environ["XDG_SESSION_TYPE"] = "x11"  # Tell toolkits we're in X11
-os.environ.pop("WAYLAND_DISPLAY", None)  # Remove Wayland socket reference
+# Environment overrides
+def _setup_environment() -> None:
+    """Force X11 session and configure Vulkan drivers for X11 WSI."""
+    import os
 
-# Vulkan driver‑specific overrides
-# Mesa drivers (RADV/ANV) – force X11 WSI
-os.environ["MESA_VK_WSI"] = "x11"
-# For older Mesa versions, also set RADV_DEBUG as fallback (ignored by non‑RADV)
-os.environ["RADV_DEBUG"] = "no_wayland_wsi"
-# NVIDIA proprietary driver – ensure GLX uses NVIDIA (optional, may help with interop)
-os.environ["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
-# -----------------------------------------------------------------------------------
+    os.environ["QT_QPA_PLATFORM"] = "xcb"  # Qt → X11
+    os.environ["XDG_SESSION_TYPE"] = "x11"  # Tell toolkits we're in X11
+    os.environ.pop("WAYLAND_DISPLAY", None)  # Remove Wayland socket reference
+
+    # Vulkan driver‑specific overrides
+    os.environ["MESA_VK_WSI"] = "x11"  # Mesa drivers (RADV/ANV)
+    os.environ["RADV_DEBUG"] = "no_wayland_wsi"  # Fallback for older Mesa
+    os.environ["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"  # NVIDIA proprietary driver
+
+
+_setup_environment()
 
 import ctypes
 import logging
@@ -28,28 +29,35 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 from compushady import Swapchain
 from compushady.formats import R8G8B8A8_UNORM
 
-from . import window
 from .config import Config
 from .monitor import get_monitor_list, get_monitor, get_monitor_geometry
 from .overlay import OverlayWindow
 from .pipeline import Pipeline
+from .window import (
+    find_by_pid,
+    get_active_window,
+    list_windows,
+    WindowInfo,
+    WindowWatcher,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def setup_logging(level: str, log_file: Optional[str]) -> None:
-    """Configure logging with the given level and optional file."""
+    """Configure logging with the given level and optional file output."""
     handlers = [logging.StreamHandler(sys.stderr)]
     if log_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        handlers.append(logging.FileHandler(log_file, encoding="utf-8"))
+        handlers.append(logging.FileHandler(log_path, encoding="utf-8"))
 
     logging.basicConfig(
         level=getattr(logging, level.upper(), logging.WARNING),
@@ -64,10 +72,13 @@ def get_x11_display_id() -> int:
     This is needed to create a swapchain tied to an X11 window.
     """
     logger.debug("Opening X11 display for swapchain")
-    xlib = ctypes.cdll.LoadLibrary("libX11.so")
+    try:
+        xlib = ctypes.cdll.LoadLibrary("libX11.so")
+    except OSError as e:
+        logger.error(f"Failed to load libX11.so: {e}")
+        raise RuntimeError("X11 library not found – is X11 installed?") from e
 
     display_ptr = xlib.XOpenDisplay(ctypes.c_int(0))
-    # XOpenDisplay returns a pointer; NULL (0) on failure
     if display_ptr == 0:
         logger.error("XOpenDisplay failed. Is X11 running?")
         raise RuntimeError("Cannot open X display – is XWayland running?")
@@ -76,16 +87,12 @@ def get_x11_display_id() -> int:
     return display_ptr
 
 
-def _select_window_interactive(
-    windows: List[window.WindowInfo],
-) -> Optional[window.WindowInfo]:
+def _select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo]:
     """
     Interactively let the user choose a window from the list.
     Returns the selected WindowInfo or None if the user quits.
     """
-    # Sort by title for easier browsing
     windows.sort(key=lambda w: w.title.lower())
-
     print("\nAvailable windows:")
     for i, w in enumerate(windows):
         print(f"{i:3d}: {w.title} ({w.width}x{w.height})")
@@ -101,24 +108,29 @@ def _select_window_interactive(
                 selected = windows[idx]
                 logger.info(f"User selected window {idx}: {selected.title}")
                 return selected
-            else:
-                print(f"Please enter a number between 0 and {len(windows)-1}")
+            print(f"Please enter a number between 0 and {len(windows)-1}")
         except ValueError:
             print("Invalid input. Please enter a number.")
 
 
-def _launch_program_and_find_window(config: Config) -> Optional[window.WindowInfo]:
+def _launch_program_and_find_window(
+    config: Config,
+) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
     """
     Launch the program from config.program and use find_by_pid to locate its window.
-    Returns WindowInfo or None on failure/timeout.
+    Returns (WindowInfo, Popen) on success, or (None, None) on failure/timeout.
     """
-    program_name = config.program[0] if config.program else ""
+    if not config.program:
+        logger.error("No program specified in config")
+        return None, None
+
+    program_name = config.program[0]
     print(f"Launching: {' '.join(config.program)}")
     proc = subprocess.Popen(config.program)
 
     print("Waiting for window...")
     try:
-        win_info = window.find_by_pid(
+        win_info = find_by_pid(
             proc.pid,
             pid_timeout=config.pid_timeout,
             class_hint=program_name,
@@ -127,16 +139,16 @@ def _launch_program_and_find_window(config: Config) -> Optional[window.WindowInf
             starting_phase=config.starting_phase,
         )
         logger.info(f"Found window for PID {proc.pid}: {win_info.title}")
-        return win_info
+        return win_info, proc
     except TimeoutError as e:
         logger.error(f"Timeout while waiting for window: {e}")
         print(e)
         proc.terminate()
         proc.wait()
-        return None
+        return None, None
 
 
-def _get_active_window_with_delay(config: Config) -> Optional[window.WindowInfo]:
+def _get_active_window_with_delay(config: Config) -> Optional[WindowInfo]:
     """
     Wait target_delay seconds and then return the currently active window.
     """
@@ -146,7 +158,7 @@ def _get_active_window_with_delay(config: Config) -> Optional[window.WindowInfo]
         )
     time.sleep(config.target_delay)
     try:
-        win_info = window.get_active_window()
+        win_info = get_active_window()
         logger.info(f"Got active window: {win_info.title}")
         return win_info
     except RuntimeError as e:
@@ -155,43 +167,47 @@ def _get_active_window_with_delay(config: Config) -> Optional[window.WindowInfo]
         return None
 
 
+def _acquire_target_window(
+    config: Config,
+) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
+    """
+    Determine which window to upscale based on config.
+    Returns (WindowInfo, optional Popen) or (None, None) on failure/exit.
+    """
+    if config.select:
+        print("Enumerating open windows...")
+        windows = list_windows()
+        if not windows:
+            logger.error("No visible windows found")
+            print("No visible windows found.")
+            return None, None
+
+        win_info = _select_window_interactive(windows)
+        if win_info is None:
+            return None, None  # user quit
+        if config.log_level != "ERROR":
+            print(f"Selected: {win_info.title}")
+        return win_info, None
+
+    elif config.program:
+        return _launch_program_and_find_window(config)
+
+    else:
+        win_info = _get_active_window_with_delay(config)
+        return win_info, None
+
+
 def main() -> None:
     """Main entry point."""
     config = Config.from_cli()
     setup_logging(config.log_level, config.log_file)
 
-    logger = logging.getLogger(__name__)
     logger.info("Starting Linux RT Upscaler")
 
-    win_info: Optional[window.WindowInfo] = None
-    proc: Optional[subprocess.Popen] = None
-
-    # Obtain target window
-    if config.select:
-        print("Enumerating open windows...")
-        windows = window.list_windows()
-        if not windows:
-            logger.error("No visible windows found")
-            print("No visible windows found.")
-            sys.exit(1)
-
-        win_info = _select_window_interactive(windows)
-        if win_info is None:
-            sys.exit(0)
-        if config.log_level != "ERROR":
-            print(f"Selected: {win_info.title}")
-
-    elif config.program:
-        win_info, proc = _launch_program_and_find_window(config)
-        if win_info is None:
-            sys.exit(1)
-
-    else:
-        win_info = _get_active_window_with_delay(config)
-        if win_info is None:
-            sys.exit(1)
-
-    assert win_info is not None
+    # Acquire target window
+    win_info, proc = _acquire_target_window(config)
+    if win_info is None:
+        sys.exit(0 if config.select else 1)
 
     if config.log_level != "ERROR":
         print(
@@ -199,8 +215,11 @@ def main() -> None:
         )
     logger.info(f"Target window confirmed: {win_info}")
 
-    # Qt and overlay setup
+    # Set up Qt application and overlay
     app = QApplication([])
+    app.setApplicationName("upscaler-overlay")
+    app.setApplicationDisplayName("Upscaler Overlay")
+
     if config.log_level != "ERROR":
         print(f"Detected monitors: {get_monitor_list()}")
 
@@ -210,14 +229,13 @@ def main() -> None:
 
     if config.log_level != "ERROR":
         print(f"Screen resolution: {screen_w}x{screen_h}")
-    logger.debug(f"Screen size: {screen_w}x{screen_h}")
 
     map_clicks = not config.disable_forwarding
     overlay = OverlayWindow(
         screen_w,
         screen_h,
         map_clicks=map_clicks,
-        target_handle=win_info.handle if not config.disable_forwarding else None,
+        target_handle=win_info.handle if map_clicks else None,
         initial_x=screen_x,
         initial_y=screen_y,
     )
@@ -228,21 +246,19 @@ def main() -> None:
     else:
         logger.debug("Click mapping disabled, overlay is transparent to input")
 
-    # Give Qt time to map the window and process events
+    # Let Qt map the window
     time.sleep(0.5)
     QApplication.processEvents()
-    logger.debug("Overlay window should now be mapped")
+    logger.debug("Overlay window mapped")
 
-    # Swapchain – use a fresh X display
+    # Create swapchain
     display_id = get_x11_display_id()
     logger.debug(
         f"Creating swapchain with display_id={display_id}, overlay.xid={overlay.xid}"
     )
-
     swapchain = Swapchain((display_id, overlay.xid), R8G8B8A8_UNORM, 3)
-    logger.debug("Swapchain created")
 
-    # Pipeline setup and start
+    # Start pipeline
     pipeline = Pipeline(
         win_info,
         screen_w,
@@ -256,20 +272,41 @@ def main() -> None:
     pipeline.start()
     logger.info("Pipeline started")
 
-    # Handle Ctrl+C gracefully
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    # Monitor target window for destruction
+    watcher = WindowWatcher(win_info.handle)
+    timer = QTimer()
+    timer.timeout.connect(lambda: _check_window_destroyed(watcher, pipeline, app))
+    timer.start(100)
 
+    # Set up signal handler for graceful exit
+    signal.signal(signal.SIGINT, signal.SIG_DFL)  # allow Ctrl+C to interrupt
+
+    # Enter Qt event loop
     try:
-        # Enter Qt event loop
         exit_code = app.exec()
         logger.info(f"Qt event loop exited with code {exit_code}")
     finally:
+        _cleanup(pipeline, proc)
+
+
+def _check_window_destroyed(
+    watcher: WindowWatcher, pipeline: Pipeline, app: QApplication
+) -> None:
+    """Qt timer callback: if target window is gone, stop pipeline and quit."""
+    if not watcher.is_alive:
+        logger.info("Target window destroyed, shutting down.")
         pipeline.stop()
-        logger.debug("Pipeline stopped")
-        if proc is not None:
-            logger.info(f"Terminating launched process {proc.pid}")
-            proc.terminate()
-            proc.wait()
+        app.quit()
+
+
+def _cleanup(pipeline: Pipeline, proc: Optional[subprocess.Popen]) -> None:
+    """Ensure pipeline is stopped and launched process is terminated."""
+    logger.debug("Cleaning up resources")
+    pipeline.stop()
+    if proc is not None:
+        logger.info(f"Terminating launched process {proc.pid}")
+        proc.terminate()
+        proc.wait()
 
 
 if __name__ == "__main__":

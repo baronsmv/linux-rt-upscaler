@@ -100,10 +100,6 @@ class SRCNN:
         self._lanczos_cb: Optional[Buffer] = None
         self._lanczos_pipeline: Optional[Compute] = None
 
-    # ----------------------------------------------------------------------
-    # Initialisation helpers
-    # ----------------------------------------------------------------------
-
     def _get_model_dir(self) -> None:
         """Locate and verify the model directory."""
         self.model_dir = os.path.join(
@@ -313,10 +309,6 @@ class SRCNN:
             )
 
         return pipelines, target_width, target_height
-
-    # ----------------------------------------------------------------------
-    # Public API
-    # ----------------------------------------------------------------------
 
     def upload(self, data: Any) -> None:
         """Upload raw frame data to the input texture."""
