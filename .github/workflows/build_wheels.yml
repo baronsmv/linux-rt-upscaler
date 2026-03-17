@@ -30,9 +30,9 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_ALL_LINUX: >
-            yum install -y libX11-devel || dnf install -y libX11-devel
+              yum install -y libX11-devel vulkan-devel || dnf install -y libX11-devel vulkan-devel
           CIBW_ARCHS_LINUX: x86_64
-          CIBW_BUILD: ${{ matrix.python }}
+          CIBW_BUILD: cp${{ matrix.python }}-*
           CIBW_TEST_COMMAND: "python -c 'import upscaler.capture'"
           CIBW_BUILD_VERBOSITY: 3
           CIBW_BEFORE_BUILD: "ls -la src/upscaler/capture"
