@@ -143,22 +143,14 @@ def main() -> None:
         w = 1280
         h = 720
 
-    map_clicks = not config.disable_forwarding
     overlay = OverlayWindow(
         width=w,
         height=h,
         mode=config.overlay_mode,
-        map_clicks=map_clicks,
-        target_handle=win_info.handle if map_clicks else None,
+        target=win_info,
         initial_x=x,
         initial_y=y,
     )
-
-    if map_clicks:
-        overlay.set_client_size(win_info.width, win_info.height)
-        logger.debug("Client size set on overlay for click mapping")
-    else:
-        logger.debug("Click mapping disabled, overlay is transparent to input")
 
     # Prepare window for Vulkan
     time.sleep(0.5)
@@ -178,7 +170,6 @@ def main() -> None:
         overlay.height(),
         overlay,
         swapchain,
-        map_clicks=map_clicks,
         model_name=config.model,
         double_upscale=config.double_upscale,
     )

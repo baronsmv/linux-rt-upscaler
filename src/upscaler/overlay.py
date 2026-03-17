@@ -11,14 +11,17 @@ logger = logging.getLogger(__name__)
 
 
 class OverlayMode(str, Enum):
-    # Always on top, click‑through or forwards (bypasses window manager)
-    TRANSPARENT = "transparent"
-
     # Fullscreen without decorations
-    BORDERLESS = "borderless"
+    FULLSCREEN = "fullscreen"
 
     # Normal window with decorations, fixed size
     WINDOWED = "windowed"
+
+    # Always on top, click‑through or forwards (bypasses window manager)
+    ALWAYS_ON_TOP = "always-on-top"
+
+    # Always on top, click‑through (bypasses window manager)
+    ALWAYS_ON_TOP_TRANSPARENT = "top-transparent"
 
 
 class OverlayWindow(QMainWindow):
@@ -39,9 +42,8 @@ class OverlayWindow(QMainWindow):
         self,
         width: int,
         height: int,
+        target: Any,  # WindowInfo instance
         mode: Union[OverlayMode, str],
-        map_clicks: bool = False,
-        target_handle: Optional[int] = None,
         initial_x: int = 0,
         initial_y: int = 0,
     ) -> None:
@@ -51,42 +53,42 @@ class OverlayWindow(QMainWindow):
         :param width:  Desired width of the overlay (for windowed mode) or full screen size.
         :param height: Desired height.
         :param mode:   OverlayMode value.
-        :param map_clicks: If True, mouse events are forwarded to the target window.
-        :param target_handle: X11 window ID of the target (required if map_clicks=True).
+        :param target: X11 window of the target.
         :param initial_x: Initial X position (windowed mode only).
         :param initial_y: Initial Y position.
         """
         super().__init__()
         logger.info(
             f"Initializing OverlayWindow: mode={mode}, size={width}x{height}, "
-            f"map_clicks={map_clicks}, target_handle={target_handle}"
+            f", target_handle={target.handle}"
         )
 
         self.mode = mode
-        self.map_clicks = map_clicks
-        self.target_handle = target_handle
-        self.scaling_rect: List[int] = [0, 0, 0, 0]  # x, y, w, h
-        self.client_width: Optional[int] = None
-        self.client_height: Optional[int] = None
+        self.map_clicks = mode != OverlayMode.ALWAYS_ON_TOP_TRANSPARENT
 
-        # X11 connection for event forwarding (only opened if map_clicks is True)
+        self.scaling_rect: List[int] = [0, 0, 0, 0]  # x, y, w, h
+        self.target_handle = target.handle
+        self.client_width = target.width
+        self.client_height = target.height
+
+        # X11 connection for event forwarding (to track mouse events)
         self._x_display: Optional[display.Display] = None
         self._x_root: Optional[int] = None
 
         # Forwarding enabled (disabled when minimized)
-        self._forwarding_enabled = map_clicks
+        self._forwarding_enabled = self.map_clicks
 
         # Set window flags and geometry according to mode
         self._setup_window(width, height, initial_x, initial_y)
 
-        self.setMouseTracking(map_clicks)  # track mouse moves only if mapping
+        self.setMouseTracking(self.map_clicks)  # track mouse moves only if mapping
         self.show()
 
         self.xid = int(self.winId())
         logger.debug(f"Overlay XID: {self.xid}")
 
-        if map_clicks:
-            if target_handle is None:
+        if self.map_clicks:
+            if self.target_handle is None:
                 raise ValueError("target_handle required when map_clicks=True")
             self._open_x_display()
             self.installEventFilter(self)
@@ -95,13 +97,7 @@ class OverlayWindow(QMainWindow):
         """Apply the appropriate window flags and geometry for the chosen mode."""
         flags = Qt.Window
 
-        if self.mode == OverlayMode.TRANSPARENT:
-            flags |= Qt.X11BypassWindowManagerHint
-            if not self.map_clicks:
-                flags |= Qt.WindowTransparentForInput
-            self.setGeometry(x, y, width, height)
-
-        elif self.mode == OverlayMode.BORDERLESS:
+        if self.mode == OverlayMode.FULLSCREEN:
             flags |= Qt.FramelessWindowHint
             self.setGeometry(x, y, width, height)
 
@@ -109,12 +105,20 @@ class OverlayWindow(QMainWindow):
             self.setGeometry(x, y, width, height)
             self.setFixedSize(width, height)
 
+        elif self.mode == OverlayMode.ALWAYS_ON_TOP:
+            flags |= Qt.X11BypassWindowManagerHint
+            self.setGeometry(x, y, width, height)
+
+        elif self.mode == OverlayMode.ALWAYS_ON_TOP_TRANSPARENT:
+            flags |= Qt.X11BypassWindowManagerHint | Qt.WindowTransparentForInput
+            self.setGeometry(x, y, width, height)
+
         else:
             raise ValueError(f"Unknown overlay mode: {self.mode}")
 
         self.setWindowFlags(flags)
 
-        if self.mode == OverlayMode.BORDERLESS:
+        if self.mode == OverlayMode.FULLSCREEN:
             self.showFullScreen()
         else:
             self.show()

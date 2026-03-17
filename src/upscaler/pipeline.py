@@ -66,12 +66,11 @@ class Pipeline:
 
     def __init__(
         self,
-        window_info: Any,  # Actually WindowInfo from window module
+        window_info: Any,  # WindowInfo instance
         screen_width: int,
         screen_height: int,
-        overlay: Any,  # OverlayWindow instance
-        swapchain: Any,  # compushady Swapchain
-        map_clicks: bool,
+        overlay: Any,  # Overlay instance
+        swapchain: Any,
         model_name: str,
         double_upscale: bool,
     ) -> None:
@@ -83,7 +82,6 @@ class Pipeline:
         :param screen_height: Full screen height.
         :param overlay: OverlayWindow instance (used for opacity and click mapping).
         :param swapchain: compushady Swapchain for presenting the final image.
-        :param map_clicks: If True, mouse events are forwarded to the target window.
         :param model_name: Name of the SRCNN model to load.
         :param double_upscale: If True, the upscaler performs a 4x upscale (two 2x passes),
                                otherwise only a single 2x upscale.
@@ -93,13 +91,12 @@ class Pipeline:
         self.screen_height = screen_height
         self.overlay = overlay
         self.swapchain = swapchain
-        self.map_clicks = map_clicks
         self.model_name = model_name
         self.double_upscale = double_upscale
 
         logger.info(
             f"Initializing Pipeline: target={window_info.title} ({window_info.width}x{window_info.height}), "
-            f"screen={screen_width}x{screen_height}, map_clicks={map_clicks}, model={model_name}, "
+            f"screen={screen_width}x{screen_height}, model={model_name}, "
             f"double_upscale={double_upscale}"
         )
 
@@ -152,7 +149,7 @@ class Pipeline:
         # X11 connection for geometry queries (used only if map_clicks is False)
         self._x_display: Optional[Display] = None
         self._x_window: Optional[XlibWindow] = None
-        if not self.map_clicks:
+        if not self.overlay.map_clicks:
             self._open_x_display()
 
     def _open_x_display(self) -> None:
@@ -209,7 +206,7 @@ class Pipeline:
         Update overlay opacity based on mouse position relative to target window.
         If the window is gone, set opacity to 1.0 and log a warning.
         """
-        if self.map_clicks:
+        if self.overlay.map_clicks:
             self.overlay.setWindowOpacity(1.0)
             return
 
