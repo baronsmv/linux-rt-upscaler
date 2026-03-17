@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: [ 'cp39-*', 'cp310-*', 'cp311-*', 'cp312-*', 'cp313-*'  ]
+        python: [ 'cp39-*', 'cp310-*', 'cp311-*', 'cp312-*' ]
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +27,7 @@ jobs:
         run: python -m pip install cibuildwheel
 
       - name: Build wheels (Linux)
+        run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_ALL_LINUX: >
             yum install -y libX11-devel || dnf install -y libX11-devel
@@ -35,7 +36,6 @@ jobs:
           CIBW_TEST_COMMAND: "python -c 'import upscaler.capture'"
           CIBW_BUILD_VERBOSITY: 3
           CIBW_BEFORE_BUILD: "ls -la src/upscaler/capture"
-        run: python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v4
         with:
