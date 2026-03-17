@@ -1,5 +1,6 @@
 import logging
-from typing import Optional, List, Tuple, Any
+from enum import Enum
+from typing import Any, List, Optional, Tuple, Union
 
 from PySide6.QtCore import QEvent, QPoint, Qt, Slot
 from PySide6.QtWidgets import QMainWindow, QApplication
@@ -9,11 +10,20 @@ from Xlib.protocol import event as xevent
 logger = logging.getLogger(__name__)
 
 
+class OverlayMode(str, Enum):
+    # Always on top, click‑through or forwards (bypasses window manager)
+    TRANSPARENT = "transparent"
+
+    # Fullscreen without decorations
+    BORDERLESS = "borderless"
+
+    # Normal window with decorations, fixed size
+    WINDOWED = "windowed"
+
+
 class OverlayWindow(QMainWindow):
     """
-    A transparent overlay window that can either:
-      - Remain click‑through (for displaying upscaled content), or
-      - Forward mouse events to a target X11 window (for click mapping).
+    An overlay window that can present upscaled content in various modes.
     """
 
     # Mapping from Qt button to X11 button number (1–3, 4–5 for scroll, 8–9 for extra)
@@ -27,8 +37,9 @@ class OverlayWindow(QMainWindow):
 
     def __init__(
         self,
-        screen_width: int,
-        screen_height: int,
+        width: int,
+        height: int,
+        mode: Union[OverlayMode, str],
         map_clicks: bool = False,
         target_handle: Optional[int] = None,
         initial_x: int = 0,
@@ -37,25 +48,24 @@ class OverlayWindow(QMainWindow):
         """
         Create and show the overlay window.
 
-        :param screen_width: Width of the screen (overlay covers full screen).
-        :param screen_height: Height of the screen.
+        :param width:  Desired width of the overlay (for windowed mode) or full screen size.
+        :param height: Desired height.
+        :param mode:   OverlayMode value.
         :param map_clicks: If True, mouse events are forwarded to the target window.
-        :param target_handle: X11 window ID of the target window (required if map_clicks=True).
+        :param target_handle: X11 window ID of the target (required if map_clicks=True).
+        :param initial_x: Initial X position (windowed mode only).
+        :param initial_y: Initial Y position.
         """
         super().__init__()
         logger.info(
-            f"Initializing OverlayWindow: {screen_width}x{screen_height}, "
+            f"Initializing OverlayWindow: mode={mode}, size={width}x{height}, "
             f"map_clicks={map_clicks}, target_handle={target_handle}"
         )
 
+        self.mode = mode
         self.map_clicks = map_clicks
         self.target_handle = target_handle
-        self.scaling_rect: List[int] = [
-            0,
-            0,
-            0,
-            0,
-        ]  # x, y, w, h (in screen coordinates)
+        self.scaling_rect: List[int] = [0, 0, 0, 0]  # x, y, w, h
         self.client_width: Optional[int] = None
         self.client_height: Optional[int] = None
 
@@ -63,33 +73,69 @@ class OverlayWindow(QMainWindow):
         self._x_display: Optional[display.Display] = None
         self._x_root: Optional[int] = None
 
-        # Basic window properties
-        self.setWindowOpacity(1.0)
-        self.setGeometry(initial_x, initial_y, screen_width, screen_height)
+        # Forwarding enabled (disabled when minimized)
+        self._forwarding_enabled = map_clicks
 
-        # Window flags: always bypass window manager (to stay on top),
-        # and optionally transparent for input if not mapping clicks.
-        flags = self.windowFlags() | Qt.X11BypassWindowManagerHint
-        if not map_clicks:
-            flags |= Qt.WindowTransparentForInput
-            logger.debug("Window is transparent for input (click‑through).")
-        else:
-            logger.debug("Window will forward mouse events (click mapping enabled).")
-        self.setWindowFlags(flags)
+        # Set window flags and geometry according to mode
+        self._setup_window(width, height, initial_x, initial_y)
 
         self.setMouseTracking(map_clicks)  # track mouse moves only if mapping
         self.show()
+
         self.xid = int(self.winId())
         logger.debug(f"Overlay XID: {self.xid}")
 
-        # If forwarding is enabled, open X display and install event filter
         if map_clicks:
             if target_handle is None:
-                logger.error("map_clicks=True requires a target_handle")
-                raise ValueError("target_handle must be provided when map_clicks=True")
-
+                raise ValueError("target_handle required when map_clicks=True")
             self._open_x_display()
             self.installEventFilter(self)
+
+    def _setup_window(self, width: int, height: int, x: int, y: int) -> None:
+        """Apply the appropriate window flags and geometry for the chosen mode."""
+        flags = Qt.Window
+
+        if self.mode == OverlayMode.TRANSPARENT:
+            flags |= Qt.X11BypassWindowManagerHint
+            if not self.map_clicks:
+                flags |= Qt.WindowTransparentForInput
+            self.setGeometry(x, y, width, height)
+
+        elif self.mode == OverlayMode.BORDERLESS:
+            flags |= Qt.FramelessWindowHint
+            self.setGeometry(x, y, width, height)
+
+        elif self.mode == OverlayMode.WINDOWED:
+            self.setGeometry(x, y, width, height)
+            self.setFixedSize(width, height)
+
+        else:
+            raise ValueError(f"Unknown overlay mode: {self.mode}")
+
+        self.setWindowFlags(flags)
+
+        if self.mode == OverlayMode.BORDERLESS:
+            self.showFullScreen()
+        else:
+            self.show()
+
+    def changeEvent(self, event: QEvent) -> None:
+        """Detect window state changes (minimized) to enable/disable forwarding."""
+        if event.type() == QEvent.WindowStateChange:
+            if self.windowState() & Qt.WindowMinimized:
+                logger.debug("Window minimized – disabling event forwarding")
+                self._forwarding_enabled = False
+            else:
+                logger.debug("Window restored – enabling event forwarding")
+                self._forwarding_enabled = True
+        super().changeEvent(event)
+
+    def closeEvent(self, event: Any) -> None:
+        """Quit the application when the overlay window is closed."""
+        logger.info("Overlay window closed – quitting application.")
+        QApplication.quit()
+        self._close_x_display()
+        super().closeEvent(event)
 
     def _x_error_handler(self, error, request) -> None:
         """
@@ -108,16 +154,12 @@ class OverlayWindow(QMainWindow):
             logger.error(f"Failed to open X display: {e}", exc_info=True)
             self._x_display = None
             self._x_root = None
-            # Disable forwarding because we can't send events
             self.map_clicks = False
-            # Update window flags to become click‑through
-            self.setWindowFlags(self.windowFlags() | Qt.WindowTransparentForInput)
-            self.show()  # re‑apply flags
-
-    def closeEvent(self, event: Any) -> None:
-        """Ensure X display is closed when the window is destroyed."""
-        self._close_x_display()
-        super().closeEvent(event)
+            self._forwarding_enabled = False
+            # Fallback to click‑through
+            flags = self.windowFlags() | Qt.WindowTransparentForInput
+            self.setWindowFlags(flags)
+            self.show()
 
     def _close_x_display(self) -> None:
         """Safely close the X display connection."""
@@ -132,19 +174,17 @@ class OverlayWindow(QMainWindow):
                 self._x_root = None
 
     def disable_click_forwarding(self) -> None:
-        """
-        Permanently disable mouse forwarding (e.g., when target window is destroyed).
-        This also makes the overlay click‑through.
-        """
+        """Permanently disable forwarding (e.g., target window destroyed)."""
         if self.map_clicks:
             logger.info("Disabling click forwarding.")
             self.map_clicks = False
+            self._forwarding_enabled = False
             self.target_handle = None
             self._close_x_display()
-            # Make window transparent for input
+            # Make window click‑through
             flags = self.windowFlags() | Qt.WindowTransparentForInput
             self.setWindowFlags(flags)
-            self.show()  # re‑apply flags
+            self.show()
 
     def set_scaling_rect(self, rect: List[int]) -> None:
         """
@@ -165,13 +205,14 @@ class OverlayWindow(QMainWindow):
 
     def eventFilter(self, obj: Any, event: QEvent) -> bool:
         """Filter mouse events and forward them when map_clicks is enabled."""
-        if not self.map_clicks:
+        if not self.map_clicks or not self._forwarding_enabled:
             return super().eventFilter(obj, event)
 
-        if event.type() == QEvent.MouseMove:
-            self._handle_mouse(event)
-            return True
-        elif event.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonRelease):
+        if event.type() in (
+            QEvent.MouseMove,
+            QEvent.MouseButtonPress,
+            QEvent.MouseButtonRelease,
+        ):
             self._handle_mouse(event)
             return True
 

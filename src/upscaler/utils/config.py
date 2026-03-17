@@ -34,6 +34,9 @@ class Config:
         self.select: bool = False
         self.disable_forwarding: bool = False
 
+        # Overlay
+        self.overlay_mode: str = "borderless"
+
         # Display
         self.monitor: str = "primary"
 
@@ -91,6 +94,16 @@ class Config:
             "--disable-forwarding",
             action="store_true",
             help="Disable mouse forwarding (overlay becomes transparent to input)",
+        )
+
+        # Overlay section
+        overlay_group = parser.add_argument_group("OVERLAY OPTIONS")
+        overlay_group.add_argument(
+            "-o",
+            "--overlay-mode",
+            choices=("transparent", "borderless", "maximized", "windowed"),
+            default="fullscreen",
+            help="Mode of overlay.",
         )
 
         # Display section
@@ -261,6 +274,9 @@ class Config:
         if args.disable_forwarding:
             self.disable_forwarding = True
             logger.debug("CLI set disable_forwarding = True")
+        if args.overlay_mode != "borderless":
+            self.overlay_mode = args.overlay_mode
+            logger.debug(f"CLI set overlay_mode = {self.overlay_mode}")
         if args.monitor != "primary":
             self.monitor = args.monitor
             logger.debug(f"CLI set monitor = {self.monitor}")

@@ -15,6 +15,7 @@ import subprocess
 import time
 from typing import Optional, List, Tuple
 
+from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
 from compushady import Swapchain
 from compushady.formats import R8G8B8A8_UNORM
@@ -128,21 +129,29 @@ def main() -> None:
     if config.log_level != "ERROR":
         print(f"Detected monitors: {get_monitor_list()}")
 
-    monitor = get_monitor(config.monitor)
-    screen_x, screen_y, screen_w, screen_h = get_monitor_geometry(monitor)
-    logger.info(f"Overlay geometry: ({screen_x},{screen_y}) {screen_w}x{screen_h}")
+    # Determine overlay size and position
+    if config.overlay_mode in ("transparent", "fullscreen", "borderless"):
+        # Use full monitor geometry
+        monitor = get_monitor(config.monitor)
+        x, y, w, h = get_monitor_geometry(monitor)
 
-    if config.log_level != "ERROR":
-        print(f"Screen resolution: {screen_w}x{screen_h}")
+        if config.log_level != "ERROR":
+            print(f"Screen resolution: {w}x{h}")
+    else:  # windowed, params to be integrated to CLI in next revision
+        x = 100
+        y = 100
+        w = 1280
+        h = 720
 
     map_clicks = not config.disable_forwarding
     overlay = OverlayWindow(
-        screen_w,
-        screen_h,
+        width=w,
+        height=h,
+        mode=config.overlay_mode,
         map_clicks=map_clicks,
         target_handle=win_info.handle if map_clicks else None,
-        initial_x=screen_x,
-        initial_y=screen_y,
+        initial_x=x,
+        initial_y=y,
     )
 
     if map_clicks:
@@ -151,23 +160,22 @@ def main() -> None:
     else:
         logger.debug("Click mapping disabled, overlay is transparent to input")
 
-    # Let Qt map the window
+    # Prepare window for Vulkan
     time.sleep(0.5)
+    overlay.show()
     QApplication.processEvents()
-    logger.debug("Overlay window mapped")
+    if overlay.windowHandle():
+        overlay.windowHandle().setSurfaceType(QWindow.VulkanSurface)
 
-    # Create swapchain
+    # Create swapchain with Qt's X11 display
     display_id = get_display()
-    logger.debug(
-        f"Creating swapchain with display_id={display_id}, overlay.xid={overlay.xid}"
-    )
+    logger.debug(f"Creating swapchain with display={display_id}, xid={overlay.xid}")
     swapchain = Swapchain((display_id, overlay.xid), R8G8B8A8_UNORM, 3)
 
-    # Start pipeline
     pipeline = Pipeline(
         win_info,
-        screen_w,
-        screen_h,
+        overlay.width(),
+        overlay.height(),
         overlay,
         swapchain,
         map_clicks=map_clicks,
