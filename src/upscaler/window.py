@@ -1,7 +1,9 @@
 import logging
+import subprocess
 import time
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, Set
+from typing import List, Optional, Tuple
 
 import psutil
 from Xlib import X
@@ -9,6 +11,8 @@ from Xlib.display import Display
 from Xlib.error import XError
 from Xlib.xobject.drawable import Window
 from ewmh import EWMH
+
+from .utils.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -408,3 +412,57 @@ def find_by_pid(
     finally:
         display.close()
         logger.debug("Closed X display at end of search")
+
+
+def launch_and_find_window(
+    config: Config,
+) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
+    """
+    Launch the program from config.program and use find_by_pid to locate its window.
+    Returns (WindowInfo, Popen) on success, or (None, None) on failure/timeout.
+    """
+    if not config.program:
+        logger.error("No program specified in config")
+        return None, None
+
+    program_name = config.program[0]
+    print(f"Launching: {' '.join(config.program)}")
+    proc = subprocess.Popen(config.program)
+
+    print("Waiting for window...")
+    try:
+        win_info = find_by_pid(
+            proc.pid,
+            pid_timeout=config.pid_timeout,
+            class_hint=program_name,
+            class_timeout=config.class_timeout,
+            total_timeout=config.total_timeout,
+            starting_phase=config.starting_phase,
+        )
+        logger.info(f"Found window for PID {proc.pid}: {win_info.title}")
+        return win_info, proc
+    except TimeoutError as e:
+        logger.error(f"Timeout while waiting for window: {e}")
+        print(e)
+        proc.terminate()
+        proc.wait()
+        return None, None
+
+
+def get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
+    """
+    Wait target_delay seconds and then return the currently active window.
+    """
+    if config.log_level != "ERROR":
+        print(
+            f"No program specified. Will scale the currently active window in {config.target_delay} seconds..."
+        )
+    time.sleep(config.target_delay)
+    try:
+        win_info = get_active_window()
+        logger.info(f"Got active window: {win_info.title}")
+        return win_info
+    except RuntimeError as e:
+        logger.error(f"Failed to get active window: {e}")
+        print(e)
+        return None
