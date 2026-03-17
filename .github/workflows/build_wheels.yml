@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: [ 'cp39-*', 'cp310-*', 'cp311-*', 'cp312-*' ]
+        python: [ 'cp39-*', 'cp310-*', 'cp311-*', 'cp312-*', 'cp313-*' ]
     steps:
       - uses: actions/checkout@v4
 
