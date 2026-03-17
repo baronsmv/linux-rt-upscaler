@@ -4,7 +4,6 @@ from typing import Optional, List, Tuple, Any
 from PySide6.QtCore import Qt, QEvent, QPoint
 from PySide6.QtWidgets import QMainWindow, QApplication
 from Xlib import X, display
-from Xlib.error import BadWindow, XError
 from Xlib.protocol import event as xevent
 
 logger = logging.getLogger(__name__)
@@ -92,12 +91,23 @@ class OverlayWindow(QMainWindow):
             self._open_x_display()
             self.installEventFilter(self)
 
+    def _x_error_handler(self, error, request) -> None:
+        """
+        Custom X error handler – suppresses default stderr printing and logs silently.
+        """
+        if error.error_code == 3:  # BadWindow
+            logger.debug(f"Ignoring BadWindow (target window probably gone)")
+        else:
+            logger.error(f"Unexpected X error: {error}")
+        # Do not raise; just return. The error is already handled.
+
     def _open_x_display(self) -> None:
-        """Open a connection to the X server for sending events."""
+        """Open a connection to the X server and install a custom error handler."""
         try:
             self._x_display = display.Display()
             self._x_root = int(self._x_display.screen().root.id)
-            logger.debug("Opened X display for event forwarding.")
+            self._x_display.set_error_handler(self._x_error_handler)
+            logger.debug("Opened X display with custom error handler.")
         except Exception as e:
             logger.error(f"Failed to open X display: {e}", exc_info=True)
             self._x_display = None
@@ -217,7 +227,6 @@ class OverlayWindow(QMainWindow):
             state |= X.Button3Mask
         if buttons & Qt.MiddleButton:
             state |= X.Button2Mask
-        # Scroll buttons are not usually in the button state mask, but we could add them if needed
         logger.debug(f"Current button state mask: {state}")
         return state
 
@@ -234,7 +243,7 @@ class OverlayWindow(QMainWindow):
     def _send_event(self, ev: Any) -> None:
         """
         Send an X11 event to the target window and flush the display.
-        Catches X errors and disables forwarding if the target window is gone.
+        The custom error handler will log errors without printing to stderr.
         """
         if self._x_display is None or self.target_handle is None:
             logger.error("Cannot send event: no X display or target handle")
@@ -250,11 +259,6 @@ class OverlayWindow(QMainWindow):
             )
             self._x_display.flush()
             logger.debug(f"Sent event: {ev}")
-        except (BadWindow, XError) as e:
-            logger.warning(
-                f"Target window disappeared; disabling click forwarding: {e}"
-            )
-            self.disable_click_forwarding()
         except Exception as e:
             logger.error(f"Unexpected error sending X11 event: {e}", exc_info=True)
 

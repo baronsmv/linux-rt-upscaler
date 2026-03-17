@@ -274,8 +274,16 @@ def main() -> None:
 
     # Monitor target window for destruction
     watcher = WindowWatcher(win_info.handle)
+
+    def check_window():
+        if not watcher.is_alive:
+            logger.info("Target window destroyed, shutting down.")
+            overlay.disable_click_forwarding()
+            pipeline.stop()
+            app.quit()
+
     timer = QTimer()
-    timer.timeout.connect(lambda: _check_window_destroyed(watcher, pipeline, app))
+    timer.timeout.connect(check_window)
     timer.start(100)
 
     # Set up signal handler for graceful exit
@@ -287,16 +295,6 @@ def main() -> None:
         logger.info(f"Qt event loop exited with code {exit_code}")
     finally:
         _cleanup(pipeline, proc)
-
-
-def _check_window_destroyed(
-    watcher: WindowWatcher, pipeline: Pipeline, app: QApplication
-) -> None:
-    """Qt timer callback: if target window is gone, stop pipeline and quit."""
-    if not watcher.is_alive:
-        logger.info("Target window destroyed, shutting down.")
-        pipeline.stop()
-        app.quit()
 
 
 def _cleanup(pipeline: Pipeline, proc: Optional[subprocess.Popen]) -> None:
