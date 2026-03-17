@@ -13,8 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ubuntu-latest
-        python: [ '39', '310', '311', '312' '3.13' ]
+        os: [ubuntu-latest]
+        python: [ '39', '310', '311', '312' '313' ]
     steps:
       - uses: actions/checkout@v4
 
