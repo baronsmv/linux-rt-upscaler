@@ -10,13 +10,14 @@ from setuptools.command.build_ext import build_ext
 
 
 class BuildCaptureLib(build_ext):
-    """Custom build_ext command that compiles captureRGBX.c before the normal build."""
+    """Custom build_ext that compiles captureRGBX.c before normal build."""
 
     def run(self):
         # Logging to stderr (visible in CI)
         print("=" * 50, file=sys.stderr)
         print("BuildCaptureLib.run() started", file=sys.stderr)
         print("Current directory:", os.getcwd(), file=sys.stderr)
+
         capture_dir = Path(__file__).parent / "src" / "upscaler" / "capture"
         print("Contents of capture dir:", list(capture_dir.iterdir()), file=sys.stderr)
 
@@ -66,16 +67,18 @@ class BuildCaptureLib(build_ext):
         super().run()
 
 
-# Create a tiny dummy C source to force build_ext to run.
-dummy_c = Path(__file__).parent / "src" / "upscaler" / "capture" / "dummy.c"
-if not dummy_c.exists():
-    dummy_c.write_text(
+# Ensure a tiny dummy C source exists (in the repo or created on the fly)
+dummy_c_path = Path("src/upscaler/capture/dummy.c")
+if not dummy_c_path.exists():
+    dummy_c_path.parent.mkdir(parents=True, exist_ok=True)
+    dummy_c_path.write_text(
         "/* dummy file to force extension build */\nvoid dummy(void) {}\n"
     )
 
+# Dummy extension – source path is relative to setup.py (required by setuptools)
 dummy_extension = Extension(
     "upscaler.capture.dummy",
-    sources=[str(dummy_c)],
+    sources=["src/upscaler/capture/dummy.c"],
 )
 
 setup(
