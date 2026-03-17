@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, List, Tuple, Any
 
-from PySide6.QtCore import Qt, QEvent, QPoint
+from PySide6.QtCore import QEvent, QPoint, Qt, Slot
 from PySide6.QtWidgets import QMainWindow, QApplication
 from Xlib import X, display
 from Xlib.protocol import event as xevent
@@ -95,11 +95,7 @@ class OverlayWindow(QMainWindow):
         """
         Custom X error handler – suppresses default stderr printing and logs silently.
         """
-        if error.error_code == 3:  # BadWindow
-            logger.debug(f"Ignoring BadWindow (target window probably gone)")
-        else:
-            logger.error(f"Unexpected X error: {error}")
-        # Do not raise; just return. The error is already handled.
+        logger.debug(f"X error: {error} (type: {type(error).__name__})")
 
     def _open_x_display(self) -> None:
         """Open a connection to the X server and install a custom error handler."""
@@ -355,3 +351,9 @@ class OverlayWindow(QMainWindow):
 
         else:
             logger.warning(f"Unexpected event type in _handle_mouse: {event.type()}")
+
+    @Slot()
+    def on_pipeline_stopped(self):
+        """Called from the pipeline thread when it exits due to an error."""
+        logger.info("Pipeline stopped – quitting application.")
+        QApplication.quit()

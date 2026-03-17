@@ -2,10 +2,10 @@ import logging
 import os
 import struct
 import threading
-import time
 from queue import Queue, Empty
 from typing import Optional, Any, Tuple
 
+from PySide6.QtCore import QMetaObject, Qt
 from PySide6.QtGui import QCursor
 from Xlib.display import Display
 from Xlib.error import XError, BadWindow
@@ -147,6 +147,7 @@ class Pipeline:
         self.running = False
         self.thread: Optional[threading.Thread] = None
         self.frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
+        self.stopped_event = threading.Event()
 
         # X11 connection for geometry queries (used only if map_clicks is False)
         self._x_display: Optional[Display] = None
@@ -280,12 +281,16 @@ class Pipeline:
                 logger.error(f"X error in pipeline loop: {e}")
                 break
             except Exception as e:
-                logger.error(f"Unexpected error in pipeline loop: {e}", exc_info=True)
-                time.sleep(0.1)  # avoid busy loop on persistent errors
+                logger.debug(f"Fatal error in pipeline loop (: {e}")
+                break
 
-        logger.info("Pipeline thread finished.")
-        # Ensure overlay is visible (opacity reset) when we exit
-        self.overlay.setWindowOpacity(1.0)
+        self.stopped_event.set()
+        logger.info("Pipeline stopped event set.")
+
+        # Tell the main thread to quit via Qt's queued connection
+        QMetaObject.invokeMethod(
+            self.overlay, "on_pipeline_stopped", Qt.QueuedConnection
+        )
 
     def _process_one_frame(
         self,

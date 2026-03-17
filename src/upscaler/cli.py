@@ -31,7 +31,6 @@ import time
 from pathlib import Path
 from typing import Optional, List, Tuple
 
-from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 from compushady import Swapchain
 from compushady.formats import R8G8B8A8_UNORM
@@ -45,7 +44,6 @@ from .window import (
     get_active_window,
     list_windows,
     WindowInfo,
-    WindowWatcher,
 )
 
 logger = logging.getLogger(__name__)
@@ -272,20 +270,6 @@ def main() -> None:
     pipeline.start()
     logger.info("Pipeline started")
 
-    # Monitor target window for destruction
-    watcher = WindowWatcher(win_info.handle)
-
-    def check_window():
-        if not watcher.is_alive:
-            logger.info("Target window destroyed, shutting down.")
-            overlay.disable_click_forwarding()
-            pipeline.stop()
-            app.quit()
-
-    timer = QTimer()
-    timer.timeout.connect(check_window)
-    timer.start(100)
-
     # Set up signal handler for graceful exit
     signal.signal(signal.SIGINT, signal.SIG_DFL)  # allow Ctrl+C to interrupt
 
@@ -305,6 +289,8 @@ def _cleanup(pipeline: Pipeline, proc: Optional[subprocess.Popen]) -> None:
         logger.info(f"Terminating launched process {proc.pid}")
         proc.terminate()
         proc.wait()
+
+    sys.exit(0)
 
 
 if __name__ == "__main__":

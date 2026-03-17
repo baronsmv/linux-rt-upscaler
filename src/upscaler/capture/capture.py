@@ -37,11 +37,12 @@ class FrameGrabber:
         The C function `captureBGRX` writes directly into `self.buffer`.
         """
         logger.debug(f"Grabbing frame from window {self.handle}")
-        try:
-            _lib.captureBGRX(0, 0, self.width, self.height, self.handle, self.buffer)
-            logger.debug("Frame grabbed successfully")
-        except Exception as e:
-            logger.error(f"Exception during captureBGRX call: {e}", exc_info=True)
-            # Re-raise because we cannot recover from a C crash
-            raise
+        result = _lib.captureBGRX(
+            0, 0, self.width, self.height, self.handle, self.buffer
+        )
+        if result != 0:
+            raise RuntimeError(
+                f"captureBGRX failed with code {result} (window probably gone)"
+            )
+        logger.debug("Frame grabbed successfully")
         return memoryview(self.buffer)
