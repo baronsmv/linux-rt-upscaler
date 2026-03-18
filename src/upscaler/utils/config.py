@@ -71,6 +71,7 @@ class Config:
         parser = argparse.ArgumentParser(
             description="Real‑Time Upscaler for Linux",
             epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler",
+            formatter_class=argparse.RawTextHelpFormatter,
         )
         parser._positionals.title = "POSITIONAL ARGUMENTS"
         parser._optionals.title = "GENERAL OPTIONS"
@@ -147,17 +148,18 @@ class Config:
         output_group = parser.add_argument_group("OUTPUT GEOMETRY OPTIONS")
         output_group.add_argument(
             "--output-geometry",
+            default="fit",
             help="Specify the output window size and scaling behavior.\n"
             "Examples:\n"
-            "  1920x1080     - Fit content to 1920x1080 (letterbox, black bars)\n"
-            "  1920x1080!    - Stretch content to 1920x1080 (aspect ratio not preserved)\n"
-            "  1920x1080^    - Cover 1920x1080 (crop)\n"
-            "  stretch       - Stretch to full monitor/window\n"
-            "  fit           - Fit to full monitor/window (letterbox)\n"
-            "  cover         - Cover full monitor/window (crop)\n"
-            "  50%%           - Scale monitor/window to 50%%, then stretch\n"
-            "  1920x         - Width fixed to 1920, height proportional\n"
-            "  x1080         - Height fixed to 1080, width proportional",
+            "  1920x1080   - Fit content to 1920x1080 (letterbox, black bars)\n"
+            "  1920x1080!  - Stretch content to 1920x1080 (aspect ratio not preserved)\n"
+            "  1920x1080^  - Cover 1920x1080 (crop)\n"
+            "  stretch     - Stretch to full monitor/window\n"
+            "  fit         - Fit to full monitor/window (letterbox)\n"
+            "  cover       - Cover full monitor/window (crop)\n"
+            "  50%%         - Scale monitor/window to 50%%, then stretch\n"
+            "  1920x       - Width fixed to 1920, height proportional\n"
+            "  x1080       - Height fixed to 1080, width proportional",
         )
         output_group.add_argument(
             "--background-color",
@@ -299,7 +301,7 @@ class Config:
         if args.monitor != "primary":
             self.monitor = args.monitor
             logger.debug(f"CLI set monitor = {self.monitor}")
-        if args.output_geometry is not None:
+        if args.output_geometry != "fit":
             self.output_geometry = args.output_geometry
             logger.debug(f"CLI set output_geometry = {self.output_geometry}")
         if args.background_color != "black":

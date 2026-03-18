@@ -1,12 +1,30 @@
+import logging
+
 from PySide6.QtGui import QColor
+
+logger = logging.getLogger(__name__)
 
 
 def color_string_to_float4(color_str: str) -> tuple[float, float, float, float]:
-    """Convert '#RRGGBB' or color name to normalized (r,g,b,a)."""
+    """
+    Convert any valid CSS color string to normalized (b, g, r, a) for the shader.
+    The shader expects BGRA order, so it returns blue, green, red, alpha.
+
+    Supports:
+        - Named colors: "red", "blue", "black", "transparent", etc.
+        - Hex: "#RGB", "#RRGGBB", "#RRGGBBAA"
+        - Functional: "rgb(255,0,0)", "rgba(255,0,0,0.5)", "hsl(120,100%,50%)"
+
+    If the string is invalid, falls back to black.
+    """
     qcolor = QColor(color_str)
     if not qcolor.isValid():
-        qcolor = QColor("black")  # fallback
-    return qcolor.redF(), qcolor.greenF(), qcolor.blueF(), qcolor.alphaF()
+        logger.warning(f"Invalid color string '{color_str}', falling back to black")
+        qcolor = QColor("black")
+    # Return BGRA order to match shader expectations
+    result = (qcolor.blueF(), qcolor.greenF(), qcolor.redF(), qcolor.alphaF())
+    logger.debug(f"Parsed color '{color_str}' -> BGRA: {result}")
+    return result
 
 
 def parse_output_geometry(

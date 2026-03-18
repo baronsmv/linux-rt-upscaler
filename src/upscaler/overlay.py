@@ -11,22 +11,18 @@ logger = logging.getLogger(__name__)
 
 
 class OverlayMode(str, Enum):
-    # Always on top, click‑through or forwards (bypasses window manager)
+    """Overlay window behavior modes."""
+
     ALWAYS_ON_TOP = "always-on-top"
-
-    # Always on top, click‑through (bypasses window manager)
     ALWAYS_ON_TOP_TRANSPARENT = "top-transparent"
-
-    # Fullscreen without decorations
     FULLSCREEN = "fullscreen"
-
-    # Normal window with decorations, fixed size
     WINDOWED = "windowed"
 
 
 class OverlayWindow(QMainWindow):
     """
     An overlay window that can present upscaled content in various modes.
+    It can optionally forward mouse events to the target window.
     """
 
     # Mapping from Qt button to X11 button number (1–3, 4–5 for scroll, 8–9 for extra)
@@ -54,17 +50,21 @@ class OverlayWindow(QMainWindow):
         """
         Create and show the overlay window.
 
-        :param width:  Desired width of the overlay (for windowed mode) or full screen size.
-        :param height: Desired height.
-        :param mode:   OverlayMode value.
-        :param target: X11 window of the target.
-        :param initial_x: Initial X position (windowed mode only).
-        :param initial_y: Initial Y position.
+        :param width:           Desired width of the overlay (may be larger than screen).
+        :param height:          Desired height.
+        :param mode:            OverlayMode value.
+        :param target:          WindowInfo of the target window.
+        :param initial_x:       Initial X position (for windowed mode).
+        :param initial_y:       Initial Y position.
+        :param content_width:   Logical width of the content (if different from overlay).
+        :param content_height:  Logical height of the content.
+        :param scale_mode:      How the content is scaled within the overlay.
+        :param background_color: Color for areas not covered by content.
         """
         super().__init__()
         logger.info(
             f"Initializing OverlayWindow: mode={mode}, size={width}x{height}, "
-            f", target_handle={target.handle}"
+            f"target_handle={target.handle}"
         )
 
         self.mode = mode
@@ -80,7 +80,7 @@ class OverlayWindow(QMainWindow):
         self.scale_mode = scale_mode
         self.background_color = background_color
 
-        # X11 connection for event forwarding (to track mouse events)
+        # X11 connection for event forwarding
         self._x_display: Optional[display.Display] = None
         self._x_root: Optional[int] = None
 
@@ -91,8 +91,7 @@ class OverlayWindow(QMainWindow):
         self._setup_window(width, height, initial_x, initial_y)
 
         self.setMouseTracking(self.map_events)  # track mouse moves only if mapping
-        self.show()
-        self.resize(width, height)
+        self.resize(width, height)  # force size after possible WM interference
         QApplication.processEvents()
 
         self.xid = int(self.winId())
@@ -109,28 +108,23 @@ class OverlayWindow(QMainWindow):
         if self.mode == OverlayMode.FULLSCREEN:
             flags |= Qt.FramelessWindowHint
             self.setGeometry(x, y, width, height)
+            self.showFullScreen()
+            return
 
-        elif self.mode == OverlayMode.WINDOWED:
+        if self.mode == OverlayMode.WINDOWED:
             self.setGeometry(x, y, width, height)
             self.setFixedSize(width, height)
-
         elif self.mode == OverlayMode.ALWAYS_ON_TOP:
             flags |= Qt.X11BypassWindowManagerHint
             self.setGeometry(x, y, width, height)
-
         elif self.mode == OverlayMode.ALWAYS_ON_TOP_TRANSPARENT:
             flags |= Qt.X11BypassWindowManagerHint | Qt.WindowTransparentForInput
             self.setGeometry(x, y, width, height)
-
         else:
             raise ValueError(f"Unknown overlay mode: {self.mode}")
 
         self.setWindowFlags(flags)
-
-        if self.mode == OverlayMode.FULLSCREEN:
-            self.showFullScreen()
-        else:
-            self.show()
+        self.show()
 
     def changeEvent(self, event: QEvent) -> None:
         """Detect window state changes (minimized) to enable/disable forwarding."""
@@ -143,14 +137,14 @@ class OverlayWindow(QMainWindow):
                 self._forwarding_enabled = True
         super().changeEvent(event)
 
-    def closeEvent(self, event: Any) -> None:
+    def closeEvent(self, event: QEvent) -> None:
         """Quit the application when the overlay window is closed."""
         logger.info("Overlay window closed – quitting application.")
         QApplication.quit()
         self._close_x_display()
         super().closeEvent(event)
 
-    def _x_error_handler(self, error, request) -> None:
+    def _x_error_handler(self, error: Any, request: Any) -> None:
         """
         Custom X error handler – suppresses default stderr printing and logs silently.
         """
@@ -209,12 +203,6 @@ class OverlayWindow(QMainWindow):
             return
         self.scaling_rect = rect
         logger.debug(f"Scaling rect set to {rect}")
-
-    def set_client_size(self, w: int, h: int) -> None:
-        """Set the original (client) size of the target window."""
-        self.client_width = w
-        self.client_height = h
-        logger.debug(f"Client size set to {w}x{h}")
 
     def eventFilter(self, obj: Any, event: QEvent) -> bool:
         """Filter mouse events and forward them when map_events is enabled."""
@@ -423,7 +411,7 @@ class OverlayWindow(QMainWindow):
             logger.warning(f"Unexpected event type in _handle_mouse: {event.type()}")
 
     @Slot()
-    def on_pipeline_stopped(self):
+    def on_pipeline_stopped(self) -> None:
         """Called from the pipeline thread when it exits due to an error."""
         logger.info("Pipeline stopped – quitting application.")
         QApplication.quit()

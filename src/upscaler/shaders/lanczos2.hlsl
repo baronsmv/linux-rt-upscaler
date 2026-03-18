@@ -7,6 +7,7 @@ SamplerState PointSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
+    float4 bgColor;
     uint srcWidth;          // upscaled source width
     uint srcHeight;         // upscaled source height
     uint dstTotalWidth;     // physical window width
@@ -16,7 +17,6 @@ cbuffer Constants : register(b0)
     int dstW;               // rectangle width
     int dstH;               // rectangle height
     float blur;
-    float4 bgColor;
 };
 
 float lanczos(float x)

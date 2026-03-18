@@ -28,6 +28,10 @@ from .utils.parsers import color_string_to_float4
 
 logger = logging.getLogger(__name__)
 
+# Constant buffer layout: 4 floats (bgColor), 4 uint, 4 int, 1 float (blur)
+CB_FORMAT = "ffffIIIIiiiif"
+CB_SIZE = struct.calcsize(CB_FORMAT)
+
 
 def _calculate_scaling_rect(
     src_w: int, src_h: int, dst_w: int, dst_h: int, mode: str
@@ -39,24 +43,11 @@ def _calculate_scaling_rect(
     if mode == "stretch":
         return 0, 0, dst_w, dst_h
 
-    if mode == "fit":
-        scale = min(dst_w / src_w, dst_h / src_h)
-        out_w = int(src_w * scale)
-        out_h = int(src_h * scale)
-        out_x = (dst_w - out_w) // 2
-        out_y = (dst_h - out_h) // 2
-        return out_x, out_y, out_w, out_h
-
     if mode == "cover":
         scale = max(dst_w / src_w, dst_h / src_h)
-        out_w = int(src_w * scale)
-        out_h = int(src_h * scale)
-        out_x = (dst_w - out_w) // 2
-        out_y = (dst_h - out_h) // 2
-        return out_x, out_y, out_w, out_h
+    else:  # "fit" or any unknown mode (fallback to fit)
+        scale = min(dst_w / src_w, dst_h / src_h)
 
-    # Fallback to fit if mode is unknown
-    scale = min(dst_w / src_w, dst_h / src_h)
     out_w = int(src_w * scale)
     out_h = int(src_h * scale)
     out_x = (dst_w - out_w) // 2
@@ -142,7 +133,7 @@ class Pipeline:
         logger.debug("Lanczos sampler created.")
 
         # Constant buffer (will be updated per frame with scaling parameters)
-        self.cb = Buffer(struct.calcsize("IIIIiiiiiffff"), heap_type=HEAP_UPLOAD)
+        self.cb = Buffer(CB_SIZE, heap_type=HEAP_UPLOAD)
         logger.debug("Constant buffer created.")
 
         # For click mapping rectangle (updated each frame)
@@ -286,7 +277,7 @@ class Pipeline:
                 logger.error(f"X error in pipeline loop: {e}")
                 break
             except Exception as e:
-                logger.debug(f"Fatal error in pipeline loop (: {e}")
+                logger.debug(f"Fatal error in pipeline loop: {e}")
                 break
 
         self.stopped_event.set()
@@ -331,46 +322,29 @@ class Pipeline:
         logger.debug("Running SRCNN compute...")
         self.upscaler.compute()  # result in self.upscaler.output
 
-        if self.overlay.scale_mode == "stretch":
-            dst_x, dst_y = 0, 0
-            dst_w, dst_h = self.screen_width, self.screen_height
-        elif self.overlay.scale_mode == "fit":
-            scale = min(self.screen_width / src_w, self.screen_height / src_h)
-            dst_w = int(src_w * scale)
-            dst_h = int(src_h * scale)
-            dst_x = (self.screen_width - dst_w) // 2
-            dst_y = (self.screen_height - dst_h) // 2
-        elif self.overlay.scale_mode == "cover":
-            scale = max(self.screen_width / src_w, self.screen_height / src_h)
-            dst_w = int(src_w * scale)
-            dst_h = int(src_h * scale)
-            dst_x = (self.screen_width - dst_w) // 2
-            dst_y = (self.screen_height - dst_h) // 2
-        else:
-            # fallback to fit
-            scale = min(self.screen_width / src_w, self.screen_height / src_h)
-            dst_w = int(src_w * scale)
-            dst_h = int(src_h * scale)
-            dst_x = (self.screen_width - dst_w) // 2
-            dst_y = (self.screen_height - dst_h) // 2
+        # Compute destination rectangle based on scale_mode
+        dst_x, dst_y, dst_w, dst_h = _calculate_scaling_rect(
+            src_w, src_h, self.screen_width, self.screen_height, self.overlay.scale_mode
+        )
 
         # Store for mouse mapping
         self.overlay.scaling_rect[:] = [dst_x, dst_y, dst_w, dst_h]
 
         # Lanczos scaling (constant buffer)
         cb_data = struct.pack(
-            "IIIIiiiifffff",
+            CB_FORMAT,
+            *self.background_color,  # 4 floats
             src_w,
             src_h,
             self.screen_width,
-            self.screen_height,
+            self.screen_height,  # 4 uint
             dst_x,
             dst_y,
             dst_w,
-            dst_h,
-            1.0,  # blur
-            *self.background_color,
+            dst_h,  # 4 int
+            1.0,  # blur (float)
         )
+        logger.debug(f"CB data hex: {cb_data.hex()}")
         self.cb.upload(cb_data)
         logger.debug("Constant buffer updated for Lanczos scaling.")
 
