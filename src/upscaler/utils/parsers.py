@@ -32,6 +32,18 @@ def parse_output_geometry(
 ):
     """
     Returns (overlay_w, overlay_h, content_w, content_h, mode)
+
+    Recognised formats:
+      - "stretch", "fit", "cover"          (use full monitor, mode = name)
+      - "50%"                               (50% of monitor, fit content)
+      - "50%!"                              (50% of monitor, stretch content)
+      - "1920x"                              (width fixed, height proportional, fit)
+      - "1920x!"                             (width fixed, height proportional, stretch)
+      - "x1080"                              (height fixed, width proportional, fit)
+      - "x1080!"                             (height fixed, width proportional, stretch)
+      - "1920x1080"                          (exact size, fit content)
+      - "1920x1080!"                         (exact size, stretch)
+      - "1920x1080^"                         (exact size, cover)
     """
     geometry = geometry.strip()
 
@@ -50,11 +62,56 @@ def parse_output_geometry(
         return ow, oh, cw, ch, mode
 
     # Percentage of base overlay
-    if geometry.endswith("%"):
-        percent = float(geometry[:-1]) / 100.0
+    if geometry.endswith("%") or geometry.endswith("%!"):
+        stretch = geometry.endswith("!")
+        if stretch:
+            geom = geometry[:-2]  # remove "%!"
+        else:
+            geom = geometry[:-1]  # remove "%"
+        percent = float(geom) / 100.0
         ow = int(base_w * percent)
         oh = int(base_h * percent)
-        return ow, oh, ow, oh, "stretch"
+        mode = "stretch" if stretch else "fit"
+        if mode == "stretch":
+            cw, ch = ow, oh
+        else:
+            scale = min(ow / src_w, oh / src_h)
+            cw, ch = int(src_w * scale), int(src_h * scale)
+        return ow, oh, cw, ch, mode
+
+    # Wx   (width fixed, height proportional)
+    if (geometry.endswith("x") or geometry.endswith("x!")) and len(geometry) > 1:
+        stretch = geometry.endswith("!")
+        if stretch:
+            geom = geometry[:-2]  # remove "x!"
+        else:
+            geom = geometry[:-1]  # remove "x"
+        ow = int(geom)
+        scale = ow / src_w
+        oh = int(src_h * scale)
+        mode = "stretch" if stretch else "fit"
+        if mode == "stretch":
+            cw, ch = ow, oh
+        else:
+            cw, ch = int(src_w * scale), int(src_h * scale)
+        return ow, oh, cw, ch, mode
+
+    # xH   (height fixed, width proportional)
+    if (geometry.startswith("x") or geometry.startswith("x!")) and len(geometry) > 1:
+        stretch = geometry.endswith("!")
+        if stretch:
+            geom = geometry[1:-1]  # remove leading "x" and trailing "!"
+        else:
+            geom = geometry[1:]  # remove leading "x"
+        oh = int(geom)
+        scale = oh / src_h
+        ow = int(src_w * scale)
+        mode = "stretch" if stretch else "fit"
+        if mode == "stretch":
+            cw, ch = ow, oh
+        else:
+            cw, ch = int(src_w * scale), int(src_h * scale)
+        return ow, oh, cw, ch, mode
 
     # WxH!  (exact stretch)
     if geometry.endswith("!"):
@@ -84,20 +141,6 @@ def parse_output_geometry(
             scale = min(ow / src_w, oh / src_h)
             cw, ch = int(src_w * scale), int(src_h * scale)
             return ow, oh, cw, ch, "fit"
-
-    # Wx   (width fixed, height proportional)
-    if geometry.endswith("x") and len(geometry) > 1:
-        ow = int(geometry[:-1])
-        scale = ow / src_w
-        oh = int(src_h * scale)
-        return ow, oh, ow, oh, "stretch"
-
-    # xH   (height fixed, width proportional)
-    if geometry.startswith("x") and len(geometry) > 1:
-        oh = int(geometry[1:])
-        scale = oh / src_h
-        ow = int(src_w * scale)
-        return ow, oh, ow, oh, "stretch"
 
     # Fallback: treat as exact WxH (stretch)
     if "x" in geometry:

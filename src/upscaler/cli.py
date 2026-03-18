@@ -137,14 +137,16 @@ def main() -> None:
     overlay_w, overlay_h, content_w, content_h, mode = parse_output_geometry(
         config.output_geometry, win_info.width, win_info.height, base_w, base_h
     )
+    centered_x = base_x + (base_w - overlay_w) // 2
+    centered_y = base_y + (base_h - overlay_h) // 2
 
     overlay = OverlayWindow(
         width=overlay_w,
         height=overlay_h,
         mode=config.overlay_mode,
         target=win_info,
-        initial_x=base_x,
-        initial_y=base_y,
+        initial_x=centered_x,
+        initial_y=centered_y,
         content_width=content_w,
         content_height=content_h,
         scale_mode=mode,
