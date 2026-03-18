@@ -46,6 +46,8 @@ class OverlayWindow(QMainWindow):
         content_height: Optional[int] = None,
         scale_mode: str = "stretch",
         background_color: str = "black",
+        offset_x: int = 0,
+        offset_y: int = 0,
     ) -> None:
         """
         Create and show the overlay window.
@@ -74,6 +76,8 @@ class OverlayWindow(QMainWindow):
         self.target_handle = target.handle
         self.client_width = target.width
         self.client_height = target.height
+        self.offset_x = offset_x
+        self.offset_y = offset_y
 
         self.content_width = content_width if content_width is not None else width
         self.content_height = content_height if content_height is not None else height

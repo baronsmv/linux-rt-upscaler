@@ -47,6 +47,8 @@ class Config:
 
         # Output geometry
         self.output_geometry: str = "fit"
+        self.offset_x: int = 0
+        self.offset_y: int = 0
         self.background_color: str = "black"
 
         # Search window
@@ -99,7 +101,6 @@ class Config:
         # Overlay section
         overlay_group = parser.add_argument_group("OVERLAY OPTIONS")
         overlay_group.add_argument(
-            "-o",
             "--overlay-mode",
             choices=[e.value for e in OverlayMode],
             default="always-on-top",
@@ -147,6 +148,7 @@ class Config:
         # Output geometry options
         output_group = parser.add_argument_group("OUTPUT GEOMETRY OPTIONS")
         output_group.add_argument(
+            "-o",
             "--output-geometry",
             default="fit",
             help="Specify the output window size and scaling behavior.\n"
@@ -160,6 +162,18 @@ class Config:
             "  50%%         - Scale monitor/window to 50%%, then stretch\n"
             "  1920x       - Width fixed to 1920, height proportional\n"
             "  x1080       - Height fixed to 1080, width proportional",
+        )
+        output_group.add_argument(
+            "--offset-x",
+            type=int,
+            default=0,
+            help="Horizontal offset from centered position (pixels, positive moves right)",
+        )
+        output_group.add_argument(
+            "--offset-y",
+            type=int,
+            default=0,
+            help="Vertical offset from centered position (pixels, positive moves down)",
         )
         output_group.add_argument(
             "--background-color",
@@ -304,6 +318,12 @@ class Config:
         if args.output_geometry != "fit":
             self.output_geometry = args.output_geometry
             logger.debug(f"CLI set output_geometry = {self.output_geometry}")
+        if args.offset_x != 0:
+            self.offset_x = args.offset_x
+            logger.debug(f"CLI set offset_x = {self.offset_x}")
+        if args.offset_y != 0:
+            self.offset_y = args.offset_y
+            logger.debug(f"CLI set offset_y = {self.offset_y}")
         if args.background_color != "black":
             self.background_color = args.background_color
             logger.debug(f"CLI set background_color = {self.background_color}")

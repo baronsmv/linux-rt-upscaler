@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QApplication
 from compushady import Swapchain
 from compushady.formats import R8G8B8A8_UNORM
 
-from .overlay import OverlayWindow
+from .overlay import OverlayWindow, OverlayMode
 from .pipeline import Pipeline
 from .utils.config import Config
 from .utils.logging import setup_logging
@@ -134,23 +134,41 @@ def main() -> None:
     monitor = get_monitor(config.monitor)
     base_x, base_y, base_w, base_h = get_monitor_geometry(monitor)
 
+    # Parse geometry to get logical content size and mode
     overlay_w, overlay_h, content_w, content_h, mode = parse_output_geometry(
         config.output_geometry, win_info.width, win_info.height, base_w, base_h
     )
-    centered_x = base_x + (base_w - overlay_w) // 2
-    centered_y = base_y + (base_h - overlay_h) // 2
+
+    if config.overlay_mode == OverlayMode.WINDOWED.value:
+        # Windowed mode: overlay window is exactly the requested size
+        win_x = base_x + (base_w - overlay_w) // 2 + config.offset_x
+        win_y = base_y + (base_h - overlay_h) // 2 + config.offset_y
+        # For windowed mode, content fills the overlay (scale_mode handles scaling)
+        content_offset_x = 0
+        content_offset_y = 0
+    else:
+        # Fullscreen modes: overlay covers the whole monitor
+        win_x = base_x
+        win_y = base_y
+        overlay_w = base_w
+        overlay_h = base_h
+        # Offsets are applied to the content rectangle
+        content_offset_x = config.offset_x
+        content_offset_y = config.offset_y
 
     overlay = OverlayWindow(
         width=overlay_w,
         height=overlay_h,
         mode=config.overlay_mode,
         target=win_info,
-        initial_x=centered_x,
-        initial_y=centered_y,
+        initial_x=win_x,
+        initial_y=win_y,
         content_width=content_w,
         content_height=content_h,
         scale_mode=mode,
         background_color=config.background_color,
+        offset_x=content_offset_x,
+        offset_y=content_offset_y,
     )
 
     # Prepare window for Vulkan

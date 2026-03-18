@@ -87,6 +87,8 @@ class Pipeline:
         self.window_info = window_info
         self.screen_width = screen_width
         self.screen_height = screen_height
+        self.content_width = overlay.content_width
+        self.content_height = overlay.content_height
         self.overlay = overlay
         self.swapchain = swapchain
         self.model_name = model_name
@@ -322,14 +324,32 @@ class Pipeline:
         logger.debug("Running SRCNN compute...")
         self.upscaler.compute()  # result in self.upscaler.output
 
-        # Compute destination rectangle based on scale_mode
-        dst_x, dst_y, dst_w, dst_h = _calculate_scaling_rect(
-            src_w, src_h, self.screen_width, self.screen_height, self.overlay.scale_mode
+        # Compute rectangle within the content canvas
+        r_x, r_y, r_w, r_h = _calculate_scaling_rect(
+            src_w,
+            src_h,
+            self.content_width,
+            self.content_height,
+            self.overlay.scale_mode,
         )
-        logger.debug(
-            f"fit rect: dst_x={dst_x}, dst_y={dst_y}, dst_w={dst_w}, dst_h={dst_h}"
-        )
-        logger.debug(f"scale_mode = {self.overlay.scale_mode}")
+
+        # Position the content canvas on the screen (centered by default)
+        canvas_x = (self.screen_width - self.content_width) // 2
+        canvas_y = (self.screen_height - self.content_height) // 2
+
+        # Apply user offsets and rectangle offset
+        dst_x = canvas_x + r_x + self.overlay.offset_x
+        dst_y = canvas_y + r_y + self.overlay.offset_y
+        dst_w = r_w
+        dst_h = r_h
+
+        # Clamp to screen bounds (optional)
+        dst_x = max(0, min(dst_x, self.screen_width - 1))
+        dst_y = max(0, min(dst_y, self.screen_height - 1))
+        if dst_x + dst_w > self.screen_width:
+            dst_w = self.screen_width - dst_x
+        if dst_y + dst_h > self.screen_height:
+            dst_h = self.screen_height - dst_y
 
         # Store for mouse mapping
         self.overlay.scaling_rect[:] = [dst_x, dst_y, dst_w, dst_h]
