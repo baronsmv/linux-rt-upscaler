@@ -39,8 +39,9 @@ void main(uint3 dtid : SV_DispatchThreadID)
         return;
 
     // Check if output pixel lies inside the destination rectangle
-    if (outPos.x < dstX || outPos.x >= dstX + dstW ||
-        outPos.y < dstY || outPos.y >= dstY + dstH)
+    int x = int(outPos.x);
+    int y = int(outPos.y);
+    if (x < dstX || x >= dstX + dstW || y < dstY || y >= dstY + dstH)
     {
         OutputTex[outPos] = bgColor;
         return;
