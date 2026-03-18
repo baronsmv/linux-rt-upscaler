@@ -46,7 +46,7 @@ class Config:
         self.double_upscale: bool = False
 
         # Output geometry
-        self.output_geometry: Optional[str] = None
+        self.output_geometry: str = "fit"
         self.background_color: str = "black"
 
         # Search window

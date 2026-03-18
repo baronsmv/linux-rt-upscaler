@@ -134,15 +134,9 @@ def main() -> None:
     monitor = get_monitor(config.monitor)
     base_x, base_y, base_w, base_h = get_monitor_geometry(monitor)
 
-    if config.output_geometry:
-        overlay_w, overlay_h, content_w, content_h, mode = parse_output_geometry(
-            config.output_geometry, win_info.width, win_info.height, base_w, base_h
-        )
-    else:
-        # Backward compatible: use monitor size, content = overlay, stretch
-        overlay_w, overlay_h = base_w, base_h
-        content_w, content_h = base_w, base_h
-        mode = "stretch"
+    overlay_w, overlay_h, content_w, content_h, mode = parse_output_geometry(
+        config.output_geometry, win_info.width, win_info.height, base_w, base_h
+    )
 
     overlay = OverlayWindow(
         width=overlay_w,

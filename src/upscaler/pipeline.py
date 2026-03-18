@@ -326,6 +326,10 @@ class Pipeline:
         dst_x, dst_y, dst_w, dst_h = _calculate_scaling_rect(
             src_w, src_h, self.screen_width, self.screen_height, self.overlay.scale_mode
         )
+        logger.debug(
+            f"fit rect: dst_x={dst_x}, dst_y={dst_y}, dst_w={dst_w}, dst_h={dst_h}"
+        )
+        logger.debug(f"scale_mode = {self.overlay.scale_mode}")
 
         # Store for mouse mapping
         self.overlay.scaling_rect[:] = [dst_x, dst_y, dst_w, dst_h]
