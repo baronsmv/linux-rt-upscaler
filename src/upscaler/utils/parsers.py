@@ -1,8 +1,18 @@
 import logging
+import re
 
 from PySide6.QtGui import QColor
 
 logger = logging.getLogger(__name__)
+
+
+_GEOMETRY_PATTERN = re.compile(
+    r"^(stretch|fit|cover)$|"  # pure mode names
+    r"^(\d+(?:\.\d+)?)%!?$|"  # percentage (optional !)
+    r"^(\d+)x!?$|"  # fixed width (optional !)
+    r"^x(\d+)!?$|"  # fixed height (optional !)
+    r"^(\d+)x(\d+)[!^]?$"  # WxH with optional ! or ^
+)
 
 
 def color_string_to_float4(color_str: str) -> tuple[float, float, float, float]:
@@ -25,6 +35,21 @@ def color_string_to_float4(color_str: str) -> tuple[float, float, float, float]:
     result = (qcolor.blueF(), qcolor.greenF(), qcolor.redF(), qcolor.alphaF())
     logger.debug(f"Parsed color '{color_str}' -> BGRA: {result}")
     return result
+
+
+def validate_geometry(geometry: str):
+    geometry = geometry.strip()
+
+    if not _GEOMETRY_PATTERN.match(geometry):
+        raise ValueError(
+            f"Invalid geometry string: {geometry!r}\n"
+            "Allowed formats:\n"
+            "  stretch, fit, cover\n"
+            "  50%, 50%!\n"
+            "  1920x, 1920x!\n"
+            "  x1080, x1080!\n"
+            "  1920x1080, 1920x1080!, 1920x1080^"
+        )
 
 
 def parse_output_geometry(

@@ -98,23 +98,15 @@ class Config:
             help="Select a window from the list of open windows",
         )
 
-        # Overlay section
-        overlay_group = parser.add_argument_group("OVERLAY OPTIONS")
-        overlay_group.add_argument(
-            "--overlay-mode",
-            choices=[e.value for e in OverlayMode],
-            default="always-on-top",
-            help="Mode of overlay.",
-        )
-
         # Display section
         display_group = parser.add_argument_group("DISPLAY OPTIONS")
         display_group.add_argument(
             "--monitor",
             type=str,
             default="primary",
-            help="Monitor to cover: 'primary', 'all' (to cover all multi-monitor space),"
-            " or monitor name/index (e.g., 'HDMI-1', 0). Default: primary.",
+            help="Monitor to cover: 'primary', 'all' (to cover all multi-monitor\n"
+            "space), or monitor name/index (e.g., 'HDMI-1', 0).\n"
+            "Default: primary.",
         )
 
         # Upscaling section
@@ -134,52 +126,81 @@ class Config:
                 "veryfast",
             ),
             default="fast",
-            help="Upscaling model to use (ordered from best to worst quality)."
-            " Default: fast",
+            help="Upscaling model to use (ordered from best to worst quality).\n"
+            "Default: fast",
         )
         upscaling_group.add_argument(
             "-2",
             "--double-upscale",
             action="store_true",
-            help="EXPERIMENTAL: Perform two 2× passes (total 4×) for higher"
-            " resolution screens (4k, 1440p) or low‑resolution sources",
+            help="EXPERIMENTAL: Perform two 2× passes (total 4×) for higher\n"
+            "resolution screens (4k, 1440p) or low‑resolution sources",
         )
 
-        # Output geometry options
-        output_group = parser.add_argument_group("OUTPUT GEOMETRY OPTIONS")
-        output_group.add_argument(
+        # Overlay options
+        overlay_group = parser.add_argument_group("OVERLAY OPTIONS")
+        overlay_group.add_argument(
             "-o",
             "--output-geometry",
             default="fit",
-            help="Specify the output window size and scaling behavior.\n"
-            "Examples:\n"
-            "  1920x1080   - Fit content to 1920x1080 (letterbox, black bars)\n"
-            "  1920x1080!  - Stretch content to 1920x1080 (aspect ratio not preserved)\n"
-            "  1920x1080^  - Cover 1920x1080 (crop)\n"
-            "  stretch     - Stretch to full monitor/window\n"
-            "  fit         - Fit to full monitor/window (letterbox)\n"
-            "  cover       - Cover full monitor/window (crop)\n"
-            "  50%%         - Scale monitor/window to 50%%, then stretch\n"
-            "  1920x       - Width fixed to 1920, height proportional\n"
-            "  x1080       - Height fixed to 1080, width proportional",
+            help="""Specify the output window size and scaling behaviour.
+
+Examples:
+  fit            - Fit to full monitor/window (letterbox)
+  stretch        - Stretch to full monitor/window (aspect ratio not preserved)
+  cover          - Cover full monitor/window (crop)
+
+  1920x1080      - Fit content to 1920x1080 (letterbox)
+  1920x1080!     - Stretch content to 1920x1080
+  1920x1080^     - Cover 1920x1080 (crop)
+
+  50%%            - 50%% of monitor, content fitted (letterbox)
+  50%%!           - 50%% of monitor, content stretched
+
+  1920x          - Fixed width 1920, height proportional (fit)
+  1920x!         - Fixed width 1920, height proportional (stretch)
+
+  x1080          - Fixed height 1080, width proportional (fit)
+  x1080!         - Fixed height 1080, width proportional (stretch)
+
+""",
         )
-        output_group.add_argument(
+        overlay_group.add_argument(
+            "--overlay-mode",
+            choices=[e.value for e in OverlayMode],
+            default="always-on-top",
+            help="""Overlay window behaviour.
+
+Keyboard events are NOT forwarded, so it's best to keep the target window behind the 
+overlay (if on a single monitor, always-on-top works well for this).
+
+Modes:
+  always-on-top    - Floating overlay above all windows (bypasses WM).
+  top-transparent  - Same as above but click‑through (mouse passes to window below).
+  fullscreen       - Fullscreen window without decorations (covers entire monitor).
+  windowed         - Normal window with decorations, fixed size.
+
+""",
+        )
+        overlay_group.add_argument(
             "--offset-x",
             type=int,
             default=0,
             help="Horizontal offset from centered position (pixels, positive moves right)",
         )
-        output_group.add_argument(
+        overlay_group.add_argument(
             "--offset-y",
             type=int,
             default=0,
             help="Vertical offset from centered position (pixels, positive moves down)",
         )
-        output_group.add_argument(
+        overlay_group.add_argument(
             "--background-color",
             default="black",
-            help="Color for letterbox bars. Can be a CSS color name (e.g., 'black', 'red') "
-            "or a hex code (e.g., '#000000', '#FF0000'). Default: black",
+            help="Color for letterbox bars.\n"
+            "Can be a CSS color name (e.g., 'black', 'red') or a hex code \n"
+            "(e.g., '#000000', '#FF0000').\n"
+            "Default: black",
         )
 
         # Logging section
