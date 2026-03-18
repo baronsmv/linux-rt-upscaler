@@ -343,14 +343,6 @@ class Pipeline:
         dst_w = r_w
         dst_h = r_h
 
-        # Clamp to screen bounds (optional)
-        dst_x = max(0, min(dst_x, self.screen_width - 1))
-        dst_y = max(0, min(dst_y, self.screen_height - 1))
-        if dst_x + dst_w > self.screen_width:
-            dst_w = self.screen_width - dst_x
-        if dst_y + dst_h > self.screen_height:
-            dst_h = self.screen_height - dst_y
-
         # Store for mouse mapping
         self.overlay.scaling_rect[:] = [dst_x, dst_y, dst_w, dst_h]
 
