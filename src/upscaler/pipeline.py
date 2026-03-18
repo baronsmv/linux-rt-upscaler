@@ -24,36 +24,43 @@ from compushady.shaders import hlsl
 
 from .capture.capture import FrameGrabber
 from .shaders.srcnn import SRCNN
+from .utils.parsers import color_string_to_float4
 
 logger = logging.getLogger(__name__)
 
 
 def _calculate_scaling_rect(
-    src_w: int, src_h: int, dst_w: int, dst_h: int
+    src_w: int, src_h: int, dst_w: int, dst_h: int, mode: str
 ) -> Tuple[int, int, int, int]:
     """
-    Calculate the letterboxed destination rectangle that preserves aspect ratio.
-
-    Returns (x, y, w, h) where (x, y) is the top‑left corner and (w, h) the size.
+    Returns (x, y, w, h) where (x, y) is the top‑left corner of the
+    destination rectangle within the output texture of size dst_w x dst_h.
     """
-    src_aspect = src_w / src_h
-    screen_aspect = dst_w / dst_h
-    if src_aspect > screen_aspect:
-        # Source is wider than screen → fit to width
-        out_w = dst_w
-        out_h = int(dst_w / src_aspect)
-        out_x = 0
-        out_y = (dst_h - out_h) // 2
-    else:
-        # Source is taller or equal → fit to height
-        out_h = dst_h
-        out_w = int(dst_h * src_aspect)
+    if mode == "stretch":
+        return 0, 0, dst_w, dst_h
+
+    if mode == "fit":
+        scale = min(dst_w / src_w, dst_h / src_h)
+        out_w = int(src_w * scale)
+        out_h = int(src_h * scale)
         out_x = (dst_w - out_w) // 2
-        out_y = 0
-    logger.debug(
-        f"Scaling rect: src={src_w}x{src_h}, dst={dst_w}x{dst_h} -> "
-        f"rect=({out_x},{out_y},{out_w},{out_h})"
-    )
+        out_y = (dst_h - out_h) // 2
+        return out_x, out_y, out_w, out_h
+
+    if mode == "cover":
+        scale = max(dst_w / src_w, dst_h / src_h)
+        out_w = int(src_w * scale)
+        out_h = int(src_h * scale)
+        out_x = (dst_w - out_w) // 2
+        out_y = (dst_h - out_h) // 2
+        return out_x, out_y, out_w, out_h
+
+    # Fallback to fit if mode is unknown
+    scale = min(dst_w / src_w, dst_h / src_h)
+    out_w = int(src_w * scale)
+    out_h = int(src_h * scale)
+    out_x = (dst_w - out_w) // 2
+    out_y = (dst_h - out_h) // 2
     return out_x, out_y, out_w, out_h
 
 
@@ -93,6 +100,7 @@ class Pipeline:
         self.swapchain = swapchain
         self.model_name = model_name
         self.double_upscale = double_upscale
+        self.background_color = color_string_to_float4(overlay.background_color)
 
         logger.info(
             f"Initializing Pipeline: target={window_info.title} ({window_info.width}x{window_info.height}), "
@@ -134,7 +142,7 @@ class Pipeline:
         logger.debug("Lanczos sampler created.")
 
         # Constant buffer (will be updated per frame with scaling parameters)
-        self.cb = Buffer(struct.calcsize("IIIIf"), heap_type=HEAP_UPLOAD)
+        self.cb = Buffer(struct.calcsize("IIIIiiiiiffff"), heap_type=HEAP_UPLOAD)
         logger.debug("Constant buffer created.")
 
         # For click mapping rectangle (updated each frame)
@@ -323,20 +331,45 @@ class Pipeline:
         logger.debug("Running SRCNN compute...")
         self.upscaler.compute()  # result in self.upscaler.output
 
-        # Calculate scaling rectangle (for click mapping)
-        dst_x, dst_y, dst_w, dst_h = _calculate_scaling_rect(
-            src_w, src_h, self.screen_width, self.screen_height
-        )
+        if self.overlay.scale_mode == "stretch":
+            dst_x, dst_y = 0, 0
+            dst_w, dst_h = self.screen_width, self.screen_height
+        elif self.overlay.scale_mode == "fit":
+            scale = min(self.screen_width / src_w, self.screen_height / src_h)
+            dst_w = int(src_w * scale)
+            dst_h = int(src_h * scale)
+            dst_x = (self.screen_width - dst_w) // 2
+            dst_y = (self.screen_height - dst_h) // 2
+        elif self.overlay.scale_mode == "cover":
+            scale = max(self.screen_width / src_w, self.screen_height / src_h)
+            dst_w = int(src_w * scale)
+            dst_h = int(src_h * scale)
+            dst_x = (self.screen_width - dst_w) // 2
+            dst_y = (self.screen_height - dst_h) // 2
+        else:
+            # fallback to fit
+            scale = min(self.screen_width / src_w, self.screen_height / src_h)
+            dst_w = int(src_w * scale)
+            dst_h = int(src_h * scale)
+            dst_x = (self.screen_width - dst_w) // 2
+            dst_y = (self.screen_height - dst_h) // 2
+
+        # Store for mouse mapping
         self.overlay.scaling_rect[:] = [dst_x, dst_y, dst_w, dst_h]
 
         # Lanczos scaling (constant buffer)
         cb_data = struct.pack(
-            "IIIIf",
+            "IIIIiiiifffff",
             src_w,
             src_h,
             self.screen_width,
             self.screen_height,
-            1.0,  # blur factor (1.0 = no extra blur)
+            dst_x,
+            dst_y,
+            dst_w,
+            dst_h,
+            1.0,  # blur
+            *self.background_color,
         )
         self.cb.upload(cb_data)
         logger.debug("Constant buffer updated for Lanczos scaling.")

@@ -36,7 +36,7 @@ class Config:
         self.select: bool = False
 
         # Overlay
-        self.overlay_mode: str = "borderless"
+        self.overlay_mode: str = "always-on-top"
 
         # Display
         self.monitor: str = "primary"
@@ -44,6 +44,10 @@ class Config:
         # Upscaling
         self.model: str = "fast"
         self.double_upscale: bool = False
+
+        # Output geometry
+        self.output_geometry: Optional[str] = None
+        self.background_color: str = "black"
 
         # Search window
         self.target_delay: int = 5
@@ -97,7 +101,7 @@ class Config:
             "-o",
             "--overlay-mode",
             choices=[e.value for e in OverlayMode],
-            default="fullscreen",
+            default="always-on-top",
             help="Mode of overlay.",
         )
 
@@ -137,6 +141,29 @@ class Config:
             action="store_true",
             help="EXPERIMENTAL: Perform two 2× passes (total 4×) for higher"
             " resolution screens (4k, 1440p) or low‑resolution sources",
+        )
+
+        # Output geometry options
+        output_group = parser.add_argument_group("OUTPUT GEOMETRY OPTIONS")
+        output_group.add_argument(
+            "--output-geometry",
+            help="Specify the output window size and scaling behavior.\n"
+            "Examples:\n"
+            "  1920x1080     - Fit content to 1920x1080 (letterbox, black bars)\n"
+            "  1920x1080!    - Stretch content to 1920x1080 (aspect ratio not preserved)\n"
+            "  1920x1080^    - Cover 1920x1080 (crop)\n"
+            "  stretch       - Stretch to full monitor/window\n"
+            "  fit           - Fit to full monitor/window (letterbox)\n"
+            "  cover         - Cover full monitor/window (crop)\n"
+            "  50%%           - Scale monitor/window to 50%%, then stretch\n"
+            "  1920x         - Width fixed to 1920, height proportional\n"
+            "  x1080         - Height fixed to 1080, width proportional",
+        )
+        output_group.add_argument(
+            "--background-color",
+            default="black",
+            help="Color for letterbox bars. Can be a CSS color name (e.g., 'black', 'red') "
+            "or a hex code (e.g., '#000000', '#FF0000'). Default: black",
         )
 
         # Logging section
@@ -266,12 +293,18 @@ class Config:
         if args.double_upscale:
             self.double_upscale = True
             logger.debug("CLI set double_upscale = True")
-        if args.overlay_mode != "borderless":
+        if args.overlay_mode != "always-on-top":
             self.overlay_mode = args.overlay_mode
             logger.debug(f"CLI set overlay_mode = {self.overlay_mode}")
         if args.monitor != "primary":
             self.monitor = args.monitor
             logger.debug(f"CLI set monitor = {self.monitor}")
+        if args.output_geometry is not None:
+            self.output_geometry = args.output_geometry
+            logger.debug(f"CLI set output_geometry = {self.output_geometry}")
+        if args.background_color != "black":
+            self.background_color = args.background_color
+            logger.debug(f"CLI set background_color = {self.background_color}")
         if args.target_delay != 5:
             self.target_delay = args.target_delay
             logger.debug(f"CLI set target_delay = {self.target_delay}")

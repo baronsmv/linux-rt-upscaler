@@ -7,11 +7,16 @@ SamplerState PointSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
-    uint inputWidth;
-    uint inputHeight;
-    uint outputWidth;
-    uint outputHeight;
-    float blur;          // kernel width scaling (1.0 = normal Lanczos)
+    uint srcWidth;          // upscaled source width
+    uint srcHeight;         // upscaled source height
+    uint dstTotalWidth;     // physical window width
+    uint dstTotalHeight;    // physical window height
+    int dstX;               // rectangle top‑left X
+    int dstY;               // rectangle top‑left Y
+    int dstW;               // rectangle width
+    int dstH;               // rectangle height
+    float blur;
+    float4 bgColor;
 };
 
 float lanczos(float x)
@@ -30,46 +35,26 @@ float lanczos(float x)
 void main(uint3 dtid : SV_DispatchThreadID)
 {
     uint2 outPos = dtid.xy;
-    if (outPos.x >= outputWidth || outPos.y >= outputHeight)
+    if (outPos.x >= dstTotalWidth || outPos.y >= dstTotalHeight)
         return;
 
-    // ----- aspect‑preserving destination rectangle -----
-    float srcAspect = (float)inputWidth / inputHeight;
-    float dstAspect = (float)outputWidth / outputHeight;
-    uint2 dstSize;
-    uint2 dstOffset;
-    if (srcAspect > dstAspect)
-    {
-        dstSize.x = outputWidth;
-        dstSize.y = (uint)(outputWidth / srcAspect);
-        dstOffset.x = 0;
-        dstOffset.y = (outputHeight - dstSize.y) / 2;
-    }
-    else
-    {
-        dstSize.y = outputHeight;
-        dstSize.x = (uint)(outputHeight * srcAspect);
-        dstOffset.x = (outputWidth - dstSize.x) / 2;
-        dstOffset.y = 0;
-    }
-
     // Check if output pixel lies inside the destination rectangle
-    if (outPos.x < dstOffset.x || outPos.x >= dstOffset.x + dstSize.x ||
-        outPos.y < dstOffset.y || outPos.y >= dstOffset.y + dstSize.y)
+    if (outPos.x < dstX || outPos.x >= dstX + dstW ||
+        outPos.y < dstY || outPos.y >= dstY + dstH)
     {
-        OutputTex[outPos] = float4(0, 0, 0, 1);
+        OutputTex[outPos] = bgColor;
         return;
     }
 
     // ----- map to input texture coordinates -----
-    float2 uv = (float2(outPos - dstOffset) + 0.5) / float2(dstSize);   // normalized inside dst rect
-    float2 inputPos = uv * float2(inputWidth, inputHeight);             // continuous, pixel centers at integer+0.5
+    float2 uv = (float2(outPos.x - dstX, outPos.y - dstY) + 0.5) / float2(dstW, dstH);
+    float2 inputPos = uv * float2(srcWidth, srcHeight);
 
-    float2 pt = 1.0 / float2(inputWidth, inputHeight);                  // texel size in normalized space
-    float2 pp = inputPos - 0.5;                                          // align so integer positions are pixel centers
+    float2 pt = 1.0 / float2(srcWidth, srcHeight);               // texel size in normalized space
+    float2 pp = inputPos - 0.5;                                   // align so integer positions are pixel centers
     float2 p0 = floor(pp);
-    float2 f = pp - p0;                                                  // fractional offset from that pixel center
-    float2 s = p0 * pt;                                                  // normalized coordinate of top‑left of 4x4 neighborhood
+    float2 f = pp - p0;                                           // fractional offset from that pixel center
+    float2 s = p0 * pt;                                           // normalized coordinate of top‑left of 4x4 neighborhood
 
     // Lanczos weights for the 4x4 neighbourhood (x and y directions)
     float4 wx = float4(K(1 + f.x), K(0 + f.x), K(1 - f.x), K(2 - f.x));

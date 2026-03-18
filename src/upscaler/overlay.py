@@ -11,17 +11,17 @@ logger = logging.getLogger(__name__)
 
 
 class OverlayMode(str, Enum):
-    # Fullscreen without decorations
-    FULLSCREEN = "fullscreen"
-
-    # Normal window with decorations, fixed size
-    WINDOWED = "windowed"
-
     # Always on top, click‑through or forwards (bypasses window manager)
     ALWAYS_ON_TOP = "always-on-top"
 
     # Always on top, click‑through (bypasses window manager)
     ALWAYS_ON_TOP_TRANSPARENT = "top-transparent"
+
+    # Fullscreen without decorations
+    FULLSCREEN = "fullscreen"
+
+    # Normal window with decorations, fixed size
+    WINDOWED = "windowed"
 
 
 class OverlayWindow(QMainWindow):
@@ -46,6 +46,10 @@ class OverlayWindow(QMainWindow):
         mode: Union[OverlayMode, str],
         initial_x: int = 0,
         initial_y: int = 0,
+        content_width: Optional[int] = None,
+        content_height: Optional[int] = None,
+        scale_mode: str = "stretch",
+        background_color: str = "black",
     ) -> None:
         """
         Create and show the overlay window.
@@ -71,6 +75,11 @@ class OverlayWindow(QMainWindow):
         self.client_width = target.width
         self.client_height = target.height
 
+        self.content_width = content_width if content_width is not None else width
+        self.content_height = content_height if content_height is not None else height
+        self.scale_mode = scale_mode
+        self.background_color = background_color
+
         # X11 connection for event forwarding (to track mouse events)
         self._x_display: Optional[display.Display] = None
         self._x_root: Optional[int] = None
@@ -83,6 +92,8 @@ class OverlayWindow(QMainWindow):
 
         self.setMouseTracking(self.map_events)  # track mouse moves only if mapping
         self.show()
+        self.resize(width, height)
+        QApplication.processEvents()
 
         self.xid = int(self.winId())
         logger.debug(f"Overlay XID: {self.xid}")
@@ -220,38 +231,54 @@ class OverlayWindow(QMainWindow):
 
         return super().eventFilter(obj, event)
 
-    def _map_coordinates(self, screen_x: int, screen_y: int) -> Tuple[int, int, bool]:
+    def _map_coordinates(self, local_x: int, local_y: int) -> Tuple[int, int, bool]:
         """
-        Transform screen coordinates to target window client coordinates.
-
-        Returns (target_x, target_y, inside_flag). If the point is outside the
-        scaling rectangle or client size is not set, inside_flag is False.
+        Transform overlay local coordinates to target window client coordinates.
+        Returns (target_x, target_y, inside_flag).
         """
-        if not self.scaling_rect or self.scaling_rect[2] == 0:
-            logger.debug("_map_coordinates: scaling_rect not set")
+        win_w = self.width()
+        win_h = self.height()
+
+        # Step 1: overlay -> content coordinates
+        if self.scale_mode == "stretch":
+            # content fills overlay exactly
+            cx = local_x * self.content_width / win_w
+            cy = local_y * self.content_height / win_h
+
+        elif self.scale_mode == "fit":
+            # content centered, scaled to fit
+            scale = min(win_w / self.content_width, win_h / self.content_height)
+            out_w = self.content_width * scale
+            out_h = self.content_height * scale
+            off_x = (win_w - out_w) / 2
+            off_y = (win_h - out_h) / 2
+            if off_x <= local_x < off_x + out_w and off_y <= local_y < off_y + out_h:
+                cx = (local_x - off_x) * self.content_width / out_w
+                cy = (local_y - off_y) * self.content_height / out_h
+            else:
+                return 0, 0, False
+
+        elif self.scale_mode == "cover":
+            # content scaled to cover overlay, then cropped
+            scale = max(win_w / self.content_width, win_h / self.content_height)
+            content_drawn_w = self.content_width * scale
+            content_drawn_h = self.content_height * scale
+            off_x = (content_drawn_w - win_w) / 2
+            off_y = (content_drawn_h - win_h) / 2
+            cx = (off_x + local_x) * self.content_width / content_drawn_w
+            cy = (off_y + local_y) * self.content_height / content_drawn_h
+
+        else:
             return 0, 0, False
 
-        dx, dy, dw, dh = self.scaling_rect
-        if not (dx <= screen_x < dx + dw and dy <= screen_y < dy + dh):
-            logger.debug(
-                f"_map_coordinates: ({screen_x},{screen_y}) outside scaling rect"
-            )
-            return 0, 0, False
-
-        if self.client_width is None or self.client_height is None:
-            logger.debug("_map_coordinates: client size not set yet")
-            return 0, 0, False
-
-        target_x = int((screen_x - dx) * self.client_width / dw)
-        target_y = int((screen_y - dy) * self.client_height / dh)
+        # Step 2: content -> target window coordinates
+        target_x = int(cx * self.client_width / self.content_width)
+        target_y = int(cy * self.client_height / self.content_height)
 
         # Clamp to valid range
         target_x = max(0, min(target_x, self.client_width - 1))
         target_y = max(0, min(target_y, self.client_height - 1))
 
-        logger.debug(
-            f"_map_coordinates: ({screen_x},{screen_y}) -> ({target_x},{target_y})"
-        )
         return target_x, target_y, True
 
     def _get_current_button_state(self) -> int:

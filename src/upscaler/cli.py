@@ -25,6 +25,7 @@ from .pipeline import Pipeline
 from .utils.config import Config
 from .utils.logging import setup_logging
 from .utils.monitor import get_monitor, get_monitor_geometry, get_monitor_list
+from .utils.parsers import parse_output_geometry
 from .utils.x11 import get_display
 from .window import (
     list_windows,
@@ -129,27 +130,31 @@ def main() -> None:
     if config.log_level != "ERROR":
         print(f"Detected monitors: {get_monitor_list()}")
 
-    # Determine overlay size and position
-    if config.overlay_mode in ("transparent", "fullscreen", "borderless"):
-        # Use full monitor geometry
-        monitor = get_monitor(config.monitor)
-        x, y, w, h = get_monitor_geometry(monitor)
+    # Determine base overlay size from monitor (position and size)
+    monitor = get_monitor(config.monitor)
+    base_x, base_y, base_w, base_h = get_monitor_geometry(monitor)
 
-        if config.log_level != "ERROR":
-            print(f"Screen resolution: {w}x{h}")
-    else:  # windowed, params to be integrated to CLI in next revision
-        x = 100
-        y = 100
-        w = 1280
-        h = 720
+    if config.output_geometry:
+        overlay_w, overlay_h, content_w, content_h, mode = parse_output_geometry(
+            config.output_geometry, win_info.width, win_info.height, base_w, base_h
+        )
+    else:
+        # Backward compatible: use monitor size, content = overlay, stretch
+        overlay_w, overlay_h = base_w, base_h
+        content_w, content_h = base_w, base_h
+        mode = "stretch"
 
     overlay = OverlayWindow(
-        width=w,
-        height=h,
+        width=overlay_w,
+        height=overlay_h,
         mode=config.overlay_mode,
         target=win_info,
-        initial_x=x,
-        initial_y=y,
+        initial_x=base_x,
+        initial_y=base_y,
+        content_width=content_w,
+        content_height=content_h,
+        scale_mode=mode,
+        background_color=config.background_color,
     )
 
     # Prepare window for Vulkan
