@@ -1,18 +1,26 @@
 import argparse
 import logging
 import os
-import re
+from enum import Enum
 from importlib.metadata import version, PackageNotFoundError
 from typing import Any, List, Optional, Self, Dict
 
 import yaml
 
-from upscaler.overlay import OverlayMode
+from . import validators
 
 logger = logging.getLogger(__name__)
 
 
-# Single source of truth for defaults
+class OverlayMode(str, Enum):
+    """Overlay window behavior modes."""
+
+    ALWAYS_ON_TOP = "always-on-top"
+    ALWAYS_ON_TOP_TRANSPARENT = "top-transparent"
+    FULLSCREEN = "fullscreen"
+    WINDOWED = "windowed"
+
+
 DEFAULTS: Dict[str, Any] = {
     # General
     "program": None,
@@ -46,15 +54,6 @@ DEFAULTS: Dict[str, Any] = {
     "config_file": None,
 }
 
-# Geometry validation regex (same as before)
-_GEOMETRY_PATTERN = re.compile(
-    r"^(stretch|fit|cover)$|"  # pure mode names
-    r"^(\d+(?:\.\d+)?)%!?$|"  # percentage (optional !)
-    r"^(\d+)x!?$|"  # fixed width (optional !)
-    r"^x(\d+)!?$|"  # fixed height (optional !)
-    r"^(\d+)x(\d+)[!^]?$"  # WxH with optional ! or ^
-)
-
 
 def get_version() -> str:
     """Return the package version, with a fallback for development."""
@@ -80,22 +79,6 @@ class Config:
         for key, value in DEFAULTS.items():
             setattr(self, key, kwargs.get(key, value))
         logger.debug("Config object created with default values")
-
-    def _validate(self) -> None:
-        """Validate configuration values"""
-
-        # Validate output_geometry syntax
-        geom = self.output_geometry.strip()
-        if not _GEOMETRY_PATTERN.match(geom):
-            raise ValueError(
-                f"Invalid geometry string: {geom!r}\n"
-                "Allowed formats:\n"
-                "  stretch, fit, cover\n"
-                "  50%, 50%!\n"
-                "  1920x, 1920x!\n"
-                "  x1080, x1080!\n"
-                "  1920x1080, 1920x1080!, 1920x1080^"
-            )
 
     @classmethod
     def from_cli(cls) -> Self:
@@ -254,14 +237,25 @@ Modes:
             type=int,
             default=DEFAULTS["offset_x"],
             help="""Horizontal offset from centered position (pixels, positive
-moves right)""",
+moves right, negative moves left)
+
+Note: To pass negative values, use either --offset-x=-1
+(with an equals sign) or --offset-x "-1" (with quotes).
+The form --offset-x -1 will be misinterpreted because the
+shell treats -1 as a separate option.
+
+""",
         )
         overlay_group.add_argument(
             "--offset-y",
             type=int,
             default=DEFAULTS["offset_y"],
             help="""Vertical offset from centered position (pixels, positive
-moves down)""",
+moves down, negative moves up)
+
+Note: Same as above.
+
+""",
         )
         overlay_group.add_argument(
             "--background-color",
@@ -342,8 +336,9 @@ Default: {DEFAULTS['background_color']}""",
         if args.log_file:
             config.log_file = args.log_file
 
-        # Validate configuration
-        config._validate()
+        # Validation
+        validators.output_geometry(config.output_geometry)
+        validators.background_color(config.background_color)
 
         return config
 

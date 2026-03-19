@@ -1,5 +1,4 @@
 import logging
-from enum import Enum
 from typing import Any, List, Optional, Tuple, Union
 
 from PySide6.QtCore import QEvent, QPoint, Qt, Slot
@@ -7,16 +6,9 @@ from PySide6.QtWidgets import QMainWindow, QApplication
 from Xlib import X, display
 from Xlib.protocol import event as xevent
 
+from .utils.config import OverlayMode
+
 logger = logging.getLogger(__name__)
-
-
-class OverlayMode(str, Enum):
-    """Overlay window behavior modes."""
-
-    ALWAYS_ON_TOP = "always-on-top"
-    ALWAYS_ON_TOP_TRANSPARENT = "top-transparent"
-    FULLSCREEN = "fullscreen"
-    WINDOWED = "windowed"
 
 
 class OverlayWindow(QMainWindow):

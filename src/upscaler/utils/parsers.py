@@ -1,11 +1,12 @@
 import logging
+from typing import Tuple
 
 from PySide6.QtGui import QColor
 
 logger = logging.getLogger(__name__)
 
 
-def color_string_to_float4(color_str: str) -> tuple[float, float, float, float]:
+def color_string_to_float4(color_str: str) -> Tuple[float, float, float, float]:
     """
     Convert any valid CSS color string to normalized (b, g, r, a) for the shader.
     The shader expects BGRA order, so it returns blue, green, red, alpha.
@@ -18,9 +19,7 @@ def color_string_to_float4(color_str: str) -> tuple[float, float, float, float]:
     If the string is invalid, falls back to black.
     """
     qcolor = QColor(color_str)
-    if not qcolor.isValid():
-        logger.warning(f"Invalid color string '{color_str}', falling back to black")
-        qcolor = QColor("black")
+
     # Return BGRA order to match shader expectations
     result = (qcolor.blueF(), qcolor.greenF(), qcolor.redF(), qcolor.alphaF())
     logger.debug(f"Parsed color '{color_str}' -> BGRA: {result}")
@@ -29,7 +28,7 @@ def color_string_to_float4(color_str: str) -> tuple[float, float, float, float]:
 
 def parse_output_geometry(
     geometry: str, src_w: int, src_h: int, base_w: int, base_h: int
-):
+) -> Tuple[int, int, int, int, str]:
     """
     Returns (overlay_w, overlay_h, content_w, content_h, mode)
 
@@ -45,8 +44,6 @@ def parse_output_geometry(
       - "1920x1080!"                         (exact size, stretch)
       - "1920x1080^"                         (exact size, cover)
     """
-    geometry = geometry.strip()
-
     # Pure mode names (use base overlay size)
     if geometry in ("stretch", "fit", "cover"):
         mode = geometry
