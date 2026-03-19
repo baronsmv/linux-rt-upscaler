@@ -71,6 +71,10 @@ class Pipeline:
         swapchain: Any,
         model_name: str,
         double_upscale: bool,
+        crop_left: int = 0,
+        crop_top: int = 0,
+        crop_right: int = 0,
+        crop_bottom: int = 0,
     ) -> None:
         """
         Initialize the pipeline.
@@ -89,6 +93,12 @@ class Pipeline:
         self.screen_height = screen_height
         self.content_width = overlay.content_width
         self.content_height = overlay.content_height
+        self.crop_left = crop_left
+        self.crop_top = crop_top
+        self.crop_right = crop_right
+        self.crop_bottom = crop_bottom
+        self.crop_width = window_info.width - crop_left - crop_right
+        self.crop_height = window_info.height - crop_top - crop_bottom
         self.overlay = overlay
         self.swapchain = swapchain
         self.model_name = model_name
@@ -109,8 +119,8 @@ class Pipeline:
         # Create upscaler (SRCNN)
         logger.debug(f"Creating upscaler with model '{model_name}'...")
         self.upscaler = SRCNN(
-            width=window_info.width,
-            height=window_info.height,
+            width=self.crop_width,
+            height=self.crop_height,
             model_name=model_name,
             double_upscale=double_upscale,
         )
@@ -247,7 +257,13 @@ class Pipeline:
 
         # Create grabber inside thread to avoid sharing X connections across threads
         try:
-            grabber = FrameGrabber(self.window_info)
+            grabber = FrameGrabber(
+                self.window_info,
+                crop_left=self.crop_left,
+                crop_top=self.crop_top,
+                crop_right=self.crop_right,
+                crop_bottom=self.crop_bottom,
+            )
             logger.debug(f"FrameGrabber created for window {self.window_info.handle}")
         except Exception as e:
             logger.error(f"Failed to create FrameGrabber: {e}", exc_info=True)
@@ -260,11 +276,11 @@ class Pipeline:
 
         # Source dimensions depend on whether we double‑upscaled
         if self.double_upscale:
-            src_w = self.window_info.width * 4
-            src_h = self.window_info.height * 4
+            src_w = self.crop_width * 4
+            src_h = self.crop_height * 4
         else:
-            src_w = self.window_info.width * 2
-            src_h = self.window_info.height * 2
+            src_w = self.crop_width * 2
+            src_h = self.crop_height * 2
         logger.debug(f"Source dimensions after upscaling: {src_w}x{src_h}")
 
         while self.running:

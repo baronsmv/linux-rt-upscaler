@@ -47,6 +47,10 @@ class Config:
 
         # Output geometry
         self.output_geometry: str = "fit"
+        self.crop_top: int = 0
+        self.crop_bottom: int = 0
+        self.crop_left: int = 0
+        self.crop_right: int = 0
         self.offset_x: int = 0
         self.offset_y: int = 0
         self.background_color: str = "black"
@@ -181,6 +185,30 @@ Modes:
   windowed         - Normal window with decorations, fixed size.
 
 """,
+        )
+        overlay_group.add_argument(
+            "--crop-top",
+            type=int,
+            default=0,
+            help="Pixels to crop from top",
+        )
+        overlay_group.add_argument(
+            "--crop-bottom",
+            type=int,
+            default=0,
+            help="Pixels to crop from bottom",
+        )
+        overlay_group.add_argument(
+            "--crop-left",
+            type=int,
+            default=0,
+            help="Pixels to crop from left",
+        )
+        overlay_group.add_argument(
+            "--crop-right",
+            type=int,
+            default=0,
+            help="Pixels to crop from right",
         )
         overlay_group.add_argument(
             "--offset-x",
@@ -339,6 +367,18 @@ Modes:
         if args.output_geometry != "fit":
             self.output_geometry = args.output_geometry
             logger.debug(f"CLI set output_geometry = {self.output_geometry}")
+        if args.crop_top != 0:
+            self.crop_top = args.crop_top
+            logger.debug(f"CLI set crop_top = {self.crop_top}")
+        if args.crop_bottom != 0:
+            self.crop_bottom = args.crop_bottom
+            logger.debug(f"CLI set crop_bottom = {self.crop_bottom}")
+        if args.crop_right != 0:
+            self.crop_right = args.crop_right
+            logger.debug(f"CLI set crop_right = {self.crop_right}")
+        if args.crop_left != 0:
+            self.crop_left = args.crop_left
+            logger.debug(f"CLI set crop_left = {self.crop_left}")
         if args.offset_x != 0:
             self.offset_x = args.offset_x
             logger.debug(f"CLI set offset_x = {self.offset_x}")

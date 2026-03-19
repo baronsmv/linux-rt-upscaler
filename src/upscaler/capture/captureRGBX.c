@@ -13,7 +13,7 @@
     Display *display = XOpenDisplay(NULL);                                     \
     if (!display)                                                              \
       return -1;                                                               \
-    XImage *image = XGetImage(display, xid, 0, 0, W, H, AllPlanes, ZPixmap);   \
+    XImage *image = XGetImage(display, xid, xx, yy, W, H, AllPlanes, ZPixmap); \
     if (!image) {                                                              \
       XCloseDisplay(display);                                                  \
       return -1;                                                               \

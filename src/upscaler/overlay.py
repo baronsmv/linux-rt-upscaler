@@ -48,6 +48,10 @@ class OverlayWindow(QMainWindow):
         background_color: str = "black",
         offset_x: int = 0,
         offset_y: int = 0,
+        crop_left: int = 0,
+        crop_top: int = 0,
+        crop_width: Optional[int] = None,
+        crop_height: Optional[int] = None,
     ) -> None:
         """
         Create and show the overlay window.
@@ -78,6 +82,12 @@ class OverlayWindow(QMainWindow):
         self.client_height = target.height
         self.offset_x = offset_x
         self.offset_y = offset_y
+        self.crop_left = crop_left
+        self.crop_top = crop_top
+        self.crop_width = crop_width if crop_width is not None else self.client_width
+        self.crop_height = (
+            crop_height if crop_height is not None else self.client_height
+        )
 
         self.content_width = content_width if content_width is not None else width
         self.content_height = content_height if content_height is not None else height
@@ -264,10 +274,10 @@ class OverlayWindow(QMainWindow):
             return 0, 0, False
 
         # Step 2: content -> target window coordinates
-        target_x = int(cx * self.client_width / self.content_width)
-        target_y = int(cy * self.client_height / self.content_height)
+        target_x = self.crop_left + int(cx * self.crop_width / self.content_width)
+        target_y = self.crop_top + int(cy * self.crop_height / self.content_height)
 
-        # Clamp to valid range
+        # Clamp to original window bounds
         target_x = max(0, min(target_x, self.client_width - 1))
         target_y = max(0, min(target_y, self.client_height - 1))
 

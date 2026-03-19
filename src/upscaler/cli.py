@@ -164,6 +164,9 @@ def main() -> None:
         content_offset_x = config.offset_x
         content_offset_y = config.offset_y
 
+    crop_width = win_info.width - config.crop_left - config.crop_right
+    crop_height = win_info.height - config.crop_top - config.crop_bottom
+
     overlay = OverlayWindow(
         width=overlay_w,
         height=overlay_h,
@@ -177,6 +180,10 @@ def main() -> None:
         background_color=config.background_color,
         offset_x=content_offset_x,
         offset_y=content_offset_y,
+        crop_left=config.crop_left,
+        crop_top=config.crop_top,
+        crop_width=crop_width,
+        crop_height=crop_height,
     )
 
     # Prepare window for Vulkan
@@ -199,6 +206,10 @@ def main() -> None:
         swapchain,
         model_name=config.model,
         double_upscale=config.double_upscale,
+        crop_left=config.crop_left,
+        crop_top=config.crop_top,
+        crop_right=config.crop_right,
+        crop_bottom=config.crop_bottom,
     )
     pipeline.start()
     logger.info("Pipeline started")
