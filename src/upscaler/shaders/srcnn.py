@@ -90,9 +90,31 @@ class SRCNN:
         self._load_config()
         self._load_shaders()
         self._create_resources()
-        self._create_pipelines_first()  # pipelines for normal (or first pass)
+        self._create_pipelines_first()
         if self.double_upscale:
-            self._create_pipelines_second()
+            # First pass writes to intermediate
+            self.pipelines_first, self._first_in_w, self._first_in_h = (
+                self._build_pipelines(
+                    target_input=self.input,
+                    target_output=self.intermediate,
+                    target_textures=self.textures,
+                    target_cbs=self.cbs,
+                    target_width=self.width,
+                    target_height=self.height,
+                )
+            )
+            self._create_pipelines_second()  # second pass reads intermediate -> output
+        else:
+            self.pipelines_first, self._first_in_w, self._first_in_h = (
+                self._build_pipelines(
+                    target_input=self.input,
+                    target_output=self.output,
+                    target_textures=self.textures,
+                    target_cbs=self.cbs,
+                    target_width=self.width,
+                    target_height=self.height,
+                )
+            )
 
         # Lanczos resources (lazy initialised)
         self._lanczos_shader: Optional[Any] = None
