@@ -4,7 +4,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/linux-rt-upscaler.svg)](https://pypi.org/project/linux-rt-upscaler/)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-A real‑time AI upscaler for any application window on GNU/Linux. It uses [CuNNy](https://github.com/funnyplanter/CuNNy) neural networks to perform 2× (or 4×) upscaling, then scales the result to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
+A real‑time AI upscaler for any application window on GNU/Linux. It uses [CuNNy](https://github.com/funnyplanter/CuNNy) neural networks to perform 2x (or 4x) upscaling, then scales the result to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
 
 Now with full **XWayland support** – works seamlessly under Wayland compositors!
 
@@ -20,38 +20,33 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 
 ## Features
 
-- **AI‑Powered Upscaling** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high‑quality 2× upscaling of visual novels and illustrations.
+- **AI‑Powered Upscaling** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high‑quality 2x upscaling of visual novels and illustrations.
 - **Complete Model Selection** – Choose from 9 variants, offering a range of quality/performance trade‑offs:
-  - `8x32` – Highest quality, slowest.
-  - `4x32`
-  - `4x24`
-  - `4x16`
-  - `4x12`
-  - `3x12`
-  - `fast` – Default. Recommended for slow machines.
-  - `faster`
-  - `veryfast` – Fastest option, lowest quality.
+    - `8x32` – Highest quality, slowest.
+    - `4x32`
+    - `4x24`
+    - `4x16`
+    - `4x12`
+    - `3x12`
+    - `fast` – Default. Recommended for slow machines.
+    - `faster`
+    - `veryfast` – Fastest option, lowest quality.
 - **Attach to Any Window** – Either grab the currently active window, select from visible windows or launch a new program and capture its window automatically.
-- **Full‑Screen Output** – The upscaled image is displayed in a transparent overlay that covers your entire monitor, scaled to fill the screen while preserving aspect ratio.
-- **Input Forwarding** – Click, move, and drag on the upscaled image as if you were interacting directly with the original window.
-- **Hardware Accelerated** – GPU compute via Compushady (Vulkan) works on NVIDIA, AMD, and Intel GPUs.
-- **XWayland Compatible** – Runs under Wayland compositors by automatically forcing X11 platform for Qt and disabling Wayland Vulkan extensions.
-- **Low Overhead** – Minimal CPU/GPU usage; the final scaling pass uses hardware Lanczos2 filtering.
+- **Flexible Output Geometry** – Control the overlay size, scaling mode, offset and borders.
+- **Input Forwarding** – Click, move, and drag on the upscaled image as if interacting directly with the original window.
+- **Hardware Accelerated** – Vulkan compute (Compushady) works on NVIDIA, AMD, and Intel GPUs.
+- **XWayland Compatible** – Runs under Wayland compositors by automatically forcing X11 platform for Qt.
+- **Low Overhead** – Final scaling pass uses hardware Lanczos2 filtering.
 
 ## Requirements
 
 - GNU/Linux (X11 or Wayland with XWayland)
-- Vulkan-capable GPU from any vendor (NVIDIA, AMD, Intel)
-- Vulkan drivers (`libvulkan-dev` on Debian/Ubuntu)
+- Vulkan-capable GPU (NVIDIA, AMD, Intel)
+- Vulkan drivers (`libvulkan-dev`)
 - X11 development libraries (`libx11-dev`)
-- GCC and basic tools to compile C extensions (`build-essential`).
-- Python 3.8 - 3.13
+- Python 3.8 – 3.13
 
-### Python 3.14 compatibility
-
-The current release does not support Python 3.14 due to a low‑level incompatibility with the Vulkan backend. If you have Python 3.14 installed, please use a Python 3.13 virtual environment. See [this report](https://github.com/baronsmv/linux-rt-upscaler/issues/1) for more details on that.
-
-We are tracking the issue and will update once compatibility is restored.
+> **Python 3.14 compatibility** – Currently not supported due to a low‑level Vulkan backend issue. Please use a Python ≤ 3.13 virtual environment if you have Python 3.14 installed. See [issue #1](https://github.com/baronsmv/linux-rt-upscaler/issues/1#issuecomment-4069065775) for details.
 
 ## Installation
 
@@ -124,7 +119,7 @@ After installation, the `upscale` command will be available globally:
 # Upscale the currently active window
 upscale
 
-# Interactively select from visible windows at startup
+# Interactively select from visible windows
 upscale -s
 
 # Run a command and upscale its window
@@ -135,38 +130,44 @@ upscale -m 8x32      # Highest quality, slowest
 upscale -m 4x24      # A balanced option
 upscale -m veryfast  # Maximum performance
 
-# Disable mouse‑click forwarding (also enables dimming/click‑through)
-upscale -d
-
-# Perform two 2× passes (total 4×) (Experimental)
+# Perform 4x upscaling (two 2x passes)
 upscale -2
 
-# Show help and other options
-upscale -h
+# Set a custom overlay geometry (50% size, fitted)
+upscale -o 50%
+
+# Crop 100 pixels from top and left, then upscale
+upscale --crop-top 100 --crop-left 100
+
+# Shift the overlay 100 pixels right and 50 down
+upscale --offset-x 100 --offset-y 50
+```
+
+For a full list of options and examples:
+
+```bash
+upscale --help
 ```
 
 ### Controls
 
-- **Exit**: Press `Ctrl+C` in the terminal where the upscaler is running.
-- **Dimming/Click‑through** (only when `-d` is used):
-  - The overlay becomes semi‑transparent (20% opacity) when the mouse leaves the source window.
-  - Clicks then pass through to whatever window is underneath (e.g., your desktop or other applications).
+- **Exit**: `Ctrl+C` in the terminal.
 
 ## How It Works
 
 1. **Window Selection** – Uses X11 to find the target window by PID or WM_CLASS.
 2. **Capture** – Grabs the window's pixels using a fast custom C library.
-3. **AI Upscaling** – CuNNy compute shaders (written in HLSL, compiled via Compushady) produce a 2× (or 4×) larger image .
+3. **AI Upscaling** – CuNNy compute shaders (written in HLSL, compiled via Compushady) produce a 2x (or 4x) larger image .
 4. **Aspect‑Preserving Scaling** – A lightweight Lanczos2 compute shader scales the upscaled image to fill the monitor, adding black bars to maintain the original aspect ratio.
 5. **Display** – The result is rendered in a transparent overlay window that bypasses the window manager (so it always stays on top).
-6. **Input Forwarding** – Mouse events are transformed using the scaling ratios and sent to the original window via `XSendEvent`.
+6. **Input Forwarding** – Mouse events are transformed using the scaling ratios and sent to the original window via
+   `XSendEvent`.
 
 ## Future Plans
 
 - [ ] **Standalone GUI application** – Create a windowed app interface for easier management.
 - [ ] **Addition of more models** – Parse and include other models and shaders.
 - [ ] **Native Wayland support** – Support pure Wayland windows without XWayland.
-- [ ] **Option to force screen aspect ratio** – Let users choose between letterboxing or stretching.
 
 ## Motivation
 
