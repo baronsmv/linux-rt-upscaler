@@ -1,14 +1,59 @@
 import argparse
 import logging
 import os
+import re
 from importlib.metadata import version, PackageNotFoundError
-from typing import Any, List, Optional, Self
+from typing import Any, List, Optional, Self, Dict
 
 import yaml
 
 from upscaler.overlay import OverlayMode
 
 logger = logging.getLogger(__name__)
+
+
+# Single source of truth for defaults
+DEFAULTS: Dict[str, Any] = {
+    # General
+    "program": None,
+    "select": False,
+    # Overlay
+    "overlay_mode": OverlayMode.ALWAYS_ON_TOP.value,
+    # Display
+    "monitor": "primary",
+    # Upscaling
+    "model": "fast",
+    "double_upscale": False,
+    # Output geometry
+    "output_geometry": "fit",
+    "crop_top": 0,
+    "crop_bottom": 0,
+    "crop_left": 0,
+    "crop_right": 0,
+    "offset_x": 0,
+    "offset_y": 0,
+    "background_color": "black",
+    # Window detection
+    "target_delay": 5,
+    "pid_timeout": 5,
+    "class_timeout": 5,
+    "total_timeout": 60,
+    "starting_phase": 1,
+    # Logging (these are set via flags, not directly from CLI)
+    "log_level": "WARNING",
+    "log_file": None,
+    # Config file
+    "config_file": None,
+}
+
+# Geometry validation regex (same as before)
+_GEOMETRY_PATTERN = re.compile(
+    r"^(stretch|fit|cover)$|"  # pure mode names
+    r"^(\d+(?:\.\d+)?)%!?$|"  # percentage (optional !)
+    r"^(\d+)x!?$|"  # fixed width (optional !)
+    r"^x(\d+)!?$|"  # fixed height (optional !)
+    r"^(\d+)x(\d+)[!^]?$"  # WxH with optional ! or ^
+)
 
 
 def get_version() -> str:
@@ -30,46 +75,27 @@ class Config:
     then overrides with command‑line arguments.
     """
 
-    def __init__(self) -> None:
-        # General
-        self.program: Optional[List[str]] = None
-        self.select: bool = False
-
-        # Overlay
-        self.overlay_mode: str = "always-on-top"
-
-        # Display
-        self.monitor: str = "primary"
-
-        # Upscaling
-        self.model: str = "fast"
-        self.double_upscale: bool = False
-
-        # Output geometry
-        self.output_geometry: str = "fit"
-        self.crop_top: int = 0
-        self.crop_bottom: int = 0
-        self.crop_left: int = 0
-        self.crop_right: int = 0
-        self.offset_x: int = 0
-        self.offset_y: int = 0
-        self.background_color: str = "black"
-
-        # Search window
-        self.target_delay: int = 5
-        self.pid_timeout: int = 5
-        self.class_timeout: int = 5
-        self.total_timeout: Optional[int] = 60
-        self.starting_phase: int = 1
-
-        # Logging
-        self.log_level: str = "WARNING"
-        self.log_file: Optional[str] = None
-
-        # Configuration
-        self.config_file: Optional[str] = None
-
+    def __init__(self, **kwargs) -> None:
+        # Initialize with defaults, then override with any provided kwargs
+        for key, value in DEFAULTS.items():
+            setattr(self, key, kwargs.get(key, value))
         logger.debug("Config object created with default values")
+
+    def _validate(self) -> None:
+        """Validate configuration values"""
+
+        # Validate output_geometry syntax
+        geom = self.output_geometry.strip()
+        if not _GEOMETRY_PATTERN.match(geom):
+            raise ValueError(
+                f"Invalid geometry string: {geom!r}\n"
+                "Allowed formats:\n"
+                "  stretch, fit, cover\n"
+                "  50%, 50%!\n"
+                "  1920x, 1920x!\n"
+                "  x1080, x1080!\n"
+                "  1920x1080, 1920x1080!, 1920x1080^"
+            )
 
     @classmethod
     def from_cli(cls) -> Self:
@@ -107,10 +133,11 @@ class Config:
         display_group.add_argument(
             "--monitor",
             type=str,
-            default="primary",
-            help="Monitor to cover: 'primary', 'all' (to cover all multi-monitor\n"
-            "space), or monitor name/index (e.g., 'HDMI-1', 0).\n"
-            "Default: primary.",
+            default=DEFAULTS["monitor"],
+            help=f"""Monitor to cover: 'primary', 'all' (to cover all
+multi-monitor space), or monitor name/index
+(e.g., 'HDMI-1', 0).
+Default: {DEFAULTS['monitor']}.""",
         )
 
         # Upscaling section
@@ -129,9 +156,9 @@ class Config:
                 "faster",
                 "veryfast",
             ),
-            default="fast",
-            help="Upscaling model to use (ordered from best to worst quality).\n"
-            "Default: fast",
+            default=DEFAULTS["model"],
+            help="Upscaling model to use (ordered from best to worst quality)\n"
+            f"Default: {DEFAULTS['model']}",
         )
         upscaling_group.add_argument(
             "-2",
@@ -146,89 +173,103 @@ class Config:
         overlay_group.add_argument(
             "-o",
             "--output-geometry",
-            default="fit",
-            help="""Specify the output window size and scaling behaviour.
+            default=DEFAULTS["output_geometry"],
+            help=f"""Specify the output window size and scaling behaviour.
+Default: {DEFAULTS["output_geometry"]}
 
 Examples:
-  fit            - Fit to full monitor/window (letterbox)
-  stretch        - Stretch to full monitor/window (aspect ratio not preserved)
-  cover          - Cover full monitor/window (crop)
+  fit          - Fit to full monitor/window (letterbox)
+  stretch      - Stretch to full monitor/window (aspect
+                 ratio not preserved)
+  cover        - Cover full monitor/window
 
-  1920x1080      - Fit content to 1920x1080 (letterbox)
-  1920x1080!     - Stretch content to 1920x1080
-  1920x1080^     - Cover 1920x1080 (crop)
+  1920x1080    - Fit content to 1920x1080
+  1920x1080!   - Stretch content to 1920x1080
+  1920x1080^   - Cover 1920x1080 (crop)
 
-  50%%            - 50%% of monitor, content fitted (letterbox)
-  50%%!           - 50%% of monitor, content stretched
+  50%%          - 50%% of monitor, content fitted
+  50%%!         - 50%% of monitor, content stretched
 
-  1920x          - Fixed width 1920, height proportional (fit)
-  1920x!         - Fixed width 1920, height proportional (stretch)
+  1920x        - Fixed width 1920, height proportional
+                 (fit)
+  1920x!       - Fixed width 1920, height proportional
+                 (stretch)
 
-  x1080          - Fixed height 1080, width proportional (fit)
-  x1080!         - Fixed height 1080, width proportional (stretch)
+  x1080        - Fixed height 1080, width proportional
+                 (fit)
+  x1080!       - Fixed height 1080, width proportional
+                 (stretch)
 
 """,
         )
         overlay_group.add_argument(
             "--overlay-mode",
             choices=[e.value for e in OverlayMode],
-            default="always-on-top",
-            help="""Overlay window behaviour.
+            default=DEFAULTS["overlay_mode"],
+            help=f"""Overlay window behaviour.
+Default: {DEFAULTS["overlay_mode"]}
 
-Keyboard events are NOT forwarded, so it's best to keep the target window behind the 
-overlay (if on a single monitor, always-on-top works well for this).
+Note: Keyboard events are NOT forwarded, so it's best to
+keep the target window focused (if on a single monitor,
+always-on-top works well for this).
 
 Modes:
-  always-on-top    - Floating overlay above all windows (bypasses WM).
-  top-transparent  - Same as above but click‑through (mouse passes to window below).
-  fullscreen       - Fullscreen window without decorations (covers entire monitor).
-  windowed         - Normal window with decorations, fixed size.
+  always-on-top    - Floating overlay above all windows
+                     and not focusable (bypasses WM).
+  top-transparent  - Same as above but click‑through
+                     (mouse passes to window below).
+  fullscreen       - Fullscreen window without decorations
+                     (covers entire monitor).
+  windowed         - Normal window with decorations, fixed
+                     size.
 
 """,
         )
         overlay_group.add_argument(
             "--crop-top",
             type=int,
-            default=0,
-            help="Pixels to crop from top",
+            default=DEFAULTS["crop_top"],
+            help="Pixels to crop from top border of the target window",
         )
         overlay_group.add_argument(
             "--crop-bottom",
             type=int,
-            default=0,
-            help="Pixels to crop from bottom",
+            default=DEFAULTS["crop_bottom"],
+            help="Pixels to crop from bottom border of the target window",
         )
         overlay_group.add_argument(
             "--crop-left",
             type=int,
-            default=0,
-            help="Pixels to crop from left",
+            default=DEFAULTS["crop_left"],
+            help="Pixels to crop from left border of the target window",
         )
         overlay_group.add_argument(
             "--crop-right",
             type=int,
-            default=0,
-            help="Pixels to crop from right",
+            default=DEFAULTS["crop_right"],
+            help="Pixels to crop from right of the target window",
         )
         overlay_group.add_argument(
             "--offset-x",
             type=int,
-            default=0,
-            help="Horizontal offset from centered position (pixels, positive moves right)",
+            default=DEFAULTS["offset_x"],
+            help="""Horizontal offset from centered position (pixels, positive
+moves right)""",
         )
         overlay_group.add_argument(
             "--offset-y",
             type=int,
-            default=0,
-            help="Vertical offset from centered position (pixels, positive moves down)",
+            default=DEFAULTS["offset_y"],
+            help="""Vertical offset from centered position (pixels, positive
+moves down)""",
         )
         overlay_group.add_argument(
             "--background-color",
-            default="black",
-            help="Color for letterbox bars.\n"
-            "Can be a CSS color name (e.g., 'black', 'red') or a hex code \n"
-            "(e.g., '#000000', '#FF0000').\n"
-            "Default: black",
+            default=DEFAULTS["background_color"],
+            help=f"""Color for letterbox bars.
+Can be a CSS color name (e.g., 'black', 'red') or a hex
+code (e.g., '#000000', '#FF0000')
+Default: {DEFAULTS['background_color']}""",
         )
 
         # Logging section
@@ -254,32 +295,32 @@ Modes:
         timeout_group.add_argument(
             "--target-delay",
             type=int,
-            default=5,
+            default=DEFAULTS["target_delay"],
             help="Seconds to wait before capturing active window",
         )
         timeout_group.add_argument(
             "--pid-timeout",
             type=int,
-            default=5,
+            default=DEFAULTS["pid_timeout"],
             help="Seconds to try PID‑based window detection",
         )
         timeout_group.add_argument(
             "--class-timeout",
             type=int,
-            default=5,
+            default=DEFAULTS["class_timeout"],
             help="Seconds to try class‑based window detection",
         )
         timeout_group.add_argument(
             "--total-timeout",
             type=int,
-            default=60,
+            default=DEFAULTS["total_timeout"],
             help="Total seconds before giving up",
         )
         timeout_group.add_argument(
             "--starting-phase",
             type=int,
             choices=[1, 2],
-            default=1,
+            default=DEFAULTS["starting_phase"],
             help="Start with phase 1 (PID) or 2 (class)",
         )
 
@@ -300,6 +341,9 @@ Modes:
             config.log_level = "ERROR"
         if args.log_file:
             config.log_file = args.log_file
+
+        # Validate configuration
+        config._validate()
 
         return config
 
@@ -345,61 +389,10 @@ Modes:
 
     def _apply_args(self, args: argparse.Namespace) -> None:
         """Override config with command‑line arguments."""
-        # Note: args.program can be an empty list; we preserve None if not set
-        if args.program:
-            self.program = args.program
-            logger.debug(f"CLI set program = {self.program}")
-        if args.select:
-            self.select = True
-            logger.debug("CLI set select = True")
-        if args.model != "fast":
-            self.model = args.model
-            logger.debug(f"CLI set model = {self.model}")
-        if args.double_upscale:
-            self.double_upscale = True
-            logger.debug("CLI set double_upscale = True")
-        if args.overlay_mode != "always-on-top":
-            self.overlay_mode = args.overlay_mode
-            logger.debug(f"CLI set overlay_mode = {self.overlay_mode}")
-        if args.monitor != "primary":
-            self.monitor = args.monitor
-            logger.debug(f"CLI set monitor = {self.monitor}")
-        if args.output_geometry != "fit":
-            self.output_geometry = args.output_geometry
-            logger.debug(f"CLI set output_geometry = {self.output_geometry}")
-        if args.crop_top != 0:
-            self.crop_top = args.crop_top
-            logger.debug(f"CLI set crop_top = {self.crop_top}")
-        if args.crop_bottom != 0:
-            self.crop_bottom = args.crop_bottom
-            logger.debug(f"CLI set crop_bottom = {self.crop_bottom}")
-        if args.crop_right != 0:
-            self.crop_right = args.crop_right
-            logger.debug(f"CLI set crop_right = {self.crop_right}")
-        if args.crop_left != 0:
-            self.crop_left = args.crop_left
-            logger.debug(f"CLI set crop_left = {self.crop_left}")
-        if args.offset_x != 0:
-            self.offset_x = args.offset_x
-            logger.debug(f"CLI set offset_x = {self.offset_x}")
-        if args.offset_y != 0:
-            self.offset_y = args.offset_y
-            logger.debug(f"CLI set offset_y = {self.offset_y}")
-        if args.background_color != "black":
-            self.background_color = args.background_color
-            logger.debug(f"CLI set background_color = {self.background_color}")
-        if args.target_delay != 5:
-            self.target_delay = args.target_delay
-            logger.debug(f"CLI set target_delay = {self.target_delay}")
-        if args.pid_timeout != 5:
-            self.pid_timeout = args.pid_timeout
-            logger.debug(f"CLI set pid_timeout = {self.pid_timeout}")
-        if args.class_timeout != 5:
-            self.class_timeout = args.class_timeout
-            logger.debug(f"CLI set class_timeout = {self.class_timeout}")
-        if args.total_timeout != 60:
-            self.total_timeout = args.total_timeout
-            logger.debug(f"CLI set total_timeout = {self.total_timeout}")
-        if args.starting_phase != 1:
-            self.starting_phase = args.starting_phase
-            logger.debug(f"CLI set starting_phase = {self.starting_phase}")
+        for arg in DEFAULTS.keys():
+            arg_value = getattr(args, arg, None)
+            if arg_value is not None:
+                default_val = DEFAULTS.get(arg)
+                if arg_value != default_val:
+                    setattr(self, arg, arg_value)
+                    logger.debug(f"CLI set {arg} = {arg_value!r}")

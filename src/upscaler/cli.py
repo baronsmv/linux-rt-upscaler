@@ -25,7 +25,7 @@ from .pipeline import Pipeline
 from .utils.config import Config
 from .utils.logging import setup_logging
 from .utils.monitor import get_monitor, get_monitor_geometry, get_monitor_list
-from .utils.parsers import parse_output_geometry, validate_geometry
+from .utils.parsers import parse_output_geometry
 from .utils.x11 import get_display
 from .window import (
     list_windows,
@@ -110,14 +110,6 @@ def main() -> None:
     setup_logging(config.log_level, config.log_file)
 
     logger.info("Starting Linux RT Upscaler")
-
-    # Validations
-    try:
-        validate_geometry(config.output_geometry)
-    except ValueError as e:
-        logger.error(e)
-        print(f"Error parsing geometry argument '{config.output_geometry}'")
-        sys.exit(1)
 
     # Acquire target window
     win_info, proc = _acquire_target_window(config)
