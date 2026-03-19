@@ -167,6 +167,17 @@ def main() -> None:
     crop_width = win_info.width - config.crop_left - config.crop_right
     crop_height = win_info.height - config.crop_top - config.crop_bottom
 
+    if crop_width <= 0 or crop_height <= 0:
+        logger.error(
+            f"Invalid crop: resulting dimensions {crop_width}x{crop_height} "
+            f"(original {win_info.width}x{win_info.height})"
+        )
+        print(
+            "Error: Crop values too large – would result in empty area.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     overlay = OverlayWindow(
         width=overlay_w,
         height=overlay_h,

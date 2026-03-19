@@ -41,8 +41,10 @@ class FrameGrabber:
         self.crop_bottom = crop_bottom
         self.width = self.orig_width - crop_left - crop_right
         self.height = self.orig_height - crop_top - crop_bottom
+
         if self.width <= 0 or self.height <= 0:
-            raise ValueError("Crop results in non‑positive dimensions")
+            raise ValueError(f"Invalid cropped dimensions: {self.width}x{self.height}")
+
         self.buffer_size = self.width * self.height * 4
         self.buffer = (ctypes.c_ubyte * self.buffer_size)()
         logger.info(
