@@ -368,7 +368,7 @@ class Pipeline:
         dst_h = r_h
 
         # Store for mouse mapping
-        self.overlay.scaling_rect[:] = [dst_x, dst_y, dst_w, dst_h]
+        self.overlay.scaling_rect = [dst_x, dst_y, dst_w, dst_h]
 
         # Lanczos scaling (constant buffer)
         cb_data = struct.pack(

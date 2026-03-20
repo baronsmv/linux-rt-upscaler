@@ -227,49 +227,43 @@ class OverlayWindow(QMainWindow):
 
     def _map_coordinates(self, local_x: int, local_y: int) -> Tuple[int, int, bool]:
         """
-        Transform overlay local coordinates to target window client coordinates.
-        Returns (target_x, target_y, inside_flag).
+        Transform overlay local coordinates to target window client coordinates
+        using the pipeline's computed scaling rectangle.
         """
-        win_w = self.width()
-        win_h = self.height()
-
-        # Step 1: overlay -> content coordinates
-        if self.scale_mode == "stretch":
-            # content fills overlay exactly
-            cx = local_x * self.content_width / win_w
-            cy = local_y * self.content_height / win_h
-
-        elif self.scale_mode == "fit":
-            # content centered, scaled to fit
-            scale = min(win_w / self.content_width, win_h / self.content_height)
-            out_w = self.content_width * scale
-            out_h = self.content_height * scale
-            off_x = (win_w - out_w) / 2
-            off_y = (win_h - out_h) / 2
-            if off_x <= local_x < off_x + out_w and off_y <= local_y < off_y + out_h:
-                cx = (local_x - off_x) * self.content_width / out_w
-                cy = (local_y - off_y) * self.content_height / out_h
-            else:
-                return 0, 0, False
-
-        elif self.scale_mode == "cover":
-            # content scaled to cover overlay, then cropped
-            scale = max(win_w / self.content_width, win_h / self.content_height)
-            content_drawn_w = self.content_width * scale
-            content_drawn_h = self.content_height * scale
-            off_x = (content_drawn_w - win_w) / 2
-            off_y = (content_drawn_h - win_h) / 2
-            cx = (off_x + local_x) * self.content_width / content_drawn_w
-            cy = (off_y + local_y) * self.content_height / content_drawn_h
-
-        else:
+        rect = self.scaling_rect
+        if len(rect) != 4:
             return 0, 0, False
 
-        # Step 2: content -> target window coordinates
-        target_x = self.crop_left + int(cx * self.crop_width / self.content_width)
-        target_y = self.crop_top + int(cy * self.crop_height / self.content_height)
+        rx, ry, rw, rh = rect
+        # If the rectangle is empty (e.g., before first frame), fall back to old method?
+        if rw == 0 or rh == 0:
+            return 0, 0, False
 
-        # Clamp to original window bounds
+        # Check if the click is inside the content area
+        if not (rx <= local_x < rx + rw and ry <= local_y < ry + rh):
+            return 0, 0, False
+
+        # Compute position within the content rectangle (normalized)
+        norm_x = (local_x - rx) / rw
+        norm_y = (local_y - ry) / rh
+
+        # Map to content coordinates (logical content size)
+        content_x = int(norm_x * self.content_width)
+        content_y = int(norm_y * self.content_height)
+
+        # Clamp to content bounds
+        content_x = max(0, min(content_x, self.content_width - 1))
+        content_y = max(0, min(content_y, self.content_height - 1))
+
+        # Apply crop transformation to get target window coordinates
+        target_x = self.crop_left + int(
+            content_x * self.crop_width / self.content_width
+        )
+        target_y = self.crop_top + int(
+            content_y * self.crop_height / self.content_height
+        )
+
+        # Clamp to window bounds
         target_x = max(0, min(target_x, self.client_width - 1))
         target_y = max(0, min(target_y, self.client_height - 1))
 
