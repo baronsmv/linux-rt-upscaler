@@ -98,6 +98,9 @@ class Pipeline:
         self.content_width = overlay.content_width
         self.content_height = overlay.content_height
 
+        self.src_w = self.crop_width * (4 if self.double_upscale else 2)
+        self.src_h = self.crop_height * (4 if self.double_upscale else 2)
+
         self.crop_left = crop_left
         self.crop_top = crop_top
         self.crop_right = crop_right
@@ -261,13 +264,10 @@ class Pipeline:
             logger.error(f"Unexpected error in opacity update: {e}", exc_info=True)
             self.overlay.setWindowOpacity(1.0)
 
-    def _run(self) -> None:
-        """Main pipeline loop – runs in a separate thread."""
-        logger.info("Pipeline thread started.")
-
-        # Create grabber inside thread to avoid sharing X connections across threads
+    def _create_grabber(self):
+        """Create grabber inside thread to avoid sharing X connections across threads"""
         try:
-            grabber = FrameGrabber(
+            self.grabber = FrameGrabber(
                 self.window_info,
                 crop_left=self.crop_left,
                 crop_top=self.crop_top,
@@ -278,6 +278,11 @@ class Pipeline:
         except Exception as e:
             logger.error(f"Failed to create FrameGrabber: {e}", exc_info=True)
             return
+
+    def _run(self) -> None:
+        """Main pipeline loop – runs in a separate thread."""
+        logger.info("Pipeline thread started.")
+        self._create_grabber()
 
         # Compute dispatch groups for Lanczos pass
         self.groups_x = (self.screen_width + 15) // 16
@@ -293,9 +298,20 @@ class Pipeline:
             src_h = self.crop_height * 2
         logger.debug(f"Source dimensions after upscaling: {src_w}x{src_h}")
 
+        # First Compute object
+        self.lanczos_compute = Compute(
+            self.lanczos_shader,
+            srv=[self.upscaler.output],
+            uav=[self.screen_tex],
+            cbv=[self.cb],
+            samplers=[self.lanczos_sampler],
+        )
+
         while self.running:
             try:
-                self._process_one_frame(grabber, src_w, src_h)
+                # Check if target window size changed
+                self._update_target_window_size()
+                self._process_one_frame()
             except BadWindow:
                 # Target window was destroyed – exit the loop cleanly
                 logger.info("Target window destroyed, stopping pipeline loop.")
@@ -318,15 +334,12 @@ class Pipeline:
 
     def _process_one_frame(
         self,
-        grabber: FrameGrabber,
-        src_w: int,
-        src_h: int,
     ) -> None:
         """
         Grab a frame, upscale, scale, and present. May raise XError/BadWindow.
         """
         # Grab frame from target window
-        frame = grabber.grab()
+        frame = self.grabber.grab()
         logger.debug(f"Frame grabbed, size={len(frame)} bytes")
 
         if not self.running:
@@ -350,8 +363,8 @@ class Pipeline:
 
         # Compute rectangle within the content canvas
         r_x, r_y, r_w, r_h = _calculate_scaling_rect(
-            src_w,
-            src_h,
+            self.src_w,
+            self.src_h,
             self.content_width,
             self.content_height,
             self.overlay.scale_mode,
@@ -374,8 +387,8 @@ class Pipeline:
         cb_data = struct.pack(
             CB_FORMAT,
             *self.background_color,  # 4 floats
-            src_w,
-            src_h,
+            self.src_w,
+            self.src_h,
             self.screen_width,
             self.screen_height,  # 4 uint
             dst_x,
@@ -389,14 +402,7 @@ class Pipeline:
         logger.debug("Constant buffer updated for Lanczos scaling.")
 
         # Create compute pipeline
-        scale_compute = Compute(
-            self.lanczos_shader,
-            srv=[self.upscaler.output],
-            uav=[self.screen_tex],
-            cbv=[self.cb],
-            samplers=[self.lanczos_sampler],
-        )
-        scale_compute.dispatch(self.groups_x, self.groups_y, 1)
+        self.lanczos_compute.dispatch(self.groups_x, self.groups_y, 1)
         logger.debug("Lanczos scaling dispatched.")
 
         # Opacity control
@@ -407,8 +413,14 @@ class Pipeline:
         logger.debug("Presented to swapchain.")
 
         # Check if swapchain needs recreation
-        if self.swapchain.is_suboptimal():
-            self.recreate_swapchain()
+        if self.swapchain.needs_recreation():
+            if self.swapchain.is_out_of_date():
+                logger.info("Swapchain out-of-date, full pipeline rebuild in progress")
+                self._update_target_window_size()  # ensure target size is current
+                self.recreate_swapchain()
+            elif self.swapchain.is_suboptimal():
+                logger.debug("Swapchain suboptimal, recreating")
+                self.recreate_swapchain()
 
     def recreate_swapchain(self):
         """Create a new swapchain when the current one becomes suboptimal."""
@@ -437,5 +449,72 @@ class Pipeline:
         # Create a new swapchain (the old one will be garbage‑collected later)
         new_swap = Swapchain((self.display_id, self.xid), R8G8B8A8_UNORM, 3)
         self.swapchain = new_swap
+        self._rebuild_lanczos_compute()
 
         logger.info("Swapchain recreated")
+
+    def _rebuild_lanczos_compute(self):
+        self.lanczos_compute = Compute(
+            self.lanczos_shader,
+            srv=[self.upscaler.output],
+            uav=[self.screen_tex],
+            cbv=[self.cb],
+            samplers=[self.lanczos_sampler],
+        )
+
+    def _update_target_window_size(self):
+        """
+        Check if the target window has been resized.
+        If so, recreate the frame grabber and upscaler with the new dimensions.
+        Returns True if a resize occurred.
+        """
+        if not self._x_window or not self._x_display:
+            return False
+        try:
+            geom = self._x_window.get_geometry()
+            new_width = geom.width
+            new_height = geom.height
+            if (
+                new_width != self.window_info.width
+                or new_height != self.window_info.height
+            ):
+                logger.info(
+                    f"Target window resized: {self.window_info.width}x{self.window_info.height} → {new_width}x{new_height}"
+                )
+                self.window_info.width = new_width
+                self.window_info.height = new_height
+
+                # Recompute crop dimensions
+                self.crop_width = (
+                    self.window_info.width - self.crop_left - self.crop_right
+                )
+                self.crop_height = (
+                    self.window_info.height - self.crop_top - self.crop_bottom
+                )
+                self.src_w = self.crop_width * (4 if self.double_upscale else 2)
+                self.src_h = self.crop_height * (4 if self.double_upscale else 2)
+
+                if self.crop_width <= 0 or self.crop_height <= 0:
+                    logger.warning(
+                        "Crop dimensions became invalid after resize; disabling crop."
+                    )
+                    self.crop_width = self.window_info.width
+                    self.crop_height = self.window_info.height
+                    self.crop_left = self.crop_top = self.crop_right = (
+                        self.crop_bottom
+                    ) = 0
+                # Recreate upscaler with new size
+                self.upscaler = SRCNN(
+                    width=self.crop_width,
+                    height=self.crop_height,
+                    model_name=self.model_name,
+                    double_upscale=self.double_upscale,
+                )
+                # Recreate frame grabber (the old one will be discarded)
+                self._create_grabber()
+
+                self._rebuild_lanczos_compute()
+                return True
+        except (BadWindow, XError) as e:
+            logger.debug(f"Could not get target window geometry: {e}")
+        return False
