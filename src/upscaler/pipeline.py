@@ -127,6 +127,7 @@ class Pipeline:
         self.display_id = display_id
         self.xid = xid
         self.last_recreate_time = 0
+        self.consecutive_failures = 0
 
         logger.info(
             f"Initializing Pipeline: target={window_info.title} ({window_info.width}x{window_info.height}), "
@@ -218,13 +219,14 @@ class Pipeline:
         self.thread.start()
 
     def stop(self) -> None:
-        """Stop the pipeline thread and clean up resources."""
         logger.info("Stopping pipeline thread.")
         self.running = False
+
         # Unblock queue by pushing a dummy frame
         dummy = bytearray(self.window_info.width * self.window_info.height * 4)
         self.frame_queue.put(dummy)
 
+        # Daemon thread will be killed on exit
         if self.thread is not None:
             self.thread.join(timeout=2.0)
             if self.thread.is_alive():
@@ -232,7 +234,11 @@ class Pipeline:
             else:
                 logger.debug("Pipeline thread joined.")
 
-        # Close X11 connection if open
+        self.swapchain = None
+        self.screen_tex = None
+        self.upscaler = None
+        self.lanczos_compute = None
+
         self._close_x_display()
 
     def _close_x_display(self) -> None:
@@ -370,6 +376,13 @@ class Pipeline:
                 # Any other X error – log and exit
                 logger.error(f"X error in pipeline loop: {e}")
                 break
+            except RuntimeError as e:
+                if "Target window gone timeout" in str(e):
+                    logger.info("Target window gone, stopping pipeline.")
+                    break
+                else:
+                    logger.debug(f"Fatal error in pipeline loop: {e}")
+                    break
             except Exception as e:
                 logger.debug(f"Fatal error in pipeline loop: {e}")
                 break
@@ -391,8 +404,13 @@ class Pipeline:
         # Grab frame from target window
         try:
             frame = self.grabber.grab()
+            self.consecutive_failures = 0
         except RuntimeError as e:
             if "window probably gone" in str(e):
+                self.consecutive_failures += 1
+                if self.consecutive_failures > 30:  # ~0.5 seconds
+                    logger.info("Target window gone for too long, stopping pipeline.")
+                    raise RuntimeError("Target window gone timeout")
                 logger.info("Target window disappeared, attempting to recover...")
                 self._update_target_window_size(force=True)
                 return
