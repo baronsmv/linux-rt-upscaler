@@ -111,18 +111,6 @@ class Config:
             help="Select a window from the list of open windows",
         )
 
-        # Display section
-        display_group = parser.add_argument_group("DISPLAY OPTIONS")
-        display_group.add_argument(
-            "--monitor",
-            type=str,
-            default=DEFAULTS["monitor"],
-            help=f"""Monitor to cover: 'primary', 'all' (to cover all
-multi-monitor space), or monitor name/index
-(e.g., 'HDMI-1', 0).
-Default: {DEFAULTS['monitor']}.""",
-        )
-
         # Upscaling section
         upscaling_group = parser.add_argument_group("UPSCALING OPTIONS")
         upscaling_group.add_argument(
@@ -147,8 +135,20 @@ Default: {DEFAULTS['monitor']}.""",
             "-2",
             "--double-upscale",
             action="store_true",
-            help="EXPERIMENTAL: Perform two 2× passes (total 4×) for higher\n"
+            help="EXPERIMENTAL: Perform two 2x passes (total 4x) for higher\n"
             "resolution screens (4k, 1440p) or low‑resolution sources",
+        )
+
+        # Display section
+        display_group = parser.add_argument_group("DISPLAY OPTIONS")
+        display_group.add_argument(
+            "--monitor",
+            type=str,
+            default=DEFAULTS["monitor"],
+            help=f"""Monitor to cover: 'primary', 'all' (to cover all
+multi-monitor space), or monitor name/index
+(e.g., 'HDMI-1', 0).
+Default: {DEFAULTS['monitor']}.""",
         )
 
         # Overlay options
@@ -230,7 +230,7 @@ Modes:
             "--crop-right",
             type=int,
             default=DEFAULTS["crop_right"],
-            help="Pixels to crop from right of the target window",
+            help="Pixels to crop from right border of the target window",
         )
         overlay_group.add_argument(
             "--offset-x",
@@ -266,24 +266,6 @@ code (e.g., '#000000', '#FF0000')
 Default: {DEFAULTS['background_color']}""",
         )
 
-        # Logging section
-        log_group = parser.add_argument_group("LOGGING OPTIONS")
-        log_group.add_argument(
-            "-q",
-            "--quiet",
-            action="store_true",
-            help="Decrease log verbosity (ERROR level)",
-        )
-        log_group.add_argument(
-            "--debug",
-            action="store_true",
-            help="Increase log verbosity (DEBUG level)",
-        )
-        log_group.add_argument(
-            "--log-file",
-            help="Write logs to this file (parent directories are created)",
-        )
-
         # Timeout / window detection section
         timeout_group = parser.add_argument_group("WINDOW DETECTION OPTIONS")
         timeout_group.add_argument(
@@ -316,6 +298,24 @@ Default: {DEFAULTS['background_color']}""",
             choices=[1, 2],
             default=DEFAULTS["starting_phase"],
             help="Start with phase 1 (PID) or 2 (class)",
+        )
+
+        # Logging section
+        log_group = parser.add_argument_group("LOGGING OPTIONS")
+        log_group.add_argument(
+            "-q",
+            "--quiet",
+            action="store_true",
+            help="Decrease log verbosity (ERROR level)",
+        )
+        log_group.add_argument(
+            "--debug",
+            action="store_true",
+            help="Increase log verbosity (DEBUG level)",
+        )
+        log_group.add_argument(
+            "--log-file",
+            help="Write logs to this file (parent directories are created)",
         )
 
         args = parser.parse_args()
