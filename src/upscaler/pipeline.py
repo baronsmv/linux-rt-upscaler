@@ -75,6 +75,10 @@ class Pipeline:
         xid: int,
         model_name: str,
         double_upscale: bool,
+        output_geometry: str,
+        base_width: int,
+        base_height: int,
+        overlay_mode: int,
         crop_left: int = 0,
         crop_top: int = 0,
         crop_right: int = 0,
@@ -109,6 +113,11 @@ class Pipeline:
         self.double_upscale = double_upscale
         self.src_w = self.crop_width * (4 if double_upscale else 2)
         self.src_h = self.crop_height * (4 if double_upscale else 2)
+
+        self.output_geometry = output_geometry
+        self.base_width = base_width
+        self.base_height = base_height
+        self.overlay_mode = overlay_mode
 
         self.overlay = overlay
         self.swapchain = swapchain
@@ -504,6 +513,7 @@ class Pipeline:
             )
             self.groups_x = (new_width + 15) // 16
             self.groups_y = (new_height + 15) // 16
+            self._update_content_dimensions()
 
         # Create a new swapchain (the old one will be garbage‑collected later)
         start = time.perf_counter()
@@ -616,3 +626,24 @@ class Pipeline:
             return True
 
         return False
+
+    def _update_content_dimensions(self):
+        """Recalculate content_width/content_height based on current overlay size."""
+        from .utils.parsers import parse_output_geometry
+
+        overlay_w = self.overlay.width()
+        overlay_h = self.overlay.height()
+
+        # Re‑parse the output geometry using the current overlay size as the reference
+        new_content_w, new_content_h, _, _, _ = parse_output_geometry(
+            self.output_geometry,
+            self.window_info.width,
+            self.window_info.height,
+            overlay_w,
+            overlay_h,
+        )
+        self.content_width = new_content_w
+        self.content_height = new_content_h
+        logger.debug(
+            f"Content dimensions updated to {self.content_width}x{self.content_height}"
+        )
