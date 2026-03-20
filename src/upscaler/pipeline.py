@@ -393,7 +393,7 @@ class Pipeline:
             frame = self.grabber.grab()
         except RuntimeError as e:
             if "window probably gone" in str(e):
-                logger.warning("Target window disappeared, attempting to recover...")
+                logger.info("Target window disappeared, attempting to recover...")
                 self._update_target_window_size(force=True)
                 return
             else:
@@ -586,12 +586,18 @@ class Pipeline:
             self.window_info.handle = new_handle
             self.window_info.width = new_width
             self.window_info.height = new_height
+            self.overlay.set_target_handle(self.window_info.handle)
+            self.overlay.set_target_size(new_width, new_height)
 
             # Recompute crop dimensions
             self.crop_width = self.window_info.width - self.crop_left - self.crop_right
             self.crop_height = (
                 self.window_info.height - self.crop_top - self.crop_bottom
             )
+            self.overlay.set_crop(
+                self.crop_left, self.crop_top, self.crop_width, self.crop_height
+            )
+
             self._update_content_dimensions()
             self.src_w = self.crop_width * (4 if self.double_upscale else 2)
             self.src_h = self.crop_height * (4 if self.double_upscale else 2)

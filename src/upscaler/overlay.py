@@ -410,11 +410,32 @@ class OverlayWindow(QMainWindow):
         else:
             logger.warning(f"Unexpected event type in _handle_mouse: {event.type()}")
 
+    def set_crop(self, left: int, top: int, width: int, height: int) -> None:
+        """Update the crop region (used for mouse mapping)."""
+        self.crop_left = left
+        self.crop_top = top
+        self.crop_width = width
+        self.crop_height = height
+        logger.debug(
+            f"Overlay crop updated: left={left}, top={top}, size={width}x{height}"
+        )
+
     def set_content_dimensions(self, width: int, height: int) -> None:
         """Update the logical content dimensions (used for mouse mapping)."""
         self.content_width = width
         self.content_height = height
         logger.debug(f"Overlay content dimensions updated to {width}x{height}")
+
+    def set_target_handle(self, handle: int) -> None:
+        """Update the XID of the target window (used for sending events)."""
+        self.target_handle = handle
+        logger.debug(f"Overlay target handle updated to {handle}")
+
+    def set_target_size(self, width: int, height: int) -> None:
+        """Update the actual target window size (used for clamping mouse coordinates)."""
+        self.client_width = width
+        self.client_height = height
+        logger.debug(f"Overlay target size updated to {width}x{height}")
 
     @Slot()
     def on_pipeline_stopped(self) -> None:
