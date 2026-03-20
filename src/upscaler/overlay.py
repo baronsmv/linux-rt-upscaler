@@ -410,6 +410,12 @@ class OverlayWindow(QMainWindow):
         else:
             logger.warning(f"Unexpected event type in _handle_mouse: {event.type()}")
 
+    def set_content_dimensions(self, width: int, height: int) -> None:
+        """Update the logical content dimensions (used for mouse mapping)."""
+        self.content_width = width
+        self.content_height = height
+        logger.debug(f"Overlay content dimensions updated to {width}x{height}")
+
     @Slot()
     def on_pipeline_stopped(self) -> None:
         """Called from the pipeline thread when it exits due to an error."""

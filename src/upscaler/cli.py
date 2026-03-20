@@ -170,6 +170,15 @@ def main() -> None:
         )
         sys.exit(1)
 
+    # Re‑parse output geometry using cropped dimensions as the source
+    content_w, content_h, _, _, mode = parse_output_geometry(
+        config.output_geometry,
+        crop_width,
+        crop_height,
+        base_w,
+        base_h,
+    )
+
     overlay = OverlayWindow(
         width=overlay_w,
         height=overlay_h,

@@ -26,7 +26,7 @@ from compushady.shaders import hlsl
 
 from .capture.capture import FrameGrabber
 from .shaders.srcnn import SRCNN
-from .utils.parsers import color_string_to_float4
+from .utils.parsers import color_string_to_float4, parse_output_geometry
 
 logger = logging.getLogger(__name__)
 
@@ -592,6 +592,7 @@ class Pipeline:
             self.crop_height = (
                 self.window_info.height - self.crop_top - self.crop_bottom
             )
+            self._update_content_dimensions()
             self.src_w = self.crop_width * (4 if self.double_upscale else 2)
             self.src_h = self.crop_height * (4 if self.double_upscale else 2)
 
@@ -629,21 +630,22 @@ class Pipeline:
 
     def _update_content_dimensions(self):
         """Recalculate content_width/content_height based on current overlay size."""
-        from .utils.parsers import parse_output_geometry
-
         overlay_w = self.overlay.width()
         overlay_h = self.overlay.height()
 
         # Re‑parse the output geometry using the current overlay size as the reference
         new_content_w, new_content_h, _, _, _ = parse_output_geometry(
             self.output_geometry,
-            self.window_info.width,
-            self.window_info.height,
+            self.crop_width,
+            self.crop_height,
             overlay_w,
             overlay_h,
         )
-        self.content_width = new_content_w
-        self.content_height = new_content_h
-        logger.debug(
-            f"Content dimensions updated to {self.content_width}x{self.content_height}"
-        )
+
+        if new_content_w != self.content_width or new_content_h != self.content_height:
+            logger.debug(
+                f"Content dimensions updated: {self.content_width}x{self.content_height} -> {new_content_w}x{new_content_h}"
+            )
+            self.content_width = new_content_w
+            self.content_height = new_content_h
+            self.overlay.set_content_dimensions(new_content_w, new_content_h)
