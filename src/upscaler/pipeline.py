@@ -185,8 +185,7 @@ class Pipeline:
         # X11 connection for geometry queries (used only if map_events is False)
         self._x_display: Optional[Display] = None
         self._x_window: Optional[XlibWindow] = None
-        if not self.overlay.map_events:
-            self._open_x_display()
+        self._open_x_display()
         self._last_opacity_update = 0.0
 
     def _open_x_display(self) -> None:
@@ -381,7 +380,16 @@ class Pipeline:
         frame_start = time.perf_counter()
 
         # Grab frame from target window
-        frame = self.grabber.grab()
+        try:
+            frame = self.grabber.grab()
+        except RuntimeError as e:
+            if "window probably gone" in str(e):
+                logger.warning("Target window disappeared, attempting to recover...")
+                self._update_target_window_size(force=True)
+                return
+            else:
+                raise
+
         logger.debug(f"Frame grabbed, size={len(frame)} bytes")
 
         if not self.running:
@@ -522,67 +530,89 @@ class Pipeline:
             f"Lanczos compute rebuilt in {(time.perf_counter() - start)*1000:.2f} ms"
         )
 
-    def _update_target_window_size(self):
+    def _update_target_window_size(self, force: bool = False, depth: int = 0) -> bool:
         """
-        Check if the target window has been resized.
-        If so, recreate the frame grabber and upscaler with the new dimensions.
-        Returns True if a resize occurred.
+        Check if the target window has been resized or recreated.
+        If so, recreate the frame grabber, upscaler, and refresh X resources.
+        If force is True, always attempt to refresh even if size/handle unchanged.
+        Returns True if a change occurred or if recovery succeeded.
         """
-        if not self._x_window or not self._x_display:
+        if depth > 2:
             return False
+
+        if self._x_window is None:
+            # Attempt to open X display if not already
+            if depth == 0:
+                self._open_x_display()
+            return False
+
         try:
             geom = self._x_window.get_geometry()
+            new_handle = self._x_window.id
             new_width = geom.width
             new_height = geom.height
-            if (
-                new_width != self.window_info.width
-                or new_height != self.window_info.height
-            ):
-                logger.info(
-                    f"Target window resized: {self.window_info.width}x{self.window_info.height} → {new_width}x{new_height}"
-                )
-                self.window_info.width = new_width
-                self.window_info.height = new_height
+        except (BadWindow, XError) as e:
+            # Window is gone or inaccessible – treat as change and try to refresh
+            logger.debug(f"X error when querying window: {e}")
+            if force:
+                return False
+            self._close_x_display()
+            self._open_x_display()
+            if self._x_window is None:
+                return False
+            return self._update_target_window_size(force=True, depth=depth + 1)
 
-                # Recompute crop dimensions
-                self.crop_width = (
-                    self.window_info.width - self.crop_left - self.crop_right
+        handle_changed = new_handle != self.window_info.handle
+        size_changed = (
+            new_width != self.window_info.width or new_height != self.window_info.height
+        )
+
+        if handle_changed or size_changed or force:
+            logger.info(
+                f"Target window changed: handle {self.window_info.handle} -> {new_handle}, "
+                f"size {self.window_info.width}x{self.window_info.height} -> {new_width}x{new_height}"
+            )
+
+            self.window_info.handle = new_handle
+            self.window_info.width = new_width
+            self.window_info.height = new_height
+
+            # Recompute crop dimensions
+            self.crop_width = self.window_info.width - self.crop_left - self.crop_right
+            self.crop_height = (
+                self.window_info.height - self.crop_top - self.crop_bottom
+            )
+            self.src_w = self.crop_width * (4 if self.double_upscale else 2)
+            self.src_h = self.crop_height * (4 if self.double_upscale else 2)
+
+            if self.crop_width <= 0 or self.crop_height <= 0:
+                logger.warning(
+                    "Crop dimensions became invalid after resize; disabling crop."
                 )
-                self.crop_height = (
-                    self.window_info.height - self.crop_top - self.crop_bottom
-                )
+                self.crop_width = self.window_info.width
+                self.crop_height = self.window_info.height
+                self.crop_left = self.crop_top = self.crop_right = self.crop_bottom = 0
                 self.src_w = self.crop_width * (4 if self.double_upscale else 2)
                 self.src_h = self.crop_height * (4 if self.double_upscale else 2)
 
-                if self.crop_width <= 0 or self.crop_height <= 0:
-                    logger.warning(
-                        "Crop dimensions became invalid after resize; disabling crop."
-                    )
-                    self.crop_width = self.window_info.width
-                    self.crop_height = self.window_info.height
-                    self.crop_left = self.crop_top = self.crop_right = (
-                        self.crop_bottom
-                    ) = 0
-                    self.src_w = self.crop_width * (4 if self.double_upscale else 2)
-                    self.src_h = self.crop_height * (4 if self.double_upscale else 2)
+            # Recreate upscaler with new size
+            start = time.perf_counter()
+            self.upscaler = SRCNN(
+                width=self.crop_width,
+                height=self.crop_height,
+                model_name=self.model_name,
+                double_upscale=self.double_upscale,
+            )
+            logger.debug(
+                f"Upscaler recreated in {(time.perf_counter() - start)*1000:.2f} ms"
+            )
 
-                # Recreate upscaler with new size
-                start = time.perf_counter()
-                self.upscaler = SRCNN(
-                    width=self.crop_width,
-                    height=self.crop_height,
-                    model_name=self.model_name,
-                    double_upscale=self.double_upscale,
-                )
-                logger.debug(
-                    f"Upscaler recreated in {(time.perf_counter() - start)*1000:.2f} ms"
-                )
+            # Recreate frame grabber with the new handle and dimensions
+            self._create_grabber()
 
-                # Recreate frame grabber (the old one will be discarded)
-                self._create_grabber()
+            # Rebuild Lanczos compute object (depends on upscaler output)
+            self._rebuild_lanczos_compute()
 
-                self._rebuild_lanczos_compute()
-                return True
-        except (BadWindow, XError) as e:
-            logger.debug(f"Could not get target window geometry: {e}")
+            return True
+
         return False
