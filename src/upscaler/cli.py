@@ -100,7 +100,7 @@ def _acquire_target_window(
     else:
         logger.info(
             "Acquiring currently active window (waiting {} seconds)".format(
-                config.delay
+                config.target_delay
             )
         )
         win_info = get_active_window_after_delay(config)

@@ -276,7 +276,7 @@ class OverlayWindow(QMainWindow):
 
         rx, ry, rw, rh = rect
         if rw == 0 or rh == 0:
-            logger.warning("Scaling rect has zero size, cannot map")
+            logger.info("Scaling rect has zero size, cannot map")
             return 0, 0, False
 
         # Check if the click is inside the content area
