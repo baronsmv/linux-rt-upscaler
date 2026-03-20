@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Any, List, Optional, Tuple, Union
 
 from PySide6.QtCore import QEvent, QPoint, Qt, Slot
@@ -60,9 +61,10 @@ class OverlayWindow(QMainWindow):
         :param background_color: Color for areas not covered by content.
         """
         super().__init__()
+        start_time = time.perf_counter()
         logger.info(
             f"Initializing OverlayWindow: mode={mode}, size={width}x{height}, "
-            f"target_handle={target.handle}"
+            f"target_handle={target.handle}, scale_mode={scale_mode}"
         )
 
         self.mode = mode
@@ -93,6 +95,13 @@ class OverlayWindow(QMainWindow):
         # Forwarding enabled (disabled when minimized)
         self._forwarding_enabled = self.map_events
 
+        # Log the configuration
+        logger.debug(
+            f"Overlay config: map_events={self.map_events}, forwarding_enabled={self._forwarding_enabled}, "
+            f"content={self.content_width}x{self.content_height}, crop={self.crop_left},{self.crop_top} "
+            f"{self.crop_width}x{self.crop_height}, offsets=({offset_x},{offset_y})"
+        )
+
         # Set window flags and geometry according to mode
         self._setup_window(width, height, initial_x, initial_y)
 
@@ -107,6 +116,10 @@ class OverlayWindow(QMainWindow):
             self._open_x_display()
             self.installEventFilter(self)
 
+        logger.debug(
+            f"OverlayWindow initialized in {(time.perf_counter() - start_time)*1000:.2f} ms"
+        )
+
     def _setup_window(self, width: int, height: int, x: int, y: int) -> None:
         """Apply the appropriate window flags and geometry for the chosen mode."""
         flags = Qt.Window
@@ -115,17 +128,29 @@ class OverlayWindow(QMainWindow):
             flags |= Qt.FramelessWindowHint
             self.setGeometry(x, y, width, height)
             self.showFullScreen()
+            logger.info(
+                f"Overlay set to fullscreen on geometry ({x},{y},{width}x{height})"
+            )
             return
 
         if self.mode == OverlayMode.WINDOWED:
             self.setGeometry(x, y, width, height)
             self.setFixedSize(width, height)
+            logger.info(
+                f"Overlay set to windowed mode at ({x},{y}) size {width}x{height}"
+            )
         elif self.mode == OverlayMode.ALWAYS_ON_TOP:
             flags |= Qt.X11BypassWindowManagerHint
             self.setGeometry(x, y, width, height)
+            logger.info(
+                f"Overlay set to always-on-top mode at ({x},{y}) size {width}x{height}"
+            )
         elif self.mode == OverlayMode.ALWAYS_ON_TOP_TRANSPARENT:
             flags |= Qt.X11BypassWindowManagerHint | Qt.WindowTransparentForInput
             self.setGeometry(x, y, width, height)
+            logger.info(
+                f"Overlay set to transparent always-on-top mode at ({x},{y}) size {width}x{height}"
+            )
         else:
             raise ValueError(f"Unknown overlay mode: {self.mode}")
 
@@ -136,11 +161,13 @@ class OverlayWindow(QMainWindow):
         """Detect window state changes (minimized) to enable/disable forwarding."""
         if event.type() == QEvent.WindowStateChange:
             if self.windowState() & Qt.WindowMinimized:
-                logger.debug("Window minimized – disabling event forwarding")
-                self._forwarding_enabled = False
+                if self._forwarding_enabled:
+                    logger.debug("Window minimized – disabling event forwarding")
+                    self._forwarding_enabled = False
             else:
-                logger.debug("Window restored – enabling event forwarding")
-                self._forwarding_enabled = True
+                if not self._forwarding_enabled:
+                    logger.debug("Window restored – enabling event forwarding")
+                    self._forwarding_enabled = True
         super().changeEvent(event)
 
     def closeEvent(self, event: QEvent) -> None:
@@ -154,7 +181,11 @@ class OverlayWindow(QMainWindow):
         """
         Custom X error handler – suppresses default stderr printing and logs silently.
         """
-        logger.debug(f"X error: {error} (type: {type(error).__name__})")
+        if hasattr(error, "get_text"):
+            error_text = error.get_text()
+        else:
+            error_text = str(error)
+        logger.debug(f"X error: {error_text} (request: {request})")
 
     def _open_x_display(self) -> None:
         """Open a connection to the X server and install a custom error handler."""
@@ -162,7 +193,9 @@ class OverlayWindow(QMainWindow):
             self._x_display = display.Display()
             self._x_root = int(self._x_display.screen().root.id)
             self._x_display.set_error_handler(self._x_error_handler)
-            logger.debug("Opened X display with custom error handler.")
+            logger.debug(
+                f"Opened X display with custom error handler. Root: {self._x_root}"
+            )
         except Exception as e:
             logger.error(f"Failed to open X display: {e}", exc_info=True)
             self._x_display = None
@@ -173,6 +206,9 @@ class OverlayWindow(QMainWindow):
             flags = self.windowFlags() | Qt.WindowTransparentForInput
             self.setWindowFlags(flags)
             self.show()
+            logger.warning(
+                "Event forwarding disabled due to X display failure. Window is now click-through."
+            )
 
     def _close_x_display(self) -> None:
         """Safely close the X display connection."""
@@ -207,8 +243,11 @@ class OverlayWindow(QMainWindow):
         if len(rect) != 4:
             logger.error(f"set_scaling_rect expects list of 4 ints, got {rect}")
             return
-        self.scaling_rect = rect
-        logger.debug(f"Scaling rect set to {rect}")
+        if self.scaling_rect != rect:
+            self.scaling_rect = rect
+            logger.debug(f"Scaling rect set to {rect}")
+        else:
+            logger.debug(f"Scaling rect unchanged ({rect})")
 
     def eventFilter(self, obj: Any, event: QEvent) -> bool:
         """Filter mouse events and forward them when map_events is enabled."""
@@ -232,15 +271,19 @@ class OverlayWindow(QMainWindow):
         """
         rect = self.scaling_rect
         if len(rect) != 4:
+            logger.error(f"Invalid scaling rect {rect}, cannot map")
             return 0, 0, False
 
         rx, ry, rw, rh = rect
-        # If the rectangle is empty (e.g., before first frame), fall back to old method?
         if rw == 0 or rh == 0:
+            logger.warning("Scaling rect has zero size, cannot map")
             return 0, 0, False
 
         # Check if the click is inside the content area
         if not (rx <= local_x < rx + rw and ry <= local_y < ry + rh):
+            logger.debug(
+                f"Click at ({local_x},{local_y}) outside scaling rect ({rx},{ry},{rw},{rh})"
+            )
             return 0, 0, False
 
         # Compute position within the content rectangle (normalized)
@@ -267,6 +310,9 @@ class OverlayWindow(QMainWindow):
         target_x = max(0, min(target_x, self.client_width - 1))
         target_y = max(0, min(target_y, self.client_height - 1))
 
+        logger.debug(
+            f"Mapped: ({local_x},{local_y}) -> content ({content_x},{content_y}) -> target ({target_x},{target_y})"
+        )
         return target_x, target_y, True
 
     def _get_current_button_state(self) -> int:
@@ -281,7 +327,9 @@ class OverlayWindow(QMainWindow):
             state |= X.Button3Mask
         if buttons & Qt.MiddleButton:
             state |= X.Button2Mask
-        logger.debug(f"Current button state mask: {state}")
+        # Log only if non-zero to reduce noise
+        if state:
+            logger.debug(f"Current button state mask: {state}")
         return state
 
     def _qt_button_to_x11(self, qt_button: Qt.MouseButton) -> int:
@@ -412,30 +460,47 @@ class OverlayWindow(QMainWindow):
 
     def set_crop(self, left: int, top: int, width: int, height: int) -> None:
         """Update the crop region (used for mouse mapping)."""
-        self.crop_left = left
-        self.crop_top = top
-        self.crop_width = width
-        self.crop_height = height
-        logger.debug(
-            f"Overlay crop updated: left={left}, top={top}, size={width}x{height}"
-        )
+        if (left, top, width, height) != (
+            self.crop_left,
+            self.crop_top,
+            self.crop_width,
+            self.crop_height,
+        ):
+            self.crop_left = left
+            self.crop_top = top
+            self.crop_width = width
+            self.crop_height = height
+            logger.debug(
+                f"Overlay crop updated: left={left}, top={top}, size={width}x{height}"
+            )
+        else:
+            logger.debug("Overlay crop unchanged")
 
     def set_content_dimensions(self, width: int, height: int) -> None:
         """Update the logical content dimensions (used for mouse mapping)."""
-        self.content_width = width
-        self.content_height = height
-        logger.debug(f"Overlay content dimensions updated to {width}x{height}")
+        if (width, height) != (self.content_width, self.content_height):
+            self.content_width = width
+            self.content_height = height
+            logger.debug(f"Overlay content dimensions updated to {width}x{height}")
+        else:
+            logger.debug("Overlay content dimensions unchanged")
 
     def set_target_handle(self, handle: int) -> None:
         """Update the XID of the target window (used for sending events)."""
-        self.target_handle = handle
-        logger.debug(f"Overlay target handle updated to {handle}")
+        if handle != self.target_handle:
+            self.target_handle = handle
+            logger.debug(f"Overlay target handle updated to {handle}")
+        else:
+            logger.debug("Overlay target handle unchanged")
 
     def set_target_size(self, width: int, height: int) -> None:
         """Update the actual target window size (used for clamping mouse coordinates)."""
-        self.client_width = width
-        self.client_height = height
-        logger.debug(f"Overlay target size updated to {width}x{height}")
+        if (width, height) != (self.client_width, self.client_height):
+            self.client_width = width
+            self.client_height = height
+            logger.debug(f"Overlay target size updated to {width}x{height}")
+        else:
+            logger.debug("Overlay target size unchanged")
 
     @Slot()
     def on_pipeline_stopped(self) -> None:
