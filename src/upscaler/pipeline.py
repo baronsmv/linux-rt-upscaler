@@ -98,9 +98,6 @@ class Pipeline:
         self.content_width = overlay.content_width
         self.content_height = overlay.content_height
 
-        self.src_w = self.crop_width * (4 if self.double_upscale else 2)
-        self.src_h = self.crop_height * (4 if self.double_upscale else 2)
-
         self.crop_left = crop_left
         self.crop_top = crop_top
         self.crop_right = crop_right
@@ -108,10 +105,14 @@ class Pipeline:
         self.crop_width = window_info.width - crop_left - crop_right
         self.crop_height = window_info.height - crop_top - crop_bottom
 
+        # Compute source dimensions after upscaling
+        self.double_upscale = double_upscale
+        self.src_w = self.crop_width * (4 if double_upscale else 2)
+        self.src_h = self.crop_height * (4 if double_upscale else 2)
+
         self.overlay = overlay
         self.swapchain = swapchain
         self.model_name = model_name
-        self.double_upscale = double_upscale
         self.background_color = color_string_to_float4(overlay.background_color)
 
         self.display_id = display_id
@@ -126,26 +127,33 @@ class Pipeline:
 
         # Screen texture (output of the pipeline)
         logger.debug("Creating screen texture...")
+        start = time.perf_counter()
         self.screen_tex = Texture2D(screen_width, screen_height, format=R8G8B8A8_UNORM)
-        logger.debug("Screen texture created.")
+        logger.debug(
+            f"Screen texture created in {(time.perf_counter() - start)*1000:.2f} ms"
+        )
 
         # Create upscaler (SRCNN)
         logger.debug(f"Creating upscaler with model '{model_name}'...")
+        start = time.perf_counter()
         self.upscaler = SRCNN(
             width=self.crop_width,
             height=self.crop_height,
             model_name=model_name,
             double_upscale=double_upscale,
         )
-        logger.debug("Upscaler created.")
+        logger.debug(f"Upscaler created in {(time.perf_counter() - start)*1000:.2f} ms")
 
         # Load Lanczos shader
         shader_dir = os.path.dirname(__file__)
         shader_path = os.path.join(shader_dir, "shaders", "lanczos2.hlsl")
         logger.debug(f"Loading Lanczos shader from {shader_path}")
+        start = time.perf_counter()
         with open(shader_path, "r") as f:
             self.lanczos_shader = hlsl.compile(f.read())
-        logger.debug("Lanczos shader compiled.")
+        logger.debug(
+            f"Lanczos shader compiled in {(time.perf_counter() - start)*1000:.2f} ms"
+        )
 
         # Create sampler for Lanczos scaling (point sampling, clamp addressing)
         self.lanczos_sampler = Sampler(
@@ -170,11 +178,16 @@ class Pipeline:
         self.frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
         self.stopped_event = threading.Event()
 
+        # Performance tracking
+        self.frame_count = 0
+        self.last_fps_log = 0.0
+
         # X11 connection for geometry queries (used only if map_events is False)
         self._x_display: Optional[Display] = None
         self._x_window: Optional[XlibWindow] = None
         if not self.overlay.map_events:
             self._open_x_display()
+        self._last_opacity_update = 0.0
 
     def _open_x_display(self) -> None:
         """Open a connection to the X server for opacity control."""
@@ -228,8 +241,13 @@ class Pipeline:
     def _update_opacity(self) -> None:
         """
         Update overlay opacity based on mouse position relative to target window.
-        If the window is gone, set opacity to 1.0 and log a warning.
+        Throttled to once per 100 ms to reduce X11 overhead.
         """
+        now = time.time()
+        if now - self._last_opacity_update < 0.1:
+            return
+        self._last_opacity_update = now
+
         if self.overlay.map_events:
             self.overlay.setWindowOpacity(1.0)
             return
@@ -267,6 +285,7 @@ class Pipeline:
     def _create_grabber(self):
         """Create grabber inside thread to avoid sharing X connections across threads"""
         try:
+            start = time.perf_counter()
             self.grabber = FrameGrabber(
                 self.window_info,
                 crop_left=self.crop_left,
@@ -274,10 +293,13 @@ class Pipeline:
                 crop_right=self.crop_right,
                 crop_bottom=self.crop_bottom,
             )
-            logger.debug(f"FrameGrabber created for window {self.window_info.handle}")
+            logger.debug(
+                f"FrameGrabber created for window {self.window_info.handle} in "
+                f"{(time.perf_counter() - start)*1000:.2f} ms"
+            )
         except Exception as e:
             logger.error(f"Failed to create FrameGrabber: {e}", exc_info=True)
-            return
+            raise
 
     def _run(self) -> None:
         """Main pipeline loop – runs in a separate thread."""
@@ -289,16 +311,11 @@ class Pipeline:
         self.groups_y = (self.screen_height + 15) // 16
         logger.debug(f"Compute dispatch groups: {self.groups_x}x{self.groups_y}")
 
-        # Source dimensions depend on whether we double‑upscaled
-        if self.double_upscale:
-            src_w = self.crop_width * 4
-            src_h = self.crop_height * 4
-        else:
-            src_w = self.crop_width * 2
-            src_h = self.crop_height * 2
-        logger.debug(f"Source dimensions after upscaling: {src_w}x{src_h}")
+        # Log source dimensions
+        logger.debug(f"Source dimensions after upscaling: {self.src_w}x{self.src_h}")
 
-        # First Compute object
+        # Create the Lanczos compute object (will be reused)
+        start = time.perf_counter()
         self.lanczos_compute = Compute(
             self.lanczos_shader,
             srv=[self.upscaler.output],
@@ -306,12 +323,37 @@ class Pipeline:
             cbv=[self.cb],
             samplers=[self.lanczos_sampler],
         )
+        logger.debug(
+            f"Lanczos compute object created in {(time.perf_counter() - start)*1000:.2f} ms"
+        )
+
+        # Frame timing
+        last_frame_time = time.time()
+        frame_times = []
 
         while self.running:
             try:
                 # Check if target window size changed
                 self._update_target_window_size()
                 self._process_one_frame()
+                self.frame_count += 1
+
+                # FPS logging every 2 seconds
+                now = time.time()
+                if now - self.last_fps_log >= 2.0:
+                    avg_interval = (
+                        (now - last_frame_time) / self.frame_count
+                        if self.frame_count
+                        else 0
+                    )
+                    fps = 1.0 / avg_interval if avg_interval else 0
+                    logger.info(
+                        f"FPS: {fps:.1f} (frames: {self.frame_count}, avg interval: {avg_interval*1000:.2f} ms)"
+                    )
+                    last_frame_time = now
+                    self.frame_count = 0
+                    self.last_fps_log = now
+
             except BadWindow:
                 # Target window was destroyed – exit the loop cleanly
                 logger.info("Target window destroyed, stopping pipeline loop.")
@@ -332,12 +374,12 @@ class Pipeline:
             self.overlay, "on_pipeline_stopped", Qt.QueuedConnection
         )
 
-    def _process_one_frame(
-        self,
-    ) -> None:
+    def _process_one_frame(self) -> None:
         """
         Grab a frame, upscale, scale, and present. May raise XError/BadWindow.
         """
+        frame_start = time.perf_counter()
+
         # Grab frame from target window
         frame = self.grabber.grab()
         logger.debug(f"Frame grabbed, size={len(frame)} bytes")
@@ -356,10 +398,11 @@ class Pipeline:
             return
 
         # Upscale with SRCNN
-        logger.debug("Uploading frame to upscaler...")
+        upscale_start = time.perf_counter()
         self.upscaler.upload(frame)
-        logger.debug("Running SRCNN compute...")
-        self.upscaler.compute()  # result in self.upscaler.output
+        self.upscaler.compute()
+        upscale_time = (time.perf_counter() - upscale_start) * 1000
+        logger.debug(f"Upscaling took {upscale_time:.2f} ms")
 
         # Compute rectangle within the content canvas
         r_x, r_y, r_w, r_h = _calculate_scaling_rect(
@@ -397,20 +440,22 @@ class Pipeline:
             dst_h,  # 4 int
             1.0,  # blur (float)
         )
-        logger.debug(f"CB data hex: {cb_data.hex()}")
         self.cb.upload(cb_data)
-        logger.debug("Constant buffer updated for Lanczos scaling.")
 
-        # Create compute pipeline
+        # Dispatch compute
+        dispatch_start = time.perf_counter()
         self.lanczos_compute.dispatch(self.groups_x, self.groups_y, 1)
-        logger.debug("Lanczos scaling dispatched.")
+        dispatch_time = (time.perf_counter() - dispatch_start) * 1000
+        logger.debug(f"Lanczos dispatch took {dispatch_time:.2f} ms")
 
         # Opacity control
         self._update_opacity()
 
         # Present to swapchain
+        present_start = time.perf_counter()
         self.swapchain.present(self.screen_tex)
-        logger.debug("Presented to swapchain.")
+        present_time = (time.perf_counter() - present_start) * 1000
+        logger.debug(f"Present took {present_time:.2f} ms")
 
         # Check if swapchain needs recreation
         if self.swapchain.needs_recreation():
@@ -422,6 +467,9 @@ class Pipeline:
                 logger.debug("Swapchain suboptimal, recreating")
                 self.recreate_swapchain()
 
+        total_frame_time = (time.perf_counter() - frame_start) * 1000
+        logger.debug(f"Total frame processing time: {total_frame_time:.2f} ms")
+
     def recreate_swapchain(self):
         """Create a new swapchain when the current one becomes suboptimal."""
         now = time.time()
@@ -429,8 +477,7 @@ class Pipeline:
             return
 
         self.last_recreate_time = now
-
-        logger.info("Recreating swapchain due to suboptimal state")
+        logger.info("Recreating swapchain")
 
         new_width = self.overlay.width()
         new_height = self.overlay.height()
@@ -442,24 +489,37 @@ class Pipeline:
             )
             self.screen_width = new_width
             self.screen_height = new_height
+            start = time.perf_counter()
             self.screen_tex = Texture2D(new_width, new_height, format=R8G8B8A8_UNORM)
+            logger.debug(
+                f"Screen texture recreated in {(time.perf_counter() - start)*1000:.2f} ms"
+            )
             self.groups_x = (new_width + 15) // 16
             self.groups_y = (new_height + 15) // 16
 
         # Create a new swapchain (the old one will be garbage‑collected later)
+        start = time.perf_counter()
         new_swap = Swapchain((self.display_id, self.xid), R8G8B8A8_UNORM, 3)
+        logger.debug(
+            f"Swapchain recreated in {(time.perf_counter() - start)*1000:.2f} ms"
+        )
         self.swapchain = new_swap
         self._rebuild_lanczos_compute()
 
         logger.info("Swapchain recreated")
 
     def _rebuild_lanczos_compute(self):
+        """Rebuild the Lanczos compute object when resources change."""
+        start = time.perf_counter()
         self.lanczos_compute = Compute(
             self.lanczos_shader,
             srv=[self.upscaler.output],
             uav=[self.screen_tex],
             cbv=[self.cb],
             samplers=[self.lanczos_sampler],
+        )
+        logger.debug(
+            f"Lanczos compute rebuilt in {(time.perf_counter() - start)*1000:.2f} ms"
         )
 
     def _update_target_window_size(self):
@@ -503,13 +563,21 @@ class Pipeline:
                     self.crop_left = self.crop_top = self.crop_right = (
                         self.crop_bottom
                     ) = 0
+                    self.src_w = self.crop_width * (4 if self.double_upscale else 2)
+                    self.src_h = self.crop_height * (4 if self.double_upscale else 2)
+
                 # Recreate upscaler with new size
+                start = time.perf_counter()
                 self.upscaler = SRCNN(
                     width=self.crop_width,
                     height=self.crop_height,
                     model_name=self.model_name,
                     double_upscale=self.double_upscale,
                 )
+                logger.debug(
+                    f"Upscaler recreated in {(time.perf_counter() - start)*1000:.2f} ms"
+                )
+
                 # Recreate frame grabber (the old one will be discarded)
                 self._create_grabber()
 
