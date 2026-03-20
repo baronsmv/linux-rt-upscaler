@@ -2,8 +2,9 @@ import logging
 import os
 import struct
 import threading
-from queue import Queue, Empty
-from typing import Optional, Any, Tuple
+import time
+from queue import Empty, Queue
+from typing import Any, Optional, Tuple
 
 from PySide6.QtCore import QMetaObject, Qt
 from PySide6.QtGui import QCursor
@@ -11,10 +12,11 @@ from Xlib.display import Display
 from Xlib.error import XError, BadWindow
 from Xlib.xobject.drawable import Window as XlibWindow
 from compushady import (
-    Compute,
     Buffer,
+    Compute,
     Texture2D,
     Sampler,
+    Swapchain,
     HEAP_UPLOAD,
     SAMPLER_ADDRESS_MODE_CLAMP,
     SAMPLER_FILTER_POINT,
@@ -69,6 +71,8 @@ class Pipeline:
         screen_height: int,
         overlay: Any,  # Overlay instance
         swapchain: Any,
+        display_id: int,
+        xid: int,
         model_name: str,
         double_upscale: bool,
         crop_left: int = 0,
@@ -93,17 +97,23 @@ class Pipeline:
         self.screen_height = screen_height
         self.content_width = overlay.content_width
         self.content_height = overlay.content_height
+
         self.crop_left = crop_left
         self.crop_top = crop_top
         self.crop_right = crop_right
         self.crop_bottom = crop_bottom
         self.crop_width = window_info.width - crop_left - crop_right
         self.crop_height = window_info.height - crop_top - crop_bottom
+
         self.overlay = overlay
         self.swapchain = swapchain
         self.model_name = model_name
         self.double_upscale = double_upscale
         self.background_color = color_string_to_float4(overlay.background_color)
+
+        self.display_id = display_id
+        self.xid = xid
+        self.last_recreate_time = 0
 
         logger.info(
             f"Initializing Pipeline: target={window_info.title} ({window_info.width}x{window_info.height}), "
@@ -270,9 +280,9 @@ class Pipeline:
             return
 
         # Compute dispatch groups for Lanczos pass
-        groups_x = (self.screen_width + 15) // 16
-        groups_y = (self.screen_height + 15) // 16
-        logger.debug(f"Compute dispatch groups: {groups_x}x{groups_y}")
+        self.groups_x = (self.screen_width + 15) // 16
+        self.groups_y = (self.screen_height + 15) // 16
+        logger.debug(f"Compute dispatch groups: {self.groups_x}x{self.groups_y}")
 
         # Source dimensions depend on whether we double‑upscaled
         if self.double_upscale:
@@ -285,7 +295,7 @@ class Pipeline:
 
         while self.running:
             try:
-                self._process_one_frame(grabber, src_w, src_h, groups_x, groups_y)
+                self._process_one_frame(grabber, src_w, src_h)
             except BadWindow:
                 # Target window was destroyed – exit the loop cleanly
                 logger.info("Target window destroyed, stopping pipeline loop.")
@@ -311,8 +321,6 @@ class Pipeline:
         grabber: FrameGrabber,
         src_w: int,
         src_h: int,
-        groups_x: int,
-        groups_y: int,
     ) -> None:
         """
         Grab a frame, upscale, scale, and present. May raise XError/BadWindow.
@@ -388,7 +396,7 @@ class Pipeline:
             cbv=[self.cb],
             samplers=[self.lanczos_sampler],
         )
-        scale_compute.dispatch(groups_x, groups_y, 1)
+        scale_compute.dispatch(self.groups_x, self.groups_y, 1)
         logger.debug("Lanczos scaling dispatched.")
 
         # Opacity control
@@ -397,3 +405,37 @@ class Pipeline:
         # Present to swapchain
         self.swapchain.present(self.screen_tex)
         logger.debug("Presented to swapchain.")
+
+        # Check if swapchain needs recreation
+        if self.swapchain.is_suboptimal():
+            self.recreate_swapchain()
+
+    def recreate_swapchain(self):
+        """Create a new swapchain when the current one becomes suboptimal."""
+        now = time.time()
+        if now - self.last_recreate_time < 1.0:  # at most once per second
+            return
+
+        self.last_recreate_time = now
+
+        logger.info("Recreating swapchain due to suboptimal state")
+
+        new_width = self.overlay.width()
+        new_height = self.overlay.height()
+
+        # If the overlay was resized, update screen texture and compute groups
+        if new_width != self.screen_width or new_height != self.screen_height:
+            logger.info(
+                f"Overlay resized from {self.screen_width}x{self.screen_height} to {new_width}x{new_height}"
+            )
+            self.screen_width = new_width
+            self.screen_height = new_height
+            self.screen_tex = Texture2D(new_width, new_height, format=R8G8B8A8_UNORM)
+            self.groups_x = (new_width + 15) // 16
+            self.groups_y = (new_height + 15) // 16
+
+        # Create a new swapchain (the old one will be garbage‑collected later)
+        new_swap = Swapchain((self.display_id, self.xid), R8G8B8A8_UNORM, 3)
+        self.swapchain = new_swap
+
+        logger.info("Swapchain recreated")

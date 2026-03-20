@@ -207,6 +207,8 @@ def main() -> None:
         overlay.height(),
         overlay,
         swapchain,
+        display_id,
+        overlay.xid,
         model_name=config.model,
         double_upscale=config.double_upscale,
         crop_left=config.crop_left,
