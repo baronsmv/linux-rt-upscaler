@@ -45,7 +45,6 @@ class OverlayWindow(QMainWindow):
         crop_top: int = 0,
         crop_width: Optional[int] = None,
         crop_height: Optional[int] = None,
-        scale_factor: float = 1.0,
     ) -> None:
         """
         Create and show the overlay window.
@@ -87,7 +86,6 @@ class OverlayWindow(QMainWindow):
         self.content_width = content_width if content_width is not None else width
         self.content_height = content_height if content_height is not None else height
         self.scale_mode = scale_mode
-        self.scale_factor = scale_factor
         self.background_color = background_color
 
         # X11 connection for event forwarding
@@ -289,8 +287,8 @@ class OverlayWindow(QMainWindow):
             return 0, 0, False
 
         # Compute position within the content rectangle (normalized)
-        norm_x = (local_x - rx) / rw * self.scale_factor
-        norm_y = (local_y - ry) / rh * self.scale_factor
+        norm_x = (local_x - rx) / rw
+        norm_y = (local_y - ry) / rh
 
         # Map to content coordinates (logical content size)
         content_x = int(norm_x * self.content_width)

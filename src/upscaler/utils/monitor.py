@@ -65,8 +65,8 @@ def get_monitor_geometry(
 ) -> Tuple[int, int, int, int]:
     """Return (x, y, width, height) of the monitor(s) specified."""
     return (
-        monitor.x(),
-        monitor.y(),
+        int(monitor.x() * scale_factor),
+        int(monitor.y() * scale_factor),
         int(monitor.width() * scale_factor),
         int(monitor.height() * scale_factor),
     )

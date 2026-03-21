@@ -242,7 +242,6 @@ def main() -> None:
         crop_top=config.crop_top,
         crop_width=crop_width,
         crop_height=crop_height,
-        scale_factor=config.scale_factor,
     )
     logger.debug(f"Overlay created in {time.perf_counter() - start_overlay:.3f}s")
 
@@ -283,6 +282,7 @@ def main() -> None:
         crop_top=config.crop_top,
         crop_right=config.crop_right,
         crop_bottom=config.crop_bottom,
+        scale_factor=config.scale_factor,
     )
     logger.debug(f"Pipeline created in {time.perf_counter() - start_pipeline:.3f}s")
 

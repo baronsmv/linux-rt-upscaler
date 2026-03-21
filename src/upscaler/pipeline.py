@@ -83,6 +83,7 @@ class Pipeline:
         crop_top: int = 0,
         crop_right: int = 0,
         crop_bottom: int = 0,
+        scale_factor: float = 1.0,
     ) -> None:
         """
         Initialize the pipeline.
@@ -108,6 +109,8 @@ class Pipeline:
         self.crop_bottom = crop_bottom
         self.crop_width = window_info.width - crop_left - crop_right
         self.crop_height = window_info.height - crop_top - crop_bottom
+
+        self.scale_factor = scale_factor
 
         # Compute source dimensions after upscaling
         self.double_upscale = double_upscale
@@ -459,7 +462,12 @@ class Pipeline:
         dst_h = r_h
 
         # Store for mouse mapping
-        self.overlay.scaling_rect = [dst_x, dst_y, dst_w, dst_h]
+        self.overlay.scaling_rect = [
+            dst_x / self.scale_factor,
+            dst_y / self.scale_factor,
+            dst_w / self.scale_factor,
+            dst_h / self.scale_factor,
+        ]
 
         # Lanczos scaling (constant buffer)
         cb_data = struct.pack(
