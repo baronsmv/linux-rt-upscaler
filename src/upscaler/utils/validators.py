@@ -1,9 +1,65 @@
 import logging
 import re
+from typing import Optional
 
 from PySide6.QtGui import QColor
 
 logger = logging.getLogger(__name__)
+
+
+def validate_number(
+    value: float,
+    arg_name: str,
+    left_limit: Optional[float] = None,
+    right_limit: Optional[float] = None,
+    left_inclusive: bool = True,
+    right_inclusive: bool = True,
+) -> None:
+    """
+    Validate that a numeric value lies within specified bounds.
+
+    Args:
+        value: The number to validate.
+        arg_name: Name of the argument (for error messages).
+        left_limit: Lower bound (optional).
+        right_limit: Upper bound (optional).
+        left_inclusive: If True, lower bound is inclusive (value >= left_limit).
+                        If False, lower bound is exclusive (value > left_limit).
+        right_inclusive: If True, upper bound is inclusive (value <= right_limit).
+                         If False, upper bound is exclusive (value < right_limit).
+
+    Raises:
+        ValueError: If the value is outside the allowed range, with a detailed message.
+    """
+    # Determine if the value violates the lower bound
+    if left_limit is not None:
+        if left_inclusive:
+            if value < left_limit:
+                logger.error(
+                    f"Invalid argument: {arg_name} must be >= {left_limit}, got {value}"
+                )
+                exit(1)
+        else:
+            if value <= left_limit:
+                logger.error(
+                    f"Invalid argument: {arg_name} must be > {left_limit}, got {value}"
+                )
+                exit(1)
+
+    # Determine if the value violates the upper bound
+    if right_limit is not None:
+        if right_inclusive:
+            if value > right_limit:
+                logger.error(
+                    f"Invalid argument: {arg_name} must be <= {right_limit}, got {value}"
+                )
+                exit(1)
+        else:
+            if value >= right_limit:
+                logger.error(
+                    f"Invalid argument: {arg_name} must be < {right_limit}, got {value}"
+                )
+                exit(1)
 
 
 def output_geometry(geometry: str) -> None:

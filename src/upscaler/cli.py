@@ -161,7 +161,7 @@ def main() -> None:
 
     # Determine base overlay size from monitor
     monitor = get_monitor(config.monitor)
-    base_x, base_y, base_w, base_h = get_monitor_geometry(monitor)
+    base_x, base_y, base_w, base_h = get_monitor_geometry(monitor, config.scale_factor)
     logger.info(
         f"Using monitor '{monitor}' with geometry: {base_w}x{base_h} at ({base_x},{base_y})"
     )
@@ -242,6 +242,7 @@ def main() -> None:
         crop_top=config.crop_top,
         crop_width=crop_width,
         crop_height=crop_height,
+        scale_factor=config.scale_factor,
     )
     logger.debug(f"Overlay created in {time.perf_counter() - start_overlay:.3f}s")
 

@@ -60,6 +60,13 @@ def get_monitor(monitor_spec: str) -> QRect:
     return geom
 
 
-def get_monitor_geometry(monitor: QRect) -> Tuple[int, int, int, int]:
+def get_monitor_geometry(
+    monitor: QRect, scale_factor: float
+) -> Tuple[int, int, int, int]:
     """Return (x, y, width, height) of the monitor(s) specified."""
-    return monitor.x(), monitor.y(), monitor.width(), monitor.height()
+    return (
+        monitor.x(),
+        monitor.y(),
+        int(monitor.width() * scale_factor),
+        int(monitor.height() * scale_factor),
+    )

@@ -29,6 +29,7 @@ DEFAULTS: Dict[str, Any] = {
     "overlay_mode": OverlayMode.ALWAYS_ON_TOP.value,
     # Display
     "monitor": "primary",
+    "scale_factor": 1.0,
     # Upscaling
     "model": "fast",
     "double_upscale": False,
@@ -149,6 +150,13 @@ class Config:
 multi-monitor space), or monitor name/index
 (e.g., 'HDMI-1', 0).
 Default: {DEFAULTS['monitor']}.""",
+        )
+        display_group.add_argument(
+            "--scale-factor",
+            type=float,
+            default=DEFAULTS["scale_factor"],
+            help="""Wayland scale factor used (e.g., 2.0 for 200% scaling).
+It's used to calculate physical pixels of the screen.""",
         )
 
         # Overlay options
@@ -339,6 +347,17 @@ Default: {DEFAULTS['background_color']}""",
         # Validation
         validators.output_geometry(config.output_geometry)
         validators.background_color(config.background_color)
+
+        validators.validate_number(config.scale_factor, "scale_factor", 1)
+        validators.validate_number(config.crop_top, "crop_top", 0)
+        validators.validate_number(config.crop_bottom, "crop_bottom", 0)
+        validators.validate_number(config.crop_left, "crop_left", 0)
+        validators.validate_number(config.crop_right, "crop_right", 0)
+
+        validators.validate_number(config.target_delay, "target_delay", 0)
+        validators.validate_number(config.pid_timeout, "pid_timeout", 0)
+        validators.validate_number(config.class_timeout, "class_timeout", 0)
+        validators.validate_number(config.total_timeout, "total_timeout", 0)
 
         return config
 
