@@ -348,7 +348,9 @@ Default: {DEFAULTS['background_color']}""",
         validators.output_geometry(config.output_geometry)
         validators.background_color(config.background_color)
 
-        validators.validate_number(config.scale_factor, "scale_factor", 1)
+        validators.validate_number(
+            config.scale_factor, "scale_factor", 0, left_inclusive=False
+        )
         validators.validate_number(config.crop_top, "crop_top", 0)
         validators.validate_number(config.crop_bottom, "crop_bottom", 0)
         validators.validate_number(config.crop_left, "crop_left", 0)
