@@ -1,3 +1,4 @@
+import gc
 import logging
 import os
 import struct
@@ -541,7 +542,16 @@ class Pipeline:
             self.groups_y = (new_height + 15) // 16
             self._update_content_dimensions()
 
-        # Create a new swapchain (the old one will be garbage‑collected later)
+        # Explicitly destroy the old swapchain
+        old_swap = self.swapchain
+        self.swapchain = None
+        if old_swap is not None:
+            # Remove the local reference so the object can be finalized
+            del old_swap
+            # Force garbage collection to ensure the Vulkan resources are freed
+            gc.collect()
+
+        # Create a new swapchain
         start = time.perf_counter()
         new_swap = Swapchain((self.display_id, self.xid), R8G8B8A8_UNORM, 3)
         logger.debug(
