@@ -1,13 +1,12 @@
 import argparse
 import logging
 import os
+import re
 from enum import Enum
 from importlib.metadata import version, PackageNotFoundError
-from typing import Any, List, Optional, Self, Dict
+from typing import Any, Optional, Dict, Tuple
 
 import yaml
-
-from . import validators
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ DEFAULTS: Dict[str, Any] = {
     "class_timeout": 5,
     "total_timeout": 60,
     "starting_phase": 1,
-    # Logging (these are set via flags, not directly from CLI)
+    # Logging
     "log_level": "WARNING",
     "log_file": None,
     # Config file
@@ -70,10 +69,7 @@ def get_version() -> str:
 
 
 class Config:
-    """
-    Configuration container that loads defaults, then a YAML file,
-    then overrides with command‑line arguments.
-    """
+    """Configuration container that loads defaults."""
 
     def __init__(self, **kwargs) -> None:
         # Initialize with defaults, then override with any provided kwargs
@@ -81,334 +77,349 @@ class Config:
             setattr(self, key, kwargs.get(key, value))
         logger.debug("Config object created with default values")
 
-    @classmethod
-    def from_cli(cls) -> Self:
-        """Parse command line and config files, returning a fully populated Config."""
-        parser = argparse.ArgumentParser(
-            description="Real‑Time Upscaler for Linux",
-            epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler",
-            formatter_class=argparse.RawTextHelpFormatter,
-        )
-        parser._positionals.title = "POSITIONAL ARGUMENTS"
-        parser._optionals.title = "GENERAL OPTIONS"
-        parser.add_argument(
-            "-v", "--version", action="version", version=f"%(prog)s {get_version()}"
-        )
-        parser.add_argument(
-            "-c",
-            "--config",
-            help="Path to config file (YAML)",
-        )
 
-        # Program argument
-        parser.add_argument("program", nargs="*", help="Program to launch and scale")
+def parse_args() -> Tuple[argparse.Namespace, Optional[str], Optional[str]]:
+    """Parse command line arguments and return (args, profile_name, config_path)."""
+    parser = argparse.ArgumentParser(
+        description="Real‑Time Upscaler for Linux",
+        epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser._positionals.title = "POSITIONAL ARGUMENTS"
+    parser._optionals.title = "GENERAL OPTIONS"
+    parser.add_argument(
+        "-v", "--version", action="version", version=f"%(prog)s {get_version()}"
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        help="Path to config file (YAML)",
+    )
+    parser.add_argument(
+        "-p",
+        "--profile",
+        help="Name of a profile to apply from the config file",
+    )
 
-        # General section
-        general_group = parser.add_argument_group("INTERACTION OPTIONS")
-        general_group.add_argument(
-            "-s",
-            "--select",
-            action="store_true",
-            help="Select a window from the list of open windows",
-        )
+    # Program argument
+    parser.add_argument("program", nargs="*", help="Program to launch and scale")
 
-        # Upscaling section
-        upscaling_group = parser.add_argument_group("UPSCALING OPTIONS")
-        upscaling_group.add_argument(
-            "-m",
-            "--model",
-            choices=(
-                "8x32",
-                "4x32",
-                "4x24",
-                "4x16",
-                "4x12",
-                "3x12",
-                "fast",
-                "faster",
-                "veryfast",
-            ),
-            default=DEFAULTS["model"],
-            help="Upscaling model to use (ordered from best to worst quality)\n"
-            f"Default: {DEFAULTS['model']}",
-        )
-        upscaling_group.add_argument(
-            "-2",
-            "--double-upscale",
-            action="store_true",
-            help="EXPERIMENTAL: Perform two 2x passes (total 4x) for higher\n"
-            "resolution screens (4k, 1440p) or low‑resolution sources",
-        )
+    # General section
+    interaction_group = parser.add_argument_group("INTERACTION OPTIONS")
+    interaction_group.add_argument(
+        "-s",
+        "--select",
+        action="store_true",
+        help="Select a window from the list of open windows",
+    )
 
-        # Display section
-        display_group = parser.add_argument_group("DISPLAY OPTIONS")
-        display_group.add_argument(
-            "--monitor",
-            type=str,
-            default=DEFAULTS["monitor"],
-            help=f"""Monitor to cover: 'primary', 'all' (to cover all
-multi-monitor space), or monitor name/index
-(e.g., 'HDMI-1', 0).
-Default: {DEFAULTS['monitor']}.""",
-        )
-        display_group.add_argument(
-            "--scale-factor",
-            type=float,
-            default=DEFAULTS["scale_factor"],
-            help="""Wayland scale factor used (e.g., 2.0 for 200% scaling).
-It's used to calculate physical pixels of the screen.""",
-        )
+    # Upscaling section
+    upscaling_group = parser.add_argument_group("UPSCALING OPTIONS")
+    upscaling_group.add_argument(
+        "-m",
+        "--model",
+        choices=(
+            "8x32",
+            "4x32",
+            "4x24",
+            "4x16",
+            "4x12",
+            "3x12",
+            "fast",
+            "faster",
+            "veryfast",
+        ),
+        default=DEFAULTS["model"],
+        help="Upscaling model to use (ordered from best to worst quality)\n"
+        f"Default: {DEFAULTS['model']}",
+    )
+    upscaling_group.add_argument(
+        "-2",
+        "--double-upscale",
+        action="store_true",
+        help="EXPERIMENTAL: Perform two 2x passes (total 4x) for higher\n"
+        "resolution screens (4k, 1440p) or low‑resolution sources",
+    )
 
-        # Overlay options
-        overlay_group = parser.add_argument_group("OVERLAY OPTIONS")
-        overlay_group.add_argument(
-            "-o",
-            "--output-geometry",
-            default=DEFAULTS["output_geometry"],
-            help=f"""Specify the output window size and scaling behaviour.
-Default: {DEFAULTS["output_geometry"]}
+    # Display section
+    display_group = parser.add_argument_group("DISPLAY OPTIONS")
+    display_group.add_argument(
+        "--monitor",
+        type=str,
+        default=DEFAULTS["monitor"],
+        help=f"""Monitor to cover: 'primary', 'all' (to cover all
+    multi-monitor space), or monitor name/index
+    (e.g., 'HDMI-1', 0).
+    Default: {DEFAULTS['monitor']}.""",
+    )
+    display_group.add_argument(
+        "--scale-factor",
+        type=float,
+        default=DEFAULTS["scale_factor"],
+        help="""Wayland scale factor used (e.g., 2.0 for 200% scaling).
+    It's used to calculate physical pixels of the screen.""",
+    )
 
-Examples:
-  fit          - Fit to full monitor/window (letterbox)
-  stretch      - Stretch to full monitor/window (aspect
-                 ratio not preserved)
-  cover        - Cover full monitor/window
+    # Overlay options
+    overlay_group = parser.add_argument_group("OVERLAY OPTIONS")
+    overlay_group.add_argument(
+        "-o",
+        "--output-geometry",
+        default=DEFAULTS["output_geometry"],
+        help=f"""Specify the output window size and scaling behaviour.
+    Default: {DEFAULTS["output_geometry"]}
 
-  1920x1080    - Fit content to 1920x1080
-  1920x1080!   - Stretch content to 1920x1080
-  1920x1080^   - Cover 1920x1080 (crop)
+    Examples:
+      fit          - Fit to full monitor/window (letterbox)
+      stretch      - Stretch to full monitor/window (aspect
+                     ratio not preserved)
+      cover        - Cover full monitor/window
 
-  50%%          - 50%% of monitor, content fitted
-  50%%!         - 50%% of monitor, content stretched
+      1920x1080    - Fit content to 1920x1080
+      1920x1080!   - Stretch content to 1920x1080
+      1920x1080^   - Cover 1920x1080 (crop)
 
-  1920x        - Fixed width 1920, height proportional
-                 (fit)
-  1920x!       - Fixed width 1920, height proportional
-                 (stretch)
+      50%%          - 50%% of monitor, content fitted
+      50%%!         - 50%% of monitor, content stretched
 
-  x1080        - Fixed height 1080, width proportional
-                 (fit)
-  x1080!       - Fixed height 1080, width proportional
-                 (stretch)
+      1920x        - Fixed width 1920, height proportional
+                     (fit)
+      1920x!       - Fixed width 1920, height proportional
+                     (stretch)
 
-""",
-        )
-        overlay_group.add_argument(
-            "--overlay-mode",
-            choices=[e.value for e in OverlayMode],
-            default=DEFAULTS["overlay_mode"],
-            help=f"""Overlay window behaviour.
-Default: {DEFAULTS["overlay_mode"]}
+      x1080        - Fixed height 1080, width proportional
+                     (fit)
+      x1080!       - Fixed height 1080, width proportional
+                     (stretch)
 
-Note: Keyboard events are NOT forwarded, so it's best to
-keep the target window focused (if on a single monitor,
-always-on-top works well for this).
+    """,
+    )
+    overlay_group.add_argument(
+        "--overlay-mode",
+        choices=[e.value for e in OverlayMode],
+        default=DEFAULTS["overlay_mode"],
+        help=f"""Overlay window behaviour.
+    Default: {DEFAULTS["overlay_mode"]}
 
-Modes:
-  always-on-top    - Floating overlay above all windows
-                     and not focusable (bypasses WM).
-  top-transparent  - Same as above but click‑through
-                     (mouse passes to window below).
-  fullscreen       - Fullscreen window without decorations
-                     (covers entire monitor).
-  windowed         - Normal window with decorations, fixed
-                     size.
+    Note: Keyboard events are NOT forwarded, so it's best to
+    keep the target window focused (if on a single monitor,
+    always-on-top works well for this).
 
-""",
-        )
-        overlay_group.add_argument(
-            "--crop-top",
-            type=int,
-            default=DEFAULTS["crop_top"],
-            help="Pixels to crop from top border of the target window",
-        )
-        overlay_group.add_argument(
-            "--crop-bottom",
-            type=int,
-            default=DEFAULTS["crop_bottom"],
-            help="Pixels to crop from bottom border of the target window",
-        )
-        overlay_group.add_argument(
-            "--crop-left",
-            type=int,
-            default=DEFAULTS["crop_left"],
-            help="Pixels to crop from left border of the target window",
-        )
-        overlay_group.add_argument(
-            "--crop-right",
-            type=int,
-            default=DEFAULTS["crop_right"],
-            help="Pixels to crop from right border of the target window",
-        )
-        overlay_group.add_argument(
-            "--offset-x",
-            type=int,
-            default=DEFAULTS["offset_x"],
-            help="""Horizontal offset from centered position (pixels, positive
-moves right, negative moves left)
+    Modes:
+      always-on-top    - Floating overlay above all windows
+                         and not focusable (bypasses WM).
+      top-transparent  - Same as above but click‑through
+                         (mouse passes to window below).
+      fullscreen       - Fullscreen window without decorations
+                         (covers entire monitor).
+      windowed         - Normal window with decorations, fixed
+                         size.
 
-Note: To pass negative values, use either --offset-x=-1
-(with an equals sign) or --offset-x "-1" (with quotes).
-The form --offset-x -1 will be misinterpreted because the
-shell treats -1 as a separate option.
+    """,
+    )
+    overlay_group.add_argument(
+        "--crop-top",
+        type=int,
+        default=DEFAULTS["crop_top"],
+        help="Pixels to crop from top border of the target window",
+    )
+    overlay_group.add_argument(
+        "--crop-bottom",
+        type=int,
+        default=DEFAULTS["crop_bottom"],
+        help="Pixels to crop from bottom border of the target window",
+    )
+    overlay_group.add_argument(
+        "--crop-left",
+        type=int,
+        default=DEFAULTS["crop_left"],
+        help="Pixels to crop from left border of the target window",
+    )
+    overlay_group.add_argument(
+        "--crop-right",
+        type=int,
+        default=DEFAULTS["crop_right"],
+        help="Pixels to crop from right border of the target window",
+    )
+    overlay_group.add_argument(
+        "--offset-x",
+        type=int,
+        default=DEFAULTS["offset_x"],
+        help="""Horizontal offset from centered position (pixels, positive
+    moves right, negative moves left)
 
-""",
-        )
-        overlay_group.add_argument(
-            "--offset-y",
-            type=int,
-            default=DEFAULTS["offset_y"],
-            help="""Vertical offset from centered position (pixels, positive
-moves down, negative moves up)
+    Note: To pass negative values, use either --offset-x=-1
+    (with an equals sign) or --offset-x "-1" (with quotes).
+    The form --offset-x -1 will be misinterpreted because the
+    shell treats -1 as a separate option.
 
-Note: Same as above.
+    """,
+    )
+    overlay_group.add_argument(
+        "--offset-y",
+        type=int,
+        default=DEFAULTS["offset_y"],
+        help="""Vertical offset from centered position (pixels, positive
+    moves down, negative moves up)
 
-""",
-        )
-        overlay_group.add_argument(
-            "--background-color",
-            default=DEFAULTS["background_color"],
-            help=f"""Color for letterbox bars.
-Can be a CSS color name (e.g., 'black', 'red') or a hex
-code (e.g., '#000000', '#FF0000')
-Default: {DEFAULTS['background_color']}""",
-        )
+    Note: Same as above.
 
-        # Timeout / window detection section
-        timeout_group = parser.add_argument_group("WINDOW DETECTION OPTIONS")
-        timeout_group.add_argument(
-            "--target-delay",
-            type=int,
-            default=DEFAULTS["target_delay"],
-            help="Seconds to wait before capturing active window",
-        )
-        timeout_group.add_argument(
-            "--pid-timeout",
-            type=int,
-            default=DEFAULTS["pid_timeout"],
-            help="Seconds to try PID‑based window detection",
-        )
-        timeout_group.add_argument(
-            "--class-timeout",
-            type=int,
-            default=DEFAULTS["class_timeout"],
-            help="Seconds to try class‑based window detection",
-        )
-        timeout_group.add_argument(
-            "--total-timeout",
-            type=int,
-            default=DEFAULTS["total_timeout"],
-            help="Total seconds before giving up",
-        )
-        timeout_group.add_argument(
-            "--starting-phase",
-            type=int,
-            choices=[1, 2],
-            default=DEFAULTS["starting_phase"],
-            help="Start with phase 1 (PID) or 2 (class)",
-        )
+    """,
+    )
+    overlay_group.add_argument(
+        "--background-color",
+        default=DEFAULTS["background_color"],
+        help=f"""Color for letterbox bars.
+    Can be a CSS color name (e.g., 'black', 'red') or a hex
+    code (e.g., '#000000', '#FF0000')
+    Default: {DEFAULTS['background_color']}""",
+    )
 
-        # Logging section
-        log_group = parser.add_argument_group("LOGGING OPTIONS")
-        log_group.add_argument(
-            "-q",
-            "--quiet",
-            action="store_true",
-            help="Decrease log verbosity (ERROR level)",
-        )
-        log_group.add_argument(
-            "--debug",
-            action="store_true",
-            help="Increase log verbosity (DEBUG level)",
-        )
-        log_group.add_argument(
-            "--log-file",
-            help="Write logs to this file (parent directories are created)",
-        )
+    # Timeout / window detection section
+    timeout_group = parser.add_argument_group("WINDOW DETECTION OPTIONS")
+    timeout_group.add_argument(
+        "--target-delay",
+        type=int,
+        default=DEFAULTS["target_delay"],
+        help="Seconds to wait before capturing active window",
+    )
+    timeout_group.add_argument(
+        "--pid-timeout",
+        type=int,
+        default=DEFAULTS["pid_timeout"],
+        help="Seconds to try PID‑based window detection",
+    )
+    timeout_group.add_argument(
+        "--class-timeout",
+        type=int,
+        default=DEFAULTS["class_timeout"],
+        help="Seconds to try class‑based window detection",
+    )
+    timeout_group.add_argument(
+        "--total-timeout",
+        type=int,
+        default=DEFAULTS["total_timeout"],
+        help="Total seconds before giving up",
+    )
+    timeout_group.add_argument(
+        "--starting-phase",
+        type=int,
+        choices=[1, 2],
+        default=DEFAULTS["starting_phase"],
+        help="Start with phase 1 (PID) or 2 (class)",
+    )
 
-        args = parser.parse_args()
+    # Logging section
+    log_group = parser.add_argument_group("LOGGING OPTIONS")
+    log_group.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Decrease log verbosity (ERROR level)",
+    )
+    log_group.add_argument(
+        "--debug",
+        action="store_true",
+        help="Increase log verbosity (DEBUG level)",
+    )
+    log_group.add_argument(
+        "--log-file",
+        help="Write logs to this file (parent directories are created)",
+    )
 
-        config = cls()
+    args = parser.parse_args()
+    profile_name = args.profile
+    config_path = args.config
 
-        # Load config file if specified or default
-        config._load_config_file(args.config)
+    # Add log_level to args
+    if args.debug:
+        args.log_level = "DEBUG"
+    elif args.quiet:
+        args.log_level = "ERROR"
+    else:
+        args.log_level = "WARNING"
 
-        # Override with CLI arguments
-        config._apply_args(args)
+    # Remove these so they aren't applied as overrides later
+    delattr(args, "config")
+    delattr(args, "profile")
 
-        # Log level and file
-        if args.debug:
-            config.log_level = "DEBUG"
-        elif args.quiet:
-            config.log_level = "ERROR"
-        if args.log_file:
-            config.log_file = args.log_file
+    return args, profile_name, config_path
 
-        # Validation
-        validators.output_geometry(config.output_geometry)
-        validators.background_color(config.background_color)
 
-        validators.validate_number(
-            config.scale_factor, "scale_factor", 0, left_inclusive=False
-        )
-        validators.validate_number(config.crop_top, "crop_top", 0)
-        validators.validate_number(config.crop_bottom, "crop_bottom", 0)
-        validators.validate_number(config.crop_left, "crop_left", 0)
-        validators.validate_number(config.crop_right, "crop_right", 0)
+def load_yaml_config(
+    custom_path: Optional[str] = None,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """
+    Load a YAML config file from the given path or default locations.
+    Returns (general_options, profiles).
+    """
+    paths = []
+    if custom_path:
+        paths.append(custom_path)
+    else:
+        xdg_config = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+        default_path = os.path.join(xdg_config, "linux-rt-upscaler", "config.yaml")
+        paths.append(default_path)
+        paths.append("./config.yaml")
 
-        validators.validate_number(config.target_delay, "target_delay", 0)
-        validators.validate_number(config.pid_timeout, "pid_timeout", 0)
-        validators.validate_number(config.class_timeout, "class_timeout", 0)
-        validators.validate_number(config.total_timeout, "total_timeout", 0)
+    general_options = {}
+    profiles = {}
 
-        return config
-
-    def _load_config_file(self, custom_path: Optional[str] = None) -> None:
-        """
-        Load settings from a YAML file.
-        If custom_path is given, try that path; otherwise search default locations.
-        Only the first found file is loaded.
-        """
-        paths: List[str] = []
-        if custom_path:
-            paths.append(custom_path)
-        else:
-            # Default: ~/.config/linux-rt-upscaler/config.yaml
-            xdg_config = os.environ.get(
-                "XDG_CONFIG_HOME", os.path.expanduser("~/.config")
-            )
-            default_path = os.path.join(xdg_config, "linux-rt-upscaler", "config.yaml")
-            paths.append(default_path)
-            # Also check current directory for convenience
-            paths.append("./config.yaml")
-
-        for path in paths:
-            if os.path.isfile(path):
-                try:
-                    with open(path, "r") as f:
-                        data = yaml.safe_load(f)
-                        if data:
-                            self._update_from_dict(data)
+    for path in paths:
+        if os.path.isfile(path):
+            try:
+                with open(path, "r") as f:
+                    data = yaml.safe_load(f)
+                    if data:
+                        profiles = data.pop("profiles", {})
+                        general_options = data
                     logger.info(f"Loaded config from {path}")
-                except Exception as e:
-                    logger.warning(f"Failed to load config {path}: {e}")
-                break  # use first found
+            except Exception as e:
+                logger.warning(f"Failed to load config {path}: {e}")
+            break
 
-    def _update_from_dict(self, data: dict[str, Any]) -> None:
-        """Update config attributes from a dictionary (YAML contents)."""
-        for key, value in data.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-                logger.debug(f"Config set from file: {key} = {value!r}")
-            else:
-                logger.debug(f"Ignoring unknown config key: {key}")
+    return general_options, profiles
 
-    def _apply_args(self, args: argparse.Namespace) -> None:
-        """Override config with command‑line arguments."""
-        for arg in DEFAULTS.keys():
-            arg_value = getattr(args, arg, None)
-            if arg_value is not None:
-                default_val = DEFAULTS.get(arg)
-                if arg_value != default_val:
-                    setattr(self, arg, arg_value)
-                    logger.debug(f"CLI set {arg} = {arg_value!r}")
+
+def apply_overrides(config: Config, overrides: Dict[str, Any]) -> None:
+    """Update config with values from overrides dict (only keys that exist)."""
+    for key, value in overrides.items():
+        if hasattr(config, key) and value is not None:
+            setattr(config, key, value)
+            logger.debug(f"Applied override: {key} = {value!r}")
+
+
+def find_profile(profiles: Dict[str, Any], name: str) -> Optional[Dict[str, Any]]:
+    """Find a profile by name (case‑insensitive)."""
+    name_lower = name.lower()
+    for profile_name, profile_data in profiles.items():
+        if profile_name.lower() == name_lower:
+            return profile_data
+    return None
+
+
+def find_matching_profile(
+    profiles: Dict[str, Any], window_title: str
+) -> Optional[Dict[str, Any]]:
+    """Find the first profile that matches the window title using its 'match' criteria."""
+    for profile_name, profile_data in profiles.items():
+        match_criteria = profile_data.get("match", {})
+        if not match_criteria:
+            continue
+
+        title_match = match_criteria.get("title")
+        if title_match and window_title.lower() == title_match.lower():
+            return profile_data
+
+        title_regex = match_criteria.get("title_regex")
+        if title_regex:
+            try:
+                pattern = re.compile(title_regex, re.IGNORECASE)
+                if pattern.search(window_title):
+                    return profile_data
+            except re.error:
+                logger.warning(
+                    f"Invalid regex in profile '{profile_name}': {title_regex}"
+                )
+
+    return None

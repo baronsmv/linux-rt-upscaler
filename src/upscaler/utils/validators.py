@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Optional
+from typing import Any, Optional
 
 from PySide6.QtGui import QColor
 
@@ -62,7 +62,7 @@ def validate_number(
                 exit(1)
 
 
-def output_geometry(geometry: str) -> None:
+def validate_geometry(geometry: str) -> None:
     geometry = geometry.strip()
     pattern = re.compile(
         r"^(stretch|fit|cover)$|"  # pure mode names
@@ -85,7 +85,21 @@ def output_geometry(geometry: str) -> None:
         exit(1)
 
 
-def background_color(color_str: str) -> None:
+def validate_color(color_str: str) -> None:
     if not QColor(color_str).isValid():
         logger.error(f"Invalid color string '{color_str}'")
         exit(1)
+
+
+def validate_config(config: Any) -> None:
+    validate_geometry(config.output_geometry)
+    validate_color(config.background_color)
+    validate_number(config.scale_factor, "scale_factor", 0, left_inclusive=False)
+    validate_number(config.crop_top, "crop_top", 0)
+    validate_number(config.crop_bottom, "crop_bottom", 0)
+    validate_number(config.crop_left, "crop_left", 0)
+    validate_number(config.crop_right, "crop_right", 0)
+    validate_number(config.target_delay, "target_delay", 0)
+    validate_number(config.pid_timeout, "pid_timeout", 0)
+    validate_number(config.class_timeout, "class_timeout", 0)
+    validate_number(config.total_timeout, "total_timeout", 0)

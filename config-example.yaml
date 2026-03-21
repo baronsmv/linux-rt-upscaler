@@ -1,11 +1,24 @@
-model: fast
+# User-defined options. They override system defaults
+model: 4x12
+double_upscale: true
 
-select: false
-disable_forwarding: false
-double_upscale: false
-
-target_delay: 5
-pid_timeout: 5
-class_timeout: 5
-total_timeout: 60
-starting_phase: 1
+# Profile definitions
+# If selected or matched, they override both user-defined and defaults
+profiles:
+  fata_morgana:
+    match: # Optional: can be used for automatic matching
+      title: Fata Morgana  # String match (case‑insensitive)
+      title_regex: .       # Or regex (case‑insensitive)
+    options:
+      model: 4x24
+      double_upscale: true
+      scale_factor: 2
+      crop_top: 21
+      crop_bottom: 2
+      crop_left: 2
+      crop_right: 2
+  another:
+    options:
+      model: veryfast
+      crop_top: 10
+      crop_bottom: 10

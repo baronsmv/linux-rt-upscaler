@@ -10,8 +10,8 @@ from Xlib.display import Display
 from Xlib.error import XError
 from ewmh import EWMH
 
-from .utils.config import Config
-from .utils.x11 import (
+from .config import Config
+from .x11 import (
     AtomCache,
     get_window_geometry,
     get_window_name,
@@ -297,6 +297,80 @@ def launch_and_find_window(
         proc.terminate()
         proc.wait()
         return None, None
+
+
+def select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo]:
+    """
+    Interactively let the user choose a window from the list.
+    Returns the selected WindowInfo or None if the user quits.
+    """
+    windows.sort(key=lambda w: w.title.lower())
+    print("\nAvailable windows:")
+    for i, w in enumerate(windows):
+        print(f"{i:3d}: {w.title} ({w.width}x{w.height})")
+
+    while True:
+        try:
+            choice = input("\nEnter window number (or 'q' to quit): ").strip()
+            if choice.lower() == "q":
+                logger.info("User quit window selection")
+                return None
+            idx = int(choice)
+            if 0 <= idx < len(windows):
+                selected = windows[idx]
+                logger.info(f"User selected window {idx}: {selected.title}")
+                return selected
+            print(f"Please enter a number between 0 and {len(windows)-1}")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
+
+def acquire_target_window(
+    config: Config,
+) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
+    """
+    Determine which window to upscale based on config.
+    Returns (WindowInfo, optional Popen) or (None, None) on failure/exit.
+    """
+    start_time = time.perf_counter()
+    if config.select:
+        logger.info("Selecting window interactively.")
+        print("Enumerating open windows...")
+        windows = list_windows()
+        if not windows:
+            logger.error("No visible windows found")
+            print("No visible windows found.")
+            return None, None
+
+        win_info = select_window_interactive(windows)
+        if win_info is None:
+            return None, None  # user quit
+        if config.log_level != "ERROR":
+            print(f"Selected: {win_info.title}")
+        logger.info(
+            f"Window acquired interactively in {time.perf_counter() - start_time:.2f}s"
+        )
+        return win_info, None
+
+    elif config.program:
+        logger.info(f"Launching and finding window for program: {config.program}")
+        result = launch_and_find_window(config)
+        logger.info(
+            f"Window acquired via program launch in {time.perf_counter() - start_time:.2f}s"
+        )
+        return result
+    else:
+        logger.info(
+            "Acquiring currently active window (waiting {} seconds)".format(
+                config.target_delay
+            )
+        )
+        win_info = get_active_window_after_delay(config)
+        if win_info:
+            logger.info(
+                f"Active window acquired in {time.perf_counter() - start_time:.2f}s"
+            )
+        return win_info, None
 
 
 def get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
