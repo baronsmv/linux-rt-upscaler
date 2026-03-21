@@ -258,6 +258,7 @@ class OverlayWindow(QMainWindow):
             QEvent.MouseMove,
             QEvent.MouseButtonPress,
             QEvent.MouseButtonRelease,
+            QEvent.Wheel,
         ):
             self._handle_mouse(event)
             return True
@@ -455,6 +456,54 @@ class OverlayWindow(QMainWindow):
 
             self._send_event(ev)
 
+        elif event.type() == QEvent.Wheel:
+            # Get the wheel delta (angleDelta returns a QPoint, y() is vertical, x() is horizontal)
+            delta = event.angleDelta()
+
+            if delta.y() != 0:
+                # Vertical scroll: positive = up, negative = down
+                button = 4 if delta.y() > 0 else 5
+            elif delta.x() != 0:
+                # Horizontal scroll (if needed)
+                button = 6 if delta.x() > 0 else 7
+            else:
+                return
+
+            # Determine number of steps (usually 120 per step)
+            steps = abs(delta.y() // 120) if delta.y() != 0 else abs(delta.x() // 120)
+            if steps == 0:
+                steps = 1
+
+            for _ in range(steps):
+                press_ev = xevent.ButtonPress(
+                    window=window_id,
+                    root=root_id,
+                    same_screen=1,
+                    root_x=screen_x,
+                    root_y=screen_y,
+                    time=time,
+                    detail=button,
+                    state=0,
+                    event_x=target_x,
+                    event_y=target_y,
+                    child=0,
+                )
+                self._send_event(press_ev)
+
+                release_ev = xevent.ButtonRelease(
+                    window=window_id,
+                    root=root_id,
+                    same_screen=1,
+                    root_x=screen_x,
+                    root_y=screen_y,
+                    time=time,
+                    detail=button,
+                    state=0,
+                    event_x=target_x,
+                    event_y=target_y,
+                    child=0,
+                )
+                self._send_event(release_ev)
         else:
             logger.warning(f"Unexpected event type in _handle_mouse: {event.type()}")
 
