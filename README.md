@@ -197,7 +197,7 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 
 ## Known Issues
 
-### Mouse forwarding does not work under Wine (Proton works), Firefox and other applications
+### Mouse forwarding does not work under Wine, Firefox and other applications
 
 Some applications do not receive synthetic mouse events (clicks, motion, wheel) forwarded by the overlay. This has been observed with:
 
