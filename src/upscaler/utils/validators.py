@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Any, Optional
+from typing import Any, Optional, Dict, Tuple, Callable
 
 from PySide6.QtGui import QColor
 
@@ -62,7 +62,8 @@ def validate_number(
                 exit(1)
 
 
-def validate_geometry(geometry: str) -> None:
+def validate_geometry(geometry: str, _: str) -> None:
+    """Validate output geometry string."""
     geometry = geometry.strip()
     pattern = re.compile(
         r"^(stretch|fit|cover)$|"  # pure mode names
@@ -85,21 +86,39 @@ def validate_geometry(geometry: str) -> None:
         exit(1)
 
 
-def validate_color(color_str: str) -> None:
+def validate_color(color_str: str, _: str) -> None:
+    """Validate CSS color string."""
     if not QColor(color_str).isValid():
         logger.error(f"Invalid color string '{color_str}'")
         exit(1)
 
 
+_VALIDATORS: Dict[str, Tuple[Callable, str, ...]] = {
+    "output_geometry": (validate_geometry, "output_geometry"),
+    "background_color": (validate_color, "background_color"),
+    "scale_factor": (validate_number, "scale_factor", 0, None, False, True),
+    "crop_top": (validate_number, "crop_top", 0),
+    "crop_bottom": (validate_number, "crop_bottom", 0),
+    "crop_left": (validate_number, "crop_left", 0),
+    "crop_right": (validate_number, "crop_right", 0),
+    "target_delay": (validate_number, "target_delay", 0),
+    "pid_timeout": (validate_number, "pid_timeout", 0),
+    "class_timeout": (validate_number, "class_timeout", 0),
+    "total_timeout": (validate_number, "total_timeout", 0),
+}
+
+
 def validate_config(config: Any) -> None:
-    validate_geometry(config.output_geometry)
-    validate_color(config.background_color)
-    validate_number(config.scale_factor, "scale_factor", 0, left_inclusive=False)
-    validate_number(config.crop_top, "crop_top", 0)
-    validate_number(config.crop_bottom, "crop_bottom", 0)
-    validate_number(config.crop_left, "crop_left", 0)
-    validate_number(config.crop_right, "crop_right", 0)
-    validate_number(config.target_delay, "target_delay", 0)
-    validate_number(config.pid_timeout, "pid_timeout", 0)
-    validate_number(config.class_timeout, "class_timeout", 0)
-    validate_number(config.total_timeout, "total_timeout", 0)
+    """Validate a full Config instance (or any object with the required attributes)."""
+    for field_name, (validator, arg_name, *args) in _VALIDATORS.items():
+        value = getattr(config, field_name, None)
+        if value is not None:
+            validator(value, arg_name, *args)
+
+
+def validate_overrides(overrides: Dict[str, Any]) -> None:
+    """Validate only the keys present in the overrides dictionary."""
+    for field_name, value in overrides.items():
+        if field_name in _VALIDATORS:
+            validator, arg_name, *args = _VALIDATORS[field_name]
+            validator(value, arg_name, *args)
