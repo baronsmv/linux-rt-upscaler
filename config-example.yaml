@@ -13,8 +13,8 @@ scale_factor: 2.0
 profiles:
   fata_morgana: # Can be specified with the -p/--profile option
     match: # Optional: Or it can automatically match any title window
-      title: "The House in Fata Morgana"  # Exact string match (case‑insensitive)
-      title_contains: "Fata Morgana"      # Or any string match (case‑insensitive)
+      title: "The House in Fata Morgana"  # Exact string match (case-insensitive)
+      title_contains: "Fata Morgana"      # Or any string match (case-insensitive)
     options:
       model: 4x24
       crop_top: 21
@@ -23,9 +23,9 @@ profiles:
       crop_right: 2
   another_game:
     match:
-      title_startswith: "Another"  # Or match the beginning of the string (case‑insensitive)
-      title_endswith: "Game"       # Or match the end of the string (case‑insensitive)
-      title_regex: "Another .*"    # Or regex match (case‑insensitive)
+      title_startswith: "Another"  # Or match the beginning of the string (case-insensitive)
+      title_endswith: "Game"       # Or match the end of the string (case-insensitive)
+      title_regex: "Another .*"    # Or regex match (case-insensitive)
     options:
       model: veryfast
       crop_top: 15
