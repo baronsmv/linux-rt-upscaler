@@ -197,12 +197,16 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 
 ## Known Issues
 
-### Mouse forwarding does not work under Wine (Proton works)
+### Mouse forwarding does not work under Wine (Proton works), Firefox and other applications
 
-Effects, as detailed in issue [#7](https://github.com/baronsmv/linux-rt-upscaler/issues/7):
+Some applications do not receive synthetic mouse events (clicks, motion, wheel) forwarded by the overlay. This has been observed with:
 
-- Under X11, mouse clicks on the overlay seem to go right through it, as if the overlay were not there. They end up at the original coordinates of the target window, ignoring the mapping.
-- Under Wayland, all mouse events are blocked entirely.
+- Wine‑based games (Proton seems to work).
+- Certain native applications like Firefox.
+
+The upscaler forwards mouse events using `XSendEvent`, which only delivers events to windows that have explicitly selected the corresponding event mask (e.g., `ButtonPressMask`). Some applications either do not request these masks or filter out synthetic events.
+
+For more details, see issue [#7](https://github.com/baronsmv/linux-rt-upscaler/issues/7).
 
 ## Motivation
 
