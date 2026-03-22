@@ -4,6 +4,7 @@ from .config import (
     OverlayMode,
     get_version,
     Config,
+    default_config,
     parse_args,
     load_yaml_config,
     apply_overrides,
@@ -11,14 +12,15 @@ from .config import (
     find_matching_profile,
 )
 from .environment import setup_environment
-from .logging import logger, setup_logging
-from .monitor import logger, get_monitor_list, get_monitor, get_monitor_geometry
-from .parsers import logger, color_string_to_float4, parse_output_geometry
+from .logging import setup_logging
+from .parsers import color_string_to_float4, parse_output_geometry
+from .screen import get_screen_list, get_screen, get_screen_geometry
 from .validators import (
     validate_number,
     validate_geometry,
     validate_color,
     validate_config,
+    validate_overrides,
 )
 from .window import (
     WindowInfo,
@@ -50,6 +52,7 @@ __all__ = [
     "acquire_target_window",
     "apply_overrides",
     "color_string_to_float4",
+    "default_config",
     "enumerate_all_windows",
     "find_by_pid",
     "find_matching_profile",
@@ -57,9 +60,9 @@ __all__ = [
     "get_active_window",
     "get_active_window_after_delay",
     "get_display",
-    "get_monitor",
-    "get_monitor_geometry",
-    "get_monitor_list",
+    "get_screen",
+    "get_screen_geometry",
+    "get_screen_list",
     "get_version",
     "get_window_class",
     "get_window_geometry",
@@ -79,4 +82,5 @@ __all__ = [
     "validate_config",
     "validate_geometry",
     "validate_number",
+    "validate_overrides",
 ]

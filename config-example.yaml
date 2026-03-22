@@ -1,24 +1,32 @@
 # User-defined options. They override system defaults
+# Add any you want to be applied in any general case
+# Examples:
 model: 4x12
 double_upscale: true
+scale_factor: 2.0
 
 # Profile definitions
+# Add profiles for specific cases, that can be selected via -p option
+# Or via match with the window title
 # If selected or matched, they override both user-defined and defaults
+# Examples:
 profiles:
-  fata_morgana:
-    match: # Optional: can be used for automatic matching
-      title: Fata Morgana  # String match (case‑insensitive)
-      title_regex: .       # Or regex (case‑insensitive)
+  fata_morgana: # Can be specified with the -p/--profile option
+    match: # Optional: Or it can automatically match any title window
+      title: "The House in Fata Morgana"  # Exact string match (case‑insensitive)
+      title_contains: "Fata Morgana"      # Or any string match (case‑insensitive)
     options:
       model: 4x24
-      double_upscale: true
-      scale_factor: 2
       crop_top: 21
       crop_bottom: 2
       crop_left: 2
       crop_right: 2
-  another:
+  another_game:
+    match:
+      title_startswith: "Another"  # Or match the beginning of the string (case‑insensitive)
+      title_endswith: "Game"       # Or match the end of the string (case‑insensitive)
+      title_regex: "Another .*"    # Or regex match (case‑insensitive)
     options:
       model: veryfast
-      crop_top: 10
-      crop_bottom: 10
+      crop_top: 15
+      crop_bottom: 20

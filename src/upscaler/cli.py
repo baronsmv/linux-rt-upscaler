@@ -3,9 +3,6 @@
 import faulthandler
 import sys
 
-from upscaler.utils.validators import validate_config
-from upscaler.utils.window import acquire_target_window
-
 faulthandler.enable()
 
 from .utils.environment import setup_environment as setup_env
@@ -24,17 +21,19 @@ from compushady.formats import R8G8B8A8_UNORM
 from .overlay import OverlayWindow
 from .pipeline import Pipeline
 from .utils.config import (
-    Config,
     OverlayMode,
     apply_overrides,
+    default_config,
     find_matching_profile,
     find_profile,
     load_yaml_config,
     parse_args,
 )
 from .utils.logging import setup_logging
-from .utils.monitor import get_monitor, get_monitor_geometry, get_monitor_list
+from .utils.screen import get_screen, get_screen_geometry, get_screen_list
 from .utils.parsers import parse_output_geometry
+from .utils.validators import validate_config, validate_overrides
+from .utils.window import acquire_target_window
 from .utils.x11 import get_display
 
 logger = logging.getLogger(__name__)
@@ -43,10 +42,15 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     overall_start = time.perf_counter()
 
-    # Base config with defaults
-    args, profile_name, config_path = parse_args()
-    validate_config(args)
-    config = Config()
+    # CLI options (only provided, not default ones)
+    provided_args, profile_name, config_path = parse_args()
+    validate_overrides(provided_args)
+
+    # Base config overrid with CLI options
+    config = default_config
+    apply_overrides(config, provided_args)
+
+    # Base config overrid with YAML options
     yaml_options, profiles = load_yaml_config(config_path)
     apply_overrides(config, yaml_options)
 
@@ -65,25 +69,29 @@ def main() -> None:
     if win_info is None:
         sys.exit(0 if config.select else 1)
 
+    logger.info(f"Target window confirmed: {win_info}")
+
     # Config profiling by match
+    auto_profile = None
     if not manual_profile:
-        auto_profile = find_matching_profile(profiles, win_info.title)
+        profile_name, auto_profile = find_matching_profile(profiles, win_info.title)
         if auto_profile:
             apply_overrides(config, auto_profile.get("options", {}))
             logger.info(f"Auto-applied profile for window '{win_info.title}'")
 
     # Final configuration
-    cli_overrides = vars(args)
-    apply_overrides(config, cli_overrides)
+    apply_overrides(config, provided_args)
     validate_config(config)
     setup_logging(config.log_level, config.log_file)
 
-    # Target window info
     if config.log_level != "ERROR":
+        if config_path:
+            print(f"Configuration found in '{config_path}'.")
         print(
             f"Target window: handle={win_info.handle}, {win_info.width}x{win_info.height}, title={win_info.title}"
         )
-    logger.info(f"Target window confirmed: {win_info}")
+        if auto_profile:
+            print(f"Match with profile '{profile_name}'")
 
     # Setup Qt application and overlay
     app = QApplication([])
@@ -91,14 +99,12 @@ def main() -> None:
     app.setApplicationDisplayName("Upscaler Overlay")
     logger.debug("Qt application initialized.")
 
-    if config.log_level != "ERROR":
-        monitors = get_monitor_list()
-        print(f"Detected monitors: {monitors}")
-        logger.debug(f"Monitors detected: {monitors}")
+    monitors = get_screen_list()
+    logger.info(f"Monitors detected: {monitors}")
 
     # Determine base overlay size from monitor
-    monitor = get_monitor(config.monitor)
-    base_x, base_y, base_w, base_h = get_monitor_geometry(monitor, config.scale_factor)
+    monitor = get_screen(config.monitor)
+    base_x, base_y, base_w, base_h = get_screen_geometry(monitor, config.scale_factor)
     logger.info(
         f"Using monitor '{monitor}' with geometry: {base_w}x{base_h} at ({base_x},{base_y})"
     )
