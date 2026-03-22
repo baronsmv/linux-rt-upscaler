@@ -169,7 +169,7 @@ select: false
 profiles:
   game:
     match:
-      title: "Danganronpa"      # Exact match (case‑insensitive)
+      title: "Danganronpa"      # Exact match (case-insensitive)
       title_contains: "ronp"    # Or substring match
       title_regex: "Dangan.*"   # Or regular expression
     options:
@@ -203,8 +203,6 @@ Effects, as detailed in issue [#7](https://github.com/baronsmv/linux-rt-upscaler
 
 - Under X11, mouse clicks on the overlay seem to go right through it, as if the overlay were not there. They end up at the original coordinates of the target window, ignoring the mapping.
 - Under Wayland, all mouse events are blocked entirely.
-
-If you have experience with X11 input handling, Wine internals, or low‑level event forwarding, your expertise is welcome.
 
 ## Motivation
 
