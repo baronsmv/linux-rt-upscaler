@@ -65,8 +65,8 @@ def get_screen_geometry(
 ) -> Tuple[int, int, int, int]:
     """Return (x, y, width, height) of the screen(s) specified."""
     return (
-        int(screen.x() * scale_factor),
-        int(screen.y() * scale_factor),
+        screen.x(),
+        screen.y(),
         int(screen.width() * scale_factor),
         int(screen.height() * scale_factor),
     )
