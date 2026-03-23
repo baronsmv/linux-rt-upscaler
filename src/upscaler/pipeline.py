@@ -4,7 +4,7 @@ import os
 import struct
 import threading
 import time
-from queue import Empty, Queue
+from queue import Queue
 from typing import Any, Optional, Tuple
 
 from PySide6.QtCore import QMetaObject, Qt
@@ -28,6 +28,7 @@ from compushady.shaders import hlsl
 from .capture.capture import FrameGrabber
 from .shaders.srcnn import SRCNN
 from .utils.parsers import color_string_to_float4, parse_output_geometry
+from .utils.x11 import get_display
 
 logger = logging.getLogger(__name__)
 
@@ -68,12 +69,7 @@ class Pipeline:
     def __init__(
         self,
         window_info: Any,  # WindowInfo instance
-        screen_width: int,
-        screen_height: int,
         overlay: Any,  # Overlay instance
-        swapchain: Any,
-        display_id: int,
-        xid: int,
         model_name: str,
         double_upscale: bool,
         output_geometry: str,
@@ -99,8 +95,8 @@ class Pipeline:
                                otherwise only a single 2x upscale.
         """
         self.window_info = window_info
-        self.screen_width = screen_width
-        self.screen_height = screen_height
+        self.screen_width = overlay.width()
+        self.screen_height = overlay.height()
         self.content_width = overlay.content_width
         self.content_height = overlay.content_height
 
@@ -124,25 +120,33 @@ class Pipeline:
         self.overlay_mode = overlay_mode
 
         self.overlay = overlay
-        self.swapchain = swapchain
         self.model_name = model_name
         self.background_color = color_string_to_float4(overlay.background_color)
 
+        # Create swap chain
+        display_id = get_display()
+        logger.debug(f"Creating swapchain with display={display_id}, xid={overlay.xid}")
+        start_swap = time.perf_counter()
+        self.swapchain = Swapchain((display_id, overlay.xid), R8G8B8A8_UNORM, 3)
+        logger.debug(f"Swapchain created in {time.perf_counter() - start_swap:.3f}s")
+
         self.display_id = display_id
-        self.xid = xid
+        self.xid = overlay.xid
         self.last_recreate_time = 0
         self.consecutive_failures = 0
 
         logger.info(
             f"Initializing Pipeline: target={window_info.title} ({window_info.width}x{window_info.height}), "
-            f"screen={screen_width}x{screen_height}, model={model_name}, "
+            f"screen={self.screen_width}x{self.screen_height}, model={model_name}, "
             f"double_upscale={double_upscale}"
         )
 
         # Screen texture (output of the pipeline)
         logger.debug("Creating screen texture...")
         start = time.perf_counter()
-        self.screen_tex = Texture2D(screen_width, screen_height, format=R8G8B8A8_UNORM)
+        self.screen_tex = Texture2D(
+            self.screen_width, self.screen_height, format=R8G8B8A8_UNORM
+        )
         logger.debug(
             f"Screen texture created in {(time.perf_counter() - start)*1000:.2f} ms"
         )
@@ -347,7 +351,8 @@ class Pipeline:
 
         # Frame timing
         last_frame_time = time.time()
-        frame_times = []
+        # Unused
+        # frame_times = []
 
         while self.running:
             try:
@@ -428,13 +433,7 @@ class Pipeline:
 
         # Put frame into queue (maxsize=1 ensures we only keep the most recent)
         self.frame_queue.put(frame)
-
-        # Retrieve the latest frame (if any)
-        try:
-            frame = self.frame_queue.get_nowait()
-        except Empty:
-            logger.debug("Frame queue empty, skipping this cycle")
-            return
+        frame = self.frame_queue.get_nowait()
 
         # Upscale with SRCNN
         upscale_start = time.perf_counter()
@@ -508,8 +507,8 @@ class Pipeline:
                 self._update_target_window_size()  # ensure target size is current
                 self.recreate_swapchain()
             elif self.swapchain.is_suboptimal():
-                logger.debug("Swapchain suboptimal, recreating")
-                self.recreate_swapchain()
+                # Suboptimal is harmless – we'll just log and continue
+                logger.debug("Swapchain suboptimal, ignoring")
 
         total_frame_time = (time.perf_counter() - frame_start) * 1000
         logger.debug(f"Total frame processing time: {total_frame_time:.2f} ms")
@@ -550,6 +549,7 @@ class Pipeline:
             del old_swap
             # Force garbage collection to ensure the Vulkan resources are freed
             gc.collect()
+            time.sleep(0.05)
 
         # Create a new swapchain
         start = time.perf_counter()

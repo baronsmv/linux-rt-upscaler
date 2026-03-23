@@ -15,8 +15,7 @@ import time
 
 from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
-from compushady import Swapchain
-from compushady.formats import R8G8B8A8_UNORM
+
 
 from .overlay import OverlayWindow
 from .pipeline import Pipeline
@@ -34,7 +33,6 @@ from .utils.screen import get_screen, get_screen_geometry, get_screen_list
 from .utils.parsers import parse_output_geometry
 from .utils.validators import validate_config, validate_overrides
 from .utils.window import acquire_target_window
-from .utils.x11 import get_display
 
 logger = logging.getLogger(__name__)
 
@@ -191,23 +189,11 @@ def main() -> None:
     else:
         logger.warning("No window handle available for Vulkan surface type")
 
-    # Create swap chain
-    display_id = get_display()
-    logger.debug(f"Creating swapchain with display={display_id}, xid={overlay.xid}")
-    start_swap = time.perf_counter()
-    swapchain = Swapchain((display_id, overlay.xid), R8G8B8A8_UNORM, 3)
-    logger.debug(f"Swapchain created in {time.perf_counter() - start_swap:.3f}s")
-
     # Create pipeline
     start_pipeline = time.perf_counter()
     pipeline = Pipeline(
         win_info,
-        overlay.width(),
-        overlay.height(),
         overlay,
-        swapchain,
-        display_id,
-        overlay.xid,
         double_upscale=config.double_upscale,
         output_geometry=config.output_geometry,
         base_width=base_w,
