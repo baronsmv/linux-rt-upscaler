@@ -16,11 +16,10 @@ import time
 from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
 
-
-from .overlay import OverlayWindow
-from .pipeline import Pipeline
+from .overlay.mode import OverlayMode
+from .overlay.window import OverlayWindow
+from .pipeline.pipeline import Pipeline
 from .utils.config import (
-    OverlayMode,
     apply_overrides,
     default_config,
     find_matching_profile,
@@ -29,8 +28,8 @@ from .utils.config import (
     parse_args,
 )
 from .utils.logging import setup_logging
-from .utils.screen import get_screen, get_screen_geometry, get_screen_list
 from .utils.parsers import parse_output_geometry
+from .utils.screen import get_screen, get_screen_geometry, get_screen_list
 from .utils.validators import validate_config, validate_overrides
 from .utils.window import acquire_target_window
 

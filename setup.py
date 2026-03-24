@@ -68,7 +68,7 @@ class BuildCaptureLib(build_ext):
 
 
 # Ensure a tiny dummy C source exists (in the repo or created on the fly)
-dummy_c_path = Path("src/upscaler/capture/dummy.c")
+dummy_c_path = Path("src/upscaler/pipeline/capture/dummy.c")
 if not dummy_c_path.exists():
     dummy_c_path.parent.mkdir(parents=True, exist_ok=True)
     dummy_c_path.write_text(

@@ -142,7 +142,7 @@ cython_debug/
 
 # Project specific
 src/upscaler/capture/*.so
-!src/upscaler/capture/captureRGBX.so
+!src/upscaler/pipeline/capture/captureRGBX.so
 
 # Local test files
 test-env/

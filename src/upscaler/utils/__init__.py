@@ -1,7 +1,6 @@
 """Utility modules."""
 
 from .config import (
-    OverlayMode,
     get_version,
     Config,
     default_config,
@@ -47,7 +46,6 @@ from .x11 import (
 __all__ = [
     "AtomCache",
     "Config",
-    "OverlayMode",
     "WindowInfo",
     "acquire_target_window",
     "apply_overrides",
