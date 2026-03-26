@@ -43,6 +43,7 @@ def main() -> None:
     # Base config overrid with CLI options
     config = default_config
     apply_overrides(config, provided_args)
+    setup_logging(config.log_level, config.log_file)
 
     # Base config overrid with YAML options
     yaml_options, profiles = load_yaml_config(config_path)
@@ -76,7 +77,6 @@ def main() -> None:
     # Final configuration and logging
     apply_overrides(config, provided_args)
     validate_config(config)
-    setup_logging(config.log_level, config.log_file)
 
     if config.log_level != "ERROR":
         if config_path:

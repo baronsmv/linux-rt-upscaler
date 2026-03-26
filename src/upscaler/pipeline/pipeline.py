@@ -11,11 +11,14 @@ from compushady.formats import R8G8B8A8_UNORM
 from .capture import FrameGrabber
 from .shaders import LanczosScaler, SRCNN
 from .swapchain_manager import SwapchainManager
-from .utils import calculate_scaling_rect
 from .window_tracker import WindowTracker
 from ..overlay.window import OverlayWindow
 from ..utils.config import Config
-from ..utils.parsers import color_string_to_float4, parse_output_geometry
+from ..utils.parsers import (
+    color_string_to_float4,
+    parse_output_geometry,
+    calculate_scaling_rect,
+)
 from ..utils.window import WindowInfo
 from ..utils.x11 import get_display
 
