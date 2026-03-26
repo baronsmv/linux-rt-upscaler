@@ -1,6 +1,6 @@
 """Overlay modules."""
 
-from .window import OverlayWindow
+from .overlay import OverlayWindow
 
 __all__ = [
     "OverlayWindow",

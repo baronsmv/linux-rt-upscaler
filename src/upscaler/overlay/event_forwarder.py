@@ -34,7 +34,7 @@ class X11EventForwarder:
 
     def __init__(self) -> None:
         """Create an X11EventForwarder with no display connection (lazy open)."""
-        self._display: Optional[display.Display] = None
+        self.display: Optional[display.Display] = None
         self._root: Optional[int] = None
         self.target_handle: Optional[int] = None
         self.enabled: bool = True
@@ -43,17 +43,17 @@ class X11EventForwarder:
 
     def _open_display(self) -> None:
         """Open the X11 display and install a custom error handler."""
-        self._display = open_x_display()
-        if self._display:
-            self._root = int(self._display.screen().root.id)
+        self.display = open_x_display()
+        if self.display:
+            self._root = int(self.display.screen().root.id)
             logger.debug(f"Opened X display for event forwarding. Root: {self._root}")
         else:
             self.enabled = False
             logger.warning("X11 display unavailable – event forwarding disabled")
 
     def close(self) -> None:
-        close_x_display(self._display)
-        self._display = None
+        close_x_display(self.display)
+        self.display = None
         self._root = None
 
     def _send_event(self, event: xevent.KeyButtonPointer) -> None:
@@ -65,19 +65,19 @@ class X11EventForwarder:
         if not self.enabled:
             logger.debug("Forwarding disabled, event not sent")
             return
-        if self._display is None or self.target_handle is None:
+        if self.display is None or self.target_handle is None:
             logger.error("Cannot send event: no X display or target handle")
             return
 
         try:
-            self._display.send_event(
+            self.display.send_event(
                 self.target_handle,
                 event,
                 event_mask=X.ButtonPressMask
                 | X.ButtonReleaseMask
                 | X.PointerMotionMask,
             )
-            self._display.flush()
+            self.display.flush()
             logger.debug(f"Sent event: {event}")
         except Exception as e:
             logger.error(f"Unexpected error sending X11 event: {e}", exc_info=True)

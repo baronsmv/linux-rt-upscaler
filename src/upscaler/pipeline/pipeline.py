@@ -12,7 +12,7 @@ from upscaler.window.window_tracker import WindowTracker
 from .capture import FrameGrabber
 from .shaders import LanczosScaler, SRCNN
 from .swapchain_manager import SwapchainManager
-from ..overlay.window import OverlayWindow
+from ..overlay.overlay import OverlayWindow
 from ..utils.config import Config
 from ..utils.parsers import (
     color_string_to_float4,
@@ -56,13 +56,14 @@ class Pipeline:
         self.model_name = config.model
         self.output_geometry = config.output_geometry
         self.scale_factor = config.scale_factor
-        self.background_color = color_string_to_float4(overlay.background_color)
+        self.background_color = color_string_to_float4(config.background_color)
 
         # Screen dimensions from overlay
         self.screen_width = overlay.width()
         self.screen_height = overlay.height()
         self.content_width = overlay.content_width
         self.content_height = overlay.content_height
+        self.scale_mode = overlay.scale_mode
 
         # Crop dimensions
         self.crop_width = win_info.width - config.crop_left - config.crop_right
@@ -261,14 +262,14 @@ class Pipeline:
             self.src_h,
             self.content_width,
             self.content_height,
-            self.overlay.scale_mode,
+            self.scale_mode,
         )
 
         canvas_x = (self.screen_width - self.content_width) // 2
         canvas_y = (self.screen_height - self.content_height) // 2
 
-        dst_x = canvas_x + r_x + self.overlay.offset_x
-        dst_y = canvas_y + r_y + self.overlay.offset_y
+        dst_x = canvas_x + r_x + self.config.offset_x
+        dst_y = canvas_y + r_y + self.config.offset_y
         dst_w = r_w
         dst_h = r_h
 
@@ -393,7 +394,7 @@ class Pipeline:
         logger.debug(
             f"Content dimensions after update: "
             f"{new_content_w}x{new_content_h}, "
-            f"mode={self.overlay.scale_mode}"
+            f"mode={self.scale_mode}"
         )
         if new_content_w != self.content_width or new_content_h != self.content_height:
             self.content_width = new_content_w

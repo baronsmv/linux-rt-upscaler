@@ -6,12 +6,11 @@ from PySide6.QtCore import QEvent, Qt, Slot
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QApplication
 
-from .mapping import CoordinateMapper
+from .coordinate_mapper import CoordinateMapper
+from .event_forwarder import X11EventForwarder
+from .geometry import compute_overlay_geometry, OverlayGeometry
 from .opacity_controller import OpacityController
-from .x11 import X11EventForwarder
 from ..utils.config import Config, OverlayMode
-from ..utils.parsers import parse_output_geometry
-from ..utils.screen import get_screen, get_screen_geometry
 from ..window.win_info import WindowInfo
 
 logger = logging.getLogger(__name__)
@@ -45,62 +44,11 @@ class OverlayWindow(QMainWindow):
         self.config = config
         self.win_info = win_info
 
-        # Determine base screen geometry
-        monitor = get_screen(config.monitor)
-        base_x, base_y, base_w, base_h = get_screen_geometry(
-            monitor, config.scale_factor
-        )
+        # Compute geometry
+        self._geometry = compute_overlay_geometry(config, win_info)
+        self.scale_mode = self._geometry.scale_mode
 
-        # Parse output geometry (initial pass using original window dimensions)
-        overlay_w, overlay_h, content_w, content_h, mode = parse_output_geometry(
-            config.output_geometry, win_info.width, win_info.height, base_w, base_h
-        )
-
-        # Compute overlay position and content offsets
-        if config.overlay_mode == OverlayMode.WINDOWED.value:
-            win_x = base_x + (base_w - overlay_w) // 2 + config.offset_x
-            win_y = base_y + (base_h - overlay_h) // 2 + config.offset_y
-            content_offset_x = 0
-            content_offset_y = 0
-        else:
-            win_x = base_x
-            win_y = base_y
-            overlay_w = base_w
-            overlay_h = base_h
-            content_offset_x = config.offset_x
-            content_offset_y = config.offset_y
-
-        # Compute cropped dimensions
-        self.crop_width = win_info.width - config.crop_left - config.crop_right
-        self.crop_height = win_info.height - config.crop_top - config.crop_bottom
-        if self.crop_width <= 0 or self.crop_height <= 0:
-            raise ValueError(
-                f"Invalid crop: resulting dimensions {self.crop_width}x{self.crop_height} "
-                f"(original {win_info.width}x{win_info.height})"
-            )
-
-        # Re‑parse output geometry using cropped dimensions (final content size)
-        final_content_w, final_content_h, _, _, mode = parse_output_geometry(
-            config.output_geometry, self.crop_width, self.crop_height, base_w, base_h
-        )
-
-        # Store for later use
-        self.overlay_w = overlay_w
-        self.overlay_h = overlay_h
-        self.win_x = win_x
-        self.win_y = win_y
-        self.content_w = final_content_w
-        self.content_h = final_content_h
-        self.scale_mode = mode
-        self.crop_left = config.crop_left
-        self.crop_top = config.crop_top
-        self.crop_right = config.crop_right
-        self.crop_bottom = config.crop_bottom
-        self.offset_x = content_offset_x
-        self.offset_y = content_offset_y
-        self.background_color = config.background_color
-
-        # Initialize mapper and forwarder (as before)
+        # Initialize subcomponents
         self._mapper = CoordinateMapper()
         self._forwarder = X11EventForwarder()
         self._should_forward = (
@@ -111,23 +59,26 @@ class OverlayWindow(QMainWindow):
 
         self._mapper.set_target_size(win_info.width, win_info.height)
         self._mapper.set_crop(
-            self.crop_left, self.crop_top, self.crop_width, self.crop_height
+            self._geometry.crop_left,
+            self._geometry.crop_top,
+            self._geometry.crop_width,
+            self._geometry.crop_height,
         )
-        self._mapper.set_content_dimensions(final_content_w, final_content_h)
+        self._mapper.set_content_dimensions(
+            self._geometry.content_width, self._geometry.content_height
+        )
 
         # Set up the actual Qt window
-        self._setup_window(overlay_w, overlay_h, win_x, win_y, config.overlay_mode)
+        self._setup_window(self._geometry, config.overlay_mode)
 
         # Enable mouse tracking if we will forward events
         self.setMouseTracking(self._should_forward)
 
         # Create opacity controller
-        self._opacity_controller = OpacityController(
-            self, win_info.handle, win_info.width, win_info.height
-        )
+        self._opacity_controller = OpacityController(self, win_info)
 
         # Force final size after window flags are applied
-        self.resize(overlay_w, overlay_h)
+        self.resize(self._geometry.overlay_width, self._geometry.overlay_height)
         QApplication.processEvents()
 
         # Store XID for logging only
@@ -135,11 +86,11 @@ class OverlayWindow(QMainWindow):
         logger.debug(f"Overlay XID: {self.xid}")
 
         # Install event filter if needed and X display is available
-        if self._should_forward and self._forwarder._display is not None:
+        if self._should_forward and self._forwarder.display is not None:
             self.installEventFilter(self)
 
         # Fallback if forwarder failed
-        if self._should_forward and self._forwarder._display is None:
+        if self._should_forward and self._forwarder.display is None:
             logger.warning(
                 "Event forwarding disabled due to X display failure. Window is now click-through."
             )
@@ -175,8 +126,13 @@ class OverlayWindow(QMainWindow):
     def scaling_rect(self, rect: List[int]) -> None:
         self._mapper.set_scaling_rect(rect)
 
-    def _setup_window(self, width: int, height: int, x: int, y: int, mode: str) -> None:
+    def _setup_window(self, geometry: OverlayGeometry, mode: str) -> None:
         """Apply the appropriate window flags and geometry for the chosen mode."""
+        width = geometry.overlay_width
+        height = geometry.overlay_height
+        x = geometry.overlay_x
+        y = geometry.overlay_y
+
         flags = Qt.Window
 
         if mode == OverlayMode.FULLSCREEN.value:
@@ -304,7 +260,7 @@ class OverlayWindow(QMainWindow):
         This method uses the CoordinateMapper to transform overlay coordinates
         to target window coordinates, then calls the appropriate forwarder method.
         """
-        if self._forwarder._display is None or self._forwarder.target_handle is None:
+        if self._forwarder.display is None or self._forwarder.target_handle is None:
             logger.debug("_handle_mouse called but forwarding not available")
             return
 

@@ -8,6 +8,7 @@ from Xlib.error import XError, BadWindow
 from Xlib.xobject.drawable import Window as XlibWindow
 
 from ..utils.x11 import open_x_display, close_x_display
+from ..window.win_info import WindowInfo
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +18,11 @@ class OpacityController:
     Controls overlay opacity based on mouse position relative to a target window.
     """
 
-    def __init__(
-        self, overlay, target_handle: int, target_width: int, target_height: int
-    ):
+    def __init__(self, overlay, win_info: WindowInfo):
         self.overlay = overlay
-        self.target_handle = target_handle
-        self.target_width = target_width
-        self.target_height = target_height
+        self.target_handle = win_info.handle
+        self.target_width = win_info.width
+        self.target_height = win_info.height
         self._x_display: Optional[Display] = None
         self._x_window: Optional[XlibWindow] = None
         self._last_update_time = 0.0
