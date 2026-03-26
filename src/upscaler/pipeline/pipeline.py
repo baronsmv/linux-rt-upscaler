@@ -13,7 +13,7 @@ from .shaders import LanczosScaler, SRCNN
 from .swapchain import SwapchainManager
 from ..config import Config
 from ..overlay import OverlayWindow
-from ..utils.geometry import parse_output_geometry, calculate_scaling_rect
+from ..utils import parse_output_geometry, calculate_scaling_rect
 from ..window import WindowInfo, WindowTracker, get_display
 
 logger = logging.getLogger(__name__)

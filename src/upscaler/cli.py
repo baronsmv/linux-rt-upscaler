@@ -5,7 +5,7 @@ import sys
 
 faulthandler.enable()
 
-from .utils.environment import setup_environment
+from .utils import setup_environment
 
 setup_environment()
 
@@ -62,6 +62,7 @@ def main() -> None:
         f"Total initialization time: {time.perf_counter() - overall_start:.2f}s"
     )
 
+    # Monitor for change of focus
     if config.follow_focus:
         monitor = FocusMonitor(interval=0.5)  # poll every 0.5 sec
         monitor.start(
