@@ -16,8 +16,8 @@ import time
 from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
 
-from .overlay.window import OverlayWindow
-from .pipeline.pipeline import Pipeline
+from .overlay import OverlayWindow
+from .pipeline import Pipeline
 from .utils.config import (
     apply_overrides,
     default_config,

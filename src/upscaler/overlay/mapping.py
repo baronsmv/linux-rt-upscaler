@@ -73,7 +73,7 @@ class CoordinateMapper:
             A tuple (target_x, target_y, inside) where `inside` is True if the
             point lies inside the scaling rectangle, otherwise False.
         """
-        # 1. Check if inside scaling rect
+        # Check if inside scaling rect
         rx, ry, rw, rh = self.scaling_rect
         if rw == 0 or rh == 0:
             # No valid scaling rect – cannot map
@@ -82,11 +82,11 @@ class CoordinateMapper:
         if not (rx <= screen_x < rx + rw and ry <= screen_y < ry + rh):
             return 0, 0, False
 
-        # 2. Normalize within scaling rect
+        # Normalize within scaling rect
         norm_x = (screen_x - rx) / rw
         norm_y = (screen_y - ry) / rh
 
-        # 3. Map to content coordinates
+        # Map to content coordinates
         content_x = int(norm_x * self.content_width)
         content_y = int(norm_y * self.content_height)
 
@@ -94,7 +94,7 @@ class CoordinateMapper:
         content_x = max(0, min(content_x, self.content_width - 1))
         content_y = max(0, min(content_y, self.content_height - 1))
 
-        # 4. Apply crop transformation to get target coordinates
+        # Apply crop transformation to get target coordinates
         target_x = self.crop_left + int(
             content_x * self.crop_width / self.content_width
         )
@@ -102,7 +102,7 @@ class CoordinateMapper:
             content_y * self.crop_height / self.content_height
         )
 
-        # 5. Clamp to target window bounds
+        # Clamp to target window bounds
         target_x = max(0, min(target_x, self.client_width - 1))
         target_y = max(0, min(target_y, self.client_height - 1))
 
