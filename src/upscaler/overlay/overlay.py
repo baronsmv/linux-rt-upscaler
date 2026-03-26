@@ -10,7 +10,7 @@ from .coordinates import CoordinateMapper
 from .events import X11EventForwarder
 from .geometry import compute_overlay_geometry, OverlayGeometry
 from .opacity import OpacityController
-from ..utils.config import Config, OverlayMode
+from ..config import OverlayMode, Config
 from ..window import WindowInfo
 
 logger = logging.getLogger(__name__)

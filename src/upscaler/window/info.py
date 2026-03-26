@@ -11,9 +11,9 @@ from ewmh import EWMH
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass
 class WindowInfo:
-    """Immutable information about an X11 window."""
+    """Information about an X11 window."""
 
     handle: int
     width: int

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ..utils.config import Config, OverlayMode
+from ..config import OverlayMode, Config
 from ..window import WindowInfo
 
 
@@ -26,7 +26,7 @@ class OverlayGeometry:
 def compute_overlay_geometry(config: Config, win_info: WindowInfo) -> OverlayGeometry:
     """Compute all geometry parameters for the overlay."""
     from ..utils.screen import get_screen, get_screen_geometry
-    from ..utils.parsers import parse_output_geometry
+    from ..utils.geometry import parse_output_geometry
 
     # Determine base screen geometry
     monitor = get_screen(config.monitor)

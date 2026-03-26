@@ -1,4 +1,4 @@
-"""Window modules."""
+"""Window public modules."""
 
 from .acquisition import acquire_target_window
 from .display import open_x_display, close_x_display, get_display

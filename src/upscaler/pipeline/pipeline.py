@@ -11,13 +11,9 @@ from compushady.formats import R8G8B8A8_UNORM
 from .capture import FrameGrabber
 from .shaders import LanczosScaler, SRCNN
 from .swapchain import SwapchainManager
-from ..overlay.overlay import OverlayWindow
-from ..utils.config import Config
-from ..utils.parsers import (
-    color_string_to_float4,
-    parse_output_geometry,
-    calculate_scaling_rect,
-)
+from ..config import Config
+from ..overlay import OverlayWindow
+from ..utils.geometry import parse_output_geometry, calculate_scaling_rect
 from ..window import WindowInfo, WindowTracker, get_display
 
 logger = logging.getLogger(__name__)
@@ -54,7 +50,7 @@ class Pipeline:
         self.model_name = config.model
         self.output_geometry = config.output_geometry
         self.scale_factor = config.scale_factor
-        self.background_color = color_string_to_float4(config.background_color)
+        self.background_color = config.background_color
 
         # Screen dimensions from overlay
         self.screen_width = overlay.width()

@@ -20,7 +20,7 @@ from .info import (
     is_application_window,
     enumerate_all_windows,
 )
-from ..utils.config import Config
+from ..config import Config
 
 logger = logging.getLogger(__name__)
 

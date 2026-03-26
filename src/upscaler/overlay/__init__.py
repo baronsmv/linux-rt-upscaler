@@ -1,7 +1,5 @@
-"""Overlay modules."""
+"""Overlay public module."""
 
 from .overlay import OverlayWindow
 
-__all__ = [
-    "OverlayWindow",
-]
+__all__ = ["OverlayWindow"]
