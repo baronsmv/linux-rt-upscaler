@@ -7,6 +7,8 @@ from Xlib.display import Display
 from Xlib.error import XError, BadWindow
 from Xlib.xobject.drawable import Window as XlibWindow
 
+from ..utils.x11 import open_x_display, close_x_display
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,30 +27,22 @@ class OpacityController:
         self._x_display: Optional[Display] = None
         self._x_window: Optional[XlibWindow] = None
         self._last_update_time = 0.0
+
+        self._x_display: Optional[Display] = None
+        self._x_window: Optional[XlibWindow] = None
         self._open_x_display()
 
     def _open_x_display(self) -> None:
-        try:
-            self._x_display = Display()
+        self._x_display = open_x_display()
+        if self._x_display:
             self._x_window = self._x_display.create_resource_object(
                 "window", self.target_handle
             )
-            logger.debug("Opened X display for opacity control.")
-        except XError as e:
-            logger.error(f"Failed to open X display for opacity: {e}")
-            self._x_display = None
-            self._x_window = None
 
     def close(self) -> None:
-        if self._x_display is not None:
-            try:
-                self._x_display.close()
-                logger.debug("Closed X display for opacity control.")
-            except Exception as e:
-                logger.warning(f"Error closing X display: {e}")
-            finally:
-                self._x_display = None
-                self._x_window = None
+        close_x_display(self._x_display)
+        self._x_display = None
+        self._x_window = None
 
     def update(self) -> None:
         """Update overlay opacity based on mouse position (throttled to 10 Hz)."""

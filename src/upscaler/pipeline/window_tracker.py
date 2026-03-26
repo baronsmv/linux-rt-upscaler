@@ -5,6 +5,8 @@ from Xlib.display import Display
 from Xlib.error import XError, BadWindow
 from Xlib.xobject.drawable import Window as XlibWindow
 
+from ..utils.x11 import open_x_display, close_x_display
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,32 +20,22 @@ class WindowTracker:
         self.handle = initial_handle
         self.width = initial_width
         self.height = initial_height
+
         self._x_display: Optional[Display] = None
         self._x_window: Optional[XlibWindow] = None
         self._open_x_display()
 
     def _open_x_display(self) -> None:
-        try:
-            self._x_display = Display()
+        self._x_display = open_x_display()
+        if self._x_display:
             self._x_window = self._x_display.create_resource_object(
                 "window", self.handle
             )
-            logger.debug("Opened X display for window tracking.")
-        except XError as e:
-            logger.error(f"Failed to open X display for window tracking: {e}")
-            self._x_display = None
-            self._x_window = None
 
     def close(self) -> None:
-        if self._x_display is not None:
-            try:
-                self._x_display.close()
-                logger.debug("Closed X display for window tracking.")
-            except Exception as e:
-                logger.warning(f"Error closing X display: {e}")
-            finally:
-                self._x_display = None
-                self._x_window = None
+        close_x_display(self._x_display)
+        self._x_display = None
+        self._x_window = None
 
     def update(self, force: bool = False, depth: int = 0) -> bool:
         """

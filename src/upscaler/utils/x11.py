@@ -12,6 +12,42 @@ from ewmh import EWMH
 logger = logging.getLogger(__name__)
 
 
+def _x_error_handler(error, request) -> None:
+    """
+    Custom X error handler that logs at DEBUG level and suppresses stderr.
+    """
+    if hasattr(error, "get_text"):
+        error_text = error.get_text()
+    else:
+        error_text = str(error)
+    logger.debug(f"X error: {error_text} (request: {request})")
+
+
+def open_x_display() -> Optional[Display]:
+    """
+    Open an X11 display and install a custom error handler.
+    Returns a Display object, or None if opening fails.
+    """
+    try:
+        disp = Display()
+        disp.set_error_handler(_x_error_handler)
+        logger.debug("Opened X display with custom error handler.")
+        return disp
+    except Exception as e:
+        logger.error(f"Failed to open X display: {e}", exc_info=True)
+        return None
+
+
+def close_x_display(disp: Optional[Display]) -> None:
+    """Safely close an X11 display."""
+    if disp is not None:
+        try:
+            disp.close()
+            logger.debug("Closed X display.")
+        except Exception as e:
+            logger.warning(f"Error closing X display: {e}")
+
+
 def get_display(allow_fallback: bool = True) -> int:
     """
     Return the X11 Display pointer used by Qt as an integer.

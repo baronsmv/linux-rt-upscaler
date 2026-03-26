@@ -1,10 +1,12 @@
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from Xlib import X, display
 from Xlib.protocol import event as xevent
+
+from ..utils.x11 import open_x_display, close_x_display
 
 logger = logging.getLogger(__name__)
 
@@ -37,46 +39,22 @@ class X11EventForwarder:
         self.target_handle: Optional[int] = None
         self.enabled: bool = True
 
-        # Try to open the display immediately (fail fast)
         self._open_display()
 
     def _open_display(self) -> None:
         """Open the X11 display and install a custom error handler."""
-        try:
-            self._display = display.Display()
+        self._display = open_x_display()
+        if self._display:
             self._root = int(self._display.screen().root.id)
-            self._display.set_error_handler(self._x_error_handler)
-            logger.debug(f"Opened X display. Root window: {self._root}")
-        except Exception as e:
-            logger.error(f"Failed to open X display: {e}", exc_info=True)
-            self._display = None
-            self._root = None
-            # Also disable forwarding because we have no connection
-            self.enabled = False
-
-    def _x_error_handler(self, error: Any, request: Any) -> None:
-        """
-        Custom X error handler – suppresses default stderr printing.
-
-        The error is logged at DEBUG level to avoid cluttering the console.
-        """
-        if hasattr(error, "get_text"):
-            error_text = error.get_text()
+            logger.debug(f"Opened X display for event forwarding. Root: {self._root}")
         else:
-            error_text = str(error)
-        logger.debug(f"X error: {error_text} (request: {request})")
+            self.enabled = False
+            logger.warning("X11 display unavailable – event forwarding disabled")
 
     def close(self) -> None:
-        """Close the X display connection and reset state."""
-        if self._display is not None:
-            try:
-                self._display.close()
-                logger.debug("Closed X display.")
-            except Exception as e:
-                logger.warning(f"Error closing X display: {e}")
-            finally:
-                self._display = None
-                self._root = None
+        close_x_display(self._display)
+        self._display = None
+        self._root = None
 
     def _send_event(self, event: xevent.KeyButtonPointer) -> None:
         """
