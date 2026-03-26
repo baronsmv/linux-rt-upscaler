@@ -2,7 +2,7 @@ import logging
 import threading
 import time
 from queue import Queue
-from typing import Any, Optional
+from typing import Optional, Any
 
 from PySide6.QtCore import QMetaObject, Qt
 from compushady import Texture2D
@@ -310,6 +310,10 @@ class Pipeline:
             self.crop_left, self.crop_top, self.crop_width, self.crop_height
         )
 
+        # Recompute content dimensions based on new crop and current overlay size
+        self._update_content_dimensions()
+
+        # Update source dimensions
         self.src_w = self.crop_width * (4 if self.double_upscale else 2)
         self.src_h = self.crop_height * (4 if self.double_upscale else 2)
 
@@ -346,7 +350,7 @@ class Pipeline:
         self.swapchain_manager.recreate(self.screen_width, self.screen_height)
 
     def _update_content_dimensions(self) -> None:
-        """Recalculate content dimensions based on new overlay size."""
+        """Recalculate content dimensions based on current overlay size and crop."""
         overlay_w = self.overlay.width()
         overlay_h = self.overlay.height()
         new_content_w, new_content_h, _, _, _ = parse_output_geometry(
