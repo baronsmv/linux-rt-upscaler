@@ -3,6 +3,8 @@
 import faulthandler
 import sys
 
+from upscaler.window.focus_monitor import FocusMonitor
+
 faulthandler.enable()
 
 from .utils.environment import setup_environment as setup_env
@@ -28,7 +30,7 @@ from .utils.config import (
 )
 from .utils.logging import setup_logging
 from .utils.validators import validate_config, validate_overrides
-from .utils.window import acquire_target_window
+from upscaler.window.acquisition import acquire_target_window
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +121,16 @@ def main() -> None:
         f"Total initialization time: {time.perf_counter() - overall_start:.2f}s"
     )
 
+    if config.follow_focus:
+        monitor = FocusMonitor(interval=0.5)  # poll every 0.5 sec
+        monitor.start(
+            lambda new_win: (
+                pipeline.request_switch(new_win)
+                if new_win.handle != overlay.xid  # ignore the overlay
+                else None
+            )
+        )
+
     # Event loop
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     try:
@@ -129,6 +141,8 @@ def main() -> None:
     finally:
         logger.debug("Cleaning up resources")
         pipeline.stop()
+        if config.follow_focus:
+            monitor.stop()
         if proc is not None:
             logger.info(f"Terminating launched process {proc.pid}")
             proc.terminate()

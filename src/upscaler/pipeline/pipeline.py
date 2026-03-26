@@ -1,17 +1,17 @@
 import logging
 import threading
 import time
-from queue import Queue
+from queue import Queue, Empty
 from typing import Optional
 
 from PySide6.QtCore import QMetaObject, Qt
 from compushady import Texture2D
 from compushady.formats import R8G8B8A8_UNORM
 
+from upscaler.window.window_tracker import WindowTracker
 from .capture import FrameGrabber
 from .shaders import LanczosScaler, SRCNN
 from .swapchain_manager import SwapchainManager
-from .window_tracker import WindowTracker
 from ..overlay.window import OverlayWindow
 from ..utils.config import Config
 from ..utils.parsers import (
@@ -19,8 +19,8 @@ from ..utils.parsers import (
     parse_output_geometry,
     calculate_scaling_rect,
 )
-from ..utils.window import WindowInfo
 from ..utils.x11 import get_display
+from ..window.win_info import WindowInfo
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +112,7 @@ class Pipeline:
         self.running = False
         self.thread: Optional[threading.Thread] = None
         self.frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
+        self._switch_queue: Queue[Optional[WindowInfo]] = Queue()
         self.stopped_event = threading.Event()
 
         # Performance
@@ -182,6 +183,14 @@ class Pipeline:
 
                 self._process_one_frame()
                 self.frame_count += 1
+
+                # Check if a switch request arrived
+                try:
+                    new_win = self._switch_queue.get_nowait()
+                    if new_win is not None:
+                        self._switch_target(new_win)
+                except Empty:
+                    pass
 
                 # FPS logging every 2 seconds
                 now = time.time()
@@ -288,8 +297,11 @@ class Pipeline:
             elif self.swapchain_manager.is_suboptimal():
                 logger.debug("Swapchain suboptimal, ignoring")
 
-    def _handle_window_change(self) -> None:
+    def _handle_window_change(self, force: bool = False) -> None:
         """Update internal state when target window changes."""
+        if not force and not self.window_tracker.update():
+            return
+
         logger.info("Target window changed, updating pipeline.")
 
         self.win_info.handle = self.window_tracker.handle
@@ -356,3 +368,25 @@ class Pipeline:
             self.content_width = new_content_w
             self.content_height = new_content_h
             self.overlay.set_content_dimensions(new_content_w, new_content_h)
+
+    def _switch_target(self, new_win_info: WindowInfo) -> None:
+        """Switch the pipeline to a new target window."""
+        logger.info(
+            f"Switching pipeline to new window: {new_win_info.title} ({new_win_info.width}x{new_win_info.height})"
+        )
+
+        # Update window_info and tracker
+        self.win_info = new_win_info
+        self.window_tracker = WindowTracker(
+            new_win_info.handle, new_win_info.width, new_win_info.height
+        )
+
+        # Force a full update of all resources
+        self._handle_window_change(force=True)
+
+        # Update overlay with new target info
+        self.overlay.set_target_handle(new_win_info.handle)
+        self.overlay.set_target_size(new_win_info.width, new_win_info.height)
+
+    def request_switch(self, new_win_info: WindowInfo) -> None:
+        self._switch_queue.put(new_win_info)

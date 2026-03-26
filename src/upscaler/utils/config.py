@@ -39,6 +39,7 @@ class Config:
     # General
     program: Optional[List[str]] = None
     select: bool = False
+    follow_focus: bool = False
 
     # Overlay
     overlay_mode: str = OverlayMode.ALWAYS_ON_TOP.value
@@ -114,6 +115,12 @@ in the project source and in the current directory""",
         "--select",
         action="store_true",
         help="Select a window from the list of open windows",
+    )
+    interaction_group.add_argument(
+        "-f",
+        "--follow-focus",
+        action="store_true",
+        help="Follow the currently focused window (automatically switch when focus changes)",
     )
 
     # Upscaling section

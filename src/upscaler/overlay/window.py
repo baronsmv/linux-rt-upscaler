@@ -12,7 +12,7 @@ from .x11 import X11EventForwarder
 from ..utils.config import Config, OverlayMode
 from ..utils.parsers import parse_output_geometry
 from ..utils.screen import get_screen, get_screen_geometry
-from ..utils.window import WindowInfo
+from ..window.win_info import WindowInfo
 
 logger = logging.getLogger(__name__)
 

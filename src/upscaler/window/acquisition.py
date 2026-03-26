@@ -1,7 +1,6 @@
 import logging
 import subprocess
 import time
-from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from typing import Set
 
@@ -10,8 +9,8 @@ from Xlib.display import Display
 from Xlib.error import XError
 from ewmh import EWMH
 
-from .config import Config
-from .x11 import (
+from upscaler.utils.config import Config
+from upscaler.utils.x11 import (
     AtomCache,
     get_window_geometry,
     get_window_name,
@@ -21,22 +20,9 @@ from .x11 import (
     is_application_window,
     enumerate_all_windows,
 )
+from upscaler.window.win_info import WindowInfo
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class WindowInfo:
-    """Immutable information about an X11 window."""
-
-    handle: int
-    width: int
-    height: int
-    title: str
-
-    @property
-    def size(self) -> Tuple[int, int]:
-        return self.width, self.height
 
 
 def list_windows() -> List[WindowInfo]:
@@ -89,29 +75,35 @@ def list_windows() -> List[WindowInfo]:
     return result
 
 
-def get_active_window() -> WindowInfo:
-    """Return WindowInfo for the currently active window."""
-    logger.info("Getting active window")
-    display = Display()
-    atoms = AtomCache(display)
-    ewmh = EWMH(display)
+def get_active_window(
+    display: Optional[Display] = None, ewmh: Optional[EWMH] = None
+) -> Optional[WindowInfo]:
+    """
+    Return WindowInfo for the currently active window.
+    If display and ewmh are provided, they are reused; otherwise new connections are opened.
+    """
+    close_display = False
+    if display is None:
+        display = Display()
+        ewmh = EWMH(display)
+        close_display = True
 
-    active = ewmh.getActiveWindow()
-    if not active:
-        display.close()
-        raise RuntimeError("No active window found")
+    try:
+        active = ewmh.getActiveWindow()
+        if not active:
+            return None
 
-    geom = get_window_geometry(active)
-    if geom is None:
-        display.close()
-        raise RuntimeError("Failed to get geometry of active window")
-    _, _, w, h = geom
+        geom = get_window_geometry(active)
+        if geom is None:
+            return None
+        _, _, w, h = geom
 
-    name = get_window_name(active, atoms) or "unknown"
-    info = WindowInfo(active.id, w, h, name)
-    display.close()
-    logger.info(f"Active window: {info.title} ({info.width}x{info.height})")
-    return info
+        atoms = AtomCache(display)
+        name = get_window_name(active, atoms) or "unknown"
+        return WindowInfo(active.id, w, h, name)
+    finally:
+        if close_display:
+            display.close()
 
 
 def find_by_pid(
