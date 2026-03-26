@@ -27,9 +27,6 @@ class OpacityController:
         self._x_display: Optional[Display] = None
         self._x_window: Optional[XlibWindow] = None
         self._last_update_time = 0.0
-
-        self._x_display: Optional[Display] = None
-        self._x_window: Optional[XlibWindow] = None
         self._open_x_display()
 
     def _open_x_display(self) -> None:
@@ -71,10 +68,6 @@ class OpacityController:
             )
             opacity = 1.0 if inside else 0.2
             self.overlay.setWindowOpacity(opacity)
-            logger.debug(
-                f"Opacity set to {opacity:.2f} (mouse at ({mouse.x()},{mouse.y()}), "
-                f"window at ({win_x},{win_y})"
-            )
         except (BadWindow, XError) as e:
             logger.warning(f"Target window disappeared during opacity update: {e}")
             self.overlay.setWindowOpacity(1.0)

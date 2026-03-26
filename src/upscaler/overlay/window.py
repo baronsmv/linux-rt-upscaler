@@ -3,9 +3,11 @@ import time
 from typing import Any, List
 
 from PySide6.QtCore import QEvent, Qt, Slot
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QApplication
 
 from .mapping import CoordinateMapper
+from .opacity_controller import OpacityController
 from .x11 import X11EventForwarder
 from ..utils.config import Config, OverlayMode
 from ..utils.parsers import parse_output_geometry
@@ -119,6 +121,11 @@ class OverlayWindow(QMainWindow):
         # Enable mouse tracking if we will forward events
         self.setMouseTracking(self._should_forward)
 
+        # Create opacity controller
+        self._opacity_controller = OpacityController(
+            self, win_info.handle, win_info.width, win_info.height
+        )
+
         # Force final size after window flags are applied
         self.resize(overlay_w, overlay_h)
         QApplication.processEvents()
@@ -220,10 +227,20 @@ class OverlayWindow(QMainWindow):
     def set_target_handle(self, handle: int) -> None:
         """Update the XID of the target window."""
         self._forwarder.target_handle = handle
+        self._opacity_controller.update_target_info(
+            handle, self._mapper.client_width, self._mapper.client_height
+        )
 
     def set_target_size(self, width: int, height: int) -> None:
         """Update the actual target window size."""
         self._mapper.set_target_size(width, height)
+        self._opacity_controller.update_target_info(
+            self._forwarder.target_handle, width, height
+        )
+
+    def update_opacity(self) -> None:
+        """Update the window opacity based on mouse position."""
+        self._opacity_controller.update()
 
     def disable_click_forwarding(self) -> None:
         """Permanently disable forwarding (e.g., target window destroyed)."""
@@ -249,9 +266,10 @@ class OverlayWindow(QMainWindow):
                 self._forwarder.enabled = True
         super().changeEvent(event)
 
-    def closeEvent(self, event: QEvent) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         """Quit the application when the overlay window is closed."""
         logger.info("Overlay window closed – quitting application.")
+        self._opacity_controller.close()
         self._forwarder.close()
         QApplication.quit()
         super().closeEvent(event)

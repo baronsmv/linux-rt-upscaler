@@ -9,7 +9,6 @@ from compushady import Texture2D
 from compushady.formats import R8G8B8A8_UNORM
 
 from .capture import FrameGrabber
-from .opacity_controller import OpacityController
 from .shaders import LanczosScaler, SRCNN
 from .swapchain_manager import SwapchainManager
 from .utils import calculate_scaling_rect
@@ -103,11 +102,6 @@ class Pipeline:
             win_info.handle, win_info.width, win_info.height
         )
 
-        # Opacity controller
-        self.opacity_controller = OpacityController(
-            overlay, win_info.handle, win_info.width, win_info.height
-        )
-
         # Mouse mapping rect (initially empty)
         overlay.scaling_rect = [0, 0, 0, 0]
 
@@ -153,7 +147,6 @@ class Pipeline:
         self.upscaler = None
         self.lanczos_scaler = None
         self.window_tracker.close()
-        self.opacity_controller.close()
 
     def _create_grabber(self):
         try:
@@ -279,7 +272,7 @@ class Pipeline:
         self.lanczos_scaler.dispatch(self.groups_x, self.groups_y)
 
         # Opacity control
-        self.opacity_controller.update()
+        self.overlay.update_opacity()
 
         # Present
         self.swapchain_manager.present(self.screen_tex)
@@ -328,11 +321,6 @@ class Pipeline:
 
         # Recreate grabber with new window handle and crop
         self._create_grabber()
-
-        # Update opacity controller
-        self.opacity_controller.update_target_info(
-            self.win_info.handle, self.win_info.width, self.win_info.height
-        )
 
     def _recreate_swapchain(self) -> None:
         """Recreate swapchain and related resources."""
