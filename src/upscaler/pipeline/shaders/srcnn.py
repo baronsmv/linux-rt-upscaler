@@ -218,7 +218,6 @@ class SRCNN:
         )
         logger.debug("Samplers created")
 
-        # For double upscale, we'll create additional pipelines later.
         self.pipelines_first: Optional[List[Compute]] = None
         self.pipelines_second: Optional[List[Compute]] = None
 

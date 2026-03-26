@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONFIG = Config()
 
 
-def get_version() -> str:
+def _get_version() -> str:
     """Return the package version, with a fallback for development."""
     try:
         return version("linux-rt-upscaler")
@@ -33,7 +33,7 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
     parser._positionals.title = "POSITIONAL ARGUMENTS"
     parser._optionals.title = "GENERAL OPTIONS"
     parser.add_argument(
-        "-v", "--version", action="version", version=f"%(prog)s {get_version()}"
+        "-v", "--version", action="version", version=f"%(prog)s {_get_version()}"
     )
     parser.add_argument(
         "-c",

@@ -5,7 +5,7 @@ def setup_environment() -> None:
     """Force X11 session and configure Vulkan drivers for X11 WSI."""
 
     os.environ["QT_QPA_PLATFORM"] = "xcb"  # Qt → X11
-    os.environ["XDG_SESSION_TYPE"] = "x11"  # Tell toolkits we're in X11
+    os.environ["XDG_SESSION_TYPE"] = "x11"  # Force toolkits to use X11
     os.environ.pop("WAYLAND_DISPLAY", None)  # Remove Wayland socket reference
 
     # Vulkan driver‑specific overrides

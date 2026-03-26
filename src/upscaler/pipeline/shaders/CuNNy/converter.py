@@ -462,7 +462,6 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         if not all(t in allowed for t in line_types):
             return blocks  # cannot compact
 
-        # Now we have a sequence of bias, max, assign lines. We'll group them by register.
         # Extract register numbers
         reg_data = {}  # reg -> {"bias": line, "max": line, "assign": (line, is_simple)}
         reg_order = []
