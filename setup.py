@@ -18,14 +18,16 @@ class BuildCaptureLib(build_ext):
         print("BuildCaptureLib.run() started", file=sys.stderr)
         print("Current directory:", os.getcwd(), file=sys.stderr)
 
-        capture_dir = Path(__file__).parent / "src" / "upscaler" / "capture"
+        capture_dir = (
+            Path(__file__).parent / "src" / "upscaler" / "pipeline" / "capture"
+        )
         print("Contents of capture dir:", list(capture_dir.iterdir()), file=sys.stderr)
 
         # Determine target directory for the .so file
         if self.inplace:
             target_dir = capture_dir
         else:
-            target_dir = Path(self.build_lib) / "upscaler" / "capture"
+            target_dir = Path(self.build_lib) / "upscaler" / "pipeline" / "capture"
         target_dir.mkdir(parents=True, exist_ok=True)
 
         src_file = capture_dir / "captureRGBX.c"
@@ -77,8 +79,8 @@ if not dummy_c_path.exists():
 
 # Dummy extension – source path is relative to setup.py (required by setuptools)
 dummy_extension = Extension(
-    "upscaler.capture.dummy",
-    sources=["src/upscaler/capture/dummy.c"],
+    "upscaler.pipeline.capture.dummy",
+    sources=["src/upscaler/pipeline/capture/dummy.c"],
 )
 
 setup(

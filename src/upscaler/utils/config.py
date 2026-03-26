@@ -3,12 +3,11 @@ import logging
 import os
 import re
 from dataclasses import dataclass
+from enum import Enum
 from importlib.metadata import version, PackageNotFoundError
 from typing import Any, Optional, Dict, Tuple, List
 
 import yaml
-
-from ..overlay.mode import OverlayMode
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +23,15 @@ def get_version() -> str:
             return __version__
         except ImportError:
             return "unknown (development mode)"
+
+
+class OverlayMode(str, Enum):
+    """Overlay window behavior modes."""
+
+    ALWAYS_ON_TOP = "always-on-top"
+    ALWAYS_ON_TOP_TRANSPARENT = "top-transparent"
+    FULLSCREEN = "fullscreen"
+    WINDOWED = "windowed"
 
 
 @dataclass

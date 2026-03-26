@@ -50,11 +50,13 @@ upscale = "upscaler.cli:main"
 package-dir = { "" = "src" }
 packages = [
     "upscaler",
-    "upscaler.capture",
-    "upscaler.shaders",
+    "upscaler.overlay",
+    "upscaler.pipeline",
+    "upscaler.pipeline.capture",
+    "upscaler.pipeline.shaders",
     "upscaler.utils"
 ]
 
 [tool.setuptools.package-data]
-"upscaler.shaders" = ["*.hlsl", "*/*/*.hlsl", "*/*/model.json"]
-"upscaler.capture" = ["*.c"]
+"upscaler.pipeline.shaders" = ["*.hlsl", "*/*/*.hlsl", "*/*/model.json"]
+"upscaler.pipeline.capture" = ["*.c"]
