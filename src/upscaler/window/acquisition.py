@@ -9,8 +9,8 @@ from Xlib.display import Display
 from Xlib.error import XError
 from ewmh import EWMH
 
-from upscaler.utils.config import Config
-from upscaler.utils.x11 import (
+from .info import (
+    WindowInfo,
     AtomCache,
     get_window_geometry,
     get_window_name,
@@ -20,7 +20,7 @@ from upscaler.utils.x11 import (
     is_application_window,
     enumerate_all_windows,
 )
-from upscaler.window.win_info import WindowInfo
+from ..utils.config import Config
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@
 import faulthandler
 import sys
 
-from upscaler.window.focus_monitor import FocusMonitor
+from .window import FocusMonitor
 
 faulthandler.enable()
 
@@ -30,7 +30,7 @@ from .utils.config import (
 )
 from .utils.logging import setup_logging
 from .utils.validators import validate_config, validate_overrides
-from upscaler.window.acquisition import acquire_target_window
+from .window import acquire_target_window
 
 logger = logging.getLogger(__name__)
 

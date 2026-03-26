@@ -8,10 +8,9 @@ from PySide6.QtCore import QMetaObject, Qt
 from compushady import Texture2D
 from compushady.formats import R8G8B8A8_UNORM
 
-from upscaler.window.window_tracker import WindowTracker
 from .capture import FrameGrabber
 from .shaders import LanczosScaler, SRCNN
-from .swapchain_manager import SwapchainManager
+from .swapchain import SwapchainManager
 from ..overlay.overlay import OverlayWindow
 from ..utils.config import Config
 from ..utils.parsers import (
@@ -19,8 +18,7 @@ from ..utils.parsers import (
     parse_output_geometry,
     calculate_scaling_rect,
 )
-from ..utils.x11 import get_display
-from ..window.win_info import WindowInfo
+from ..window import WindowInfo, WindowTracker, get_display
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +45,7 @@ class Pipeline:
         self.win_info = win_info
         self.overlay = overlay
 
-        # Extract relevant config values
+        # Relevant config values
         self.crop_left = config.crop_left
         self.crop_top = config.crop_top
         self.crop_right = config.crop_right
@@ -378,6 +376,11 @@ class Pipeline:
             self.lanczos_scaler.set_target_texture(self.screen_tex)
             self._update_content_dimensions()
 
+        logger.debug(
+            f"Recreating swapchain: "
+            f"old size {self.screen_width}x{self.screen_height} "
+            f"-> new size {new_width}x{new_height}"
+        )
         self.swapchain_manager.recreate(self.screen_width, self.screen_height)
 
     def _update_content_dimensions(self) -> None:
@@ -392,8 +395,9 @@ class Pipeline:
             overlay_h,
         )
         logger.debug(
-            f"Content dimensions after update: "
-            f"{new_content_w}x{new_content_h}, "
+            f"Content dimensions updated: "
+            f"{self.content_width}x{self.content_height} "
+            f"-> {new_content_w}x{new_content_h}, "
             f"mode={self.scale_mode}"
         )
         if new_content_w != self.content_width or new_content_h != self.content_height:

@@ -6,12 +6,12 @@ from PySide6.QtCore import QEvent, Qt, Slot
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QApplication
 
-from .coordinate_mapper import CoordinateMapper
-from .event_forwarder import X11EventForwarder
+from .coordinates import CoordinateMapper
+from .events import X11EventForwarder
 from .geometry import compute_overlay_geometry, OverlayGeometry
-from .opacity_controller import OpacityController
+from .opacity import OpacityController
 from ..utils.config import Config, OverlayMode
-from ..window.win_info import WindowInfo
+from ..window import WindowInfo
 
 logger = logging.getLogger(__name__)
 

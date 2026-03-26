@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from ..utils.config import Config, OverlayMode
-from ..window.win_info import WindowInfo
+from ..window import WindowInfo
 
 
 @dataclass(frozen=True)

@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QApplication
 from Xlib import X, display
 from Xlib.protocol import event as xevent
 
-from ..utils.x11 import open_x_display, close_x_display
+from ..window import open_x_display, close_x_display
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ from Xlib.display import Display
 from ewmh import EWMH
 
 from .acquisition import get_active_window
-from .win_info import WindowInfo
+from .info import WindowInfo
 
 logger = logging.getLogger(__name__)
 
