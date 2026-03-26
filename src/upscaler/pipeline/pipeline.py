@@ -226,8 +226,21 @@ class Pipeline:
                     logger.info("Target window gone for too long, stopping pipeline.")
                     raise RuntimeError("Target window gone timeout")
                 logger.info("Target window disappeared, attempting to recover...")
+
+                # Force a fresh window size check
                 self.window_tracker.update(force=True)
+
+                # Force a full pipeline update
+                self._handle_window_change(force=True)
+
+                # Clear the frame queue to discard the stale frame
+                while not self.frame_queue.empty():
+                    try:
+                        self.frame_queue.get_nowait()
+                    except Empty:
+                        break
                 return
+
             else:
                 raise
 
@@ -266,6 +279,11 @@ class Pipeline:
             dst_w / self.scale_factor,
             dst_h / self.scale_factor,
         ]
+        logger.debug(
+            f"Scaling rect: dst={self.overlay.scaling_rect}, "
+            f"content={self.content_width}x{self.content_height}, "
+            f"screen={self.screen_width}x{self.screen_height}"
+        )
 
         # Update Lanczos constants
         self.lanczos_scaler.update_constants(
@@ -299,11 +317,9 @@ class Pipeline:
 
     def _handle_window_change(self, force: bool = False) -> None:
         """Update internal state when target window changes."""
-        if not force and not self.window_tracker.update():
-            return
+        logger.info(f"Handling window change (force={force})")
 
-        logger.info("Target window changed, updating pipeline.")
-
+        # Update local window info from tracker's current state
         self.win_info.handle = self.window_tracker.handle
         self.win_info.width = self.window_tracker.width
         self.win_info.height = self.window_tracker.height
@@ -324,6 +340,7 @@ class Pipeline:
         # Update source dimensions after upscaling
         self.src_w = self.crop_width * (4 if self.double_upscale else 2)
         self.src_h = self.crop_height * (4 if self.double_upscale else 2)
+        logger.debug(f"New src dimensions: {self.src_w}x{self.src_h}")
 
         # Recreate upscaler with new crop size
         self.upscaler = SRCNN(
@@ -336,6 +353,15 @@ class Pipeline:
 
         # Recreate grabber with new window handle and crop
         self._create_grabber()
+
+        # Clear the frame queue to avoid using old frames
+        while not self.frame_queue.empty():
+            try:
+                self.frame_queue.get_nowait()
+            except Empty:
+                break
+
+        logger.info("Window change handled successfully")
 
     def _recreate_swapchain(self) -> None:
         """Recreate swapchain and related resources."""
@@ -363,6 +389,11 @@ class Pipeline:
             self.crop_height,
             overlay_w,
             overlay_h,
+        )
+        logger.debug(
+            f"Content dimensions after update: "
+            f"{new_content_w}x{new_content_h}, "
+            f"mode={self.overlay.scale_mode}"
         )
         if new_content_w != self.content_width or new_content_h != self.content_height:
             self.content_width = new_content_w

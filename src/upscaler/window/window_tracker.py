@@ -70,8 +70,9 @@ class WindowTracker:
 
         if handle_changed or size_changed or force:
             logger.info(
-                f"Target window changed: handle {self.handle} -> {new_handle}, "
-                f"size {self.width}x{self.height} -> {new_width}x{new_height}"
+                f"WindowTracker: change detected: handle {self.handle} "
+                f"-> {new_handle}, size {self.width}x{self.height} "
+                f"-> {new_width}x{new_height}"
             )
             self.handle = new_handle
             self.width = new_width
