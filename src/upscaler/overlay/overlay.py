@@ -41,8 +41,8 @@ class OverlayWindow(QMainWindow):
         )
 
         # Store references
-        self.config = config
-        self.win_info = win_info
+        self._config = config
+        self._win_info = win_info
 
         # Compute geometry
         self._geometry = compute_overlay_geometry(config, win_info)
@@ -168,10 +168,6 @@ class OverlayWindow(QMainWindow):
         self.setWindowFlags(flags)
         self.show()
 
-    def set_scaling_rect(self, rect: List[int]) -> None:
-        """Set the rectangle (in overlay screen coordinates) where content is drawn."""
-        self._mapper.set_scaling_rect(rect)
-
     def set_crop(self, left: int, top: int, width: int, height: int) -> None:
         """Update the crop region of the target window."""
         self._mapper.set_crop(left, top, width, height)
@@ -197,18 +193,6 @@ class OverlayWindow(QMainWindow):
     def update_opacity(self) -> None:
         """Update the window opacity based on mouse position."""
         self._opacity_controller.update()
-
-    def disable_click_forwarding(self) -> None:
-        """Permanently disable forwarding (e.g., target window destroyed)."""
-        if self._should_forward:
-            logger.info("Disabling click forwarding.")
-            self._should_forward = False
-            self._forwarder.enabled = False
-            self._forwarder.target_handle = None
-            # Make window click-through
-            flags = self.windowFlags() | Qt.WindowTransparentForInput
-            self.setWindowFlags(flags)
-            self.show()
 
     def changeEvent(self, event: QEvent) -> None:
         """Detect window state changes (minimized) to enable/disable forwarding."""
