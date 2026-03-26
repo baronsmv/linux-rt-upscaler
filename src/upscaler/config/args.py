@@ -39,8 +39,7 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
         "-c",
         "--config",
         help="""Path to config file (YAML)
-By default, it looks in '~/.config/linux-rt-upscaler/config.yaml',
-in the project source and in the current directory""",
+Default: '~/.config/linux-rt-upscaler/config.yaml'""",
     )
     parser.add_argument(
         "-p",
@@ -63,7 +62,8 @@ in the project source and in the current directory""",
         "-f",
         "--follow-focus",
         action="store_true",
-        help="Follow the currently focused window (automatically switch when focus changes)",
+        help="""Follow the currently focused window (automatically switch
+when focus changes)""",
     )
 
     # Upscaling section
@@ -83,15 +83,15 @@ in the project source and in the current directory""",
             "veryfast",
         ),
         default=DEFAULT_CONFIG.model,
-        help="Upscaling model to use (ordered from best to worst quality)\n"
-        f"Default: {DEFAULT_CONFIG.model}",
+        help=f"""Upscaling model to use (ordered from best to worst quality)
+Default: {DEFAULT_CONFIG.model}""",
     )
     upscaling_group.add_argument(
         "-2",
         "--double-upscale",
         action="store_true",
-        help="EXPERIMENTAL: Perform two 2x passes (total 4x) for higher\n"
-        "resolution screens (4k, 1440p) or low‑resolution sources",
+        help="""Perform two 2x passes (total 4x) for higher resolution
+screens (4k, 1440p) or low‑resolution sources""",
     )
 
     # Display section
@@ -144,7 +144,6 @@ Examples:
                  (fit)
   x1080!       - Fixed height 1080, width proportional
                  (stretch)
-
     """,
     )
     overlay_group.add_argument(
@@ -167,7 +166,6 @@ Modes:
                      (covers entire monitor).
   windowed         - Normal window with decorations, fixed
                      size.
-
     """,
     )
     overlay_group.add_argument(
@@ -205,7 +203,6 @@ Note: To pass negative values, use either --offset-x=-1
 (with an equals sign) or --offset-x "-1" (with quotes).
 The form --offset-x -1 will be misinterpreted because the
 shell treats -1 as a separate option.
-
     """,
     )
     overlay_group.add_argument(
@@ -216,7 +213,6 @@ shell treats -1 as a separate option.
 moves down, negative moves up)
 
 Note: Same as above.
-
     """,
     )
     overlay_group.add_argument(

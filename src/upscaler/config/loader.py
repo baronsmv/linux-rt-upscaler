@@ -21,7 +21,7 @@ def load_yaml_config(
         xdg_config = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
         default_path = os.path.join(xdg_config, "linux-rt-upscaler", "config.yaml")
         paths.append(default_path)
-        paths.append("./config.yaml")
+        # paths.append("./config.yaml")
 
     general_options = {}
     profiles = {}

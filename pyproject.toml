@@ -50,6 +50,7 @@ upscale = "upscaler.cli:main"
 package-dir = { "" = "src" }
 packages = [
     "upscaler",
+    "upscaler.config",
     "upscaler.overlay",
     "upscaler.pipeline",
     "upscaler.pipeline.capture",
