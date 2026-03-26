@@ -5,7 +5,7 @@ from Xlib.display import Display
 from Xlib.error import XError, BadWindow
 from Xlib.xobject.drawable import Window as XlibWindow
 
-from ..window import open_x_display, close_x_display
+from .display import open_x_display, close_x_display
 
 logger = logging.getLogger(__name__)
 

@@ -25,7 +25,7 @@ from ..config import Config
 logger = logging.getLogger(__name__)
 
 
-def list_windows() -> List[WindowInfo]:
+def _list_windows() -> List[WindowInfo]:
     """
     Enumerate all visible application windows using _NET_CLIENT_LIST.
     Returns a list of WindowInfo objects.
@@ -106,7 +106,7 @@ def get_active_window(
             display.close()
 
 
-def find_by_pid(
+def _find_by_pid(
     pid: int,
     pid_timeout: int = 5,
     class_hint: Optional[str] = None,
@@ -256,7 +256,7 @@ def find_by_pid(
         logger.debug("Closed X display at end of search")
 
 
-def launch_and_find_window(
+def _launch_and_find_window(
     config: Config,
 ) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
     """
@@ -273,7 +273,7 @@ def launch_and_find_window(
 
     print("Waiting for window...")
     try:
-        win_info = find_by_pid(
+        win_info = _find_by_pid(
             proc.pid,
             pid_timeout=config.pid_timeout,
             class_hint=program_name,
@@ -291,7 +291,7 @@ def launch_and_find_window(
         return None, None
 
 
-def select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo]:
+def _select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo]:
     """
     Interactively let the user choose a window from the list.
     Returns the selected WindowInfo or None if the user quits.
@@ -317,55 +317,7 @@ def select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo]
             print("Invalid input. Please enter a number.")
 
 
-def acquire_target_window(
-    config: Config,
-) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
-    """
-    Determine which window to upscale based on config.
-    Returns (WindowInfo, optional Popen) or (None, None) on failure/exit.
-    """
-    start_time = time.perf_counter()
-    if config.select:
-        logger.info("Selecting window interactively.")
-        print("Enumerating open windows...")
-        windows = list_windows()
-        if not windows:
-            logger.error("No visible windows found")
-            print("No visible windows found.")
-            return None, None
-
-        win_info = select_window_interactive(windows)
-        if win_info is None:
-            return None, None  # user quit
-        if config.log_level != "ERROR":
-            print(f"Selected: {win_info.title}")
-        logger.info(
-            f"Window acquired interactively in {time.perf_counter() - start_time:.2f}s"
-        )
-        return win_info, None
-
-    elif config.program:
-        logger.info(f"Launching and finding window for program: {config.program}")
-        result = launch_and_find_window(config)
-        logger.info(
-            f"Window acquired via program launch in {time.perf_counter() - start_time:.2f}s"
-        )
-        return result
-    else:
-        logger.info(
-            "Acquiring currently active window (waiting {} seconds)".format(
-                config.target_delay
-            )
-        )
-        win_info = get_active_window_after_delay(config)
-        if win_info:
-            logger.info(
-                f"Active window acquired in {time.perf_counter() - start_time:.2f}s"
-            )
-        return win_info, None
-
-
-def get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
+def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
     """
     Wait target_delay seconds and then return the currently active window.
     """
@@ -382,3 +334,51 @@ def get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
         logger.error(f"Failed to get active window: {e}")
         print(e)
         return None
+
+
+def acquire_target_window(
+    config: Config,
+) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
+    """
+    Determine which window to upscale based on config.
+    Returns (WindowInfo, optional Popen) or (None, None) on failure/exit.
+    """
+    start_time = time.perf_counter()
+    if config.select:
+        logger.info("Selecting window interactively.")
+        print("Enumerating open windows...")
+        windows = _list_windows()
+        if not windows:
+            logger.error("No visible windows found")
+            print("No visible windows found.")
+            return None, None
+
+        win_info = _select_window_interactive(windows)
+        if win_info is None:
+            return None, None  # user quit
+        if config.log_level != "ERROR":
+            print(f"Selected: {win_info.title}")
+        logger.info(
+            f"Window acquired interactively in {time.perf_counter() - start_time:.2f}s"
+        )
+        return win_info, None
+
+    elif config.program:
+        logger.info(f"Launching and finding window for program: {config.program}")
+        result = _launch_and_find_window(config)
+        logger.info(
+            f"Window acquired via program launch in {time.perf_counter() - start_time:.2f}s"
+        )
+        return result
+    else:
+        logger.info(
+            "Acquiring currently active window (waiting {} seconds)".format(
+                config.target_delay
+            )
+        )
+        win_info = _get_active_window_after_delay(config)
+        if win_info:
+            logger.info(
+                f"Active window acquired in {time.perf_counter() - start_time:.2f}s"
+            )
+        return win_info, None
