@@ -1,8 +1,6 @@
 import logging
 from typing import Tuple
 
-from PySide6.QtGui import QColor
-
 from . import Config
 
 logger = logging.getLogger(__name__)
@@ -20,6 +18,8 @@ def _color_string_to_float4(color_str: str) -> Tuple[float, float, float, float]
 
     If the string is invalid, falls back to black.
     """
+    from PySide6.QtGui import QColor  # Local import to avoid problems in build
+
     qcolor = QColor(color_str)
 
     # Return BGRA order to match shader expectations
