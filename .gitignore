@@ -140,14 +140,9 @@ cython_debug/
 *.swo
 *~
 
-# Project specific
-src/upscaler/capture/*.so
-!src/upscaler/pipeline/capture/captureRGBX.so
-
 # Local test files
 test-env/
 testing/
-*.log
 
 # OS metadata
 .DS_Store
