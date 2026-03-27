@@ -3,11 +3,13 @@
 from .acquisition import acquire_target_window
 from .display import open_x_display, close_x_display, get_display
 from .focus import FocusMonitor
+from .hotkeys import HotkeyManager
 from .info import WindowInfo
 from .tracker import WindowTracker
 
 __all__ = [
     "FocusMonitor",
+    "HotkeyManager",
     "WindowInfo",
     "WindowTracker",
     "acquire_target_window",

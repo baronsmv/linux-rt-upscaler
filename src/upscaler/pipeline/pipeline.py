@@ -109,6 +109,7 @@ class Pipeline:
         self.frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
         self._switch_queue: Queue[Optional[WindowInfo]] = Queue()
         self.stopped_event = threading.Event()
+        self._paused = False
 
         # Performance
         self.frame_count = 0
@@ -147,6 +148,22 @@ class Pipeline:
         self.lanczos_scaler = None
         self.window_tracker.close()
 
+    def _pause(self):
+        """Pause processing (no frame capture or display)."""
+        self._paused = True
+
+    def _resume(self):
+        """Resume processing."""
+        self._paused = False
+
+    def toggle_overlay(self):
+        if self.overlay.isVisible():
+            self.overlay.hide()
+            self._pause()
+        else:
+            self.overlay.show()
+            self._resume()
+
     def _create_grabber(self):
         try:
             start = time.perf_counter()
@@ -172,6 +189,10 @@ class Pipeline:
 
         while self.running:
             try:
+                if self._paused:
+                    time.sleep(0.05)
+                    continue
+
                 # Check for target window changes
                 if self.window_tracker.update():
                     self._handle_window_change()
