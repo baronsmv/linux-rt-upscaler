@@ -93,7 +93,7 @@ def validate_color(color_str: str, _: str) -> None:
         exit(1)
 
 
-_VALIDATORS: Dict[str, Tuple[Callable, str, ...]] = {
+_VALIDATORS: Dict[str, Tuple[Callable, str, Any]] = {
     "output_geometry": (validate_geometry, "output_geometry"),
     "background_color": (validate_color, "background_color"),
     "scale_factor": (validate_number, "scale_factor", 0, None, False, True),
