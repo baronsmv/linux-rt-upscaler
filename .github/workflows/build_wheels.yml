@@ -29,12 +29,18 @@ jobs:
       - name: Build wheels (Linux)
         env:
           CIBW_BEFORE_ALL_LINUX: >
-            yum install -y libX11-devel vulkan-devel || dnf install -y libX11-devel vulkan-devel
+            yum install -y libX11-devel vulkan-devel ||
+            dnf install -y libX11-devel vulkan-devel
+          CIBW_BEFORE_TEST: >
+            yum install -y libX11 libxkbcommon ||
+            dnf install -y libX11 libxkbcommon ||
+            apt-get update && apt-get install -y libx11-6 libxkbcommon0
+          CIBW_TEST_COMMAND: >
+            python -c 'import upscaler.pipeline.capture' &&
+            ldd $(python -c 'import upscaler.pipeline.capture; print(upscaler.pipeline.capture.__file__)')
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BUILD: cp${{ matrix.pyver }}-*
-          CIBW_TEST_COMMAND: "python -c 'import upscaler.pipeline.capture'"
           CIBW_BUILD_VERBOSITY: 3
-          CIBW_BEFORE_BUILD: "ls -la src/upscaler/pipeline/capture"
           CIBW_SKIP: "*-musllinux*"
         run: python -m cibuildwheel --output-dir wheelhouse
 
