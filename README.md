@@ -201,7 +201,7 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 
 Some applications do not receive synthetic mouse events (clicks, motion, wheel) forwarded by the overlay. This has been observed with:
 
-- Wine‑based games (Proton seems to work).
+- Wine‑based games (GE-Proton10 seems to work).
 - Certain native applications like Firefox.
 
 The upscaler forwards mouse events using `XSendEvent`, which only delivers events to windows that have explicitly selected the corresponding event mask (e.g., `ButtonPressMask`). Some applications either do not request these masks or filter out synthetic events.
