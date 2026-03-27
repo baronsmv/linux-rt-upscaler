@@ -2,6 +2,8 @@ import logging
 import re
 from typing import Any, Optional, Dict, Tuple, Callable
 
+from PySide6.QtGui import QColor
+
 logger = logging.getLogger(__name__)
 
 
@@ -86,8 +88,6 @@ def validate_geometry(geometry: str, _: str) -> None:
 
 def validate_color(color_str: str, _: str) -> None:
     """Validate CSS color string."""
-    from PySide6.QtGui import QColor  # Local import to avoid problems in build
-
     if not QColor(color_str).isValid():
         logger.error(f"Invalid color string '{color_str}'")
         exit(1)
