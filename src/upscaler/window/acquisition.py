@@ -328,11 +328,13 @@ def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
     time.sleep(config.target_delay)
     try:
         win_info = get_active_window()
+        if not win_info:
+            print("No visible windows found.")
+            exit(1)
         logger.info(f"Got active window: {win_info.title}")
         return win_info
     except RuntimeError as e:
         logger.error(f"Failed to get active window: {e}")
-        print(e)
         return None
 
 
