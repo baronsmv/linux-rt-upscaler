@@ -55,7 +55,8 @@ packages = [
     "upscaler.pipeline",
     "upscaler.pipeline.capture",
     "upscaler.pipeline.shaders",
-    "upscaler.utils"
+    "upscaler.utils",
+    "upscaler.window"
 ]
 
 [tool.setuptools.package-data]
