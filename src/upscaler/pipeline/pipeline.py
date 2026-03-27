@@ -8,11 +8,11 @@ from PySide6.QtCore import QMetaObject, Qt
 from compushady import Texture2D
 from compushady.formats import R8G8B8A8_UNORM
 
-from .capture import FrameGrabber
-from .shaders import LanczosScaler, SRCNN
 from .swapchain import SwapchainManager
+from ..capture import FrameGrabber
 from ..config import Config
 from ..overlay import OverlayWindow
+from ..shaders import LanczosScaler, SRCNN
 from ..utils import parse_output_geometry, calculate_scaling_rect
 from ..window import WindowInfo, WindowTracker, get_display
 
