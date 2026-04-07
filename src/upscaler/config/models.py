@@ -27,7 +27,7 @@ class Config:
 
     # Display
     monitor: str = "primary"
-    scale_factor: float = 1.0
+    scale_factor: Optional[float] = None
 
     # Upscaling
     model: str = "fast"

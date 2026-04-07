@@ -109,8 +109,11 @@ Default: {DEFAULT_CONFIG.monitor}""",
         "--scale-factor",
         type=float,
         default=DEFAULT_CONFIG.scale_factor,
-        help="""Wayland scale factor used (e.g., 2.0 for 200%% scaling).
-It's used to calculate physical pixels of the screen""",
+        help="""Override the automatic Wayland scale factor
+(e.g., 1.5 for 150%% scaling).
+By default, the scale factor is detected automatically
+using physical monitor resolution. This override is
+required when --monitor is set to 'all'.""",
     )
 
     # Overlay options
