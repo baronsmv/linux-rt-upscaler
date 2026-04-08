@@ -124,9 +124,7 @@ class PipelineController:
             model_name=new_model,
             double_upscale=self._pipeline.double_upscale,
         )
-        self._pipeline.lanczos_scaler.set_source_texture(
-            self._pipeline.upscaler.output
-        )
+        self._pipeline.lanczos_scaler.set_source_texture(self._pipeline.upscaler.output)
 
         # Clear stale frames
         self._pipeline.clear_frame_queue()
