@@ -16,8 +16,8 @@ class HotkeyManager(QObject):
 
     # Signals
     toggle_scaling = Signal()
-    next_profile = Signal()
-    prev_profile = Signal()
+    next_model = Signal()
+    prev_model = Signal()
     screenshot = Signal()
     cycle_geometry = Signal()
 

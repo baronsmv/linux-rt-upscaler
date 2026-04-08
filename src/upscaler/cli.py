@@ -76,8 +76,8 @@ def main() -> None:
     hotkey_manager = HotkeyManager(
         {
             "toggle_scaling": "Alt+Shift+S",
-            "next_profile": "Alt+Shift+Right",
-            "prev_profile": "Alt+Shift+Left",
+            "next_model": "Alt+Shift+Right",
+            "prev_model": "Alt+Shift+Left",
             "screenshot": "Alt+Shift+P",
             "cycle_geometry": "Alt+Shift+O",
         }
@@ -86,14 +86,10 @@ def main() -> None:
 
     # Connect signals
     hotkey_manager.toggle_scaling.connect(controller.toggle_overlay)
-    hotkey_manager.next_profile.connect(
-        lambda: controller.switch_model(next_model=True)
-    )
-    hotkey_manager.prev_profile.connect(
-        lambda: controller.switch_model(next_model=False)
-    )
+    hotkey_manager.next_model.connect(lambda: controller.switch_model(next_model=True))
+    hotkey_manager.prev_model.connect(lambda: controller.switch_model(next_model=False))
     hotkey_manager.screenshot.connect(controller.take_screenshot)
-    hotkey_manager.cycle_geometry.connect(controller.cycle_output_geometry)
+    hotkey_manager.cycle_geometry.connect(controller.switch_geometry)
 
     hotkey_manager.start()
 

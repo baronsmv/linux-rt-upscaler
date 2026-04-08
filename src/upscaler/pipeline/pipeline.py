@@ -40,16 +40,16 @@ class Pipeline:
         """
         self._config = config
         self._win_info = win_info
-        self._overlay = overlay
+        self.overlay = overlay
 
         # Relevant config values
         self._crop_left = config.crop_left
         self._crop_top = config.crop_top
         self._crop_right = config.crop_right
         self._crop_bottom = config.crop_bottom
-        self._double_upscale = config.double_upscale
-        self._model_name = config.model
-        self._output_geometry = config.output_geometry
+        self.double_upscale = config.double_upscale
+        self.model_name = config.model
+        self.output_geometry = config.output_geometry
         self._scale_factor = config.scale_factor
         self._background_color = config.background_color
 
@@ -58,20 +58,20 @@ class Pipeline:
         self._screen_height = overlay.height()
         self._content_width = overlay.content_width
         self._content_height = overlay.content_height
-        self._scale_mode = overlay.scale_mode
+        self.scale_mode = overlay.scale_mode
 
         # Crop dimensions
-        self._crop_width = win_info.width - config.crop_left - config.crop_right
-        self._crop_height = win_info.height - config.crop_top - config.crop_bottom
+        self.crop_width = win_info.width - config.crop_left - config.crop_right
+        self.crop_height = win_info.height - config.crop_top - config.crop_bottom
 
         # Source dimensions after upscaling
-        self._src_w = self._crop_width * (4 if self._double_upscale else 2)
-        self._src_h = self._crop_height * (4 if self._double_upscale else 2)
+        self.src_w = self.crop_width * (4 if self.double_upscale else 2)
+        self.src_h = self.crop_height * (4 if self.double_upscale else 2)
 
         # Pipeline controller
         self.controller = PipelineController(self)
-        self.controller.set_initial_model_index(self._model_name)
-        self.controller.set_initial_geometry_index(self._output_geometry)
+        self.controller.set_initial_model_index(self.model_name)
+        self.controller.set_initial_geometry_index(self.output_geometry)
 
         # Swapchain manager
         display_id = get_display()
@@ -85,17 +85,17 @@ class Pipeline:
         )
 
         # Upscaler
-        self._upscaler = SRCNN(
-            width=self._crop_width,
-            height=self._crop_height,
-            model_name=self._model_name,
-            double_upscale=self._double_upscale,
+        self.upscaler = SRCNN(
+            width=self.crop_width,
+            height=self.crop_height,
+            model_name=self.model_name,
+            double_upscale=self.double_upscale,
         )
 
         # Lanczos scaler
-        self._lanczos_scaler = LanczosScaler()
-        self._lanczos_scaler.set_source_texture(self._upscaler.output)
-        self._lanczos_scaler.set_target_texture(self._screen_tex)
+        self.lanczos_scaler = LanczosScaler()
+        self.lanczos_scaler.set_source_texture(self.upscaler.output)
+        self.lanczos_scaler.set_target_texture(self._screen_tex)
 
         # Compute groups for Lanczos
         self._groups_x = (self._screen_width + 15) // 16
@@ -111,7 +111,7 @@ class Pipeline:
 
         # Threading control
         self._running = False
-        self._paused = False
+        self.paused = False
         self._thread: Optional[threading.Thread] = None
         self._stopped_event = threading.Event()
         self._frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
@@ -150,11 +150,11 @@ class Pipeline:
         # Clean up components
         self._swapchain_manager = None
         self._screen_tex = None
-        self._upscaler = None
-        self._lanczos_scaler = None
+        self.upscaler = None
+        self.lanczos_scaler = None
         self._window_tracker.close()
 
-    def _clear_frame_queue(self) -> None:
+    def clear_frame_queue(self) -> None:
         while not self._frame_queue.empty():
             try:
                 self._frame_queue.get_nowait()
@@ -187,7 +187,7 @@ class Pipeline:
         while self._running:
             try:
                 # If paused, check every 100 ms
-                if self._paused:
+                if self.paused:
                     time.sleep(0.1)
                     continue
 
@@ -219,7 +219,7 @@ class Pipeline:
         self._stopped_event.set()
         logger.info("Pipeline stopped event set.")
         QMetaObject.invokeMethod(
-            self._overlay, "on_pipeline_stopped", Qt.QueuedConnection
+            self.overlay, "on_pipeline_stopped", Qt.QueuedConnection
         )
 
     def _process_one_frame(self) -> None:
@@ -261,16 +261,16 @@ class Pipeline:
         frame = self._frame_queue.get_nowait()
 
         # Upscale
-        self._upscaler.upload(frame)
-        self._upscaler.compute()
+        self.upscaler.upload(frame)
+        self.upscaler.compute()
 
         # Calculate destination rectangle
         r_x, r_y, r_w, r_h = calculate_scaling_rect(
-            self._src_w,
-            self._src_h,
+            self.src_w,
+            self.src_h,
             self._content_width,
             self._content_height,
-            self._scale_mode,
+            self.scale_mode,
         )
 
         canvas_x = (self._screen_width - self._content_width) // 2
@@ -282,23 +282,23 @@ class Pipeline:
         dst_h = r_h
 
         # Update mouse mapping rect (scaled)
-        self._overlay.scaling_rect = [
+        self.overlay.scaling_rect = [
             dst_x / self._scale_factor,
             dst_y / self._scale_factor,
             dst_w / self._scale_factor,
             dst_h / self._scale_factor,
         ]
         logger.debug(
-            f"Scaling rect: dst={self._overlay.scaling_rect}, "
+            f"Scaling rect: dst={self.overlay.scaling_rect}, "
             f"content={self._content_width}x{self._content_height}, "
             f"screen={self._screen_width}x{self._screen_height}"
         )
 
         # Update Lanczos constants
-        self._lanczos_scaler.update_constants(
+        self.lanczos_scaler.update_constants(
             self._background_color,
-            self._src_w,
-            self._src_h,
+            self.src_w,
+            self.src_h,
             self._screen_width,
             self._screen_height,
             dst_x,
@@ -308,10 +308,10 @@ class Pipeline:
         )
 
         # Dispatch Lanczos
-        self._lanczos_scaler.dispatch(self._groups_x, self._groups_y)
+        self.lanczos_scaler.dispatch(self._groups_x, self._groups_y)
 
         # Opacity control
-        self._overlay.update_opacity()
+        self.overlay.update_opacity()
 
         # Present
         self._swapchain_manager.present(self._screen_tex)
@@ -333,32 +333,32 @@ class Pipeline:
         self._win_info.width = self._window_tracker.width
         self._win_info.height = self._window_tracker.height
 
-        self._overlay.set_target_handle(self._win_info.handle)
-        self._overlay.set_target_size(self._win_info.width, self._win_info.height)
+        self.overlay.set_target_handle(self._win_info.handle)
+        self.overlay.set_target_size(self._win_info.width, self._win_info.height)
 
         # Recompute crop dimensions
-        self._crop_width = self._win_info.width - self._crop_left - self._crop_right
-        self._crop_height = self._win_info.height - self._crop_top - self._crop_bottom
-        self._overlay.set_crop(
-            self._crop_left, self._crop_top, self._crop_width, self._crop_height
+        self.crop_width = self._win_info.width - self._crop_left - self._crop_right
+        self.crop_height = self._win_info.height - self._crop_top - self._crop_bottom
+        self.overlay.set_crop(
+            self._crop_left, self._crop_top, self.crop_width, self.crop_height
         )
 
         # Update content dimensions (depends on crop and overlay size)
-        self._update_content_dimensions()
+        self.update_content_dimensions()
 
         # Update source dimensions after upscaling
-        self._src_w = self._crop_width * (4 if self._double_upscale else 2)
-        self._src_h = self._crop_height * (4 if self._double_upscale else 2)
-        logger.debug(f"New src dimensions: {self._src_w}x{self._src_h}")
+        self.src_w = self.crop_width * (4 if self.double_upscale else 2)
+        self.src_h = self.crop_height * (4 if self.double_upscale else 2)
+        logger.debug(f"New src dimensions: {self.src_w}x{self.src_h}")
 
         # Recreate upscaler with new crop size
-        self._upscaler = SRCNN(
-            width=self._crop_width,
-            height=self._crop_height,
-            model_name=self._model_name,
-            double_upscale=self._double_upscale,
+        self.upscaler = SRCNN(
+            width=self.crop_width,
+            height=self.crop_height,
+            model_name=self.model_name,
+            double_upscale=self.double_upscale,
         )
-        self._lanczos_scaler.set_source_texture(self._upscaler.output)
+        self.lanczos_scaler.set_source_texture(self.upscaler.output)
 
         # Recreate grabber with new window handle and crop
         self._create_grabber()
@@ -374,8 +374,8 @@ class Pipeline:
 
     def _recreate_swapchain(self) -> None:
         """Recreate swapchain and related resources."""
-        new_width = self._overlay.width()
-        new_height = self._overlay.height()
+        new_width = self.overlay.width()
+        new_height = self.overlay.height()
 
         if new_width != self._screen_width or new_height != self._screen_height:
             self._screen_width = new_width
@@ -383,8 +383,8 @@ class Pipeline:
             self._screen_tex = Texture2D(new_width, new_height, format=R8G8B8A8_UNORM)
             self._groups_x = (new_width + 15) // 16
             self._groups_y = (new_height + 15) // 16
-            self._lanczos_scaler.set_target_texture(self._screen_tex)
-            self._update_content_dimensions()
+            self.lanczos_scaler.set_target_texture(self._screen_tex)
+            self.update_content_dimensions()
 
         logger.debug(
             f"Recreating swapchain: "
@@ -393,14 +393,14 @@ class Pipeline:
         )
         self._swapchain_manager.recreate(self._screen_width, self._screen_height)
 
-    def _update_content_dimensions(self) -> None:
+    def update_content_dimensions(self) -> None:
         """Recalculate content dimensions based on current overlay size and crop."""
-        overlay_w = self._overlay.width()
-        overlay_h = self._overlay.height()
+        overlay_w = self.overlay.width()
+        overlay_h = self.overlay.height()
         new_content_w, new_content_h, _, _, _ = parse_output_geometry(
-            self._output_geometry,
-            self._crop_width,
-            self._crop_height,
+            self.output_geometry,
+            self.crop_width,
+            self.crop_height,
             overlay_w,
             overlay_h,
         )
@@ -408,7 +408,7 @@ class Pipeline:
             f"Content dimensions updated: "
             f"{self._content_width}x{self._content_height} "
             f"-> {new_content_w}x{new_content_h}, "
-            f"mode={self._scale_mode}"
+            f"mode={self.scale_mode}"
         )
         if (
             new_content_w != self._content_width
@@ -416,7 +416,7 @@ class Pipeline:
         ):
             self._content_width = new_content_w
             self._content_height = new_content_h
-            self._overlay.set_content_dimensions(new_content_w, new_content_h)
+            self.overlay.set_content_dimensions(new_content_w, new_content_h)
 
     def _switch_target(self, new_win_info: WindowInfo) -> None:
         """Switch the pipeline to a new target window."""
@@ -434,8 +434,8 @@ class Pipeline:
         self._handle_window_change(force=True)
 
         # Update overlay with new target info
-        self._overlay.set_target_handle(new_win_info.handle)
-        self._overlay.set_target_size(new_win_info.width, new_win_info.height)
+        self.overlay.set_target_handle(new_win_info.handle)
+        self.overlay.set_target_size(new_win_info.width, new_win_info.height)
 
     def request_switch(self, new_win_info: WindowInfo) -> None:
         self._switch_queue.put(new_win_info)

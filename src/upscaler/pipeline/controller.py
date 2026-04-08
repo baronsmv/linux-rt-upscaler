@@ -59,12 +59,12 @@ class PipelineController:
 
     def toggle_overlay(self) -> None:
         """Show/hide the overlay window."""
-        if self._pipeline._overlay.isVisible():
-            self._pipeline._overlay.hide()
-            self._pipeline._paused = True
+        if self._pipeline.overlay.isVisible():
+            self._pipeline.overlay.hide()
+            self._pipeline.paused = True
         else:
-            self._pipeline._overlay.show()
-            self._pipeline._paused = False
+            self._pipeline.overlay.show()
+            self._pipeline.paused = False
 
     def switch_model(self, next_model: bool = True) -> None:
         """Request a model switch (next or previous)."""
@@ -74,7 +74,7 @@ class PipelineController:
         """Request a lossless screenshot."""
         self._screenshot_requested = True
 
-    def cycle_output_geometry(self) -> None:
+    def switch_geometry(self) -> None:
         """Request a geometry mode cycle."""
         self._geometry_switch_queue.put(True)
 
@@ -111,25 +111,25 @@ class PipelineController:
         )
         new_model = self._available_models[new_idx]
 
-        logger.info(f"Switching model from {self._pipeline._model_name} to {new_model}")
+        logger.info(f"Switching model from {self._pipeline.model_name} to {new_model}")
         self._current_model_index = new_idx
-        self._pipeline._model_name = new_model
+        self._pipeline.model_name = new_model
 
         # Recreate upscaler
         from ..shaders import SRCNN  # local import to avoid circularity
 
-        self._pipeline._upscaler = SRCNN(
-            width=self._pipeline._crop_width,
-            height=self._pipeline._crop_height,
+        self._pipeline.upscaler = SRCNN(
+            width=self._pipeline.crop_width,
+            height=self._pipeline.crop_height,
             model_name=new_model,
-            double_upscale=self._pipeline._double_upscale,
+            double_upscale=self._pipeline.double_upscale,
         )
-        self._pipeline._lanczos_scaler.set_source_texture(
-            self._pipeline._upscaler.output
+        self._pipeline.lanczos_scaler.set_source_texture(
+            self._pipeline.upscaler.output
         )
 
         # Clear stale frames
-        self._pipeline._clear_frame_queue()
+        self._pipeline.clear_frame_queue()
 
     def _apply_geometry_cycle(self) -> None:
         total = len(self._available_geometries)
@@ -140,31 +140,31 @@ class PipelineController:
         new_geometry = self._available_geometries[new_idx]
 
         logger.info(
-            f"Switching output geometry from {self._pipeline._output_geometry} to {new_geometry}"
+            f"Switching output geometry from {self._pipeline.output_geometry} to {new_geometry}"
         )
         self._current_geometry_index = new_idx
-        self._pipeline._output_geometry = new_geometry
-        self._pipeline._scale_mode = new_geometry
+        self._pipeline.output_geometry = new_geometry
+        self._pipeline.scale_mode = new_geometry
 
         QMetaObject.invokeMethod(
-            self._pipeline._overlay,
+            self._pipeline.overlay,
             "set_scale_mode",
             Qt.QueuedConnection,
             Q_ARG(str, new_geometry),
         )
-        self._pipeline._update_content_dimensions()
+        self._pipeline.update_content_dimensions()
 
     def _save_screenshot(self) -> None:
         """Capture the raw upscaled texture (lossless, pre‑Lanczos) and save to PNG."""
         try:
             temp_tex = Texture2D(
-                self._pipeline._src_w, self._pipeline._src_h, R8G8B8A8_UNORM
+                self._pipeline.src_w, self._pipeline.src_h, R8G8B8A8_UNORM
             )
-            self._pipeline._upscaler.output.copy_to(temp_tex)
+            self._pipeline.upscaler.output.copy_to(temp_tex)
 
             threading.Thread(
                 target=_download_and_save,
-                args=(temp_tex, self._pipeline._src_w, self._pipeline._src_h),
+                args=(temp_tex, self._pipeline.src_w, self._pipeline.src_h),
                 daemon=True,
                 name="ScreenshotSaver",
             ).start()
