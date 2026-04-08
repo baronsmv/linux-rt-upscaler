@@ -186,6 +186,13 @@ class Pipeline:
 
         while self._running:
             try:
+                # Keep alive status fresh
+                if not self._config.follow_focus:
+                    self._window_tracker.check_alive()
+                    if not self._window_tracker.alive:
+                        logger.info("Target window closed – exiting.")
+                        break
+
                 # If paused, check every 100 ms
                 if self.paused:
                     time.sleep(0.1)
@@ -231,7 +238,7 @@ class Pipeline:
         except RuntimeError as e:
             if "window probably gone" in str(e):
                 self._consecutive_failures += 1
-                if self._consecutive_failures > 30:  # ~0.5 seconds
+                if self._consecutive_failures > 10:  # ~0.16 seconds
                     logger.info("Target window gone for too long, stopping pipeline.")
                     raise RuntimeError("Target window gone timeout")
                 logger.info("Target window disappeared, attempting to recover...")
