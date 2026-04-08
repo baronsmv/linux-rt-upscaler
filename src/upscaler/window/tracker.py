@@ -22,6 +22,7 @@ class WindowTracker:
         self.width = initial_width
         self.height = initial_height
         self.alive = True
+        self.active = True
         self.minimized = False
 
         self._x_display: Optional[Display] = None
@@ -108,6 +109,16 @@ class WindowTracker:
             new_width = geom.width
             new_height = geom.height
             self.minimized = attrs.map_state != X.IsViewable
+
+            # Query active window from root
+            root = self._x_display.screen().root
+            atom = self._x_display.intern_atom("_NET_ACTIVE_WINDOW")
+            prop = root.get_full_property(atom, X.AnyPropertyType)
+            if prop and prop.value:
+                active_handle = prop.value[0]
+                self.active = active_handle == self.handle
+            else:
+                self.active = False
         except BadWindow:
             logger.debug("Window no longer exists (BadWindow in update)")
             self.alive = False

@@ -11,7 +11,7 @@ from compushady.formats import R8G8B8A8_UNORM
 from .controller import PipelineController
 from .swapchain import SwapchainManager
 from ..capture import FrameGrabber
-from ..config import Config
+from ..config import Config, OverlayMode
 from ..overlay import OverlayWindow
 from ..shaders import LanczosScaler, SRCNN
 from ..utils import parse_output_geometry, calculate_scaling_rect
@@ -109,10 +109,11 @@ class Pipeline:
         # Mouse mapping rect (initially empty)
         overlay.scaling_rect = [0, 0, 0, 0]
 
-        # Threading control
+        # Threading variables and control
         self._running = False
         self.user_paused = False
         self.minimized_paused = False
+        self.focus_paused = False
         self._thread: Optional[threading.Thread] = None
         self._stopped_event = threading.Event()
         self._frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
@@ -222,6 +223,29 @@ class Pipeline:
                             "Target window restored, resuming frame processing."
                         )
                         self.minimized_paused = False
+                        if not self.user_paused:
+                            self.overlay.show()
+
+                bypass_wm = self._config.overlay_mode in (
+                    OverlayMode.ALWAYS_ON_TOP.value,
+                    OverlayMode.ALWAYS_ON_TOP_TRANSPARENT.value,
+                )
+
+                if bypass_wm and not self._window_tracker.active:
+                    if not self.focus_paused:
+                        logger.info(
+                            "Target window lost focus, pausing and hiding overlay."
+                        )
+                        self.focus_paused = True
+                        self.overlay.hide()
+                    time.sleep(0.1)
+                    continue
+                else:
+                    if self.focus_paused:
+                        logger.info(
+                            "Target window regained focus, resuming and showing overlay."
+                        )
+                        self.focus_paused = False
                         if not self.user_paused:
                             self.overlay.show()
 
