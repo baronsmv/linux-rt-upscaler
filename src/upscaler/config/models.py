@@ -34,6 +34,7 @@ class Config:
     program: Optional[List[str]] = None
     select: bool = False
     follow_focus: bool = False
+    pause_on_focus_loss: bool = True
 
     # Overlay
     overlay_mode: str = OverlayMode.ALWAYS_ON_TOP.value

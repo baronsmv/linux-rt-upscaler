@@ -226,18 +226,25 @@ class Pipeline:
                         if not self.user_paused:
                             self.overlay.show()
 
+                # Handle focus and manual pause
                 bypass_wm = self._config.overlay_mode in (
                     OverlayMode.ALWAYS_ON_TOP.value,
                     OverlayMode.ALWAYS_ON_TOP_TRANSPARENT.value,
                 )
 
-                if bypass_wm and not self._window_tracker.active:
+                if (
+                    bypass_wm
+                    and self._config.pause_on_focus_loss
+                    and not self._window_tracker.active
+                ):
                     if not self.focus_paused:
                         logger.info(
                             "Target window lost focus, pausing and hiding overlay."
                         )
                         self.focus_paused = True
-                        self.overlay.hide()
+                        QMetaObject.invokeMethod(
+                            self.overlay, "hide", Qt.QueuedConnection
+                        )
                     time.sleep(0.1)
                     continue
                 else:
@@ -247,7 +254,9 @@ class Pipeline:
                         )
                         self.focus_paused = False
                         if not self.user_paused:
-                            self.overlay.show()
+                            QMetaObject.invokeMethod(
+                                self.overlay, "show", Qt.QueuedConnection
+                            )
 
                 # Only handle changes if not minimized
                 if changed:
@@ -262,7 +271,7 @@ class Pipeline:
                 self._process_one_frame()
                 self._frame_count += 1
 
-                # aCheck controller requests
+                # Check controller requests
                 self.controller.process_requests()
 
                 # FPS logging every 2 seconds

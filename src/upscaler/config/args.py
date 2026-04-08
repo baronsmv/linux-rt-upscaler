@@ -65,6 +65,13 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'""",
         help="""Follow the currently focused window (automatically switch
 when focus changes)""",
     )
+    interaction_group.add_argument(
+        "--no-focus-pause",
+        action="store_false",
+        dest="pause_on_focus_loss",
+        help="""Do not pause/hide overlay when target window loses focus"
+(pause is enabled by default)""",
+    )
 
     # Upscaling section
     upscaling_group = parser.add_argument_group("UPSCALING OPTIONS")
