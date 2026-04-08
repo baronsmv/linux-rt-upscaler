@@ -1,42 +1,23 @@
 import logging
-import os
 import threading
 import time
-from datetime import datetime
-from queue import Queue, Empty
+from queue import Empty, Queue
 from typing import Optional
 
-from PIL import Image
-from PySide6.QtCore import QMetaObject, Qt, Q_ARG
+from PySide6.QtCore import QMetaObject, Qt
 from compushady import Texture2D
 from compushady.formats import R8G8B8A8_UNORM
 
+from .controller import PipelineController
 from .swapchain import SwapchainManager
 from ..capture import FrameGrabber
-from ..config import Config, OUTPUT_GEOMETRIES, UPSCALING_MODELS
+from ..config import Config
 from ..overlay import OverlayWindow
 from ..shaders import LanczosScaler, SRCNN
 from ..utils import parse_output_geometry, calculate_scaling_rect
 from ..window import WindowInfo, WindowTracker, get_display
 
 logger = logging.getLogger(__name__)
-
-
-def _download_and_save(texture: Texture2D, width: int, height: int) -> None:
-    """Download texture data and save as PNG. Runs in a background thread."""
-    try:
-        data = texture.download()
-        img = Image.frombytes("RGBA", (width, height), data, "raw", "BGRA")
-        img = img.convert("RGB")
-
-        save_dir = os.path.expanduser("~/.local/share/linux-rt-upscaler/screenshots")
-        os.makedirs(save_dir, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = os.path.join(save_dir, f"screenshot_{timestamp}.png")
-        img.save(filename)
-        logger.info(f"Screenshot saved to {filename}")
-    except Exception as e:
-        logger.error(f"Failed to save screenshot: {e}", exc_info=True)
 
 
 class Pipeline:
@@ -87,6 +68,11 @@ class Pipeline:
         self._src_w = self._crop_width * (4 if self._double_upscale else 2)
         self._src_h = self._crop_height * (4 if self._double_upscale else 2)
 
+        # Pipeline controller
+        self.controller = PipelineController(self)
+        self.controller.set_initial_model_index(self._model_name)
+        self.controller.set_initial_geometry_index(self._output_geometry)
+
         # Swapchain manager
         display_id = get_display()
         self._swapchain_manager = SwapchainManager(
@@ -128,23 +114,8 @@ class Pipeline:
         self._paused = False
         self._thread: Optional[threading.Thread] = None
         self._stopped_event = threading.Event()
-
         self._frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
         self._switch_queue: Queue[Optional[WindowInfo]] = Queue()
-        self._model_switch_queue: Queue[bool] = Queue()
-        self._geometry_switch_queue: Queue[bool] = Queue()
-
-        self._screenshot_requested = False
-        self._current_model_index = (
-            UPSCALING_MODELS.index(self._model_name)
-            if self._model_name in UPSCALING_MODELS
-            else 0
-        )
-        self._current_geometry_index = (
-            OUTPUT_GEOMETRIES.index(self._output_geometry)
-            if self._output_geometry in OUTPUT_GEOMETRIES
-            else 0
-        )
 
         # Performance
         self._frame_count = 0
@@ -183,105 +154,12 @@ class Pipeline:
         self._lanczos_scaler = None
         self._window_tracker.close()
 
-    def _pause(self):
-        """Pause processing (no frame capture or display)."""
-        self._paused = True
-
-    def _resume(self):
-        """Resume processing."""
-        self._paused = False
-
-    def toggle_overlay(self):
-        if self._overlay.isVisible():
-            self._overlay.hide()
-            self._pause()
-        else:
-            self._overlay.show()
-            self._resume()
-
-    def switch_model(self, next_model: bool = True):
-        """Switch to the next or previous model."""
-        self._model_switch_queue.put(next_model)
-
     def _clear_frame_queue(self) -> None:
         while not self._frame_queue.empty():
             try:
                 self._frame_queue.get_nowait()
             except Empty:
                 break
-
-    def _apply_model_switch(self, next_model: bool) -> None:
-        """Called in pipeline thread to change the upscaling model."""
-        new_idx = (
-            (self._current_model_index + 1) % len(UPSCALING_MODELS)
-            if next_model
-            else (self._current_model_index - 1) % len(UPSCALING_MODELS)
-        )
-        new_model = UPSCALING_MODELS[new_idx]
-
-        logger.info(f"Switching model from {self._model_name} to {new_model}")
-        self._current_model_index = new_idx
-        self._model_name = new_model
-
-        # Recreate upscaler with new model
-        self._upscaler = SRCNN(
-            width=self._crop_width,
-            height=self._crop_height,
-            model_name=self._model_name,
-            double_upscale=self._double_upscale,
-        )
-        self._lanczos_scaler.set_source_texture(self._upscaler.output)
-
-        # Clear stale frames
-        self._clear_frame_queue()
-
-    def take_screenshot(self) -> None:
-        """Request a screenshot (main thread)."""
-        self._screenshot_requested = True
-
-    def _save_screenshot(self) -> None:
-        """Capture the raw upscaled texture (lossless, pre‑Lanczos) and save to PNG."""
-        try:
-            # Create a temporary texture
-            temp_tex = Texture2D(self._src_w, self._src_h, R8G8B8A8_UNORM)
-            self._upscaler.output.copy_to(temp_tex)
-
-            # Offload the readback and file I/O to a separate thread
-            threading.Thread(
-                target=_download_and_save,
-                args=(temp_tex, self._src_w, self._src_h),
-                daemon=True,
-                name="ScreenshotSaver",
-            ).start()
-        except Exception as e:
-            logger.error(f"Failed to initiate screenshot: {e}", exc_info=True)
-
-    def cycle_output_geometry(self) -> None:
-        """Cycle to the next output geometry."""
-        self._geometry_switch_queue.put(True)
-
-    def _apply_geometry_cycle(self, next_geometry: bool) -> None:
-        """Cycle through output geometries."""
-        new_idx = (self._current_geometry_index + 1) % len(OUTPUT_GEOMETRIES)
-        new_geometry = OUTPUT_GEOMETRIES[new_idx]
-
-        logger.info(
-            f"Switching output geometry from {self._output_geometry} to {new_geometry}"
-        )
-        self._current_geometry_index = new_idx
-        self._output_geometry = new_geometry
-        self._scale_mode = new_geometry
-
-        # Update overlay's scale_mode
-        QMetaObject.invokeMethod(
-            self._overlay,
-            "set_scale_mode",
-            Qt.QueuedConnection,
-            Q_ARG(str, new_geometry),
-        )
-
-        # Update content dimensions to reflect new geometry mode
-        self._update_content_dimensions()
 
     def _create_grabber(self):
         try:
@@ -320,32 +198,8 @@ class Pipeline:
                 self._process_one_frame()
                 self._frame_count += 1
 
-                # Check if a switch request arrived
-                try:
-                    new_win = self._switch_queue.get_nowait()
-                    if new_win is not None:
-                        self._switch_target(new_win)
-                except Empty:
-                    pass
-
-                # Check for model switch requests
-                try:
-                    next_model = self._model_switch_queue.get_nowait()
-                    self._apply_model_switch(next_model)
-                except Empty:
-                    pass
-
-                # Screenshot (flag set in main thread)
-                if self._screenshot_requested:
-                    self._save_screenshot()
-                    self._screenshot_requested = False
-
-                # Check for geometry cycle requests
-                try:
-                    next_geometry = self._geometry_switch_queue.get_nowait()
-                    self._apply_geometry_cycle(next_geometry)
-                except Empty:
-                    pass
+                # Check controller requests
+                self.controller.process_requests()
 
                 # FPS logging every 2 seconds
                 now = time.time()

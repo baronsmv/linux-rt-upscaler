@@ -82,13 +82,18 @@ def main() -> None:
             "cycle_geometry": "Alt+Shift+O",
         }
     )
+    controller = pipeline.controller
 
     # Connect signals
-    hotkey_manager.toggle_scaling.connect(pipeline.toggle_overlay)
-    hotkey_manager.next_profile.connect(lambda: pipeline.switch_model(next_model=True))
-    hotkey_manager.prev_profile.connect(lambda: pipeline.switch_model(next_model=False))
-    hotkey_manager.screenshot.connect(pipeline.take_screenshot)
-    hotkey_manager.cycle_geometry.connect(pipeline.cycle_output_geometry)
+    hotkey_manager.toggle_scaling.connect(controller.toggle_overlay)
+    hotkey_manager.next_profile.connect(
+        lambda: controller.switch_model(next_model=True)
+    )
+    hotkey_manager.prev_profile.connect(
+        lambda: controller.switch_model(next_model=False)
+    )
+    hotkey_manager.screenshot.connect(controller.take_screenshot)
+    hotkey_manager.cycle_geometry.connect(controller.cycle_output_geometry)
 
     hotkey_manager.start()
 
