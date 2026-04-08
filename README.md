@@ -44,6 +44,7 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 - Vulkan-capable GPU (NVIDIA, AMD, Intel)
 - Vulkan drivers (`libvulkan-dev`)
 - X11 development libraries (`libx11-dev`)
+- X C Binding headers (`libxcb-dev`)
 - Python 3.8 – 3.13
 
 > **Python 3.14 compatibility**: Currently not supported due to a low‑level Vulkan backend issue. Please use a Python ≤ 3.13 virtual environment if you have Python 3.14 installed. See [issue #1](https://github.com/baronsmv/linux-rt-upscaler/issues/1#issuecomment-4069065775) for details.
@@ -56,31 +57,31 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 
 ```sh
 sudo apt update
-sudo apt install libvulkan-dev libx11-dev
+sudo apt install libvulkan-dev libx11-dev libxcb-render0-dev
 ```
 
 #### Fedora / RHEL / CentOS
 
 ```sh
-sudo dnf install vulkan-loader-devel libX11-devel
+sudo dnf install vulkan-loader-devel libX11-devel libxcb-devel
 ```
 
 #### Arch Linux
 
 ```sh
-sudo pacman -S vulkan-devel libx11
+sudo pacman -S vulkan-devel libx11 libxcb
 ```
 
 #### openSUSE
 
 ```sh
-sudo zypper install vulkan-devel libX11-devel
+sudo zypper install vulkan-devel libX11-devel libxcb-devel
 ```
 
 #### Alpine Linux
 
 ```sh
-sudo apk add vulkan-headers libx11-dev
+sudo apk add vulkan-headers libx11-dev libxcb-dev
 ```
 
 ### 2. Python package

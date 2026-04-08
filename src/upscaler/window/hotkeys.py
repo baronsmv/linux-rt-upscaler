@@ -1,218 +1,228 @@
+import itertools
 import logging
 from typing import Dict, Optional, Tuple
 
-from PySide6.QtCore import QObject, Signal, QSocketNotifier
-from Xlib import X, display
-from Xlib.keysymdef import latin1, miscellany
-
-from .display import open_x_display, close_x_display
+import xcffib
+from PySide6.QtCore import QObject, QSocketNotifier, Signal
+from xcffib.xproto import GrabMode, KeyPressEvent, ModMask, Setup
 
 logger = logging.getLogger(__name__)
 
 
 class HotkeyManager(QObject):
     """
-    Global hotkey manager. Emits Qt signals when configured hotkeys are pressed.
+    Global hotkey manager using a separate XCB connection + QSocketNotifier.
     """
 
-    # Signals for each supported action
+    # Signals
     toggle_scaling = Signal()
     next_profile = Signal()
     prev_profile = Signal()
     screenshot = Signal()
     cycle_geometry = Signal()
 
-    # Mapping from action name to signal
-    _action_to_signal = {
-        "toggle_scaling": toggle_scaling,
-        "next_profile": next_profile,
-        "prev_profile": prev_profile,
-        "screenshot": screenshot,
-        "cycle_geometry": cycle_geometry,
+    _MODIFIER_MAP = {
+        "Ctrl": ModMask.Control,
+        "Control": ModMask.Control,
+        "Alt": ModMask._1,
+        "Shift": ModMask.Shift,
+        "Super": ModMask._4,
+        "Win": ModMask._4,
     }
 
-    # Modifier name to X11 mask
-    _MODIFIER_MAP = {
-        "Ctrl": X.ControlMask,
-        "Control": X.ControlMask,
-        "Alt": X.Mod1Mask,
-        "Shift": X.ShiftMask,
-        "Super": X.Mod4Mask,
-        "Win": X.Mod4Mask,
+    # Lock masks (NumLock, CapsLock, ScrollLock)
+    _LOCK_MASKS = [0, ModMask._2, ModMask.Lock, ModMask._5]
+
+    _KEYSYM_MAP = {
+        "S": 0x53,
+        "P": 0x50,
+        "O": 0x4F,
+        "Left": 0xFF51,
+        "Right": 0xFF53,
+        "Up": 0xFF52,
+        "Down": 0xFF54,
+        "F1": 0xFFBE,
+        "F2": 0xFFBF,
+        "F3": 0xFFC0,
+        "F4": 0xFFC1,
+        "F5": 0xFFC2,
+        "F6": 0xFFC3,
+        "F7": 0xFFC4,
+        "F8": 0xFFC5,
+        "F9": 0xFFC6,
+        "F10": 0xFFC7,
+        "F11": 0xFFC8,
+        "F12": 0xFFC9,
+        "Space": 0x20,
+        "Return": 0xFF0D,
+        "Tab": 0xFF09,
+        "Escape": 0xFF1B,
     }
 
     def __init__(self, config_hotkeys: Dict[str, str]) -> None:
-        """
-        :param config_hotkeys: dictionary mapping action names to hotkey strings,
-                               e.g., {'toggle_scaling': 'Ctrl+Alt+S'}
-        """
         super().__init__()
         self._config_hotkeys = config_hotkeys
-        self._display: Optional[display.Display] = None
+        self._grabbed: Dict[Tuple[int, int], str] = {}
+        self._conn: Optional[xcffib.Connection] = None
+        self._root: Optional[int] = None
+        self._setup: Optional[Setup] = None
+        self._keycode_cache: Dict[str, int] = {}
         self._socket_notifier: Optional[QSocketNotifier] = None
-        self._grabbed_keys: list = []  # store (keycode, modifier) for ungrab
+
+        # Compute lock mask combinations
+        self._lock_combinations = list(
+            {
+                sum(comb)
+                for r in range(len(self._LOCK_MASKS) + 1)
+                for comb in itertools.combinations(self._LOCK_MASKS, r)
+            }
+        )
 
     def start(self) -> None:
-        """Open X display, grab hotkeys, and start listening."""
-        self._display = open_x_display()
-        if not self._display:
-            logger.error("Cannot start hotkey manager: X display unavailable")
+        """Open XCB connection, grab keys, and start listening."""
+        try:
+            self._conn = xcffib.connect()
+        except Exception as e:
+            logger.error(f"Failed to open XCB connection: {e}")
             return
+
+        self._setup = self._conn.get_setup()
+        self._root = self._setup.roots[0].root
 
         self._grab_keys()
         self._setup_event_listener()
-        logger.info("Hotkey manager started")
+        logger.info("XCB hotkey manager started (standalone connection).")
 
     def stop(self) -> None:
-        """Ungrab keys and clean up."""
+        """Ungrab keys and close connection."""
         self._ungrab_keys()
         if self._socket_notifier:
             self._socket_notifier.setEnabled(False)
             self._socket_notifier = None
-        close_x_display(self._display)
-        self._display = None
-        logger.info("Hotkey manager stopped")
+        if self._conn:
+            self._conn.disconnect()
+            self._conn = None
+        logger.info("XCB hotkey manager stopped.")
 
     def _grab_keys(self) -> None:
-        """Grab each configured hotkey."""
-        root = self._display.screen().root
         for action, hotkey_str in self._config_hotkeys.items():
+            # Verify the action corresponds to a defined signal
+            if not hasattr(self, action):
+                logger.warning(f"Unknown action '{action}'")
+                continue
+
             try:
-                mod_mask, keysym = self._parse_hotkey_string(hotkey_str)
+                mod_mask, key_name = self._parse_hotkey_string(hotkey_str)
             except ValueError as e:
-                logger.warning(
-                    f"Invalid hotkey '{hotkey_str}' for action '{action}': {e}"
+                logger.warning(f"Invalid hotkey '{hotkey_str}': {e}")
+                continue
+
+            keycode = self._key_name_to_keycode(key_name)
+            if keycode is None:
+                logger.warning(f"Unknown key '{key_name}' in '{hotkey_str}'")
+                continue
+
+            for lock_mask in self._lock_combinations:
+                self._conn.core.GrabKey(
+                    owner_events=True,
+                    grab_window=self._root,
+                    modifiers=mod_mask | lock_mask,
+                    key=keycode,
+                    pointer_mode=GrabMode.Async,
+                    keyboard_mode=GrabMode.Async,
                 )
-                continue
 
-            # Convert keysym to keycode
-            keycode = self._display.keysym_to_keycode(keysym)
-            if keycode == 0:
-                logger.warning(f"Unknown key '{keysym}' in hotkey '{hotkey_str}'")
-                continue
-
-            # Grab the key
-            root.grab_key(keycode, mod_mask, True, X.GrabModeAsync, X.GrabModeAsync)
-            self._grabbed_keys.append((keycode, mod_mask))
-            logger.debug(
-                f"Grabbed {action}: {hotkey_str} (keycode={keycode}, mod_mask={mod_mask})"
+            self._grabbed[(mod_mask, keycode)] = action
+            logger.info(
+                f"Grabbed {action}: {hotkey_str} (mod={mod_mask}, keycode={keycode})"
             )
 
-    def _ungrab_keys(self) -> None:
-        """Ungrab all grabbed keys."""
-        root = self._display.screen().root
-        for keycode, mod_mask in self._grabbed_keys:
-            root.ungrab_key(keycode, mod_mask, True)
-        self._grabbed_keys.clear()
+        self._conn.flush()
 
-    def _parse_hotkey_string(self, hotkey_str: str) -> Tuple[int, int]:
-        """
-        Parse a hotkey string like "Ctrl+Alt+S" into (modifier_mask, keysym).
-        Returns a tuple (modifier_mask, keysym).
-        Raises ValueError on parsing failure.
-        """
+    def _ungrab_keys(self) -> None:
+        for (mod_mask, keycode), _ in self._grabbed.items():
+            for lock_mask in self._lock_combinations:
+                self._conn.core.UngrabKey(keycode, self._root, mod_mask | lock_mask)
+        self._conn.flush()
+        self._grabbed.clear()
+
+    def _key_name_to_keycode(self, name: str) -> Optional[int]:
+        """Convert a key name to an X11 keycode using the current keyboard mapping."""
+        if name in self._keycode_cache:
+            return self._keycode_cache[name]
+
+        keysym = self._KEYSYM_MAP.get(name)
+        if keysym is None:
+            logger.warning(f"Unsupported key name: {name}")
+            return None
+
+        min_kc = self._setup.min_keycode
+        max_kc = self._setup.max_keycode
+        count = max_kc - min_kc + 1
+
+        reply = self._conn.core.GetKeyboardMapping(min_kc, count).reply()
+        if not reply:
+            return None
+
+        keysyms_per_keycode = reply.keysyms_per_keycode
+        for i in range(count):
+            base = i * keysyms_per_keycode
+            for offset in range(keysyms_per_keycode):
+                if reply.keysyms[base + offset] == keysym:
+                    kc = min_kc + i
+                    self._keycode_cache[name] = kc
+                    return kc
+        return None
+
+    def _parse_hotkey_string(self, hotkey_str: str) -> Tuple[int, str]:
         parts = hotkey_str.split("+")
         modifiers = 0
-        keysym_part = None
-
+        key_name = None
         for part in parts:
-            # Check if part is a modifier
+            part = part.strip()
             if part in self._MODIFIER_MAP:
                 modifiers |= self._MODIFIER_MAP[part]
             else:
-                # Assume it's the key name
-                if keysym_part is not None:
-                    raise ValueError(f"Multiple key names in hotkey: {hotkey_str}")
-                keysym_part = part
-
-        if keysym_part is None:
-            raise ValueError("No key name specified")
-
-        # Convert key name to keysym
-        keysym = self._name_to_keysym(keysym_part)
-        if keysym == 0:
-            raise ValueError(f"Unknown key name: {keysym_part}")
-
-        return modifiers, keysym
-
-    def _name_to_keysym(self, name: str) -> int:
-        """
-        Convert a key name like 'S', 'Right', 'P' to an X11 keysym.
-        Uses Xlib's keysym lookup functions.
-        """
-        # Common keys
-        common = {
-            "S": latin1.XK_S,
-            "P": latin1.XK_P,
-            "O": latin1.XK_O,
-            "Left": miscellany.XK_Left,
-            "Right": miscellany.XK_Right,
-            "Up": miscellany.XK_Up,
-            "Down": miscellany.XK_Down,
-            "F1": miscellany.XK_F1,
-            "F2": miscellany.XK_F2,
-            "F3": miscellany.XK_F3,
-            "F4": miscellany.XK_F4,
-            "F5": miscellany.XK_F5,
-            "F6": miscellany.XK_F6,
-            "F7": miscellany.XK_F7,
-            "F8": miscellany.XK_F8,
-            "F9": miscellany.XK_F9,
-            "F10": miscellany.XK_F10,
-            "F11": miscellany.XK_F11,
-            "F12": miscellany.XK_F12,
-            "Space": latin1.XK_space,
-            "Shift": miscellany.XK_Shift_L,
-            "Return": miscellany.XK_Return,
-            "Tab": miscellany.XK_Tab,
-            "Escape": miscellany.XK_Escape,
-        }
-        if name in common:
-            return common[name]
-
-        logger.warning(
-            f"Unsupported key name: {name}. Use a key from the list: letters, arrows, F1-F12, Space, Return, Tab, Escape"
-        )
-        return 0
+                if key_name is not None:
+                    raise ValueError("Multiple key names")
+                key_name = part
+        if key_name is None:
+            raise ValueError("No key name")
+        return modifiers, key_name
 
     def _setup_event_listener(self) -> None:
-        """Set up a QSocketNotifier to watch the X connection file descriptor."""
-        fd = self._display.display.fileno()
+        """Watch the XCB connection file descriptor using QSocketNotifier."""
+        fd = self._conn.get_file_descriptor()
         self._socket_notifier = QSocketNotifier(fd, QSocketNotifier.Type.Read, self)
         self._socket_notifier.activated.connect(self._process_x_events)
 
     def _process_x_events(self) -> None:
-        """Called when X events are available. Read all pending events."""
+        """Read all pending events from the XCB connection."""
         while True:
             try:
-                event = self._display.next_event()
-                self._handle_event(event)
-            except Exception:
+                event = self._conn.poll_for_event()
+            except Exception as e:
+                logger.error(f"Error polling for XCB event: {e}")
                 break
+            if not event:
+                break
+            self._handle_event(event)
 
     def _handle_event(self, event) -> None:
-        """Dispatch key press events to the appropriate signal."""
-        if event.type != X.KeyPress:
+        """Dispatch KeyPress events to the appropriate signal."""
+        if not isinstance(event, KeyPressEvent):
             return
 
         keycode = event.detail
         state = event.state
+        for lock in self._LOCK_MASKS:
+            state &= ~lock
 
-        # Check if the key is one we grabbed
-        for action, hotkey_str in self._config_hotkeys.items():
-            try:
-                mod_mask, keysym = self._parse_hotkey_string(hotkey_str)
-            except ValueError:
-                continue
-
-            # Check if the keycode matches and the modifier state includes the required modifiers
-            if (
-                self._display.keycode_to_keysym(keycode, 0) == keysym
-                and (state & mod_mask) == mod_mask
-            ):
-                # Emit the signal
-                signal = self._action_to_signal.get(action)
-                if signal:
+        for (mod_mask, grabbed_keycode), action in self._grabbed.items():
+            if grabbed_keycode == keycode and (state & mod_mask) == mod_mask:
+                # Retrieve the bound signal by name and emit
+                signal = getattr(self, action, None)
+                if signal is not None:
                     signal.emit()
-                    logger.debug(f"Hotkey {action} triggered")
-                return
+                    logger.debug(f"Hotkey '{action}' triggered.")
+                break

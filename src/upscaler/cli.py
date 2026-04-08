@@ -19,7 +19,7 @@ from PySide6.QtWidgets import QApplication
 from .config import setup_config
 from .overlay import OverlayWindow
 from .pipeline import Pipeline
-from .window import FocusMonitor
+from .window import FocusMonitor, HotkeyManager
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,6 @@ def main() -> None:
             )
         )
 
-    """
     hotkey_manager = HotkeyManager(
         {
             "toggle_scaling": "Alt+Shift+S",
@@ -83,7 +82,6 @@ def main() -> None:
             "cycle_geometry": "Ctrl+Alt+O",
         }
     )
-    hotkey_manager.start()
 
     # Connect signals
     hotkey_manager.toggle_scaling.connect(pipeline.toggle_overlay)
@@ -91,7 +89,8 @@ def main() -> None:
     # hotkey_manager.prev_profile.connect(lambda: pipeline.switch_profile(next=False))
     # hotkey_manager.screenshot.connect(pipeline.take_screenshot)
     # hotkey_manager.cycle_geometry.connect(pipeline.cycle_output_geometry)
-    """
+
+    hotkey_manager.start()
 
     # Event loop
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -109,7 +108,7 @@ def main() -> None:
             logger.info(f"Terminating launched process {proc.pid}")
             proc.terminate()
             proc.wait()
-        # hotkey_manager.stop()
+        hotkey_manager.stop()
         logger.debug("Cleanup complete")
         sys.exit(0)
 
