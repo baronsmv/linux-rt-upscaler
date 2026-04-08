@@ -107,7 +107,7 @@ class WindowTracker:
             new_handle = self._x_window.id
             new_width = geom.width
             new_height = geom.height
-            self.minimized = attrs.map_state == X.IsUnmapped
+            self.minimized = attrs.map_state != X.IsViewable
         except BadWindow:
             logger.debug("Window no longer exists (BadWindow in update)")
             self.alive = False

@@ -203,9 +203,8 @@ class Pipeline:
                         logger.info("Target window closed – exiting.")
                         break
 
-                # Check for target window changes
-                if self._window_tracker.update():
-                    self._handle_window_change()
+                # Update window state
+                changed = self._window_tracker.update()
 
                 # Handle minimization pause
                 if self._window_tracker.minimized:
@@ -214,6 +213,7 @@ class Pipeline:
                             "Target window minimized, pausing frame processing."
                         )
                         self.minimized_paused = True
+                        self.overlay.hide()
                     time.sleep(0.1)
                     continue
                 else:
@@ -222,6 +222,12 @@ class Pipeline:
                             "Target window restored, resuming frame processing."
                         )
                         self.minimized_paused = False
+                        if not self.user_paused:
+                            self.overlay.show()
+
+                # Only handle changes if not minimized
+                if changed:
+                    self._handle_window_change()
 
                 # If paused via hotkey, skip frame processing
                 if self.user_paused:
