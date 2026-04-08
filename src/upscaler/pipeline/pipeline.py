@@ -10,10 +10,11 @@ from compushady.formats import R8G8B8A8_UNORM
 
 from .controller import PipelineController
 from .swapchain import SwapchainManager
+from .text_renderer import TextRenderer
 from ..capture import FrameGrabber
-from ..config import Config, OverlayMode
+from ..config import Config, OverlayMode, OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..overlay import OverlayWindow
-from ..shaders import LanczosScaler, SRCNN
+from ..shaders import LanczosScaler, OverlayBlender, SRCNN
 from ..utils import parse_output_geometry, calculate_scaling_rect
 from ..window import WindowInfo, WindowTracker, get_display
 
@@ -125,6 +126,16 @@ class Pipeline:
         self._last_frame_time = 0.0
         self._grabber = None
         self._consecutive_failures = 0
+
+        # OSD
+        self._osd_texture: Optional[Texture2D] = None
+        self._osd_timer: float = 0.0
+        osd_texts = [f"Model: {m}" for m in UPSCALING_MODELS] + [
+            f"Geometry: {g}" for g in OUTPUT_GEOMETRIES
+        ]
+        self._text_renderer = TextRenderer(osd_texts, screen_height=self._screen_height)
+        self._overlay_blender = OverlayBlender()
+        self._overlay_blender.set_screen_texture(self._screen_tex)
 
     def start(self) -> None:
         """Start the pipeline thread."""
@@ -295,6 +306,13 @@ class Pipeline:
             self.overlay, "on_pipeline_stopped", Qt.QueuedConnection
         )
 
+    def show_osd(self, text: str, duration: float = 1.5):
+        """Request an OSD message to be displayed."""
+        tex = self._text_renderer.get_texture(text)
+        if tex is not None:
+            self._osd_texture = tex
+            self._osd_timer = duration
+
     def _process_one_frame(self) -> None:
         """Grab, upscale, scale, and present one frame."""
         # Grab frame
@@ -360,6 +378,16 @@ class Pipeline:
 
         # Dispatch Lanczos
         self.lanczos_scaler.dispatch(self._groups_x, self._groups_y)
+
+        # OSD overlay
+        if self._osd_texture is not None and self._osd_timer > 0:
+            w, h = self._osd_texture.width, self._osd_texture.height
+            x = (self._screen_width - w) // 2
+            y = (self._screen_height - h) // 2
+            self._overlay_blender.blend(self._osd_texture, x, y, w, h)
+            self._osd_timer -= 1.0 / 60.0  # approximate
+            if self._osd_timer <= 0:
+                self._osd_texture = None
 
         # Opacity control
         self.overlay.update_opacity()

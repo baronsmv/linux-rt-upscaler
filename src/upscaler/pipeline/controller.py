@@ -68,7 +68,7 @@ class PipelineController:
 
     def switch_model(self, next_model: bool = True) -> None:
         """Request a model switch (next or previous)."""
-        self._model_switch_queue.put(next_model)
+        self._model_switch_queue.put(not next_model)  # Inversed order
 
     def take_screenshot(self) -> None:
         """Request a lossless screenshot."""
@@ -129,6 +129,9 @@ class PipelineController:
         # Clear stale frames
         self._pipeline.clear_frame_queue()
 
+        # OSD message
+        self._pipeline.show_osd(f"Model: {new_model}")
+
     def _apply_geometry_cycle(self) -> None:
         total = len(self._available_geometries)
         if total == 0:
@@ -151,6 +154,9 @@ class PipelineController:
             Q_ARG(str, new_geometry),
         )
         self._pipeline.update_content_dimensions()
+
+        # OSD message
+        self._pipeline.show_osd(f"Geometry: {new_geometry}")
 
     def _save_screenshot(self) -> None:
         """Capture the raw upscaled texture (lossless, pre‑Lanczos) and save to PNG."""
