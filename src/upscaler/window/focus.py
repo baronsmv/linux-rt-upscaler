@@ -46,6 +46,9 @@ class FocusMonitor:
                     # Get full window info
                     win_info = get_active_window(display, ewmh)
                     if win_info:
+                        logger.info(
+                            f"Focus changed to: {win_info.handle} - {win_info.title}"
+                        )
                         self._current_handle = win_info.handle
                         if self._callback:
                             self._callback(win_info)

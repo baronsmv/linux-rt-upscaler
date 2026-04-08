@@ -186,7 +186,15 @@ class Pipeline:
 
         while self._running:
             try:
-                # Keep alive status fresh
+                try:
+                    new_win = self._switch_queue.get_nowait()
+                    if new_win is not None:
+                        logger.info(f"Processing switch to window {new_win.handle}")
+                        self._switch_target(new_win)
+                except Empty:
+                    pass
+
+                # Window alive check (only when follow_focus is off)
                 if not self._config.follow_focus:
                     self._window_tracker.check_alive()
                     if not self._window_tracker.alive:
@@ -431,11 +439,22 @@ class Pipeline:
             f"Switching pipeline to new window: {new_win_info.title} ({new_win_info.width}x{new_win_info.height})"
         )
 
-        # Update window_info and tracker
-        self._win_info = new_win_info
-        self._window_tracker = WindowTracker(
+        # Test if the window is alive
+        test_tracker = WindowTracker(
             new_win_info.handle, new_win_info.width, new_win_info.height
         )
+        test_tracker.update(force=True)
+        if not test_tracker.alive:
+            logger.warning(
+                f"New window {new_win_info.handle} is not alive, ignoring switch"
+            )
+            test_tracker.close()
+            return
+
+        # Close old tracker and replace
+        self._window_tracker.close()
+        self._window_tracker = test_tracker
+        self._win_info = new_win_info
 
         # Force a full update of all resources
         self._handle_window_change(force=True)
@@ -443,6 +462,8 @@ class Pipeline:
         # Update overlay with new target info
         self.overlay.set_target_handle(new_win_info.handle)
         self.overlay.set_target_size(new_win_info.width, new_win_info.height)
+
+        logger.info(f"Successfully switched to window {new_win_info.handle}")
 
     def request_switch(self, new_win_info: WindowInfo) -> None:
         self._switch_queue.put(new_win_info)
