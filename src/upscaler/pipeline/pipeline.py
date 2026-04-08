@@ -270,6 +270,7 @@ class Pipeline:
         )
         self._current_geometry_index = new_idx
         self._output_geometry = new_geometry
+        self._scale_mode = new_geometry
 
         # Update overlay's scale_mode
         QMetaObject.invokeMethod(
