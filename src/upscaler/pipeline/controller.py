@@ -61,10 +61,10 @@ class PipelineController:
         """Show/hide the overlay window."""
         if self._pipeline.overlay.isVisible():
             self._pipeline.overlay.hide()
-            self._pipeline.paused = True
+            self._pipeline.user_paused = True
         else:
             self._pipeline.overlay.show()
-            self._pipeline.paused = False
+            self._pipeline.user_paused = False
 
     def switch_model(self, next_model: bool = True) -> None:
         """Request a model switch (next or previous)."""

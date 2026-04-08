@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+from Xlib import X
 from Xlib.display import Display
 from Xlib.error import XError, BadWindow
 from Xlib.xobject.drawable import Window as XlibWindow
@@ -21,6 +22,7 @@ class WindowTracker:
         self.width = initial_width
         self.height = initial_height
         self.alive = True
+        self.minimized = False
 
         self._x_display: Optional[Display] = None
         self._x_window: Optional[XlibWindow] = None
@@ -51,7 +53,6 @@ class WindowTracker:
         """
         Quickly check if the tracked window still exists.
         Updates the internal `alive` flag and returns the current status.
-        This is a lightweight call (get_attributes) that does not fetch geometry.
         """
         if not self.alive:
             return False
@@ -102,9 +103,11 @@ class WindowTracker:
 
         try:
             geom = self._x_window.get_geometry()
+            attrs = self._x_window.get_attributes()
             new_handle = self._x_window.id
             new_width = geom.width
             new_height = geom.height
+            self.minimized = attrs.map_state == X.IsUnmapped
         except BadWindow:
             logger.debug("Window no longer exists (BadWindow in update)")
             self.alive = False

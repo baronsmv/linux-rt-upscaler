@@ -111,7 +111,8 @@ class Pipeline:
 
         # Threading control
         self._running = False
-        self.paused = False
+        self.user_paused = False
+        self.minimized_paused = False
         self._thread: Optional[threading.Thread] = None
         self._stopped_event = threading.Event()
         self._frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
@@ -186,6 +187,7 @@ class Pipeline:
 
         while self._running:
             try:
+                # Process switch requests
                 try:
                     new_win = self._switch_queue.get_nowait()
                     if new_win is not None:
@@ -201,19 +203,36 @@ class Pipeline:
                         logger.info("Target window closed – exiting.")
                         break
 
-                # If paused, check every 100 ms
-                if self.paused:
-                    time.sleep(0.1)
-                    continue
-
                 # Check for target window changes
                 if self._window_tracker.update():
                     self._handle_window_change()
 
+                # Handle minimization pause
+                if self._window_tracker.minimized:
+                    if not self.minimized_paused:
+                        logger.info(
+                            "Target window minimized, pausing frame processing."
+                        )
+                        self.minimized_paused = True
+                    time.sleep(0.1)
+                    continue
+                else:
+                    if self.minimized_paused:
+                        logger.info(
+                            "Target window restored, resuming frame processing."
+                        )
+                        self.minimized_paused = False
+
+                # If paused via hotkey, skip frame processing
+                if self.user_paused:
+                    time.sleep(0.1)
+                    continue
+
+                # Frame processing
                 self._process_one_frame()
                 self._frame_count += 1
 
-                # Check controller requests
+                # aCheck controller requests
                 self.controller.process_requests()
 
                 # FPS logging every 2 seconds
@@ -242,31 +261,9 @@ class Pipeline:
         # Grab frame
         try:
             frame = self._grabber.grab()
-            self._consecutive_failures = 0
         except RuntimeError as e:
-            if "window probably gone" in str(e):
-                self._consecutive_failures += 1
-                if self._consecutive_failures > 10:  # ~0.16 seconds
-                    logger.info("Target window gone for too long, stopping pipeline.")
-                    raise RuntimeError("Target window gone timeout")
-                logger.info("Target window disappeared, attempting to recover...")
-
-                # Force a fresh window size check
-                self._window_tracker.update(force=True)
-
-                # Force a full pipeline update
-                self._handle_window_change(force=True)
-
-                # Clear the frame queue to discard the stale frame
-                while not self._frame_queue.empty():
-                    try:
-                        self._frame_queue.get_nowait()
-                    except Empty:
-                        break
-                return
-
-            else:
-                raise
+            logger.warning(f"Frame grab failed: {e}")
+            return
 
         if not self._running:
             return
