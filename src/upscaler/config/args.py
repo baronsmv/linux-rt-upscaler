@@ -3,7 +3,7 @@ import logging
 from importlib.metadata import version, PackageNotFoundError
 from typing import Tuple, Dict, Optional, Any
 
-from .models import Config, OverlayMode
+from .models import Config, OverlayMode, UPSCALING_MODELS
 
 logger = logging.getLogger(__name__)
 
@@ -71,17 +71,7 @@ when focus changes)""",
     upscaling_group.add_argument(
         "-m",
         "--model",
-        choices=(
-            "8x32",
-            "4x32",
-            "4x24",
-            "4x16",
-            "4x12",
-            "3x12",
-            "fast",
-            "faster",
-            "veryfast",
-        ),
+        choices=UPSCALING_MODELS,
         default=DEFAULT_CONFIG.model,
         help=f"""Upscaling model to use (ordered from best to worst quality)
 Default: {DEFAULT_CONFIG.model}""",

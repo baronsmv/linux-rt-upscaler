@@ -2,6 +2,19 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional, Tuple, Union
 
+UPSCALING_MODELS = (
+    "8x32",
+    "4x32",
+    "4x24",
+    "4x16",
+    "4x12",
+    "3x12",
+    "fast",
+    "faster",
+    "veryfast",
+)
+OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
+
 
 class OverlayMode(str, Enum):
     """Overlay window behavior modes."""

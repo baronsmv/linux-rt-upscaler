@@ -220,6 +220,10 @@ class OverlayWindow(QMainWindow):
         logger.info("Pipeline stopped – quitting application.")
         QApplication.quit()
 
+    @Slot(str)
+    def set_scale_mode(self, mode: str) -> None:
+        self.scale_mode = mode
+
     def eventFilter(self, obj: Any, event: QEvent) -> bool:
         """Filter mouse events and forward them when forwarding is enabled."""
         if not self._should_forward or not self._forwarder.enabled:

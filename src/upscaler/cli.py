@@ -76,19 +76,19 @@ def main() -> None:
     hotkey_manager = HotkeyManager(
         {
             "toggle_scaling": "Alt+Shift+S",
-            "next_profile": "Ctrl+Alt+Right",
-            "prev_profile": "Ctrl+Alt+Left",
-            "screenshot": "Ctrl+Alt+P",
-            "cycle_geometry": "Ctrl+Alt+O",
+            "next_profile": "Alt+Shift+Right",
+            "prev_profile": "Alt+Shift+Left",
+            "screenshot": "Alt+Shift+P",
+            "cycle_geometry": "Alt+Shift+O",
         }
     )
 
     # Connect signals
     hotkey_manager.toggle_scaling.connect(pipeline.toggle_overlay)
-    # hotkey_manager.next_profile.connect(lambda: pipeline.switch_profile(next=True))
-    # hotkey_manager.prev_profile.connect(lambda: pipeline.switch_profile(next=False))
-    # hotkey_manager.screenshot.connect(pipeline.take_screenshot)
-    # hotkey_manager.cycle_geometry.connect(pipeline.cycle_output_geometry)
+    hotkey_manager.next_profile.connect(lambda: pipeline.switch_model(next_model=True))
+    hotkey_manager.prev_profile.connect(lambda: pipeline.switch_model(next_model=False))
+    hotkey_manager.screenshot.connect(pipeline.take_screenshot)
+    hotkey_manager.cycle_geometry.connect(pipeline.cycle_output_geometry)
 
     hotkey_manager.start()
 

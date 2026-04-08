@@ -31,6 +31,7 @@ requires-python = ">=3.8, <3.14"
 dependencies = [
     "compushady-lrtu",
     "ewmh",
+    "pillow",
     "psutil",
     "pyside6",
     "pyyaml",
