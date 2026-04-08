@@ -22,6 +22,23 @@ from ..window import WindowInfo, WindowTracker, get_display
 logger = logging.getLogger(__name__)
 
 
+def _download_and_save(texture: Texture2D, width: int, height: int) -> None:
+    """Download texture data and save as PNG. Runs in a background thread."""
+    try:
+        data = texture.download()
+        img = Image.frombytes("RGBA", (width, height), data, "raw", "BGRA")
+        img = img.convert("RGB")
+
+        save_dir = os.path.expanduser("~/.local/share/linux-rt-upscaler/screenshots")
+        os.makedirs(save_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = os.path.join(save_dir, f"screenshot_{timestamp}.png")
+        img.save(filename)
+        logger.info(f"Screenshot saved to {filename}")
+    except Exception as e:
+        logger.error(f"Failed to save screenshot: {e}", exc_info=True)
+
+
 class Pipeline:
     """
     Main processing pipeline: captures a window, upscales it via SRCNN,
@@ -225,23 +242,19 @@ class Pipeline:
     def _save_screenshot(self) -> None:
         """Capture the raw upscaled texture (lossless, pre‑Lanczos) and save to PNG."""
         try:
-            # Download raw SRCNN output
-            data = self._upscaler.output.download()
-            img = Image.frombytes(
-                "RGBA", (self._src_w, self._src_h), data, "raw", "BGRA"
-            )
-            img = img.convert("RGB")
+            # Create a temporary texture
+            temp_tex = Texture2D(self._src_w, self._src_h, R8G8B8A8_UNORM)
+            self._upscaler.output.copy_to(temp_tex)
 
-            save_dir = os.path.expanduser(
-                "~/.local/share/linux-rt-upscaler/screenshots"
-            )
-            os.makedirs(save_dir, exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = os.path.join(save_dir, f"screenshot_{timestamp}.png")
-            img.save(filename)
-            logger.info(f"Screenshot saved to {filename}")
+            # Offload the readback and file I/O to a separate thread
+            threading.Thread(
+                target=_download_and_save,
+                args=(temp_tex, self._src_w, self._src_h),
+                daemon=True,
+                name="ScreenshotSaver",
+            ).start()
         except Exception as e:
-            logger.error(f"Failed to save screenshot: {e}", exc_info=True)
+            logger.error(f"Failed to initiate screenshot: {e}", exc_info=True)
 
     def cycle_output_geometry(self) -> None:
         """Cycle to the next output geometry."""
