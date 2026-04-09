@@ -73,15 +73,9 @@ def main() -> None:
             )
         )
 
-    hotkey_manager = HotkeyManager(
-        {
-            "toggle_scaling": "Alt+Shift+S",
-            "cycle_model": "Alt+Shift+M",
-            "cycle_geometry": "Alt+Shift+G",
-            "screenshot": "Alt+Shift+P",
-        }
-    )
+    # Pipeline controller and Hotkey Manager
     controller = pipeline.controller
+    hotkey_manager = HotkeyManager(config.hotkeys)
 
     # Connect signals
     hotkey_manager.toggle_scaling.connect(controller.toggle_overlay)

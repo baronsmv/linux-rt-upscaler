@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Dict
 
 UPSCALING_MODELS = (
     "8x32",
@@ -14,6 +14,13 @@ UPSCALING_MODELS = (
     "veryfast",
 )
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
+
+DEFAULT_HOTKEYS = {
+    "toggle_scaling": "Alt+Shift+S",
+    "cycle_model": "Alt+Shift+M",
+    "cycle_geometry": "Alt+Shift+G",
+    "screenshot": "Alt+Shift+P",
+}
 
 
 class OverlayMode(str, Enum):
@@ -73,3 +80,4 @@ class Config:
 
     # Config file (not a configurable option, just used internally)
     config_file: Optional[str] = None
+    hotkeys: Dict[str, str] = field(default_factory=lambda: DEFAULT_HOTKEYS.copy())

@@ -1,32 +1,212 @@
-# User-defined options. They override system defaults
-# Add any you want to be applied in any general case
-# Examples:
-model: 4x12
-double_upscale: true
-scale_factor: 2.0
+# ------------------------------------------------------------------------------
+# Linux RT Upscaler – Configuration File
+# Default location: ~/.config/linux-rt-upscaler/config.yaml
+# ------------------------------------------------------------------------------
 
-# Profile definitions
-# Add profiles for specific cases, that can be selected via -p option
-# Or via match with the window title
-# If selected or matched, they override both user-defined and defaults
-# Examples:
+# All options are optional. Missing fields will fall back to their default
+# values (listed below). The final configuration is built in this order:
+#   1. Application defaults
+#   2. General options defined in this file (top level)
+#   3. Profile options (if a profile is selected manually with -p or matches
+#      the window title automatically)
+#   4. Command‑line overrides (e.g., --model 4x24)
+
+# ------------------------------------------------------------------------------
+# General Options (applied to all windows unless overridden by a profile)
+# ------------------------------------------------------------------------------
+
+# Upscaling model (trade‑off between quality and performance).
+# Available models (ordered from highest to lowest quality):
+#   - 8x32, 4x32, 4x24, 4x16, 4x12, 3x12, fast, faster, veryfast
+# Default: fast
+model: fast
+
+# Perform two sequential 2x upscales (total 4x) for very high‑resolution screens
+# or low‑resolution sources. Enabling this increases GPU load.
+# Default: false
+double_upscale: false
+
+# Monitor selection.
+#   - "primary"         : use the primary monitor (default)
+#   - "all"             : cover all monitors (multi‑monitor spanning)
+#   - "HDMI-1", "eDP-1" : specific monitor name (use xrandr to list names)
+#   - 0, 1, …           : monitor index (0 = first)
+# Default: primary
+monitor: primary
+
+# Override the automatically detected Wayland scale factor (e.g., 1.5 for 150%).
+# This is required when monitor is set to "all" because scaling cannot be
+# detected reliably across multiple monitors.
+# Default: null (auto‑detected)
+scale_factor: null
+
+# ------------------------------------------------------------------------------
+# Overlay / Output Geometry
+# ------------------------------------------------------------------------------
+
+# How the upscaled content is placed inside the overlay window.
+# Can be a simple mode or a precise dimension. Examples:
+#   - "fit"      : letterboxed, preserve aspect ratio (default)
+#   - "stretch"  : fill the window, ignore aspect ratio
+#   - "cover"    : fill the window, crop if necessary
+#   - "1920x1080": fit inside 1920×1080
+#   - "1920x1080!": stretch to exactly 1920×1080
+#   - "1920x1080^": cover a 1920×1080 area (crop)
+#   - "50%"      : fit to 50% of the monitor
+#   - "50%!"     : stretch to 50% of the monitor
+#   - "1920x"    : fixed width 1920, height proportional (fit)
+#   - "1920x!"   : fixed width 1920, height proportional (stretch)
+#   - "x1080"    : fixed height 1080, width proportional (fit)
+#   - "x1080!"   : fixed height 1080, width proportional (stretch)
+# Default: fit
+output_geometry: fit
+
+# Overlay window behaviour.
+#   - "always-on-top"   : floating, unmanaged overlay that stays above all windows
+#                         (mouse events are forwarded to the target window).
+#   - "top-transparent" : same as above but click‑through.
+#   - "fullscreen"      : fullscreen borderless window (covers the whole monitor).
+#   - "windowed"        : normal window with decorations, fixed size.
+# Default: always-on-top
+overlay_mode: always-on-top
+
+# Pixels to crop from each border of the captured window.
+# Useful for removing title bars, scroll bars, or black borders.
+# Default: 0
+crop_top: 0
+crop_bottom: 0
+crop_left: 0
+crop_right: 0
+
+# Horizontal / vertical offset (in pixels) from the centered position.
+# Positive moves right/down, negative moves left/up.
+# Default: 0
+offset_x: 0
+offset_y: 0
+
+# Color of letterbox / pillarbox bars. Can be a CSS color name or hex code.
+# Default: black
+background_color: "#000000"
+
+# ------------------------------------------------------------------------------
+# Interaction Options
+# ------------------------------------------------------------------------------
+
+# Automatically switch to the currently focused window (follow‑focus).
+# Default: false
+follow_focus: false
+
+# When the target window loses focus, pause frame processing and hide the overlay
+# (only applies when overlay_mode is "always-on-top" or "top-transparent").
+# Default: true
+pause_on_focus_loss: true
+
+# ------------------------------------------------------------------------------
+# Screenshot Options
+# ------------------------------------------------------------------------------
+
+# Directory where screenshots are saved. Supports ~ for home directory.
+# Default: ~/.local/share/linux-rt-upscaler/screenshots
+screenshot_dir: "~/.local/share/linux-rt-upscaler/screenshots"
+
+# ------------------------------------------------------------------------------
+# Window Detection Timeouts (used when launching a program)
+# ------------------------------------------------------------------------------
+
+# Seconds to wait before capturing the active window.
+# Default: 5
+target_delay: 5
+
+# Timeout for PID‑based window detection (phase 1).
+# Default: 10
+pid_timeout: 10
+
+# Timeout for class‑based window detection (phase 2).
+# Default: 10
+class_timeout: 10
+
+# Total time before giving up window detection.
+# Default: 30
+total_timeout: 30
+
+# Start with phase 1 (PID) or phase 2 (class). 1 = PID, 2 = class.
+# Default: 1
+starting_phase: 1
+
+# ------------------------------------------------------------------------------
+# Logging
+# ------------------------------------------------------------------------------
+
+# Log level: "DEBUG", "INFO", "WARNING", "ERROR".
+# Default: WARNING
+log_level: WARNING
+
+# Write logs to a file (parent directories are created automatically).
+# Default: null (no log file created)
+log_file: null
+
+# ------------------------------------------------------------------------------
+# Hotkeys (Keyboard Shortcuts)
+# ------------------------------------------------------------------------------
+
+# Modifier keys: Ctrl, Alt, Shift, Super (Windows key).
+# Key names: letters A–Z, numbers 0–9, F1–F12, Space, Return, Tab, Escape,
+#            Left, Right, Up, Down.
+# All hotkeys are global and work even when the overlay is not focused.
+hotkeys:
+  toggle_scaling: "Alt+Shift+S"   # Show/hide overlay
+  cycle_model: "Alt+Shift+M"      # Switch to next upscaling model
+  cycle_geometry: "Alt+Shift+G"   # Cycle output geometry (fit → stretch → cover)
+  screenshot: "Alt+Shift+P"       # Take a lossless screenshot (pre-Lanczos)
+
+# ------------------------------------------------------------------------------
+# Profiles
+# ------------------------------------------------------------------------------
+# Profiles allow you to define window‑specific settings. They are applied:
+#   - Manually via the -p/--profile CLI argument, or
+#   - Automatically when the target window title matches a match rule.
+#
+# Inside each profile, you can override any of the options listed above
+# (model, crop, output_geometry, etc.). Hotkeys cannot be changed per profile.
+
 profiles:
-  fata_morgana: # Can be specified with the -p/--profile option
-    match: # Optional: Or it can automatically match any title window
-      title: "The House in Fata Morgana"  # Exact string match (case-insensitive)
-      title_contains: "Fata Morgana"      # Or any string match (case-insensitive)
+
+  # Example of a manually selected profile (use -p fata_morgana)
+  fata_morgana:
+    # Automatic matching rules (optional – if omitted, the profile is manual only)
+    match:
+      # Exact title match (case‑insensitive)
+      title: "The House in Fata Morgana"
+      # Substring match (case‑insensitive)
+      title_contains: "Fata Morgana"
+      # Title starts with this prefix
+      title_startswith: "The House"
+      # Title ends with this suffix
+      title_endswith: "Morgana"
+      # Regular expression (case‑insensitive)
+      title_regex: "The House in Fata.*"
     options:
       model: 4x24
       crop_top: 21
       crop_bottom: 2
       crop_left: 2
       crop_right: 2
-  another_game:
+      output_geometry: cover
+
+  # Profile for a lightweight / fast game
+  retro_game:
     match:
-      title_startswith: "Another"  # Or match the beginning of the string (case-insensitive)
-      title_endswith: "Game"       # Or match the end of the string (case-insensitive)
-      title_regex: "Another .*"    # Or regex match (case-insensitive)
+      title_contains: "OpenTTD"
     options:
       model: veryfast
       crop_top: 15
       crop_bottom: 20
+
+  # Profile that uses a regular expression to match any emulator window
+  emulators:
+    match:
+      title_regex: "(PCSX2|Dolphin|RPCS3|Yuzu|Ryujinx).*"
+    options:
+      model: 4x12
+      double_upscale: false
+      output_geometry: stretch

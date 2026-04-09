@@ -311,8 +311,17 @@ Default: {DEFAULT_CONFIG.screenshot_dir}""",
 def apply_overrides(config: Config, overrides: Dict[str, Any]) -> None:
     """Update config with values from overrides dict (only keys that exist)."""
     for key, value in overrides.items():
-        if hasattr(config, key) and value is not None:
+        if not hasattr(config, key):
+            logger.warning(f"Ignoring unknown configuration key: '{key}'")
+            continue
+
+        if value is None:
+            continue  # skip None values
+
+        if key == "hotkeys" and isinstance(value, dict):
+            # Merge dictionaries: user overrides take precedence
+            config.hotkeys = {**config.hotkeys, **value}
+            logger.debug(f"Merged hotkeys override")
+        else:
             setattr(config, key, value)
             logger.debug(f"Applied override: {key} = {value!r}")
-        else:
-            logger.warning(f"Ignoring unknown configuration key: '{key}'")
