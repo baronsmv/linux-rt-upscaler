@@ -22,15 +22,15 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 
 - **AI‑Powered Upscaling** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high‑quality 2x upscaling of visual novels and illustrations.
 - **Complete Model Selection** – Choose from 9 variants, offering a range of quality/performance trade‑offs:
-    - `8x32` – Highest quality, slowest.
-    - `4x32`
-    - `4x24`
-    - `4x16`
-    - `4x12`
-    - `3x12`
-    - `fast` – Default. Recommended for slow machines.
-    - `faster`
-    - `veryfast` – Fastest option, lowest quality.
+  - `8x32` – Highest quality, slowest.
+  - `4x32`
+  - `4x24`
+  - `4x16`
+  - `4x12`
+  - `3x12`
+  - `fast` – Default. Recommended for slow machines.
+  - `faster`
+  - `veryfast` – Fastest option, lowest quality.
 - **Attach to Any Window** – Either grab the currently active window, select from visible windows or launch a new program and capture its window automatically.
 - **Flexible Output Geometry** – Control the overlay size, scaling mode, offset and borders.
 - **Input Forwarding** – Click, move, and drag on the upscaled image as if interacting directly with the original window.
@@ -153,12 +153,12 @@ upscale --help
 
 ### Controls
 
-| Shortcut                | Action                                       |
-|-------------------------|----------------------------------------------|
-| `Alt`+`Shift`+`S`       | Toggle overlay visibility / pause processing |
-| `Alt`+`Shift`+`M`       | Switch to the next upscaling model           |
-| `Alt`+`Shift`+`G`       | Cycle output geometry (fit → stretch → cover)|
-| `Alt`+`Shift`+`P`       | Take a lossless screenshot                   |
+| Shortcut          | Action                                                                   |
+| ----------------- | ------------------------------------------------------------------------ |
+| `Alt`+`Shift`+`S` | Toggle overlay visibility / pause processing                             |
+| `Alt`+`Shift`+`M` | Switch to the next upscaling model                                       |
+| `Alt`+`Shift`+`G` | Cycle output geometry (fit → stretch → cover)                            |
+| `Alt`+`Shift`+`P` | Take a lossless screenshot (`--screenshot-dir DIR` defines the location) |
 
 All hotkeys can be customised in the configuration file.
 
@@ -180,9 +180,9 @@ select: false
 profiles:
   game:
     match:
-      title: "Danganronpa"      # Exact match (case-insensitive)
-      title_contains: "ronp"    # Or substring match
-      title_regex: "Dangan.*"   # Or regular expression
+      title: "Danganronpa"     # Exact match (case-insensitive)
+      title_contains: "ronp"   # Or substring match
+      title_regex: "Dangan.*"  # Or regular expression
     options:
       model: 4x24
       double_upscale: true
@@ -233,7 +233,7 @@ This project stands on the shoulders of several open‑source works:
 - **[screeninfo](https://github.com/rr-/screeninfo)** – Python library to fetch location and size of physical screens.
 - **[PySide6](https://pypi.org/project/PySide6/)** – Qt bindings used for the overlay window.
 - **[python‑xlib](https://github.com/python-xlib/python-xlib)** – X11 client library for window management and input forwarding.
-- **[XCB binding for Python](https://github.com/tych0/xcffib)** – XCB binding for Python.
+- **[xcffib](https://github.com/tych0/xcffib)** – XCB binding for Python.
 - **[pyewmh](https://github.com/parkouss/pyewmh)** – Query and control of window manager.
 - **[psutil](https://github.com/giampaolo/psutil)** – Library for retrieving information on running processes.
 - **[Pillow](https://python-pillow.github.io/)** – The Python Imaging Library
