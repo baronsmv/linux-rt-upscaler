@@ -107,8 +107,8 @@ pause_on_focus_loss: true
 # ------------------------------------------------------------------------------
 
 # Directory where screenshots are saved. Supports ~ for home directory.
-# Default: ~/.local/share/linux-rt-upscaler/screenshots
-screenshot_dir: "~/.local/share/linux-rt-upscaler/screenshots"
+# Default: ~/Pictures/Screenshots (localized)
+screenshot_dir: "~/Pictures/Screenshots"
 
 # ------------------------------------------------------------------------------
 # Window Detection Timeouts (used when launching a program)

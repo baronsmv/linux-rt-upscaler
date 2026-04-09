@@ -1,6 +1,9 @@
+import os
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional, Tuple, Union, Dict
+
+from platformdirs import user_pictures_dir
 
 UPSCALING_MODELS = (
     "8x32",
@@ -65,7 +68,7 @@ class Config:
     background_color: BackgroundColor = "black"
 
     # Screenshots
-    screenshot_dir: str = "~/.local/share/linux-rt-upscaler/screenshots"
+    screenshot_dir: str = os.path.join(user_pictures_dir(), "Screenshots")
 
     # Window detection
     target_delay: int = 5
