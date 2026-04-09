@@ -11,6 +11,7 @@
 #      the window title automatically)
 #   4. Command‑line overrides (e.g., --model 4x24)
 
+
 # ------------------------------------------------------------------------------
 # General Options (applied to all windows unless overridden by a profile)
 # ------------------------------------------------------------------------------
@@ -158,6 +159,7 @@ hotkeys:
   cycle_model: "Alt+Shift+M"      # Switch to next upscaling model
   cycle_geometry: "Alt+Shift+G"   # Cycle output geometry (fit → stretch → cover)
   screenshot: "Alt+Shift+P"       # Take a lossless screenshot (pre-Lanczos)
+
 
 # ------------------------------------------------------------------------------
 # Profiles

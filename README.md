@@ -37,6 +37,7 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 - **Hardware Accelerated** – Vulkan compute (Compushady) works on NVIDIA, AMD, and Intel GPUs.
 - **XWayland Compatible** – Runs under Wayland compositors by automatically forcing X11 platform for Qt.
 - **Low Overhead** – Final scaling pass uses hardware Lanczos2 filtering.
+- **Global Hotkeys & On‑Screen Display** – Switch models, take lossless screenshots and more using keyboard shortcuts.
 
 ## Requirements
 
@@ -152,6 +153,15 @@ upscale --help
 
 ### Controls
 
+| Shortcut                | Action                                       |
+|-------------------------|----------------------------------------------|
+| `Alt`+`Shift`+`S`       | Toggle overlay visibility / pause processing |
+| `Alt`+`Shift`+`M`       | Switch to the next upscaling model           |
+| `Alt`+`Shift`+`G`       | Cycle output geometry (fit → stretch → cover)|
+| `Alt`+`Shift`+`P`       | Take a lossless screenshot                   |
+
+All hotkeys can be customised in the configuration file.
+
 - **Exit**: `Ctrl+C` in the terminal.
 
 ### Profiles
@@ -198,16 +208,14 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 
 ## Known Issues
 
-### Mouse forwarding does not work under Wine, Firefox and other applications
+### Mouse forwarding may not work with Wine, Proton <10 and other applications
 
-Some applications do not receive synthetic mouse events (clicks, motion, wheel) forwarded by the overlay. This has been observed with:
+Synthetic mouse events (clicks, motion, wheel) sent by the overlay are ignored by:
 
-- Wine‑based games (GE-Proton10 seems to work).
+- Wine and Proton versions older than 10.0 (Proton 10 works correctly).
 - Certain native applications like Firefox.
 
-The upscaler forwards mouse events using `XSendEvent`, which only delivers events to windows that have explicitly selected the corresponding event mask (e.g., `ButtonPressMask`). Some applications either do not request these masks or filter out synthetic events.
-
-For more details, see issue [#7](https://github.com/baronsmv/linux-rt-upscaler/issues/7).
+For more details, see [issue #7](https://github.com/baronsmv/linux-rt-upscaler/issues/7).
 
 ## Motivation
 
@@ -222,7 +230,10 @@ This project stands on the shoulders of several open‑source works:
 - **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real‑time CuNNy upscaling on Linux. This project extends that foundation with full‑screen scaling, accurate input forwarding, and support for all CuNNy NVL models and GPU vendors.
 - **[funnyplanter](https://github.com/funnyplanter)** – For [CuNNy](https://github.com/funnyplanter/CuNNy), the neural network upscaling models, especially the Magpie NVL variants trained for visual novel content.
 - **[Compushady](https://github.com/rdeioris/compushady)** – Python library for GPU compute (Vulkan backend).
+- **[screeninfo](https://github.com/rr-/screeninfo)** – Python library to fetch location and size of physical screens.
 - **[PySide6](https://pypi.org/project/PySide6/)** – Qt bindings used for the overlay window.
 - **[python‑xlib](https://github.com/python-xlib/python-xlib)** – X11 client library for window management and input forwarding.
+- **[XCB binding for Python](https://github.com/tych0/xcffib)** – XCB binding for Python.
 - **[pyewmh](https://github.com/parkouss/pyewmh)** – Query and control of window manager.
 - **[psutil](https://github.com/giampaolo/psutil)** – Library for retrieving information on running processes.
+- **[Pillow](https://python-pillow.github.io/)** – The Python Imaging Library
