@@ -76,20 +76,18 @@ def main() -> None:
     hotkey_manager = HotkeyManager(
         {
             "toggle_scaling": "Alt+Shift+S",
-            "next_model": "Alt+Shift+Right",
-            "prev_model": "Alt+Shift+Left",
+            "cycle_model": "Alt+Shift+M",
+            "cycle_geometry": "Alt+Shift+G",
             "screenshot": "Alt+Shift+P",
-            "cycle_geometry": "Alt+Shift+O",
         }
     )
     controller = pipeline.controller
 
     # Connect signals
     hotkey_manager.toggle_scaling.connect(controller.toggle_overlay)
-    hotkey_manager.next_model.connect(lambda: controller.switch_model(next_model=True))
-    hotkey_manager.prev_model.connect(lambda: controller.switch_model(next_model=False))
-    hotkey_manager.screenshot.connect(controller.take_screenshot)
+    hotkey_manager.cycle_model.connect(controller.switch_model)
     hotkey_manager.cycle_geometry.connect(controller.switch_geometry)
+    hotkey_manager.screenshot.connect(controller.take_screenshot)
 
     hotkey_manager.start()
 

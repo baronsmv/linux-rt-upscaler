@@ -16,10 +16,9 @@ class HotkeyManager(QObject):
 
     # Signals
     toggle_scaling = Signal()
-    next_model = Signal()
-    prev_model = Signal()
-    screenshot = Signal()
+    cycle_model = Signal()
     cycle_geometry = Signal()
+    screenshot = Signal()
 
     _MODIFIER_MAP = {
         "Ctrl": ModMask.Control,
@@ -34,13 +33,50 @@ class HotkeyManager(QObject):
     _LOCK_MASKS = [0, ModMask._2, ModMask.Lock, ModMask._5]
 
     _KEYSYM_MAP = {
-        "S": 0x53,
-        "P": 0x50,
-        "O": 0x4F,
+        # Letters
+        "A": 0x61,
+        "B": 0x62,
+        "C": 0x63,
+        "D": 0x64,
+        "E": 0x65,
+        "F": 0x66,
+        "G": 0x67,
+        "H": 0x68,
+        "I": 0x69,
+        "J": 0x6A,
+        "K": 0x6B,
+        "L": 0x6C,
+        "M": 0x6D,
+        "N": 0x6E,
+        "O": 0x6F,
+        "P": 0x70,
+        "Q": 0x71,
+        "R": 0x72,
+        "S": 0x73,
+        "T": 0x74,
+        "U": 0x75,
+        "V": 0x76,
+        "W": 0x77,
+        "X": 0x78,
+        "Y": 0x79,
+        "Z": 0x7A,
+        # Numbers
+        "0": 0x30,
+        "1": 0x31,
+        "2": 0x32,
+        "3": 0x33,
+        "4": 0x34,
+        "5": 0x35,
+        "6": 0x36,
+        "7": 0x37,
+        "8": 0x38,
+        "9": 0x39,
+        # Arrows
         "Left": 0xFF51,
         "Right": 0xFF53,
         "Up": 0xFF52,
         "Down": 0xFF54,
+        # Function keys
         "F1": 0xFFBE,
         "F2": 0xFFBF,
         "F3": 0xFFC0,
@@ -53,6 +89,7 @@ class HotkeyManager(QObject):
         "F10": 0xFFC7,
         "F11": 0xFFC8,
         "F12": 0xFFC9,
+        # Other common keys
         "Space": 0x20,
         "Return": 0xFF0D,
         "Tab": 0xFF09,
