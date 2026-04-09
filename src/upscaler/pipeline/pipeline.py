@@ -2,7 +2,7 @@ import logging
 import threading
 import time
 from queue import Empty, Queue
-from typing import Optional
+from typing import Optional, Tuple
 
 from PySide6.QtCore import QMetaObject, Qt
 from compushady import Texture2D
@@ -39,7 +39,7 @@ class Pipeline:
             win_info: Information about the target window.
             overlay: The overlay window (already shown and ready).
         """
-        self._config = config
+        self.config = config
         self._win_info = win_info
         self.overlay = overlay
 
@@ -119,6 +119,7 @@ class Pipeline:
         self._stopped_event = threading.Event()
         self._frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
         self._switch_queue: Queue[Optional[WindowInfo]] = Queue()
+        self.osd_queue: Queue[Tuple[str, float]] = Queue()
 
         # Performance
         self._frame_count = 0
@@ -130,9 +131,11 @@ class Pipeline:
         # OSD
         self._osd_texture: Optional[Texture2D] = None
         self._osd_timer: float = 0.0
-        osd_texts = [f"Model: {m}" for m in UPSCALING_MODELS] + [
-            f"Geometry: {g}" for g in OUTPUT_GEOMETRIES
-        ]
+        osd_texts = (
+            [f"Model: {m}" for m in UPSCALING_MODELS]
+            + [f"Geometry: {g}" for g in OUTPUT_GEOMETRIES]
+            + ["Screenshot saved", "Screenshot failed"]
+        )
         self._text_renderer = TextRenderer(osd_texts, screen_height=self._screen_height)
         self._overlay_blender = OverlayBlender()
         self._overlay_blender.set_screen_texture(self._screen_tex)
@@ -209,7 +212,7 @@ class Pipeline:
                     pass
 
                 # Window alive check (only when follow_focus is off)
-                if not self._config.follow_focus:
+                if not self.config.follow_focus:
                     self._window_tracker.check_alive()
                     if not self._window_tracker.alive:
                         logger.info("Target window closed – exiting.")
@@ -238,14 +241,14 @@ class Pipeline:
                             self.overlay.show()
 
                 # Handle focus and manual pause
-                bypass_wm = self._config.overlay_mode in (
+                bypass_wm = self.config.overlay_mode in (
                     OverlayMode.ALWAYS_ON_TOP.value,
                     OverlayMode.ALWAYS_ON_TOP_TRANSPARENT.value,
                 )
 
                 if (
                     bypass_wm
-                    and self._config.pause_on_focus_loss
+                    and self.config.pause_on_focus_loss
                     and not self._window_tracker.active
                 ):
                     if not self.focus_paused:
@@ -284,6 +287,13 @@ class Pipeline:
 
                 # Check controller requests
                 self.controller.process_requests()
+
+                # Process OSD requests from other threads
+                try:
+                    text, duration = self.osd_queue.get_nowait()
+                    self.show_osd(text, duration)
+                except Empty:
+                    pass
 
                 # FPS logging every 2 seconds
                 now = time.time()
@@ -345,8 +355,8 @@ class Pipeline:
         canvas_x = (self._screen_width - self._content_width) // 2
         canvas_y = (self._screen_height - self._content_height) // 2
 
-        dst_x = canvas_x + r_x + self._config.offset_x
-        dst_y = canvas_y + r_y + self._config.offset_y
+        dst_x = canvas_x + r_x + self.config.offset_x
+        dst_y = canvas_y + r_y + self.config.offset_y
         dst_w = r_w
         dst_h = r_h
 

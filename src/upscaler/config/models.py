@@ -57,6 +57,9 @@ class Config:
     offset_y: int = 0
     background_color: BackgroundColor = "black"
 
+    # Screenshots
+    screenshot_dir: str = "~/.local/share/linux-rt-upscaler/screenshots"
+
     # Window detection
     target_delay: int = 5
     pid_timeout: int = 5

@@ -224,33 +224,43 @@ code (e.g., '#000000', '#FF0000')
 Default: {DEFAULT_CONFIG.background_color}""",
     )
 
+    # Screenshot section
+    screenshot_group = parser.add_argument_group("SCREENSHOT OPTIONS")
+    screenshot_group.add_argument(
+        "--screenshot-dir",
+        type=str,
+        default=DEFAULT_CONFIG.screenshot_dir,
+        help=f"""Directory to save screenshots.
+Default: {DEFAULT_CONFIG.screenshot_dir}""",
+    )
+
     # Timeout / window detection section
-    timeout_group = parser.add_argument_group("WINDOW DETECTION OPTIONS")
-    timeout_group.add_argument(
+    window_detection_group = parser.add_argument_group("WINDOW DETECTION OPTIONS")
+    window_detection_group.add_argument(
         "--target-delay",
         type=int,
         default=DEFAULT_CONFIG.target_delay,
         help="Seconds to wait before capturing active window",
     )
-    timeout_group.add_argument(
+    window_detection_group.add_argument(
         "--pid-timeout",
         type=int,
         default=DEFAULT_CONFIG.pid_timeout,
         help="Seconds to try PID‑based window detection",
     )
-    timeout_group.add_argument(
+    window_detection_group.add_argument(
         "--class-timeout",
         type=int,
         default=DEFAULT_CONFIG.class_timeout,
         help="Seconds to try class‑based window detection",
     )
-    timeout_group.add_argument(
+    window_detection_group.add_argument(
         "--total-timeout",
         type=int,
         default=DEFAULT_CONFIG.total_timeout,
         help="Total seconds before giving up",
     )
-    timeout_group.add_argument(
+    window_detection_group.add_argument(
         "--starting-phase",
         type=int,
         choices=[1, 2],
