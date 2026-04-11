@@ -100,8 +100,6 @@ sudo apk add vulkan-headers libx11-dev libxcb-dev
 
 ### 2. Python package
 
-> **Python 3.14 users:** Please see the [compatibility note](#requirements) above for the recommended installation method.
-
 #### Install with pipx (recommended)
 
 ```sh
