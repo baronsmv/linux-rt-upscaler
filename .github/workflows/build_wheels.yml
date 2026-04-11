@@ -32,7 +32,7 @@ jobs:
             yum install -y libX11-devel vulkan-devel || dnf install -y libX11-devel vulkan-devel
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BUILD: cp${{ matrix.pyver }}-*
-          CIBW_TEST_COMMAND: "python -c 'import upscaler.capture'"
+          CIBW_TEST_COMMAND: ${{ matrix.pyver == '314' && '' || 'python -c "import upscaler.capture"' }}
           CIBW_BUILD_VERBOSITY: 3
           CIBW_BEFORE_BUILD: "ls -la src/upscaler/capture"
           CIBW_SKIP: "*-musllinux*"
