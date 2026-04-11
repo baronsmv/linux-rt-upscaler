@@ -51,7 +51,7 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 > [!NOTE]
 > **Python 3.14 compatibility**
 >
-> Previously, we advised against Python 3.14 due to a suspected Vulkan backend issue ([#1](https://github.com/baronsmv/linux-rt-upscaler/issues/1#issuecomment-4069065775)). A recent testing shows the upscaler works fine with it.
+> Previously, we advised against Python 3.14 due to a suspected Vulkan backend issue ([#1](https://github.com/baronsmv/linux-rt-upscaler/issues/1#issuecomment-4069065775)). Recent testing shows the upscaler works fine with it.
 >
 > Python 3.14 is now supported. **However**, official PyPI wheels for 3.14 are temporarily unavailable because `PySide6` doesn't provide a compatible `cp314`-tagged wheel yet.
 >
@@ -99,6 +99,8 @@ sudo apk add vulkan-headers libx11-dev libxcb-dev
 ```
 
 ### 2. Python package
+
+> **Python 3.14 users:** Please see the [compatibility note](#requirements) above for the recommended installation method.
 
 #### Install with pipx (recommended)
 
