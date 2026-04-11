@@ -46,9 +46,11 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 - Vulkan drivers (`libvulkan-dev`)
 - X11 development libraries (`libx11-dev`)
 - X C Binding headers (`libxcb-dev`)
-- Python 3.8 – 3.13
+- Python 3.10 or newer
 
-> **Python 3.14 compatibility**: Currently not supported due to a low‑level Vulkan backend issue. Please use a Python ≤ 3.13 virtual environment if you have Python 3.14 installed. See [issue #1](https://github.com/baronsmv/linux-rt-upscaler/issues/1#issuecomment-4069065775) for details.
+> **Python 3.14 compatibility**: Previously, we advised against using Python 3.14 due to a suspected Vulkan backend issue (see [issue #1](https://github.com/baronsmv/linux-rt-upscaler/issues/1#issuecomment-4069065775)). However, in a recent testing using Python 3.14.3, the upscaler worked without any problems.
+>
+> If you encounter any Vulkan‑related crashes or unexpected behavior while using Python 3.14, please [open a new issue](https://github.com/baronsmv/linux-rt-upscaler/issues) with your system details (GPU, driver version, distro). Your report will help us ensure 3.14 support.
 
 ## Installation
 

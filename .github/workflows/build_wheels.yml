@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        pyver: [ '39', '310', '311', '312', '313' ]
+        pyver: [ '310', '311', '312', '313', '314' ]
     steps:
       - uses: actions/checkout@v4
 
