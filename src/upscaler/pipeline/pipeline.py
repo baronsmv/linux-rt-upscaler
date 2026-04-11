@@ -341,7 +341,7 @@ class Pipeline:
     def _process_one_frame(self) -> None:
         # Grab frame
         try:
-            frame, is_dirty = self._grabber.grab()
+            frame, is_dirty, rects = self._grabber.grab()
         except RuntimeError as e:
             logger.warning(f"Frame grab failed: {e}")
             return

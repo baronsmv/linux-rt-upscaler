@@ -1,16 +1,23 @@
 import ctypes
 import logging
 import os
-from typing import Any, Tuple
+from typing import Any, List, Tuple
 
 logger = logging.getLogger(__name__)
 
 _lib_path = os.path.join(os.path.dirname(__file__), "capture_x11.so")
 _lib = ctypes.CDLL(_lib_path)
 
+_MAX_DAMAGE_RECTS = 256
 
-class CaptureContext(ctypes.Structure):
-    pass
+
+class DamageRect(ctypes.Structure):
+    _fields_ = [
+        ("x", ctypes.c_int),
+        ("y", ctypes.c_int),
+        ("width", ctypes.c_int),
+        ("height", ctypes.c_int),
+    ]
 
 
 _lib.capture_create.argtypes = [
@@ -20,15 +27,17 @@ _lib.capture_create.argtypes = [
     ctypes.c_int,
     ctypes.c_int,
 ]
-_lib.capture_create.restype = ctypes.POINTER(CaptureContext)
+_lib.capture_create.restype = ctypes.c_void_p
 
-_lib.capture_grab.argtypes = [
-    ctypes.POINTER(CaptureContext),
+_lib.capture_grab_damage.argtypes = [
+    ctypes.c_void_p,
     ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.POINTER(DamageRect),
+    ctypes.c_int,
 ]
-_lib.capture_grab.restype = ctypes.c_int  # 0=success, 1=no damage, -1=error
+_lib.capture_grab_damage.restype = ctypes.c_int
 
-_lib.capture_destroy.argtypes = [ctypes.POINTER(CaptureContext)]
+_lib.capture_destroy.argtypes = [ctypes.c_void_p]
 _lib.capture_destroy.restype = None
 
 
@@ -49,29 +58,29 @@ class FrameGrabber:
 
         self.buffer_size = self.width * self.height * 4
         self.buffer = (ctypes.c_ubyte * self.buffer_size)()
+        self._rects_buffer = (DamageRect * _MAX_DAMAGE_RECTS)()
 
         self._ctx = _lib.capture_create(
             self.handle, self.crop_left, self.crop_top, self.width, self.height
         )
         if not self._ctx:
-            raise RuntimeError(
-                "Failed to create capture context (XShm/XDamage unavailable)"
-            )
+            raise RuntimeError("Failed to create capture context")
 
         logger.info(f"FrameGrabber initialized: {self.width}x{self.height}")
 
-    def grab(self) -> Tuple[memoryview, bool]:
-        """
-        Capture a frame.
-        Returns:
-            (memoryview of buffer, is_dirty)
-            is_dirty is False if the window contents have not changed (damage tracking).
-        """
-        result = _lib.capture_grab(self._ctx, self.buffer)
-        if result == -1:
-            raise RuntimeError("capture_grab failed (window closed?)")
-        is_dirty = result == 0
-        return memoryview(self.buffer), is_dirty
+    def grab(self) -> Tuple[memoryview, bool, List[Tuple[int, int, int, int]]]:
+        num_rects = _lib.capture_grab_damage(
+            self._ctx, self.buffer, self._rects_buffer, _MAX_DAMAGE_RECTS
+        )
+        if num_rects == -1:
+            raise RuntimeError("capture failed")
+        is_dirty = num_rects > 0
+        rects = []
+        if is_dirty:
+            for i in range(num_rects):
+                r = self._rects_buffer[i]
+                rects.append((r.x, r.y, r.width, r.height))
+        return memoryview(self.buffer), is_dirty, rects
 
     def __del__(self):
         if hasattr(self, "_ctx") and self._ctx:

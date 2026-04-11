@@ -1,10 +1,9 @@
 /*
- * capture_x11.c – High‑performance X11 window capture with XShm, XDamage, and
- * XFixes.
+ * capture_x11.c – Fast X11 capture with damage rectangle support.
  *
  * Compile:
  *   gcc -shared -fPIC -O3 -march=native capture_x11.c -o capture_x11.so \
- *       -lX11 -lXext -lXdamage -lXfixes
+ *        -lX11 -lXext -lXdamage -lXfixes
  */
 
 #include <X11/Xlib.h>
@@ -19,6 +18,12 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
+#define MAX_DAMAGE_RECTS 256
+
+typedef struct {
+  int x, y, width, height;
+} DamageRect;
+
 typedef struct CaptureContext {
   Display *dpy;
   XID xid;
@@ -29,12 +34,12 @@ typedef struct CaptureContext {
   unsigned long red_mask, green_mask, blue_mask;
   int use_fast_path;
 
-  /* Damage tracking */
+  /* Damage */
   int damage_event_base, damage_error_base;
   Damage damage;
   int xfixes_event_base, xfixes_error_base;
-  int use_damage;         /* 1 if both XDamage and XFixes are usable */
-  int needs_full_capture; /* force full capture after window resize, etc. */
+  int use_damage;
+  int first_capture_done;
 } CaptureContext;
 
 CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
@@ -47,7 +52,7 @@ CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
   if (!ctx->dpy)
     goto fail;
 
-  /* Check SHM extension */
+  /* Check SHM */
   int major, minor;
   Bool pixmaps;
   if (!XShmQueryExtension(ctx->dpy) ||
@@ -108,7 +113,7 @@ CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
     ctx->damage = XDamageCreate(ctx->dpy, xid, XDamageReportNonEmpty);
     if (ctx->damage) {
       ctx->use_damage = 1;
-      ctx->needs_full_capture = 1; /* first frame always captured */
+      ctx->first_capture_done = 0;
     }
   }
 
@@ -121,49 +126,14 @@ fail:
   return NULL;
 }
 
-/*
- * capture_grab
- *
- * Returns:
- *   0  – success, frame data written to output_data
- *   1  – no damage (frame unchanged), output_data untouched
- *  -1  – error (window closed, etc.)
- */
-int capture_grab(CaptureContext *ctx, unsigned char *output_data) {
-  if (!ctx || !ctx->dpy || !ctx->img)
-    return -1;
-
-  /* Damage check using XFixes region emptiness */
-  if (ctx->use_damage) {
-    if (!ctx->needs_full_capture) {
-      XserverRegion parts = XFixesCreateRegion(ctx->dpy, NULL, 0);
-      /* Subtract nothing (repair = None), retrieve current damage in 'parts' */
-      XDamageSubtract(ctx->dpy, ctx->damage, None, parts);
-
-      int num_rects = 0;
-      XFixesFetchRegion(ctx->dpy, parts, &num_rects);
-      XFixesDestroyRegion(ctx->dpy, parts);
-
-      if (num_rects == 0) {
-        return 1; /* no damage – buffer unchanged */
-      }
-    }
-    ctx->needs_full_capture = 0;
-  }
-
-  /* Perform the capture */
-  if (!XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x, ctx->y, AllPlanes))
-    return -1;
-
-  /* Convert pixels to BGRX (or as defined by the ORDER macro – we hardcode BGRX
-   * here) */
+/* Convert the entire XImage to BGRX and write to output_data */
+static void convert_full_frame(CaptureContext *ctx,
+                               unsigned char *output_data) {
   int ii = 0;
   if (ctx->use_fast_path) {
     unsigned char *src = (unsigned char *)ctx->img->data;
     int stride = ctx->img->bytes_per_line;
-    unsigned long rm = ctx->red_mask;
-    unsigned long gm = ctx->green_mask;
-    unsigned long bm = ctx->blue_mask;
+    unsigned long rm = ctx->red_mask, gm = ctx->green_mask, bm = ctx->blue_mask;
 
     for (int y = 0; y < ctx->height; y++) {
       uint32_t *row = (uint32_t *)(src + y * stride);
@@ -186,8 +156,97 @@ int capture_grab(CaptureContext *ctx, unsigned char *output_data) {
       }
     }
   }
+}
 
-  return 0;
+int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
+                        DamageRect *rects, int max_rects) {
+  if (!ctx || !ctx->dpy || !ctx->img)
+    return -1;
+
+  /* If damage extension not available, always full capture */
+  if (!ctx->use_damage) {
+    if (!XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x, ctx->y, AllPlanes))
+      return -1;
+    convert_full_frame(ctx, output_data);
+    if (max_rects > 0) {
+      rects[0].x = 0;
+      rects[0].y = 0;
+      rects[0].width = ctx->width;
+      rects[0].height = ctx->height;
+      return 1;
+    }
+    return 1;
+  }
+
+  /* First capture: always full, consume initial damage */
+  if (!ctx->first_capture_done) {
+    if (!XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x, ctx->y, AllPlanes))
+      return -1;
+    convert_full_frame(ctx, output_data);
+    ctx->first_capture_done = 1;
+    XDamageSubtract(ctx->dpy, ctx->damage, None,
+                    None); // clear initial damage report
+    if (max_rects > 0) {
+      rects[0].x = 0;
+      rects[0].y = 0;
+      rects[0].width = ctx->width;
+      rects[0].height = ctx->height;
+      return 1;
+    }
+    return 1;
+  }
+
+  /* Subsequent captures: check damage via XFixes */
+  XserverRegion parts = XFixesCreateRegion(ctx->dpy, NULL, 0);
+  XDamageSubtract(ctx->dpy, ctx->damage, None, parts);
+
+  int num_rects = 0;
+  XRectangle bounds = {0, 0, 0, 0};
+  XRectangle *xrects =
+      XFixesFetchRegionAndBounds(ctx->dpy, parts, &num_rects, &bounds);
+  XFixesDestroyRegion(ctx->dpy, parts);
+
+  if (num_rects == 0 || bounds.width == 0 || bounds.height == 0) {
+    if (xrects)
+      XFree(xrects);
+    return 0; // no damage, output_data unchanged
+  }
+
+  /* Damage present: capture full frame */
+  if (!XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x, ctx->y, AllPlanes)) {
+    if (xrects)
+      XFree(xrects);
+    return -1;
+  }
+  convert_full_frame(ctx, output_data);
+
+  /* Return damage rectangles */
+  int count = 0;
+  if (xrects) {
+    count = num_rects < max_rects ? num_rects : max_rects;
+    for (int i = 0; i < count; i++) {
+      rects[i].x = xrects[i].x;
+      rects[i].y = xrects[i].y;
+      rects[i].width = xrects[i].width;
+      rects[i].height = xrects[i].height;
+    }
+    XFree(xrects);
+  } else {
+    if (max_rects > 0) {
+      rects[0].x = bounds.x;
+      rects[0].y = bounds.y;
+      rects[0].width = bounds.width;
+      rects[0].height = bounds.height;
+      count = 1;
+    }
+  }
+  return count;
+}
+
+int capture_grab(CaptureContext *ctx, unsigned char *output_data) {
+  DamageRect dummy;
+  int result = capture_grab_damage(ctx, output_data, &dummy, 0);
+  return (result > 0) ? 0 : (result == 0) ? 1 : -1;
 }
 
 void capture_destroy(CaptureContext *ctx) {
