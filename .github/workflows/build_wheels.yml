@@ -8,13 +8,13 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheel for Python ${{ matrix.python }} ${{ matrix.pyver }} on ${{ matrix.os }}
+    name: Build wheel for Python ${{ matrix.pyver }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        pyver: [ '310', '311', '312', '313' ]
+        pyver: [ '310', '311', '312', '313', '314' ]
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +36,8 @@ jobs:
           CIBW_BUILD_VERBOSITY: 3
           CIBW_BEFORE_BUILD: "ls -la src/upscaler/capture"
           CIBW_SKIP: "*-musllinux*"
+          # Pre-install PySide6
+          CIBW_BEFORE_TEST: "pip install --only-binary=:all: PySide6"
         run: python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v4
