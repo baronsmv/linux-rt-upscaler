@@ -48,15 +48,20 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 - X C Binding headers (`libxcb-dev`)
 - Python 3.10 or newer
 
-> **Python 3.14 compatibility**: Previously, we advised against using Python 3.14 due to a suspected Vulkan backend issue (see [issue #1](https://github.com/baronsmv/linux-rt-upscaler/issues/1#issuecomment-4069065775)). In a recent testing with it, the upscaler worked without any problems.
+> [!NOTE]
+> **Python 3.14 compatibility**
 >
-> Python 3.14 is now supported, **however** official PyPI wheels for Python 3.14 are temporarily unavailable due to a missing `PySide6` wheel. You can still use Python 3.14 by installing the package from source or by waiting for PySide6 to release `cp314` wheels. If you encounter any Vulkan‑related crashes while using it, please [open a new issue](https://github.com/baronsmv/linux-rt-upscaler/issues) with your system details.
+> Previously, we advised against Python 3.14 due to a suspected Vulkan backend issue ([#1](https://github.com/baronsmv/linux-rt-upscaler/issues/1#issuecomment-4069065775)). A recent testing shows the upscaler works fine with it.
 >
-> Until that's resolved, the simplest workaround is to install it using Python 3.13:
+> Python 3.14 is now supported. **However**, official PyPI wheels for 3.14 are temporarily unavailable because `PySide6` doesn't provide a compatible `cp314`-tagged wheel yet.
+>
+> **Workaround**: Use Python 3.13 for the easiest install:
 >
 > ```sh
 > pipx install --python=python3.13 --fetch-missing-python linux-rt-upscaler
 > ```
+>
+> Alternatively, you can install it from source or wait for `PySide6` to release `cp314` wheels. If you hit any Vulkan‑related crashes on 3.14, please [open an issue](https://github.com/baronsmv/linux-rt-upscaler/issues).
 
 ## Installation
 
