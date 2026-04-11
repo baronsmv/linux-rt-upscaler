@@ -130,7 +130,8 @@ class Pipeline:
 
         # OSD
         self._osd_texture: Optional[Texture2D] = None
-        self._osd_timer: float = 0.0
+        self._needs_osd_redraw = False
+        self._osd_expiry_time: Optional[float] = None
         osd_texts = (
             [f"Model: {m}" for m in UPSCALING_MODELS]
             + [f"Geometry: {g}" for g in OUTPUT_GEOMETRIES]
@@ -321,13 +322,26 @@ class Pipeline:
         tex = self._text_renderer.get_texture(text)
         if tex is not None:
             self._osd_texture = tex
-            self._osd_timer = duration
+            self._osd_expiry_time = time.monotonic() + duration
+            self._needs_osd_redraw = True
+
+    def _draw_osd(self) -> None:
+        if self._osd_texture is not None:
+            w, h = self._osd_texture.width, self._osd_texture.height
+            x = (self._screen_width - w) // 2
+            y = (self._screen_height - h) // 2
+            self._overlay_blender.blend(self._osd_texture, x, y, w, h)
+
+    def _update_osd_timer(self) -> None:
+        if self._osd_texture is not None and self._osd_expiry_time is not None:
+            if time.monotonic() >= self._osd_expiry_time:
+                self._osd_texture = None
+                self._osd_expiry_time = None
 
     def _process_one_frame(self) -> None:
-        """Grab, upscale, scale, and present one frame."""
         # Grab frame
         try:
-            frame = self._grabber.grab()
+            frame, is_dirty = self._grabber.grab()
         except RuntimeError as e:
             logger.warning(f"Frame grab failed: {e}")
             return
@@ -335,7 +349,27 @@ class Pipeline:
         if not self._running:
             return
 
-        # Keep only the most recent frame
+        # OSD expiry
+        if self._osd_texture is not None and self._osd_expiry_time is not None:
+            if time.monotonic() >= self._osd_expiry_time:
+                self._osd_texture = None
+                self._osd_expiry_time = None
+                self._needs_osd_redraw = True  # force redraw to remove OSD
+
+        # Force dirty if OSD needs redraw
+        if self._needs_osd_redraw:
+            is_dirty = True
+            self._needs_osd_redraw = False
+
+        # Always update overlay opacity
+        self.overlay.update_opacity()
+
+        # If frame unchanged, skip heavy GPU work
+        if not is_dirty:
+            self._swapchain_manager.present(self._screen_tex)
+            return
+
+        # Frame is dirty: full processing
         self._frame_queue.put(frame)
         frame = self._frame_queue.get_nowait()
 
@@ -351,29 +385,21 @@ class Pipeline:
             self._content_height,
             self.scale_mode,
         )
-
         canvas_x = (self._screen_width - self._content_width) // 2
         canvas_y = (self._screen_height - self._content_height) // 2
-
         dst_x = canvas_x + r_x + self.config.offset_x
         dst_y = canvas_y + r_y + self.config.offset_y
-        dst_w = r_w
-        dst_h = r_h
+        dst_w, dst_h = r_w, r_h
 
-        # Update mouse mapping rect (scaled)
+        # Update mouse mapping
         self.overlay.scaling_rect = [
             dst_x / self._scale_factor,
             dst_y / self._scale_factor,
             dst_w / self._scale_factor,
             dst_h / self._scale_factor,
         ]
-        logger.debug(
-            f"Scaling rect: dst={self.overlay.scaling_rect}, "
-            f"content={self._content_width}x{self._content_height}, "
-            f"screen={self._screen_width}x{self._screen_height}"
-        )
 
-        # Update Lanczos constants
+        # Lanczos pass
         self.lanczos_scaler.update_constants(
             self._background_color,
             self.src_w,
@@ -385,27 +411,15 @@ class Pipeline:
             dst_w,
             dst_h,
         )
-
-        # Dispatch Lanczos
         self.lanczos_scaler.dispatch(self._groups_x, self._groups_y)
 
-        # OSD overlay
-        if self._osd_texture is not None and self._osd_timer > 0:
-            w, h = self._osd_texture.width, self._osd_texture.height
-            x = (self._screen_width - w) // 2
-            y = (self._screen_height - h) // 2
-            self._overlay_blender.blend(self._osd_texture, x, y, w, h)
-            self._osd_timer -= 1.0 / 60.0  # approximate
-            if self._osd_timer <= 0:
-                self._osd_texture = None
-
-        # Opacity control
-        self.overlay.update_opacity()
+        # Draw OSD on top of the upscaled result
+        self._draw_osd()
 
         # Present
         self._swapchain_manager.present(self._screen_tex)
 
-        # Check swapchain
+        # Swapchain recreation check
         if self._swapchain_manager.needs_recreation():
             if self._swapchain_manager.is_out_of_date():
                 logger.info("Swapchain out-of-date, recreating.")

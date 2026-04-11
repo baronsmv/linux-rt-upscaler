@@ -10,7 +10,7 @@ from setuptools.command.build_ext import build_ext
 
 
 class BuildCaptureLib(build_ext):
-    """Custom build_ext that compiles captureRGBX.c before normal build."""
+    """Custom build_ext that compiles capture_x11.c before normal build."""
 
     def run(self):
         # Logging to stderr (visible in CI)
@@ -28,8 +28,8 @@ class BuildCaptureLib(build_ext):
             target_dir = Path(self.build_lib) / "upscaler" / "capture"
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        src_file = capture_dir / "captureRGBX.c"
-        so_file = target_dir / "captureRGBX.so"
+        src_file = capture_dir / "capture_x11.c"
+        so_file = target_dir / "capture_x11.so"
 
         # Compiler command
         cmd = [
@@ -37,11 +37,15 @@ class BuildCaptureLib(build_ext):
             "-shared",
             "-fPIC",
             "-O3",
+            "-march=native",
             str(src_file),
             "-o",
             str(so_file),
             "-Wl,-Bdynamic",
             "-lX11",
+            "-lXext",
+            "-lXdamage",
+            "-lXfixes",
         ]
 
         print(f"Running: {' '.join(cmd)}", file=sys.stderr)
@@ -60,7 +64,7 @@ class BuildCaptureLib(build_ext):
             )
             sys.exit(1)
 
-        print("✅ captureRGBX.so compiled successfully.", file=sys.stderr)
+        print("✅ capture_x11.so compiled successfully.", file=sys.stderr)
         print("BuildCaptureLib.run() finished", file=sys.stderr)
 
         # Now compile the dummy extension (triggers the normal build_ext)
