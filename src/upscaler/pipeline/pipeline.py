@@ -160,7 +160,10 @@ class Pipeline:
 
         # Unblock queue by pushing a dummy frame
         dummy = bytearray(self._win_info.width * self._win_info.height * 4)
-        self._frame_queue.put(dummy)
+        try:
+            self._frame_queue.put_nowait(dummy)
+        except Queue.Full:
+            pass
 
         if self._thread is not None:
             self._thread.join(timeout=2.0)
@@ -168,6 +171,10 @@ class Pipeline:
                 logger.warning("Pipeline thread did not stop gracefully.")
             else:
                 logger.debug("Pipeline thread joined.")
+
+        if self._grabber:
+            self._grabber.close()
+            self._grabber = None
 
         # Clean up components
         self._swapchain_manager = None
@@ -185,6 +192,8 @@ class Pipeline:
 
     def _create_grabber(self):
         try:
+            if self._grabber is not None:
+                self._grabber.close()
             start = time.perf_counter()
             self._grabber = FrameGrabber(
                 self._win_info,
@@ -210,12 +219,13 @@ class Pipeline:
             try:
                 # Process switch requests
                 try:
-                    new_win = self._switch_queue.get_nowait()
-                    if new_win is not None:
-                        logger.info(f"Processing switch to window {new_win.handle}")
-                        self._switch_target(new_win)
+                    new_win = None
+                    while True:
+                        new_win = self._switch_queue.get_nowait()
                 except Empty:
                     pass
+                if new_win is not None:
+                    self._switch_target(new_win)
 
                 # Window alive check (only when follow_focus is off)
                 if not self.config.follow_focus:
@@ -391,6 +401,11 @@ class Pipeline:
         dst_x = canvas_x + r_x + self.config.offset_x
         dst_y = canvas_y + r_y + self.config.offset_y
         dst_w, dst_h = r_w, r_h
+
+        if dst_w <= 0 or dst_h <= 0:
+            logger.debug(f"Skipping Lanczos dispatch – invalid rect: {dst_w}x{dst_h}")
+            self._swapchain_manager.present(self._screen_tex)
+            return
 
         # Update mouse mapping
         self.overlay.scaling_rect = [

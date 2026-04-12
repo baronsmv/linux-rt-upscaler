@@ -37,7 +37,7 @@ class BuildCaptureLib(build_ext):
             "-shared",
             "-fPIC",
             "-O3",
-            "-march=native",
+            "-mtune=generic",
             str(src_file),
             "-o",
             str(so_file),

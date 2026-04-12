@@ -29,7 +29,7 @@ jobs:
       - name: Build wheels (Linux)
         env:
           CIBW_BEFORE_ALL_LINUX: >
-            yum install -y libX11-devel vulkan-devel || dnf install -y libX11-devel vulkan-devel
+            yum install -y libX11-devel || dnf install -y libX11-devel
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BUILD: cp${{ matrix.pyver }}-*
           CIBW_TEST_COMMAND: "python -c 'import upscaler.capture'"

@@ -71,7 +71,7 @@ when focus changes)""",
         "--no-focus-pause",
         action="store_false",
         dest="pause_on_focus_loss",
-        help="""Do not pause/hide overlay when target window loses focus"
+        help="""Do not pause/hide overlay when target window loses focus
 (pause is enabled by default)""",
     )
 

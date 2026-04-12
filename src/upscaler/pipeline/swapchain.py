@@ -1,5 +1,6 @@
 import gc
 import logging
+import threading
 import time
 from typing import Optional
 
@@ -30,6 +31,7 @@ class SwapchainManager:
         self.swapchain: Optional[Swapchain] = None
         self.last_recreate_time = 0.0
         self._create_swapchain()
+        self._lock = threading.Lock()
 
     def _create_swapchain(self) -> None:
         if self.screen_width == 0 or self.screen_height == 0:
@@ -46,29 +48,31 @@ class SwapchainManager:
         )
 
     def recreate(self, new_width: int, new_height: int) -> None:
-        now = time.time()
-        if now - self.last_recreate_time < 1.0:  # at most once per second
-            return
-        self.last_recreate_time = now
+        with self._lock:
+            now = time.time()
+            if now - self.last_recreate_time < 1.0:  # at most once per second
+                return
+            self.last_recreate_time = now
 
-        logger.info(f"Recreating swapchain with size {new_width}x{new_height}")
-        self.screen_width = new_width
-        self.screen_height = new_height
+            logger.info(f"Recreating swapchain with size {new_width}x{new_height}")
+            self.screen_width = new_width
+            self.screen_height = new_height
 
-        # Explicitly destroy the old swapchain
-        old = self.swapchain
-        self.swapchain = None
-        if old is not None:
-            del old
-            gc.collect()
-            time.sleep(0.05)
+            # Explicitly destroy the old swapchain
+            old = self.swapchain
+            self.swapchain = None
+            if old is not None:
+                del old
+                gc.collect()
+                time.sleep(0.05)
 
-        self._create_swapchain()
+            self._create_swapchain()
 
     def present(self, texture: Texture2D) -> None:
         if self.swapchain is None:
             raise RuntimeError("Swapchain not available")
-        self.swapchain.present(texture)
+        with self._lock:
+            self.swapchain.present(texture)
 
     def needs_recreation(self) -> bool:
         return self.swapchain is None or self.swapchain.needs_recreation()

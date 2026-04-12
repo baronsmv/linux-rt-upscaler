@@ -82,6 +82,11 @@ class FrameGrabber:
                 rects.append((r.x, r.y, r.width, r.height))
         return memoryview(self.buffer), is_dirty, rects
 
+    def close(self):
+        if hasattr(self, "_ctx") and self._ctx:
+            _lib.capture_destroy(self._ctx)
+            self._ctx = None
+
     def __del__(self):
         if hasattr(self, "_ctx") and self._ctx:
             _lib.capture_destroy(self._ctx)
