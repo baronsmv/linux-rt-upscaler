@@ -40,7 +40,7 @@ class SwapchainManager:
         self.swapchain = Swapchain(
             (self.display_id, self.xid),
             R8G8B8A8_UNORM,
-            3,
+            4,
             present_mode=self.present_mode,
             async_present=self.async_present,
         )

@@ -379,10 +379,6 @@ class Pipeline:
             self._swapchain_manager.present(self._screen_tex)
             return
 
-        # Frame is dirty: full processing
-        self._frame_queue.put(frame)
-        frame = self._frame_queue.get_nowait()
-
         # Upscale
         self.upscaler.upload(frame)
         self.upscaler.compute()

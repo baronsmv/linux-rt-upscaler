@@ -50,7 +50,9 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'""",
     # Program argument
     parser.add_argument("program", nargs="*", help="Program to launch and scale")
 
+    # ----------------------------------------------------------------------
     # General section
+    # ----------------------------------------------------------------------
     interaction_group = parser.add_argument_group("INTERACTION OPTIONS")
     interaction_group.add_argument(
         "-s",
@@ -73,7 +75,9 @@ when focus changes)""",
 (pause is enabled by default)""",
     )
 
+    # ----------------------------------------------------------------------
     # Upscaling section
+    # ----------------------------------------------------------------------
     upscaling_group = parser.add_argument_group("UPSCALING OPTIONS")
     upscaling_group.add_argument(
         "-m",
@@ -81,7 +85,7 @@ when focus changes)""",
         choices=UPSCALING_MODELS,
         default=DEFAULT_CONFIG.model,
         help=f"""Upscaling model to use (ordered from best to worst quality)
-Default: {DEFAULT_CONFIG.model}""",
+Default: %(default)s""",
     )
     upscaling_group.add_argument(
         "-2",
@@ -91,7 +95,9 @@ Default: {DEFAULT_CONFIG.model}""",
 screens (4k, 1440p) or low‑resolution sources""",
     )
 
+    # ----------------------------------------------------------------------
     # Display section
+    # ----------------------------------------------------------------------
     display_group = parser.add_argument_group("DISPLAY OPTIONS")
     display_group.add_argument(
         "--monitor",
@@ -100,7 +106,7 @@ screens (4k, 1440p) or low‑resolution sources""",
         help=f"""Monitor to cover: 'primary', 'all' (to cover all
 multi-monitor space), or monitor name/index
 (e.g., 'HDMI-1', 0).
-Default: {DEFAULT_CONFIG.monitor}""",
+Default: %(default)s""",
     )
     display_group.add_argument(
         "--scale-factor",
@@ -113,14 +119,16 @@ using physical monitor resolution. This override is
 required when --monitor is set to 'all'.""",
     )
 
+    # ----------------------------------------------------------------------
     # Overlay options
+    # ----------------------------------------------------------------------
     overlay_group = parser.add_argument_group("OVERLAY OPTIONS")
     overlay_group.add_argument(
         "-o",
         "--output-geometry",
         default=DEFAULT_CONFIG.output_geometry,
         help=f"""Specify the output window size and scaling behaviour.
-Default: {DEFAULT_CONFIG.output_geometry}
+Default: %(default)s
 
 Examples:
   fit          - Fit to full monitor/window (letterbox)
@@ -151,7 +159,7 @@ Examples:
         choices=[e.value for e in OverlayMode],
         default=DEFAULT_CONFIG.overlay_mode,
         help=f"""Overlay window behaviour.
-Default: {DEFAULT_CONFIG.overlay_mode}
+Default: %(default)s
 
 Note: Keyboard events are NOT forwarded, so it's best to
 keep the target window focused (if on a single monitor,
@@ -219,7 +227,7 @@ Note: Same as above.
         "--background-color",
         default=DEFAULT_CONFIG.background_color,
         help=f"""Color for letterbox bars (supports transparency).
-Default: {DEFAULT_CONFIG.background_color}
+Default: %(default)s
 
 Can be a:
   CSS color name (e.g., 'black', 'red', 'transparent')
@@ -229,17 +237,72 @@ Can be a:
 Note: RGB values must be integers 0–255.""",
     )
 
+    # ----------------------------------------------------------------------
     # Screenshot section
+    # ----------------------------------------------------------------------
     screenshot_group = parser.add_argument_group("SCREENSHOT OPTIONS")
     screenshot_group.add_argument(
         "--screenshot-dir",
         type=str,
         default=DEFAULT_CONFIG.screenshot_dir,
         help=f"""Directory to save screenshots.
-Default: {DEFAULT_CONFIG.screenshot_dir}""",
+Default: %(default)s""",
     )
 
+    # ----------------------------------------------------------------------
+    # Vulkan Performance Options
+    # ----------------------------------------------------------------------
+    vulkan_group = parser.add_argument_group("VULKAN PERFORMANCE OPTIONS")
+    vulkan_group.add_argument(
+        "--vulkan-present-mode",
+        choices=["fifo", "mailbox", "immediate"],
+        default=DEFAULT_CONFIG.vulkan_present_mode,
+        help="""Vulkan presentation mode.
+Default: %(default)s
+
+Modes:
+  fifo      - V‑Sync on. Limits FPS to display refresh rate.
+              Lowest power consumption, no tearing.
+  mailbox   - Tear‑free, lower latency. GPU renders as fast
+              as possible; only the latest complete frame
+              is displayed. Higher power usage.
+  immediate - Lowest latency, no V‑Sync. Frames are displayed
+              immediately, may cause visible tearing.
+""",
+    )
+    vulkan_group.add_argument(
+        "--no-vulkan-async-compute",
+        action="store_false",
+        dest="vulkan_async_compute",
+        help="""Disable asynchronous compute (enabled by default).
+When enabled, CPU and GPU work in parallel for better
+performance. Disable only if you encounter instability.
+""",
+    )
+    vulkan_group.add_argument(
+        "--no-vulkan-async-present",
+        action="store_false",
+        dest="vulkan_async_present",
+        help="""Disable asynchronous presentation (enabled by default).
+Works together with async compute for maximum pipelining.
+Disable only if you encounter visual glitches.
+""",
+    )
+    vulkan_group.add_argument(
+        "--vulkan-buffer-pool-size",
+        type=int,
+        default=DEFAULT_CONFIG.vulkan_buffer_pool_size,
+        help=f"""Number of pre‑allocated staging buffers for partial
+texture updates. Larger values reduce allocation overhead
+during frequent small changes, but use a small amount of
+additional VRAM.
+Default: %(default)s
+""",
+    )
+
+    # ----------------------------------------------------------------------
     # Timeout / window detection section
+    # ----------------------------------------------------------------------
     window_detection_group = parser.add_argument_group("WINDOW DETECTION OPTIONS")
     window_detection_group.add_argument(
         "--target-delay",
@@ -273,7 +336,9 @@ Default: {DEFAULT_CONFIG.screenshot_dir}""",
         help="Start with phase 1 (PID) or 2 (class)",
     )
 
+    # ----------------------------------------------------------------------
     # Logging section
+    # ----------------------------------------------------------------------
     log_group = parser.add_argument_group("LOGGING OPTIONS")
     log_group.add_argument(
         "-q",

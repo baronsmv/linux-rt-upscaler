@@ -111,6 +111,37 @@ pause_on_focus_loss: true
 screenshot_dir: "~/Pictures/Screenshots"
 
 # ------------------------------------------------------------------------------
+# Vulkan Performance Options (Advanced)
+# ------------------------------------------------------------------------------
+# These options control low‑level Vulkan behavior. Adjust them only if you
+# experience performance issues or want to fine‑tune power/performance trade‑offs.
+
+# Vulkan presentation mode:
+#   - "fifo"      : V‑Sync on. Lowest power, no tearing.
+#   - "mailbox"   : Tear‑free, lower latency, higher GPU usage. (Default)
+#   - "immediate" : No V‑Sync, lowest latency, may tear.
+# Default: mailbox
+vulkan_present_mode: mailbox
+
+# Enable asynchronous compute. Removes CPU wait after each compute dispatch,
+# allowing CPU and GPU to work in parallel. Significant performance boost.
+# Enabled by default; set to false only if you experience instability.
+# Default: true
+vulkan_async_compute: true
+
+# Enable asynchronous present. Removes CPU wait after presentation, further
+# increasing pipeline depth. Enabled by default; disable only if you encounter
+# visual glitches.
+# Default: true
+vulkan_async_present: true
+
+# Number of pre‑allocated staging buffers (each 2 MB) used for partial texture
+# uploads. Increase this if you notice stuttering during heavy partial updates
+# (e.g., rapid typing in a large window). Each buffer uses ~2 MB VRAM.
+# Default: 8
+vulkan_buffer_pool_size: 8
+
+# ------------------------------------------------------------------------------
 # Window Detection Timeouts (used when launching a program)
 # ------------------------------------------------------------------------------
 
