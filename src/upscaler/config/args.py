@@ -271,24 +271,6 @@ Modes:
 """,
     )
     vulkan_group.add_argument(
-        "--no-vulkan-async-compute",
-        action="store_false",
-        dest="vulkan_async_compute",
-        help="""Disable asynchronous compute (enabled by default).
-When enabled, CPU and GPU work in parallel for better
-performance. Disable only if you encounter instability.
-""",
-    )
-    vulkan_group.add_argument(
-        "--no-vulkan-async-present",
-        action="store_false",
-        dest="vulkan_async_present",
-        help="""Disable asynchronous presentation (enabled by default).
-Works together with async compute for maximum pipelining.
-Disable only if you encounter visual glitches.
-""",
-    )
-    vulkan_group.add_argument(
         "--vulkan-buffer-pool-size",
         type=int,
         default=DEFAULT_CONFIG.vulkan_buffer_pool_size,

@@ -28,7 +28,7 @@ classifiers = [
 keywords = ["upscaler", "ai", "cunny", "linux", "x11", "vulkan"]
 requires-python = ">=3.10"
 dependencies = [
-    "compushady-lrtu>=0.17.5.post6,<0.17.6.post1",
+    #"compushady-lrtu>=0.17.5.post6,<0.17.6.post1",
     "ewmh",
     "numpy",
     "pillow",

@@ -21,14 +21,12 @@ class SwapchainManager:
         width: int,
         height: int,
         present_mode: str,
-        async_present: bool,
     ):
         self.display_id = display_id
         self.xid = xid
         self.screen_width = width
         self.screen_height = height
         self.present_mode = present_mode
-        self.async_present = async_present
         self.swapchain: Optional[Swapchain] = None
         self.last_recreate_time = 0.0
         self._create_swapchain()
@@ -42,7 +40,6 @@ class SwapchainManager:
             R8G8B8A8_UNORM,
             4,
             present_mode=self.present_mode,
-            async_present=self.async_present,
         )
         logger.debug(
             f"Swapchain created in {(time.perf_counter() - start)*1000:.2f} ms"

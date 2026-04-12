@@ -85,9 +85,7 @@ class Config:
     starting_phase: int = 1
 
     # Vulkan
-    vulkan_present_mode: str = VulkanPresentMode.MAILBOX.value
-    vulkan_async_compute: bool = True
-    vulkan_async_present: bool = True
+    vulkan_present_mode: str = VulkanPresentMode.FIFO.value
     vulkan_buffer_pool_size: int = 8
 
     # Logging (set via flags, not directly from CLI)

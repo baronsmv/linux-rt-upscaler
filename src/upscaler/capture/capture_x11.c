@@ -48,15 +48,15 @@ typedef struct CaptureContext {
    X11 error handler for debugging
    ------------------------------------------------------------------------- */
 static int x11_error_handler(Display *dpy, XErrorEvent *ev) {
-    // BadMatch (8) on request 130 (ShmGetImage) is expected during visual changes
-    if (ev->error_code == 8 && ev->request_code == 130) {
-        return 0;  // silently ignore
-    }
-    char buffer[256];
-    XGetErrorText(dpy, ev->error_code, buffer, sizeof(buffer));
-    fprintf(stderr, "[capture_x11] X11 error: %s (code %d), request %d\n",
-            buffer, ev->error_code, ev->request_code);
-    return 0;
+  // BadMatch (8) on request 130 (ShmGetImage) is expected during visual changes
+  if (ev->error_code == 8 && ev->request_code == 130) {
+    return 0; // silently ignore
+  }
+  char buffer[256];
+  XGetErrorText(dpy, ev->error_code, buffer, sizeof(buffer));
+  fprintf(stderr, "[capture_x11] X11 error: %s (code %d), request %d\n", buffer,
+          ev->error_code, ev->request_code);
+  return 0;
 }
 
 /* ----------------------------------------------------------------------------
