@@ -73,34 +73,32 @@ pip install linux-rt-upscaler
 
 ### Or install from source
 
-First, install the required build tools and development headers for your distribution.
-
-#### Debian / Ubuntu / Linux Mint
-
-```sh
-sudo apt update
-sudo apt install gcc make libvulkan-dev libx11-dev libxcb-dev libxext-dev libxdamage-dev libxfixes-dev
-```
-
-#### Fedora / RHEL / CentOS
-
-```sh
-sudo dnf install gcc make vulkan-loader-devel libX11-devel libxcb-devel libXext-devel libXdamage-devel libXfixes-devel
-```
-
-#### Arch Linux / CachyOS
-
-```sh
-sudo pacman -S base-devel vulkan-devel libx11 libxcb libxext libxdamage libxfixes
-```
-
-#### openSUSE
-
-```sh
-sudo zypper install gcc make vulkan-devel libX11-devel libxcb-devel libXext-devel libXdamage-devel libXfixes-devel
-```
-
-Then clone the repository and install the package in development mode:
+> **Required build tools and development headers**
+>
+> Debian / Ubuntu / Linux Mint:
+>
+> ```sh
+> sudo apt update
+> sudo apt install gcc make libvulkan-dev libx11-dev libxcb-dev libxext-dev libxdamage-dev libxfixes-dev
+> ```
+>
+> Fedora / RHEL / CentOS:
+>
+> ```sh
+> sudo dnf install gcc make vulkan-loader-devel libX11-devel libxcb-devel libXext-devel libXdamage-devel libXfixes-devel
+> ```
+>
+> Arch Linux / CachyOS:
+>
+> ```sh
+> sudo pacman -S base-devel vulkan-devel libx11 libxcb libxext libxdamage libxfixes
+> ```
+>
+> openSUSE:
+>
+> ```sh
+> sudo zypper install gcc make vulkan-devel libX11-devel libxcb-devel libXext-devel libXdamage-devel libXfixes-devel
+> ```
 
 ```sh
 git clone https://github.com/baronsmv/linux-rt-upscaler.git
