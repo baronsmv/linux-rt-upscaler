@@ -36,16 +36,12 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 - **Input Forwarding** – Click, move, and drag on the upscaled image as if interacting directly with the original window.
 - **Hardware Accelerated** – Vulkan compute (Compushady) works on NVIDIA, AMD, and Intel GPUs.
 - **XWayland Compatible** – Runs under Wayland compositors by automatically forcing X11 platform for Qt.
-- **Low Overhead** – Final scaling pass uses hardware Lanczos2 filtering.
 - **Global Hotkeys & On‑Screen Display** – Switch models, take lossless screenshots and more using keyboard shortcuts.
 
 ## Requirements
 
 - GNU/Linux (X11 or Wayland with XWayland)
 - Vulkan-capable GPU (NVIDIA, AMD, Intel)
-- Vulkan drivers (`libvulkan-dev`)
-- X11 development libraries (`libx11-dev`)
-- X C Binding headers (`libxcb-dev`)
 - Python 3.10 or newer
 
 > [!NOTE]
@@ -63,64 +59,93 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 
 ## Installation
 
-### 1. System dependencies
-
-#### Debian / Ubuntu / Linux Mint
-
-```sh
-sudo apt update
-sudo apt install libvulkan-dev libx11-dev libxcb-render0-dev
-```
-
-#### Fedora / RHEL / CentOS
-
-```sh
-sudo dnf install vulkan-loader-devel libX11-devel libxcb-devel
-```
-
-#### Arch Linux
-
-```sh
-sudo pacman -S vulkan-devel libx11 libxcb
-```
-
-#### openSUSE
-
-```sh
-sudo zypper install vulkan-devel libX11-devel libxcb-devel
-```
-
-#### Alpine Linux
-
-```sh
-sudo apk add vulkan-headers libx11-dev libxcb-dev
-```
-
-### 2. Python package
-
-#### Install with pipx (recommended)
+### Install with pipx (recommended)
 
 ```sh
 pipx install linux-rt-upscaler
 ```
 
-#### Or with regular pip (inside a virtual environment is advised)
+### Or with regular pip (inside a virtual environment is advised)
 
 ```sh
 pip install linux-rt-upscaler
 ```
 
-#### Or install from source
+### Or install from source
+
+First, install the required build tools and development headers for your distribution:
+
+<!-- tabs:start -->
+
+#### Debian / Ubuntu / Linux Mint
 
 ```sh
-# Install additional system dependencies for C compilation
-sudo apt install gcc make
+sudo apt update
+sudo apt install gcc make \
+  libvulkan-dev \
+  libx11-dev \
+  libxcb-dev \
+  libxext-dev \
+  libxdamage-dev \
+  libxfixes-dev
+```
 
-# Clone the repository
+#### Fedora / RHEL / CentOS
+
+```sh
+sudo dnf install gcc make \
+  vulkan-loader-devel \
+  libX11-devel \
+  libxcb-devel \
+  libXext-devel \
+  libXdamage-devel \
+  libXfixes-devel
+```
+
+#### Arch Linux
+
+```sh
+sudo pacman -S base-devel \
+  vulkan-devel \
+  libx11 \
+  libxcb \
+  libxext \
+  libxdamage \
+  libxfixes
+```
+
+#### openSUSE
+
+```sh
+sudo zypper install gcc make \
+  vulkan-devel \
+  libX11-devel \
+  libxcb-devel \
+  libXext-devel \
+  libXdamage-devel \
+  libXfixes-devel
+```
+
+#### Alpine Linux
+
+```sh
+sudo apk add build-base \
+  vulkan-headers \
+  libx11-dev \
+  libxcb-dev \
+  libxext-dev \
+  libxdamage-dev \
+  libxfixes-dev
+```
+
+<!-- tabs:end -->
+
+Then clone the repository and install the package in development mode:
+
+```sh
 git clone https://github.com/baronsmv/linux-rt-upscaler.git
 cd linux-rt-upscaler
 
-# Install the dependencies and the package in development mode
 pip install -e .
 ```
 
