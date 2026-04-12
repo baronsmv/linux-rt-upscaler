@@ -87,7 +87,42 @@ def validate_geometry(geometry: str, _: str) -> None:
 
 
 def validate_color(color_str: str, _: str) -> None:
-    """Validate CSS color string."""
+    """Validate CSS color string, supporting #RRGGBBAA, #AARRGGBB, rgb(), rgba()."""
+    color_str = color_str.strip()
+    hex_match = re.match(r"^#([0-9A-Fa-f]{3,8})$", color_str)
+
+    if hex_match:
+        hex_val = hex_match.group(1)
+        if len(hex_val) in (3, 4, 6, 8):
+            return
+        else:
+            logger.error(
+                f"Invalid hex color string '{color_str}' (must be 3, 4, 6, or 8 hex digits)"
+            )
+            exit(1)
+
+    # Check for rgb/rgba functional notation
+    rgba_match = re.match(
+        r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)",
+        color_str,
+        re.IGNORECASE,
+    )
+    if rgba_match:
+        r, g, b = (
+            int(rgba_match.group(1)),
+            int(rgba_match.group(2)),
+            int(rgba_match.group(3)),
+        )
+        a = float(rgba_match.group(4)) if rgba_match.group(4) else 1.0
+        if 0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255 and 0.0 <= a <= 1.0:
+            return
+        else:
+            logger.error(
+                f"Invalid rgb/rgba values in '{color_str}' (must be 0-255 for rgb, 0.0-1.0 for alpha)"
+            )
+            exit(1)
+
+    # Fallback to QColor for named colors and other formats
     if not QColor(color_str).isValid():
         logger.error(f"Invalid color string '{color_str}'")
         exit(1)

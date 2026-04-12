@@ -44,6 +44,11 @@ class OverlayWindow(QMainWindow):
         self._config = config
         self._win_info = win_info
 
+        # Transparency support
+        if self._config.background_color[3] < 1.0 or True:
+            self.setAttribute(Qt.WA_TranslucentBackground, True)
+            self.setStyleSheet("background: transparent;")
+
         # Compute geometry
         self._geometry = compute_overlay_geometry(config, win_info)
         self.scale_mode = self._geometry.scale_mode
