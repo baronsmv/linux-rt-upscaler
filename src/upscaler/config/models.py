@@ -18,6 +18,7 @@ UPSCALING_MODELS = (
 )
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
 
+
 DEFAULT_HOTKEYS = {
     "toggle_scaling": "Alt+Shift+S",
     "cycle_model": "Alt+Shift+M",
@@ -33,6 +34,12 @@ class OverlayMode(str, Enum):
     ALWAYS_ON_TOP_TRANSPARENT = "top-transparent"
     FULLSCREEN = "fullscreen"
     WINDOWED = "windowed"
+
+
+class VulkanPresentMode(Enum):
+    FIFO = "fifo"
+    MAILBOX = "mailbox"
+    IMMEDIATE = "immediate"
 
 
 BackgroundColor = Union[str, Tuple[float, float, float, float]]
@@ -76,6 +83,12 @@ class Config:
     class_timeout: int = 5
     total_timeout: int = 60
     starting_phase: int = 1
+
+    # Vulkan
+    vulkan_present_mode: str = VulkanPresentMode.MAILBOX.value
+    vulkan_async_compute: bool = True
+    vulkan_async_present: bool = True
+    vulkan_buffer_pool_size: int = 8
 
     # Logging (set via flags, not directly from CLI)
     log_level: str = "WARNING"

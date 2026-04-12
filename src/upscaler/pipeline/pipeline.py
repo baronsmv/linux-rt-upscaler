@@ -5,7 +5,7 @@ from queue import Empty, Queue
 from typing import Optional, Tuple
 
 from PySide6.QtCore import QMetaObject, Qt
-from compushady import Texture2D
+from compushady import Texture2D, configure_device, get_current_device
 from compushady.formats import R8G8B8A8_UNORM
 
 from .controller import PipelineController
@@ -76,8 +76,18 @@ class Pipeline:
 
         # Swapchain manager
         display_id = get_display()
+        device = get_current_device()
+        configure_device(
+            async_compute=self.config.vulkan_async_compute,
+            buffer_pool_size=self.config.vulkan_buffer_pool_size,
+        )
         self._swapchain_manager = SwapchainManager(
-            display_id, overlay.xid, self._screen_width, self._screen_height
+            display_id,
+            overlay.xid,
+            self._screen_width,
+            self._screen_height,
+            present_mode=self.config.vulkan_present_mode,
+            async_present=self.config.vulkan_async_present,
         )
 
         # Screen texture
