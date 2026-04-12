@@ -33,6 +33,8 @@ typedef struct CaptureContext {
   XImage *img;
   unsigned long red_mask, green_mask, blue_mask;
   int use_fast_path;
+  Visual *last_visual; // track window visual
+  int last_depth;      // track window depth
 
   /* Damage */
   int damage_event_base, damage_error_base;
@@ -42,6 +44,87 @@ typedef struct CaptureContext {
   int first_capture_done;
 } CaptureContext;
 
+/* ----------------------------------------------------------------------------
+   X11 error handler for debugging
+   ------------------------------------------------------------------------- */
+static int x11_error_handler(Display *dpy, XErrorEvent *ev) {
+    // BadMatch (8) on request 130 (ShmGetImage) is expected during visual changes
+    if (ev->error_code == 8 && ev->request_code == 130) {
+        return 0;  // silently ignore
+    }
+    char buffer[256];
+    XGetErrorText(dpy, ev->error_code, buffer, sizeof(buffer));
+    fprintf(stderr, "[capture_x11] X11 error: %s (code %d), request %d\n",
+            buffer, ev->error_code, ev->request_code);
+    return 0;
+}
+
+/* ----------------------------------------------------------------------------
+   Recreate XImage if window visual/depth changed
+   ------------------------------------------------------------------------- */
+static int recreate_image_if_needed(CaptureContext *ctx) {
+  XWindowAttributes attrs;
+  if (!XGetWindowAttributes(ctx->dpy, ctx->xid, &attrs))
+    return 0;
+
+  // If visual/depth unchanged, keep existing image
+  if (ctx->last_visual == attrs.visual && ctx->last_depth == attrs.depth)
+    return 1;
+
+  // Destroy old image and SHM
+  if (ctx->img) {
+    XShmDetach(ctx->dpy, &ctx->shminfo);
+    shmdt(ctx->shminfo.shmaddr);
+    shmctl(ctx->shminfo.shmid, IPC_RMID, 0);
+    XDestroyImage(ctx->img);
+  }
+
+  // Create new image with current visual/depth
+  ctx->img = XShmCreateImage(ctx->dpy, attrs.visual, attrs.depth, ZPixmap, NULL,
+                             &ctx->shminfo, ctx->width, ctx->height);
+  if (!ctx->img)
+    return 0;
+
+  ctx->shminfo.shmid =
+      shmget(IPC_PRIVATE, ctx->img->bytes_per_line * ctx->img->height,
+             IPC_CREAT | 0777);
+  if (ctx->shminfo.shmid == -1) {
+    XDestroyImage(ctx->img);
+    ctx->img = NULL;
+    return 0;
+  }
+
+  ctx->shminfo.shmaddr = ctx->img->data = shmat(ctx->shminfo.shmid, 0, 0);
+  if (ctx->shminfo.shmaddr == (void *)-1) {
+    shmctl(ctx->shminfo.shmid, IPC_RMID, 0);
+    XDestroyImage(ctx->img);
+    ctx->img = NULL;
+    return 0;
+  }
+
+  ctx->shminfo.readOnly = False;
+  if (!XShmAttach(ctx->dpy, &ctx->shminfo)) {
+    shmdt(ctx->shminfo.shmaddr);
+    shmctl(ctx->shminfo.shmid, IPC_RMID, 0);
+    XDestroyImage(ctx->img);
+    ctx->img = NULL;
+    return 0;
+  }
+
+  ctx->red_mask = ctx->img->red_mask;
+  ctx->green_mask = ctx->img->green_mask;
+  ctx->blue_mask = ctx->img->blue_mask;
+  ctx->use_fast_path =
+      (ctx->img->bits_per_pixel == 32 && ctx->img->format == ZPixmap);
+  ctx->last_visual = attrs.visual;
+  ctx->last_depth = attrs.depth;
+
+  return 1;
+}
+
+/* ----------------------------------------------------------------------------
+   capture_create
+   ------------------------------------------------------------------------- */
 CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
                                int height) {
   CaptureContext *ctx = calloc(1, sizeof(CaptureContext));
@@ -52,7 +135,8 @@ CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
   if (!ctx->dpy)
     goto fail;
 
-  /* Check SHM */
+  XSetErrorHandler(x11_error_handler);
+
   int major, minor;
   Bool pixmaps;
   if (!XShmQueryExtension(ctx->dpy) ||
@@ -66,43 +150,7 @@ CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
   ctx->width = width;
   ctx->height = height;
 
-  int scr = DefaultScreen(ctx->dpy);
-  Visual *vis = DefaultVisual(ctx->dpy, scr);
-  int depth = DefaultDepth(ctx->dpy, scr);
-
-  ctx->img = XShmCreateImage(ctx->dpy, vis, depth, ZPixmap, NULL, &ctx->shminfo,
-                             width, height);
-  if (!ctx->img)
-    goto fail;
-
-  ctx->shminfo.shmid =
-      shmget(IPC_PRIVATE, ctx->img->bytes_per_line * ctx->img->height,
-             IPC_CREAT | 0777);
-  if (ctx->shminfo.shmid == -1) {
-    XDestroyImage(ctx->img);
-    goto fail;
-  }
-
-  ctx->shminfo.shmaddr = ctx->img->data = shmat(ctx->shminfo.shmid, 0, 0);
-  if (ctx->shminfo.shmaddr == (void *)-1) {
-    shmctl(ctx->shminfo.shmid, IPC_RMID, 0);
-    XDestroyImage(ctx->img);
-    goto fail;
-  }
-
-  ctx->shminfo.readOnly = False;
-  if (!XShmAttach(ctx->dpy, &ctx->shminfo)) {
-    shmdt(ctx->shminfo.shmaddr);
-    shmctl(ctx->shminfo.shmid, IPC_RMID, 0);
-    XDestroyImage(ctx->img);
-    goto fail;
-  }
-
-  ctx->red_mask = ctx->img->red_mask;
-  ctx->green_mask = ctx->img->green_mask;
-  ctx->blue_mask = ctx->img->blue_mask;
-  ctx->use_fast_path =
-      (ctx->img->bits_per_pixel == 32 && ctx->img->format == ZPixmap);
+  // Initial image will be created on first grab
 
   /* Try to initialise XDamage and XFixes */
   ctx->use_damage = 0;
@@ -126,7 +174,9 @@ fail:
   return NULL;
 }
 
-/* Convert the entire XImage to BGRX and write to output_data */
+/* ----------------------------------------------------------------------------
+   convert_full_frame
+   ------------------------------------------------------------------------- */
 static void convert_full_frame(CaptureContext *ctx,
                                unsigned char *output_data) {
   int ii = 0;
@@ -139,9 +189,9 @@ static void convert_full_frame(CaptureContext *ctx,
       uint32_t *row = (uint32_t *)(src + y * stride);
       for (int x = 0; x < ctx->width; x++) {
         uint32_t pixel = row[x];
-        output_data[ii + 2] = (pixel & rm) >> 16; /* red */
-        output_data[ii + 1] = (pixel & gm) >> 8;  /* green */
-        output_data[ii + 0] = pixel & bm;         /* blue */
+        output_data[ii + 2] = (pixel & rm) >> 16;
+        output_data[ii + 1] = (pixel & gm) >> 8;
+        output_data[ii + 0] = pixel & bm;
         ii += 4;
       }
     }
@@ -158,16 +208,67 @@ static void convert_full_frame(CaptureContext *ctx,
   }
 }
 
+/* ----------------------------------------------------------------------------
+   fallback_capture: use XGetImage when SHM fails
+   ------------------------------------------------------------------------- */
+static int fallback_capture(CaptureContext *ctx, unsigned char *output_data) {
+  XWindowAttributes attrs;
+  if (!XGetWindowAttributes(ctx->dpy, ctx->xid, &attrs))
+    return -1;
+
+  XImage *fb_img = XGetImage(ctx->dpy, ctx->xid, ctx->x, ctx->y, ctx->width,
+                             ctx->height, AllPlanes, ZPixmap);
+  if (!fb_img)
+    return -1;
+
+  // Convert using the fallback image's masks
+  int ii = 0;
+  for (int y = 0; y < ctx->height; y++) {
+    for (int x = 0; x < ctx->width; x++) {
+      unsigned long pixel = XGetPixel(fb_img, x, y);
+      output_data[ii + 2] = (pixel & fb_img->red_mask) >> 16;
+      output_data[ii + 1] = (pixel & fb_img->green_mask) >> 8;
+      output_data[ii + 0] = pixel & fb_img->blue_mask;
+      ii += 4;
+    }
+  }
+  XDestroyImage(fb_img);
+  return 0;
+}
+
+/* ----------------------------------------------------------------------------
+   capture_grab_damage
+   ------------------------------------------------------------------------- */
 int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
                         DamageRect *rects, int max_rects) {
-  if (!ctx || !ctx->dpy || !ctx->img)
+  if (!ctx || !ctx->dpy)
+    return -1;
+
+  /* Clamp capture region to current window dimensions */
+  XWindowAttributes attrs;
+  if (XGetWindowAttributes(ctx->dpy, ctx->xid, &attrs)) {
+    if (ctx->x + ctx->width > attrs.width)
+      ctx->width = attrs.width - ctx->x;
+    if (ctx->y + ctx->height > attrs.height)
+      ctx->height = attrs.height - ctx->y;
+    if (ctx->width <= 0 || ctx->height <= 0)
+      return 0;
+  }
+
+  /* Ensure image is up-to-date with window's visual */
+  if (!recreate_image_if_needed(ctx))
     return -1;
 
   /* If damage extension not available, always full capture */
   if (!ctx->use_damage) {
-    if (!XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x, ctx->y, AllPlanes))
-      return -1;
-    convert_full_frame(ctx, output_data);
+    if (!XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x, ctx->y,
+                      AllPlanes)) {
+      // Fallback to XGetImage
+      if (fallback_capture(ctx, output_data) != 0)
+        return -1;
+    } else {
+      convert_full_frame(ctx, output_data);
+    }
     if (max_rects > 0) {
       rects[0].x = 0;
       rects[0].y = 0;
@@ -180,12 +281,15 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
 
   /* First capture: always full, consume initial damage */
   if (!ctx->first_capture_done) {
-    if (!XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x, ctx->y, AllPlanes))
-      return -1;
-    convert_full_frame(ctx, output_data);
+    if (!XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x, ctx->y,
+                      AllPlanes)) {
+      if (fallback_capture(ctx, output_data) != 0)
+        return -1;
+    } else {
+      convert_full_frame(ctx, output_data);
+    }
     ctx->first_capture_done = 1;
-    XDamageSubtract(ctx->dpy, ctx->damage, None,
-                    None); // clear initial damage report
+    XDamageSubtract(ctx->dpy, ctx->damage, None, None);
     if (max_rects > 0) {
       rects[0].x = 0;
       rects[0].y = 0;
@@ -196,7 +300,7 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
     return 1;
   }
 
-  /* Subsequent captures: check damage via XFixes */
+  /* Subsequent captures: check damage */
   XserverRegion parts = XFixesCreateRegion(ctx->dpy, NULL, 0);
   XDamageSubtract(ctx->dpy, ctx->damage, None, parts);
 
@@ -209,16 +313,19 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
   if (num_rects == 0 || bounds.width == 0 || bounds.height == 0) {
     if (xrects)
       XFree(xrects);
-    return 0; // no damage, output_data unchanged
+    return 0;
   }
 
   /* Damage present: capture full frame */
   if (!XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x, ctx->y, AllPlanes)) {
-    if (xrects)
-      XFree(xrects);
-    return -1;
+    if (fallback_capture(ctx, output_data) != 0) {
+      if (xrects)
+        XFree(xrects);
+      return -1;
+    }
+  } else {
+    convert_full_frame(ctx, output_data);
   }
-  convert_full_frame(ctx, output_data);
 
   /* Return damage rectangles */
   int count = 0;
