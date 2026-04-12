@@ -65,12 +65,6 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 pipx install linux-rt-upscaler
 ```
 
-### Or with regular pip (inside a virtual environment is advised)
-
-```sh
-pip install linux-rt-upscaler
-```
-
 ### Or install from source
 
 <details>
