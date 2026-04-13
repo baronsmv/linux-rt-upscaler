@@ -95,6 +95,8 @@ sudo pacman -S base-devel vulkan-devel libx11 libxcb libxext libxdamage libxfixe
 sudo zypper install gcc make vulkan-devel libX11-devel libxcb-devel libXext-devel libXdamage-devel libXfixes-devel
 ```
 
+---
+
 </details>
 
 ```sh
@@ -116,7 +118,7 @@ upscale
 upscale -s
 
 # Run a command and upscale its window
-upscale <command>
+upscale -- <command>
 
 # Choose a specific model (examples)
 upscale -m 8x32      # Highest quality, slowest
