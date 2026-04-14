@@ -69,6 +69,7 @@ class FrameGrabber:
         logger.info(f"FrameGrabber initialized: {self.width}x{self.height}")
 
     def grab(self) -> Tuple[memoryview, bool, List[Tuple[int, int, int, int]]]:
+        ctypes.memset(self._rects_buffer, 0, ctypes.sizeof(self._rects_buffer))
         num_rects = _lib.capture_grab_damage(
             self._ctx, self.buffer, self._rects_buffer, _MAX_DAMAGE_RECTS
         )

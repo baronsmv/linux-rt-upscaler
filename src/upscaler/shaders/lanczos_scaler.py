@@ -36,8 +36,16 @@ class LanczosScaler:
         self.compute = None
         self._sampler = None
         self._cb = None
+
         self._src_tex = None
+        self._src_width = 0
+        self._src_height = 0
+        self._src_format = None
         self._dst_tex = None
+        self._dst_width = 0
+        self._dst_height = 0
+        self._dst_format = None
+
         self._load_shader()
         self._create_resources()
 
@@ -57,11 +65,27 @@ class LanczosScaler:
         logger.debug("Lanczos scaler resources created.")
 
     def set_source_texture(self, tex: Texture2D) -> None:
+        if (
+            tex is self._src_tex
+            and tex.width == self._src_width
+            and tex.height == self._src_height
+        ):
+            return
         self._src_tex = tex
+        self._src_width = tex.width
+        self._src_height = tex.height
         self._rebuild_compute()
 
     def set_target_texture(self, tex: Texture2D) -> None:
+        if (
+            tex is self._dst_tex
+            and tex.width == self._dst_width
+            and tex.height == self._dst_height
+        ):
+            return
         self._dst_tex = tex
+        self._dst_width = tex.width
+        self._dst_height = tex.height
         self._rebuild_compute()
 
     def update_constants(self, background_color, *args) -> None:

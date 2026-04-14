@@ -46,6 +46,7 @@ class BuildCaptureLib(build_ext):
             "-lXext",
             "-lXdamage",
             "-lXfixes",
+            "-lpthread",
         ]
 
         print(f"Running: {' '.join(cmd)}", file=sys.stderr)

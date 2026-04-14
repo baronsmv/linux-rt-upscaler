@@ -382,6 +382,9 @@ class Pipeline:
             logger.warning(f"Frame grab failed: {e}")
             return
 
+        if rects:
+            logger.debug(f"Damage rects ({len(rects)}): {rects}")
+
         if not self._running:
             return
 
@@ -409,7 +412,19 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 4. Upload captured frame to staging buffer (CPU -> GPU)
         # -------------------------------------------------------------------------
-        self.upscaler.staging.upload(frame)
+        if self.config.use_damage_tracking and rects:
+            upload_list = []
+            stride = self.crop_width * 4
+            for rx, ry, rw, rh in rects:
+                # Extract sub-rectangle data from the full frame buffer
+                sub_data = bytearray()
+                for row in range(ry, ry + rh):
+                    start = row * stride + rx * 4
+                    sub_data.extend(frame[start : start + rw * 4])
+                upload_list.append((bytes(sub_data), rx, ry, rw, rh))
+            self.upscaler.input.upload_subresources(upload_list)
+        else:
+            self.upscaler.staging.upload(frame)
 
         # -------------------------------------------------------------------------
         # 5. Calculate Lanczos destination rectangle and update constants
@@ -501,11 +516,17 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 7. Submit EVERYTHING in one Vulkan command buffer
         # -------------------------------------------------------------------------
+        if self.config.use_damage_tracking and rects:
+            # Damage upload was done directly; skip the copy stage
+            copy_src = None
+        else:
+            copy_src = self.upscaler.staging
+
         self.upscaler.pipelines_first[0].dispatch_sequence(
             sequence=dispatches,
-            copy_src=self.upscaler.staging,
+            copy_src=copy_src,
             copy_dst=self.upscaler.input,
-            present_image=self._screen_tex,  # transition to PRESENT_SRC_KHR at the end
+            present_image=self._screen_tex,
         )
 
         # -------------------------------------------------------------------------

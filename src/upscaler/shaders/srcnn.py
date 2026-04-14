@@ -17,6 +17,8 @@ from compushady import (
 from compushady.formats import R8G8B8A8_UNORM
 from compushady.shaders import hlsl
 
+from ..utils import TILE_SIZE
+
 logger = logging.getLogger(__name__)
 
 
@@ -246,3 +248,37 @@ class SRCNN:
     def upload(self, frame_data: bytes) -> None:
         """Copy frame data into the staging buffer."""
         self.staging.upload(frame_data)
+
+    def build_tile_dispatches(self, dirty_tiles, use_first=True):
+        """
+        Return a list of (compute, x, y, z, push) for the given tiles.
+        dirty_tiles: set of (tx, ty) in input tile coordinates.
+        """
+        pipelines = self.pipelines_first if use_first else self.pipelines_second
+        w, h = (
+            (self._first_in_w, self._first_in_h)
+            if use_first
+            else (self._second_in_w, self._second_in_h)
+        )
+        total_tiles_x = (w + TILE_SIZE - 1) // TILE_SIZE
+        total_tiles_y = (h + TILE_SIZE - 1) // TILE_SIZE
+
+        dispatches = []
+        for i, pipe in enumerate(pipelines):
+            last_pass = i == self.cfg["passes"] - 1
+            # Groups per tile in this pass
+            if last_pass:
+                # Output is 2x, but we're still dispatching based on input tiles
+                groups_per_tile_x = (TILE_SIZE * 2) // 16
+                groups_per_tile_y = (TILE_SIZE * 2) // 16
+            else:
+                groups_per_tile_x = TILE_SIZE // 8
+                groups_per_tile_y = TILE_SIZE // 8
+
+            for tx, ty in dirty_tiles:
+                if tx >= total_tiles_x or ty >= total_tiles_y:
+                    continue
+                gx = tx * groups_per_tile_x
+                gy = ty * groups_per_tile_y
+                dispatches.append((pipe, gx, gy, 1, None))
+        return dispatches

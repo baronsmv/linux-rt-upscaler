@@ -86,6 +86,7 @@ class Config:
 
     # Vulkan
     vulkan_present_mode: str = VulkanPresentMode.FIFO.value
+    use_damage_tracking: bool = True
     vulkan_buffer_pool_size: int = 8
 
     # Logging (set via flags, not directly from CLI)
