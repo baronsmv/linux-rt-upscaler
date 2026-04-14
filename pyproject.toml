@@ -10,7 +10,7 @@ readme = "README.md"
 authors = [
     { name = "Mauricio Valentín Barón Salinas", email = "baronsmv@gmail.com" }
 ]
-license = { text = "GPL3.0" }
+license = "GPL-3.0-only"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
@@ -64,4 +64,4 @@ packages = [
 
 [tool.setuptools.package-data]
 "upscaler.shaders" = ["*.hlsl", "*/*/*.hlsl", "*/*/model.json"]
-"upscaler.capture" = ["*.c"]
+"upscaler.capture" = ["*.c", "*.h", "lib/*.c", "lib/*.h"]

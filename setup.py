@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -13,35 +12,42 @@ class BuildCaptureLib(build_ext):
     """Custom build_ext that compiles capture_x11.c before normal build."""
 
     def run(self):
-        # Logging to stderr (visible in CI)
+        # Prevent multiple runs (setuptools may call this twice)
+        if getattr(self, "_capture_lib_built", False):
+            super().run()
+            return
+
         print("=" * 50, file=sys.stderr)
         print("BuildCaptureLib.run() started", file=sys.stderr)
-        print("Current directory:", os.getcwd(), file=sys.stderr)
 
-        capture_dir = Path(__file__).parent / "src" / "upscaler" / "capture"
-        print("Contents of capture dir:", list(capture_dir.iterdir()), file=sys.stderr)
+        # Use absolute paths
+        project_root = Path(__file__).parent
+        capture_dir = project_root / "src" / "upscaler" / "capture"
+        lib_dir = capture_dir / "lib"
 
-        # Determine target directory for the .so file
         if self.inplace:
             target_dir = capture_dir
         else:
             target_dir = Path(self.build_lib) / "upscaler" / "capture"
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        src_file = capture_dir / "capture_x11.c"
+        src_files = list(lib_dir.glob("*.c"))
+        if not src_files:
+            sys.stderr.write(f"No C source files found in {lib_dir}\n")
+            sys.exit(1)
+
         so_file = target_dir / "capture_x11.so"
 
-        # Compiler command
         cmd = [
             "gcc",
             "-shared",
             "-fPIC",
             "-O3",
             "-mtune=generic",
-            str(src_file),
+            f"-I{lib_dir}",
+            *[str(f) for f in src_files],
             "-o",
             str(so_file),
-            "-Wl,-Bdynamic",
             "-lX11",
             "-lXext",
             "-lXdamage",
@@ -53,22 +59,14 @@ class BuildCaptureLib(build_ext):
         try:
             subprocess.check_call(cmd, stdout=sys.stderr, stderr=sys.stderr)
         except subprocess.CalledProcessError as e:
-            sys.stderr.write(f"❌ gcc failed with code {e.returncode}\n")
-            sys.stderr.write(f"Command: {' '.join(cmd)}\n")
-            sys.stderr.write(
-                "Make sure libX11-devel is installed and gcc is available.\n"
-            )
+            sys.stderr.write(f"gcc failed with code {e.returncode}\n")
             raise
         except FileNotFoundError:
-            sys.stderr.write(
-                "❌ gcc not found. Please install a C compiler (build-essential).\n"
-            )
+            sys.stderr.write("gcc not found.\n")
             sys.exit(1)
 
-        print("✅ capture_x11.so compiled successfully.", file=sys.stderr)
-        print("BuildCaptureLib.run() finished", file=sys.stderr)
-
-        # Now compile the dummy extension (triggers the normal build_ext)
+        print("capture_x11.so compiled successfully.", file=sys.stderr)
+        self._capture_lib_built = True
         super().run()
 
 
