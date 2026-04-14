@@ -385,8 +385,7 @@ class Pipeline:
             return
 
         # Upscale
-        self.upscaler.upload(frame)
-        self.upscaler.compute()
+        self.upscaler.process_frame(frame)
 
         # Calculate destination rectangle
         r_x, r_y, r_w, r_h = calculate_scaling_rect(

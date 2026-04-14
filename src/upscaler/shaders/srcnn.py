@@ -14,7 +14,7 @@ from compushady import (
     SAMPLER_FILTER_LINEAR,
     SAMPLER_ADDRESS_MODE_CLAMP,
 )
-from compushady.formats import R8G8B8A8_UNORM, get_pixel_size
+from compushady.formats import R8G8B8A8_UNORM
 from compushady.shaders import hlsl
 
 logger = logging.getLogger(__name__)
@@ -331,25 +331,27 @@ class SRCNN:
 
         return pipelines, target_width, target_height
 
-    def upload(self, data: Any) -> None:
-        """Upload raw frame data to the input texture."""
-        logger.debug(f"Uploading data (size {len(data)}) to input texture")
-        self.staging.upload2d(
-            data,
-            self.input.row_pitch,
-            self.input.width,
-            self.input.height,
-            get_pixel_size(R8G8B8A8_UNORM),
-        )
-        self.staging.copy_to(self.input)
-        logger.debug("Upload complete")
+    def process_frame(self, frame_data: bytes) -> None:
+        """Upload frame and run upscale in one GPU submission."""
+        # Copy raw frame into persistently mapped staging buffer
+        self.staging.upload(frame_data)
 
-    def compute(self) -> None:
-        """Run the upscaling compute shaders."""
-        if not self.double_upscale:
-            self._compute_single()
-        else:
-            self._compute_double()
+        # Build dispatch list
+        pipelines = self.pipelines_first  # or second
+        w, h = self._first_in_w, self._first_in_h
+        dispatches = []
+        for i, pipe in enumerate(pipelines):
+            last_pass = i == self.cfg["passes"] - 1
+            gx, gy = _dispatch_groups(w, h, last_pass)
+            dispatches.append((pipe, gx, gy, 1, None))
+
+        # Execute copy + upscale in one go
+        pipelines[0].dispatch_sequence(
+            sequence=dispatches,
+            copy_src=self.staging,
+            copy_dst=self.input,
+            copy_slice=0,
+        )
 
     def _compute_single(self) -> None:
         """Single 2x upscale."""
@@ -361,11 +363,14 @@ class SRCNN:
         pipelines = self.pipelines_first
         w, h = self._first_in_w, self._first_in_h
 
+        dispatches = []
         for i, pipe in enumerate(pipelines):
             last_pass = i == self.cfg["passes"] - 1
             gx, gy = _dispatch_groups(w, h, last_pass)
-            logger.debug(f"Dispatching pass {i}: groups={gx}x{gy}")
-            pipe.dispatch(gx, gy, 1)
+            dispatches.append((pipe, gx, gy, 1, None))  # (compute, x, y, z, push)
+
+        # Use the first pipeline to call the sequence method
+        pipelines[0].dispatch_sequence(dispatches)
         logger.info("Single upscale complete")
 
     def _compute_double(self) -> None:
@@ -377,21 +382,25 @@ class SRCNN:
             logger.error("Pipelines for first run not created")
             return
         w1, h1 = self._first_in_w, self._first_in_h
+        dispatches_first = []
         for i, pipe in enumerate(self.pipelines_first):
             last_pass = i == self.cfg["passes"] - 1
             gx, gy = _dispatch_groups(w1, h1, last_pass)
-            logger.debug(f"First run pass {i}: groups={gx}x{gy}")
-            pipe.dispatch(gx, gy, 1)
+            dispatches_first.append((pipe, gx, gy, 1, None))
 
         # Second run: intermediate -> output
         if self.pipelines_second is None:
             logger.error("Pipelines for second run not created")
             return
         w2, h2 = self._second_in_w, self._second_in_h
+        dispatches_second = []
         for i, pipe in enumerate(self.pipelines_second):
             last_pass = i == self.cfg["passes"] - 1
             gx, gy = _dispatch_groups(w2, h2, last_pass)
-            logger.debug(f"Second run pass {i}: groups={gx}x{gy}")
-            pipe.dispatch(gx, gy, 1)
+            dispatches_second.append((pipe, gx, gy, 1, None))
+
+        # Execute both sequences (two submissions, still much better than per‑dispatch)
+        self.pipelines_first[0].dispatch_sequence(dispatches_first)
+        self.pipelines_second[0].dispatch_sequence(dispatches_second)
 
         logger.info("Double upscale complete")
