@@ -17,28 +17,28 @@ class OverlayBlender:
         self, shader_path: str = os.path.join(SHADERS_DIR, "overlay_blend.hlsl")
     ):
         self.shader_path = shader_path
-        self._shader = None
-        self._sampler = None
-        self._cb = None
+        self.shader = None
+        self.sampler = None
+        self.cb = None
         self._screen_tex = None
         self._load_shader()
         self._create_resources()
 
     def _load_shader(self):
         with open(self.shader_path, "r") as f:
-            self._shader = hlsl.compile(f.read())
+            self.shader = hlsl.compile(f.read())
 
     def _create_resources(self):
         from compushady import SAMPLER_ADDRESS_MODE_CLAMP, SAMPLER_FILTER_POINT
 
-        self._sampler = Sampler(
+        self.sampler = Sampler(
             filter_min=SAMPLER_FILTER_POINT,
             filter_mag=SAMPLER_FILTER_POINT,
             address_mode_u=SAMPLER_ADDRESS_MODE_CLAMP,
             address_mode_v=SAMPLER_ADDRESS_MODE_CLAMP,
             address_mode_w=SAMPLER_ADDRESS_MODE_CLAMP,
         )
-        self._cb = Buffer(CB_SIZE, heap_type=HEAP_UPLOAD)
+        self.cb = Buffer(CB_SIZE, heap_type=HEAP_UPLOAD)
         logger.debug("OverlayBlender resources created.")
 
     def set_screen_texture(self, tex):
@@ -50,16 +50,16 @@ class OverlayBlender:
 
         # Recreate compute pipeline with both textures (no bindless needed)
         compute = Compute(
-            self._shader,
+            self.shader,
             srv=[self._screen_tex, overlay_tex],
             uav=[self._screen_tex],
-            cbv=[self._cb],
-            samplers=[self._sampler],
+            cbv=[self.cb],
+            samplers=[self.sampler],
         )
 
         # Upload position/size constants
         cb_data = struct.pack("iiii", x, y, w, h)
-        self._cb.upload(cb_data)
+        self.cb.upload(cb_data)
 
         groups_x = (w + 15) // 16
         groups_y = (h + 15) // 16

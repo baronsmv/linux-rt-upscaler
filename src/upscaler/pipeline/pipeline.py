@@ -1,11 +1,12 @@
 import logging
+import struct
 import threading
 import time
 from queue import Empty, Queue
 from typing import Optional, Tuple
 
 from PySide6.QtCore import QMetaObject, Qt
-from compushady import Texture2D, configure_device
+from compushady import Texture2D, configure_device, Compute
 from compushady.formats import R8G8B8A8_UNORM
 
 from .controller import PipelineController
@@ -14,7 +15,7 @@ from .text_renderer import TextRenderer
 from ..capture import FrameGrabber
 from ..config import Config, OverlayMode, OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..overlay import OverlayWindow
-from ..shaders import LanczosScaler, OverlayBlender, SRCNN
+from ..shaders import LanczosScaler, OverlayBlender, SRCNN, dispatch_groups
 from ..utils import parse_output_geometry, calculate_scaling_rect
 from ..window import WindowInfo, WindowTracker, get_display
 
@@ -354,7 +355,27 @@ class Pipeline:
                 self._osd_expiry_time = None
 
     def _process_one_frame(self) -> None:
-        # Grab frame
+        """
+        Process a single frame:
+          1. Grab frame from the target window.
+          2. Upload to staging buffer.
+          3. Calculate Lanczos destination rectangle and constants.
+          4. Build a list of GPU dispatches:
+             - All upscale passes (SRCNN).
+             - Lanczos scaling pass.
+             - (Optional) OSD blend pass if an OSD message is active.
+          5. Submit everything in ONE Vulkan command buffer, including:
+             - Copy from staging to input texture.
+             - All compute dispatches.
+             - Layout transition of screen texture to PRESENT_SRC_KHR.
+          6. Present the screen texture without waiting for an additional fence.
+          7. Update mouse mapping for overlay interaction.
+          8. Check if swapchain needs recreation.
+        """
+
+        # -------------------------------------------------------------------------
+        # 1. Grab frame from X11 (raw BGRA bytes)
+        # -------------------------------------------------------------------------
         try:
             frame, is_dirty, rects = self._grabber.grab()
         except RuntimeError as e:
@@ -364,30 +385,35 @@ class Pipeline:
         if not self._running:
             return
 
-        # OSD expiry
-        if self._osd_texture is not None and self._osd_expiry_time is not None:
-            if time.monotonic() >= self._osd_expiry_time:
-                self._osd_texture = None
-                self._osd_expiry_time = None
-                self._needs_osd_redraw = True  # force redraw to remove OSD
+        # -------------------------------------------------------------------------
+        # 2. Handle OSD expiry (auto‑hide after duration)
+        # -------------------------------------------------------------------------
+        self._update_osd_timer()
 
-        # Force dirty if OSD needs redraw
+        # Force a redraw if the OSD just expired (to clear it from screen)
         if self._needs_osd_redraw:
             is_dirty = True
             self._needs_osd_redraw = False
 
-        # Always update overlay opacity
+        # Always update overlay window opacity (may change due to focus)
         self.overlay.update_opacity()
 
-        # If frame unchanged, skip heavy GPU work
-        if not is_dirty:
+        # -------------------------------------------------------------------------
+        # 3. If frame hasn't changed and no OSD update, skip GPU work
+        # -------------------------------------------------------------------------
+        if not is_dirty and self._osd_texture is None:
+            # Just present the existing screen texture
             self._swapchain_manager.present(self._screen_tex)
             return
 
-        # Upscale
-        self.upscaler.process_frame(frame)
+        # -------------------------------------------------------------------------
+        # 4. Upload captured frame to staging buffer (CPU -> GPU)
+        # -------------------------------------------------------------------------
+        self.upscaler.staging.upload(frame)
 
-        # Calculate destination rectangle
+        # -------------------------------------------------------------------------
+        # 5. Calculate Lanczos destination rectangle and update constants
+        # -------------------------------------------------------------------------
         r_x, r_y, r_w, r_h = calculate_scaling_rect(
             self.src_w,
             self.src_h,
@@ -406,7 +432,90 @@ class Pipeline:
             self._swapchain_manager.present(self._screen_tex)
             return
 
-        # Update mouse mapping
+        self.lanczos_scaler.update_constants(
+            self._background_color,
+            self.upscaler.output.width,
+            self.upscaler.output.height,
+            self._screen_width,
+            self._screen_height,
+            dst_x,
+            dst_y,
+            r_w,
+            r_h,
+            1.0,  # blur factor
+        )
+
+        # -------------------------------------------------------------------------
+        # 6. Build the list of compute dispatches for this frame
+        # -------------------------------------------------------------------------
+        dispatches = []
+
+        # ---- SRCNN upscale passes (first stage) ----
+        w, h = self.upscaler._first_in_w, self.upscaler._first_in_h
+        for i, pipe in enumerate(self.upscaler.pipelines_first):
+            last = i == self.upscaler.cfg["passes"] - 1
+            gx, gy = dispatch_groups(w, h, last)
+            dispatches.append((pipe, gx, gy, 1, None))
+
+        # ---- SRCNN second stage (if double upscale enabled) ----
+        if self.double_upscale:
+            w2, h2 = self.upscaler._second_in_w, self.upscaler._second_in_h
+            for i, pipe in enumerate(self.upscaler.pipelines_second):
+                last = i == self.upscaler.cfg["passes"] - 1
+                gx, gy = dispatch_groups(w2, h2, last)
+                dispatches.append((pipe, gx, gy, 1, None))
+
+        # ---- Lanczos scaling pass ----
+        dispatches.append(
+            (self.lanczos_scaler.compute, self._groups_x, self._groups_y, 1, None)
+        )
+
+        # ---- OSD blend pass (if OSD is active) ----
+        if self._osd_texture is not None:
+            # Update OSD constant buffer with position and size
+            osd_w = self._osd_texture.width
+            osd_h = self._osd_texture.height
+            osd_x = (self._screen_width - osd_w) // 2
+            osd_y = (self._screen_height - osd_h) // 2
+
+            # The OverlayBlender uses a CBV with four ints: x, y, w, h
+            cb_data = struct.pack("iiii", osd_x, osd_y, osd_w, osd_h)
+            self._overlay_blender.cb.upload(cb_data)
+
+            # Create (or reuse) the compute pipeline for this specific OSD texture.
+            # Since the OSD texture changes rarely, we can recreate the pipeline
+            # each time; it's lightweight and only happens when OSD is shown.
+            osd_compute = Compute(
+                self._overlay_blender.shader,
+                srv=[self._screen_tex, self._osd_texture],
+                uav=[self._screen_tex],
+                cbv=[self._overlay_blender.cb],
+                samplers=[self._overlay_blender.sampler],
+            )
+
+            # Dispatch enough groups to cover the OSD rectangle (16x16 threads)
+            groups_x = (osd_w + 15) // 16
+            groups_y = (osd_h + 15) // 16
+            dispatches.append((osd_compute, groups_x, groups_y, 1, None))
+
+        # -------------------------------------------------------------------------
+        # 7. Submit EVERYTHING in one Vulkan command buffer
+        # -------------------------------------------------------------------------
+        self.upscaler.pipelines_first[0].dispatch_sequence(
+            sequence=dispatches,
+            copy_src=self.upscaler.staging,
+            copy_dst=self.upscaler.input,
+            present_image=self._screen_tex,  # transition to PRESENT_SRC_KHR at the end
+        )
+
+        # -------------------------------------------------------------------------
+        # 8. Present the screen texture (no extra GPU work, layout already correct)
+        # -------------------------------------------------------------------------
+        self._swapchain_manager.present(self._screen_tex, wait_for_fence=False)
+
+        # -------------------------------------------------------------------------
+        # 9. Update mouse mapping rectangle for overlay interaction
+        # -------------------------------------------------------------------------
         self.overlay.scaling_rect = [
             dst_x / self._scale_factor,
             dst_y / self._scale_factor,
@@ -414,27 +523,9 @@ class Pipeline:
             dst_h / self._scale_factor,
         ]
 
-        # Lanczos pass
-        self.lanczos_scaler.update_constants(
-            self._background_color,
-            self.src_w,
-            self.src_h,
-            self._screen_width,
-            self._screen_height,
-            dst_x,
-            dst_y,
-            dst_w,
-            dst_h,
-        )
-        self.lanczos_scaler.dispatch(self._groups_x, self._groups_y)
-
-        # Draw OSD on top of the upscaled result
-        self._draw_osd()
-
-        # Present
-        self._swapchain_manager.present(self._screen_tex)
-
-        # Swapchain recreation check
+        # -------------------------------------------------------------------------
+        # 10. Check if swapchain needs recreation (e.g., window resized)
+        # -------------------------------------------------------------------------
         if self._swapchain_manager.needs_recreation():
             if self._swapchain_manager.is_out_of_date():
                 logger.info("Swapchain out-of-date, recreating.")

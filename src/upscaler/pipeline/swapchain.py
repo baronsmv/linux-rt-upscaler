@@ -68,11 +68,11 @@ class SwapchainManager:
 
             self._create_swapchain()
 
-    def present(self, texture: Texture2D) -> None:
+    def present(self, texture: Texture2D, wait_for_fence: bool = True) -> None:
         if self.swapchain is None:
             raise RuntimeError("Swapchain not available")
         with self._lock:
-            self.swapchain.present(texture)
+            self.swapchain.present(texture, wait_for_fence=wait_for_fence)
 
     def needs_recreation(self) -> bool:
         return self.swapchain is None or self.swapchain.needs_recreation()

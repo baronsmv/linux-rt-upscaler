@@ -2,7 +2,15 @@ import logging
 import os
 import struct
 
-from compushady import Buffer, Compute, Sampler, Texture2D, HEAP_UPLOAD
+from compushady import (
+    Buffer,
+    Compute,
+    Sampler,
+    Texture2D,
+    HEAP_UPLOAD,
+    SAMPLER_ADDRESS_MODE_CLAMP,
+    SAMPLER_FILTER_POINT,
+)
 from compushady.shaders import hlsl
 
 logger = logging.getLogger(__name__)
@@ -24,7 +32,8 @@ class LanczosScaler:
     def __init__(self, shader_path: str = os.path.join(SHADERS_DIR, "lanczos2.hlsl")):
         self.shader_path = shader_path
         self._shader = None
-        self._compute = None
+        self._push_data = b""
+        self.compute = None
         self._sampler = None
         self._cb = None
         self._src_tex = None
@@ -37,8 +46,6 @@ class LanczosScaler:
             self._shader = hlsl.compile(f.read())
 
     def _create_resources(self):
-        from compushady import SAMPLER_ADDRESS_MODE_CLAMP, SAMPLER_FILTER_POINT
-
         self._sampler = Sampler(
             filter_min=SAMPLER_FILTER_POINT,
             filter_mag=SAMPLER_FILTER_POINT,
@@ -57,43 +64,14 @@ class LanczosScaler:
         self._dst_tex = tex
         self._rebuild_compute()
 
-    def update_constants(
-        self,
-        background_color,
-        src_w,
-        src_h,
-        screen_w,
-        screen_h,
-        dst_x,
-        dst_y,
-        dst_w,
-        dst_h,
-        blur=1.0,
-    ) -> None:
-        cb_data = struct.pack(
-            CB_FORMAT,
-            *background_color,
-            src_w,
-            src_h,
-            screen_w,
-            screen_h,
-            dst_x,
-            dst_y,
-            dst_w,
-            dst_h,
-            blur,
-        )
-        self._cb.upload(cb_data)
-
-    def dispatch(self, groups_x: int, groups_y: int) -> None:
-        if self._compute is None:
-            self._rebuild_compute()
-        self._compute.dispatch(groups_x, groups_y, 1)
+    def update_constants(self, background_color, *args) -> None:
+        self._push_data = struct.pack(CB_FORMAT, *background_color, *args)
+        self._cb.upload(self._push_data)
 
     def _rebuild_compute(self):
         if self._src_tex is None or self._dst_tex is None:
             return
-        self._compute = Compute(
+        self.compute = Compute(
             self._shader,
             srv=[self._src_tex],
             uav=[self._dst_tex],
