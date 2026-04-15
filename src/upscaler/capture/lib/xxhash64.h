@@ -12,10 +12,10 @@
 #include <stdint.h>
 
 typedef struct XXH64_state {
-    unsigned long long total_len;
-    unsigned long long v1, v2, v3, v4;
-    unsigned char mem[32];
-    unsigned memsize;
+  unsigned long long total_len;
+  unsigned long long v1, v2, v3, v4;
+  unsigned char mem[32];
+  unsigned memsize;
 } XXH64_state_t;
 
 void XXH64_reset(XXH64_state_t *state, unsigned long long seed);

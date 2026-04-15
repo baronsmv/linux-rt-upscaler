@@ -12,50 +12,50 @@
 #include <stdint.h>
 
 /* Configuration constants */
-#define DEFAULT_TILE_SIZE     64
-#define MIN_TILE_SIZE         16
-#define DEFAULT_THRESHOLD     30
+#define DEFAULT_TILE_SIZE 64
+#define MIN_TILE_SIZE 16
+#define DEFAULT_THRESHOLD 30
 
 /** Public output rectangle. */
 typedef struct {
-    int x, y, width, height;
-    unsigned long long hash;
+  int x, y, width, height;
+  unsigned long long hash;
 } OutputRect;
 
 /** Internal tile cache entry. */
 typedef struct TileCacheEntry {
-    int x, y, width, height;
-    unsigned long long hash;
+  int x, y, width, height;
+  unsigned long long hash;
 } TileCacheEntry;
 
 /**
  * Capture context – opaque structure holding all state.
  */
 typedef struct CaptureContext {
-    Display *dpy;
-    Window xid;
-    int x, y, width, height;
+  Display *dpy;
+  Window xid;
+  int x, y, width, height;
 
-    /* SHM resources */
-    XShmSegmentInfo shminfo;
-    XImage *img;
-    unsigned long red_mask, green_mask, blue_mask;
-    int use_fast_path;
-    Visual *last_visual;
-    int last_depth;
-    int had_shm_failure;
+  /* SHM resources */
+  XShmSegmentInfo shminfo;
+  XImage *img;
+  unsigned long red_mask, green_mask, blue_mask;
+  int use_fast_path;
+  Visual *last_visual;
+  int last_depth;
+  int had_shm_failure;
 
-    /* Damage extension */
-    int use_damage;
-    Damage damage;
-    int first_capture_done;
+  /* Damage extension */
+  int use_damage;
+  Damage damage;
+  int first_capture_done;
 
-    /* Tile cache */
-    TileCacheEntry *tile_cache;
-    int tiles_x, tiles_y;
-    int tile_size;
-    int tile_threshold_percent;
-    int debug;
+  /* Tile cache */
+  TileCacheEntry *tile_cache;
+  int tiles_x, tiles_y;
+  int tile_size;
+  int tile_threshold_percent;
+  int debug;
 } CaptureContext;
 
 #ifdef __cplusplus
@@ -71,13 +71,14 @@ extern "C" {
  * @param height     Height of region to capture.
  * @return Opaque context pointer, or NULL on failure.
  */
-CaptureContext *capture_create(XID xid, int crop_left, int crop_top,
-                               int width, int height);
+CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
+                               int height);
 
 /**
  * Capture a frame and return a list of changed rectangles.
  * @param ctx         Capture context.
- * @param output_data Pre‑allocated buffer (width*height*4 bytes) to hold BGRA data.
+ * @param output_data Pre‑allocated buffer (width*height*4 bytes) to hold BGRA
+ * data.
  * @param rects       Array to receive output rectangles.
  * @param max_rects   Maximum number of rectangles to return.
  * @return Number of rectangles written, -1 on error.
