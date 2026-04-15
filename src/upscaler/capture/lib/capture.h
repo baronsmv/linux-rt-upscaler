@@ -16,9 +16,10 @@
 #define MIN_TILE_SIZE         16
 #define DEFAULT_THRESHOLD     30
 
-/** Public output rectangle (no hash). */
+/** Public output rectangle. */
 typedef struct {
     int x, y, width, height;
+    unsigned long long hash;
 } OutputRect;
 
 /** Internal tile cache entry. */

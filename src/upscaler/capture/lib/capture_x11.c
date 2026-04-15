@@ -125,6 +125,7 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
         if (max_rects > 0) {
             rects[0].x = 0; rects[0].y = 0;
             rects[0].width = ctx->width; rects[0].height = ctx->height;
+            rects[0].hash = 0;
             return 1;
         }
         return 1;
@@ -210,12 +211,14 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
                 rects[rect_count].y = ry;
                 rects[rect_count].width  = rw;
                 rects[rect_count].height = rh;
+                rects[rect_count].hash = 0;
                 rect_count++;
             }
         } else if (use_full_frame) {
             if (max_rects > 0) {
                 rects[0].x = 0; rects[0].y = 0;
                 rects[0].width = ctx->width; rects[0].height = ctx->height;
+                rects[0].hash = 0;
                 rect_count = 1;
             }
         }

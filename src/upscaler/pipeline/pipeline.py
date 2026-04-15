@@ -50,6 +50,7 @@ class Pipeline:
         self._crop_right = config.crop_right
         self._crop_bottom = config.crop_bottom
         self.double_upscale = config.double_upscale
+        self.tile_size = config.tile_size
         self.model_name = config.model
         self.output_geometry = config.output_geometry
         self._scale_factor = config.scale_factor
@@ -97,6 +98,7 @@ class Pipeline:
             height=self.crop_height,
             model_name=self.model_name,
             double_upscale=self.double_upscale,
+            tile_size=self.tile_size,
         )
 
         # Lanczos scaler
@@ -202,6 +204,7 @@ class Pipeline:
                 crop_top=self._crop_top,
                 crop_right=self._crop_right,
                 crop_bottom=self._crop_bottom,
+                tile_size=self.tile_size,
             )
             logger.debug(
                 f"FrameGrabber created for window {self._win_info.handle} in "
@@ -415,7 +418,7 @@ class Pipeline:
         if self.config.use_damage_tracking and rects:
             upload_list = []
             stride = self.crop_width * 4
-            for rx, ry, rw, rh in rects:
+            for rx, ry, rw, rh, hash in rects:
                 # Extract sub-rectangle data from the full frame buffer
                 sub_data = bytearray()
                 for row in range(ry, ry + rh):
@@ -587,6 +590,7 @@ class Pipeline:
             height=self.crop_height,
             model_name=self.model_name,
             double_upscale=self.double_upscale,
+            tile_size=self.tile_size,
         )
         self.lanczos_scaler.set_source_texture(self.upscaler.output)
 

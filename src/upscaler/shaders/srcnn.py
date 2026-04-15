@@ -17,8 +17,6 @@ from compushady import (
 from compushady.formats import R8G8B8A8_UNORM
 from compushady.shaders import hlsl
 
-from ..utils import TILE_SIZE
-
 logger = logging.getLogger(__name__)
 
 
@@ -66,11 +64,13 @@ class SRCNN:
         height: int,
         model_name: str,
         double_upscale: bool,
+        tile_size: int = 64,
     ) -> None:
         self.width = width
         self.height = height
         self.model_name = model_name
         self.double_upscale = double_upscale
+        self.tile_size = tile_size
 
         logger.info(
             f"Initializing SRCNN: {width}x{height}, model='{model_name}', double={double_upscale}"
@@ -260,8 +260,8 @@ class SRCNN:
             if use_first
             else (self._second_in_w, self._second_in_h)
         )
-        total_tiles_x = (w + TILE_SIZE - 1) // TILE_SIZE
-        total_tiles_y = (h + TILE_SIZE - 1) // TILE_SIZE
+        total_tiles_x = (w + self.tile_size - 1) // self.tile_size
+        total_tiles_y = (h + self.tile_size - 1) // self.tile_size
 
         dispatches = []
         for i, pipe in enumerate(pipelines):
@@ -269,11 +269,11 @@ class SRCNN:
             # Groups per tile in this pass
             if last_pass:
                 # Output is 2x, but we're still dispatching based on input tiles
-                groups_per_tile_x = (TILE_SIZE * 2) // 16
-                groups_per_tile_y = (TILE_SIZE * 2) // 16
+                groups_per_tile_x = (self.tile_size * 2) // 16
+                groups_per_tile_y = (self.tile_size * 2) // 16
             else:
-                groups_per_tile_x = TILE_SIZE // 8
-                groups_per_tile_y = TILE_SIZE // 8
+                groups_per_tile_x = self.tile_size // 8
+                groups_per_tile_y = self.tile_size // 8
 
             for tx, ty in dirty_tiles:
                 if tx >= total_tiles_x or ty >= total_tiles_y:

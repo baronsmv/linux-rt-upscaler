@@ -79,6 +79,7 @@ int tile_cache_detect_changes(CaptureContext *ctx,
                         rects[rect_count].y = tile->y;
                         rects[rect_count].width  = tile->width;
                         rects[rect_count].height = tile->height;
+                        rects[rect_count].hash = cur_hash;
                         rect_count++;
                     }
                 }
@@ -112,6 +113,7 @@ int tile_cache_detect_changes(CaptureContext *ctx,
                             rects[rect_count].y = tile->y;
                             rects[rect_count].width  = tile->width;
                             rects[rect_count].height = tile->height;
+                            rects[rect_count].hash = cur_hash;
                             rect_count++;
                         }
                     }

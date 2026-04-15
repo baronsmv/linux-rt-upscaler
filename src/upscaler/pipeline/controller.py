@@ -130,6 +130,7 @@ class PipelineController:
             height=self._pipeline.crop_height,
             model_name=new_model,
             double_upscale=self._pipeline.double_upscale,
+            tile_size=self._pipeline.tile_size,
         )
         self._pipeline.lanczos_scaler.set_source_texture(self._pipeline.upscaler.output)
 

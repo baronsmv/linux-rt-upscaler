@@ -17,6 +17,7 @@ class DamageRect(ctypes.Structure):
         ("y", ctypes.c_int),
         ("width", ctypes.c_int),
         ("height", ctypes.c_int),
+        ("hash", ctypes.c_ulonglong),
     ]
 
 
@@ -43,7 +44,13 @@ _lib.capture_destroy.restype = None
 
 class FrameGrabber:
     def __init__(
-        self, window_info: Any, crop_left=0, crop_top=0, crop_right=0, crop_bottom=0
+        self,
+        window_info: Any,
+        crop_left=0,
+        crop_top=0,
+        crop_right=0,
+        crop_bottom=0,
+        tile_size: int = 64,
     ):
         self.handle = window_info.handle
         self.crop_left = crop_left
@@ -56,6 +63,9 @@ class FrameGrabber:
         if self.width <= 0 or self.height <= 0:
             raise ValueError(f"Invalid cropped dimensions: {self.width}x{self.height}")
 
+        # Set tile size for C library
+        os.environ["CAPTURE_TILE_SIZE"] = str(tile_size)
+
         self.buffer_size = self.width * self.height * 4
         self.buffer = (ctypes.c_ubyte * self.buffer_size)()
         self._rects_buffer = (DamageRect * _MAX_DAMAGE_RECTS)()
@@ -66,9 +76,11 @@ class FrameGrabber:
         if not self._ctx:
             raise RuntimeError("Failed to create capture context")
 
-        logger.info(f"FrameGrabber initialized: {self.width}x{self.height}")
+        logger.info(
+            f"FrameGrabber initialized: {self.width}x{self.height}, tile_size={tile_size}"
+        )
 
-    def grab(self) -> Tuple[memoryview, bool, List[Tuple[int, int, int, int]]]:
+    def grab(self) -> Tuple[memoryview, bool, List[Tuple[int, int, int, int, int]]]:
         ctypes.memset(self._rects_buffer, 0, ctypes.sizeof(self._rects_buffer))
         num_rects = _lib.capture_grab_damage(
             self._ctx, self.buffer, self._rects_buffer, _MAX_DAMAGE_RECTS
@@ -80,7 +92,7 @@ class FrameGrabber:
         if is_dirty:
             for i in range(num_rects):
                 r = self._rects_buffer[i]
-                rects.append((r.x, r.y, r.width, r.height))
+                rects.append((r.x, r.y, r.width, r.height, r.hash))
         return memoryview(self.buffer), is_dirty, rects
 
     def close(self):
@@ -89,5 +101,4 @@ class FrameGrabber:
             self._ctx = None
 
     def __del__(self):
-        if hasattr(self, "_ctx") and self._ctx:
-            _lib.capture_destroy(self._ctx)
+        self.close()
