@@ -1,6 +1,7 @@
-import compushady
 from PIL import Image, ImageDraw, ImageFont
-from compushady.formats import R8G8B8A8_UNORM
+
+import vulkan
+from vulkan.constants import R8G8B8A8_UNORM
 
 
 class TextRenderer:
@@ -59,13 +60,13 @@ class TextRenderer:
         draw.text((padding, padding), text, font=self.font, fill=text_color)
 
         # Upload to GPU
-        tex = compushady.Texture2D(img_w, img_h, R8G8B8A8_UNORM)
+        tex = vulkan.Texture2D(img_w, img_h, R8G8B8A8_UNORM)
         buffer_size = img_w * img_h * 4
-        upload_buffer = compushady.Buffer(buffer_size, heap_type=compushady.HEAP_UPLOAD)
+        upload_buffer = vulkan.Buffer(buffer_size, heap_type=vulkan.HEAP_UPLOAD)
         upload_buffer.upload(img.tobytes())
         upload_buffer.copy_to(tex)
 
         self.cache[text] = tex
 
-    def get_texture(self, text: str) -> compushady.Texture2D | None:
+    def get_texture(self, text: str) -> vulkan.Texture2D | None:
         return self.cache.get(text)

@@ -2,7 +2,7 @@ import logging
 import os
 import struct
 
-from compushady import (
+from vulkan import (
     Buffer,
     Compute,
     Sampler,
@@ -11,7 +11,7 @@ from compushady import (
     SAMPLER_ADDRESS_MODE_CLAMP,
     SAMPLER_FILTER_POINT,
 )
-from compushady.shaders import hlsl
+from vulkan.shaders import hlsl
 
 logger = logging.getLogger(__name__)
 

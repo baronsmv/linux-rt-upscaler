@@ -4,7 +4,9 @@ import os
 import struct
 from typing import Dict, List, Optional, Tuple
 
-from compushady import (
+from vulkan.shaders import hlsl
+
+from vulkan import (
     Compute,
     Buffer,
     Texture2D,
@@ -14,8 +16,7 @@ from compushady import (
     SAMPLER_FILTER_LINEAR,
     SAMPLER_ADDRESS_MODE_CLAMP,
 )
-from compushady.formats import R8G8B8A8_UNORM
-from compushady.shaders import hlsl
+from vulkan.constants import R8G8B8A8_UNORM
 
 logger = logging.getLogger(__name__)
 

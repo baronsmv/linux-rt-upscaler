@@ -2,8 +2,8 @@ import logging
 import os
 import struct
 
-from compushady import Compute, Sampler, Buffer, HEAP_UPLOAD
-from compushady.shaders import hlsl
+from vulkan import Compute, Sampler, Buffer, HEAP_UPLOAD
+from vulkan.shaders import hlsl
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class OverlayBlender:
             self.shader = hlsl.compile(f.read())
 
     def _create_resources(self):
-        from compushady import SAMPLER_ADDRESS_MODE_CLAMP, SAMPLER_FILTER_POINT
+        from vulkan import SAMPLER_ADDRESS_MODE_CLAMP, SAMPLER_FILTER_POINT
 
         self.sampler = Sampler(
             filter_min=SAMPLER_FILTER_POINT,

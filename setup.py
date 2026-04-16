@@ -8,46 +8,61 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 
 
-class BuildCaptureLib(build_ext):
-    """Custom build_ext that compiles capture_x11.c before normal build."""
+def get_version_from_pyproject():
+    pyproject_path = Path(__file__).parent / "pyproject.toml"
+    if not pyproject_path.exists():
+        return "0.0.0"
+    try:
+        if sys.version_info >= (3, 11):
+            import tomllib
+        else:
+            import tomli as tomllib
+        with open(pyproject_path, "rb") as f:
+            data = tomllib.load(f)
+        return data.get("project", {}).get("version") or "0.0.0"
+    except Exception:
+        return "0.0.0"
+
+
+class BuildSharedLibs(build_ext):
+    """Compile capture_x11.so (plain C) then continue with Python extensions."""
 
     def run(self):
-        # Prevent multiple runs (setuptools may call this twice)
         if getattr(self, "_capture_lib_built", False):
             super().run()
             return
 
         print("=" * 50, file=sys.stderr)
-        print("BuildCaptureLib.run() started", file=sys.stderr)
+        print("BuildSharedLibs.run() started", file=sys.stderr)
 
-        # Use absolute paths
         project_root = Path(__file__).parent
+
+        # --- capture_x11.so ---
         capture_dir = project_root / "src" / "upscaler" / "capture"
-        lib_dir = capture_dir / "lib"
+        capture_lib_dir = capture_dir / "lib"
 
         if self.inplace:
-            target_dir = capture_dir
+            capture_target_dir = capture_dir
         else:
-            target_dir = Path(self.build_lib) / "upscaler" / "capture"
-        target_dir.mkdir(parents=True, exist_ok=True)
+            capture_target_dir = Path(self.build_lib) / "upscaler" / "capture"
+        capture_target_dir.mkdir(parents=True, exist_ok=True)
 
-        src_files = list(lib_dir.glob("*.c"))
-        if not src_files:
-            sys.stderr.write(f"No C source files found in {lib_dir}\n")
+        capture_src = list(capture_lib_dir.glob("*.c"))
+        if not capture_src:
+            sys.stderr.write(f"No C source files found in {capture_lib_dir}\n")
             sys.exit(1)
 
-        so_file = target_dir / "capture_x11.so"
-
-        cmd = [
+        capture_so = capture_target_dir / "capture_x11.so"
+        capture_cmd = [
             "gcc",
             "-shared",
             "-fPIC",
             "-O3",
             "-mtune=generic",
-            f"-I{lib_dir}",
-            *[str(f) for f in src_files],
+            f"-I{capture_lib_dir}",
+            *[str(f) for f in capture_src],
             "-o",
-            str(so_file),
+            str(capture_so),
             "-lX11",
             "-lXext",
             "-lXdamage",
@@ -55,38 +70,29 @@ class BuildCaptureLib(build_ext):
             "-lpthread",
         ]
 
-        print(f"Running: {' '.join(cmd)}", file=sys.stderr)
-        try:
-            subprocess.check_call(cmd, stdout=sys.stderr, stderr=sys.stderr)
-        except subprocess.CalledProcessError as e:
-            sys.stderr.write(f"gcc failed with code {e.returncode}\n")
-            raise
-        except FileNotFoundError:
-            sys.stderr.write("gcc not found.\n")
-            sys.exit(1)
-
+        print(f"Running: {' '.join(capture_cmd)}", file=sys.stderr)
+        subprocess.check_call(capture_cmd, stdout=sys.stderr, stderr=sys.stderr)
         print("capture_x11.so compiled successfully.", file=sys.stderr)
+
         self._capture_lib_built = True
         super().run()
 
 
-# Ensure a tiny dummy C source exists (in the repo or created on the fly)
-dummy_c_path = Path("src/upscaler/capture/dummy.c")
-if not dummy_c_path.exists():
-    dummy_c_path.parent.mkdir(parents=True, exist_ok=True)
-    dummy_c_path.write_text(
-        "/* dummy file to force extension build */\nvoid dummy(void) {}\n"
-    )
+# Vulkan extension
+vulkan_lib_dir = Path("src/upscaler/vulkan/lib")
+vulkan_sources = [str(f) for f in vulkan_lib_dir.glob("*.c")]
 
-# Dummy extension – source path is relative to setup.py (required by setuptools)
-dummy_extension = Extension(
-    "upscaler.capture.dummy",
-    sources=["src/upscaler/capture/dummy.c"],
+vulkan_extension = Extension(
+    "upscaler.vulkan.vulkan",
+    sources=vulkan_sources,
+    include_dirs=[str(vulkan_lib_dir), "/usr/include/vulkan"],
+    libraries=["vulkan"],
+    extra_compile_args=["-O3", "-mtune=generic"],
 )
 
 setup(
     name="linux-rt-upscaler",
-    version="0.2.4",
-    cmdclass={"build_ext": BuildCaptureLib},
-    ext_modules=[dummy_extension],
+    version=get_version_from_pyproject(),
+    cmdclass={"build_ext": BuildSharedLibs},
+    ext_modules=[vulkan_extension],
 )

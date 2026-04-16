@@ -6,9 +6,9 @@ from queue import Empty, Queue
 from typing import Optional, Tuple
 
 from PySide6.QtCore import QMetaObject, Qt
-from compushady import Texture2D, configure_device, Compute
-from compushady.formats import R8G8B8A8_UNORM
 
+from vulkan import Texture2D, configure_device, Compute
+from vulkan.constants import R8G8B8A8_UNORM
 from .controller import PipelineController
 from .swapchain import SwapchainManager
 from .text_renderer import TextRenderer

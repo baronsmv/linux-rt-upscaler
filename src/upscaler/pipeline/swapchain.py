@@ -4,8 +4,8 @@ import threading
 import time
 from typing import Optional
 
-from compushady import Swapchain, Texture2D
-from compushady.formats import R8G8B8A8_UNORM
+from vulkan import Swapchain, Texture2D
+from vulkan.constants import R8G8B8A8_UNORM
 
 logger = logging.getLogger(__name__)
 
