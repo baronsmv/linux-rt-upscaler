@@ -55,6 +55,7 @@ class OverlayBlender:
             uav=[self._screen_tex],
             cbv=[self.cb],
             samplers=[self.sampler],
+            push_size=0,
         )
 
         # Upload position/size constants

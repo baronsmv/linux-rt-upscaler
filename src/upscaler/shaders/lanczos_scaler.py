@@ -101,5 +101,6 @@ class LanczosScaler:
             uav=[self._dst_tex],
             cbv=[self._cb],
             samplers=[self._sampler],
+            push_size=0,
         )
         logger.debug("Lanczos compute object rebuilt.")

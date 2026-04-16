@@ -473,7 +473,7 @@ class Pipeline:
         for i, pipe in enumerate(self.upscaler.pipelines_first):
             last = i == self.upscaler.cfg["passes"] - 1
             gx, gy = dispatch_groups(w, h, last)
-            dispatches.append((pipe, gx, gy, 1, None))
+            dispatches.append((pipe, gx, gy, 1, b""))
 
         # ---- SRCNN second stage (if double upscale enabled) ----
         if self.double_upscale:
@@ -481,11 +481,11 @@ class Pipeline:
             for i, pipe in enumerate(self.upscaler.pipelines_second):
                 last = i == self.upscaler.cfg["passes"] - 1
                 gx, gy = dispatch_groups(w2, h2, last)
-                dispatches.append((pipe, gx, gy, 1, None))
+                dispatches.append((pipe, gx, gy, 1, b""))
 
         # ---- Lanczos scaling pass ----
         dispatches.append(
-            (self.lanczos_scaler.compute, self._groups_x, self._groups_y, 1, None)
+            (self.lanczos_scaler.compute, self._groups_x, self._groups_y, 1, b"")
         )
 
         # ---- OSD blend pass (if OSD is active) ----
@@ -509,12 +509,13 @@ class Pipeline:
                 uav=[self._screen_tex],
                 cbv=[self._overlay_blender.cb],
                 samplers=[self._overlay_blender.sampler],
+                push_size=0,
             )
 
             # Dispatch enough groups to cover the OSD rectangle (16x16 threads)
             groups_x = (osd_w + 15) // 16
             groups_y = (osd_h + 15) // 16
-            dispatches.append((osd_compute, groups_x, groups_y, 1, None))
+            dispatches.append((osd_compute, groups_x, groups_y, 1, b""))
 
         # -------------------------------------------------------------------------
         # 7. Submit EVERYTHING in one Vulkan command buffer
@@ -523,7 +524,11 @@ class Pipeline:
             # Damage upload was done directly; skip the copy stage
             copy_src = None
         else:
-            copy_src = self.upscaler.staging
+            copy_src = (
+                None
+                if self.config.use_damage_tracking and rects
+                else self.upscaler.staging
+            )
 
         self.upscaler.pipelines_first[0].dispatch_sequence(
             sequence=dispatches,

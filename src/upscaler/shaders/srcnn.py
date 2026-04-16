@@ -240,6 +240,7 @@ class SRCNN:
                 srv=srv_list,
                 uav=uav_list,
                 samplers=samplers,
+                push_size=8,
             )
             pipelines.append(pipe)
 
@@ -280,5 +281,5 @@ class SRCNN:
                     continue
                 gx = tx * groups_per_tile_x
                 gy = ty * groups_per_tile_y
-                dispatches.append((pipe, gx, gy, 1, None))
+                dispatches.append((pipe, gx, gy, 1, b""))
         return dispatches
