@@ -1,15 +1,8 @@
-"""
-Vulkan backend for GPU compute and presentation (Linux).
-
-This module provides a Pythonic interface to the native Vulkan C++ backend.
-All resources and operations are exposed through lightweight wrapper classes.
-"""
-
 import atexit
 import os
 from typing import List, Optional, Tuple, Union
 
-from . import vulkan as _vk
+from . import vulkan as _vk  # type: ignore
 
 # ----------------------------------------------------------------------
 # Constants
@@ -140,6 +133,11 @@ class VulkanContext:
 
     Manages device discovery, selection, and debug settings.
     Multiple contexts can coexist independently.
+
+    Attributes:
+        discovered_devices (List[Device]): Cached list of available devices.
+        current_device (Device): Currently active logical device.
+        debug_enabled (bool): Whether validation layers are active.
     """
 
     __slots__ = (
@@ -161,7 +159,11 @@ class VulkanContext:
             self._current_device.wait_idle()
 
     def enable_debug(self) -> None:
-        """Enable Vulkan validation layers and debug output."""
+        """
+        Enable Vulkan validation layers and debug output.
+
+        This must be called before any device creation to take effect.
+        """
         if not self._debug_enabled:
             _vk.enable_debug()
             self._debug_enabled = True
@@ -174,21 +176,37 @@ class VulkanContext:
         return _vk.get_shader_binary_type()
 
     def get_discovered_devices(self) -> List["Device"]:
-        """Return a list of all available Vulkan devices (cached)."""
+        """
+        Return a list of all available Vulkan devices.
+
+        The list is cached after the first call.
+        """
         if self._discovered_devices is None:
             raw_list = _vk.get_discovered_devices()
             self._discovered_devices = [Device._from_handle(d) for d in raw_list]
         return self._discovered_devices
 
     def set_current_device(self, index: int) -> None:
-        """Set the currently active device by index."""
+        """
+        Set the currently active device by index.
+
+        Args:
+            index: Index into the list returned by `get_discovered_devices()`.
+
+        Raises:
+            IndexError: If the index is out of range.
+        """
         devices = self.get_discovered_devices()
         if index < 0 or index >= len(devices):
             raise IndexError(f"Device index {index} out of range (0..{len(devices)-1})")
         self._current_device = devices[index]
 
     def get_current_device(self) -> "Device":
-        """Return the currently active device (auto‑selects best if none set)."""
+        """
+        Return the currently active device.
+
+        If no device has been set, automatically selects the best available.
+        """
         if self._current_device is None:
             self._current_device = self.get_best_device()
         return self._current_device
@@ -198,8 +216,12 @@ class VulkanContext:
         Select the best available device.
 
         Preference order:
-        1. Device specified by VULKAN_DEVICE environment variable (index).
-        2. Discrete GPU with the most dedicated video memory.
+            1. Device specified by the `VULKAN_DEVICE` environment variable (index).
+            2. Discrete GPU with the most dedicated video memory.
+            3. Any hardware‑accelerated device.
+
+        Raises:
+            RuntimeError: If no Vulkan devices are found.
         """
         devices = self.get_discovered_devices()
         if not devices:
@@ -256,7 +278,12 @@ def get_best_device() -> "Device":
 
 
 def configure_device(buffer_pool_size: int = 0) -> None:
-    """Set the staging buffer pool size on the current device."""
+    """
+    Set the staging buffer pool size on the current device.
+
+    Args:
+        buffer_pool_size: Number of reusable staging buffers.
+    """
     dev = get_current_device()
     if buffer_pool_size:
         dev.set_buffer_pool_size(buffer_pool_size)
@@ -271,6 +298,16 @@ class Device:
 
     Provides methods to create resources (buffers, textures, etc.).
     Instances are obtained via `get_discovered_devices()`.
+
+    Attributes:
+        name (str): Device name (e.g., 'NVIDIA GeForce RTX 3060').
+        dedicated_video_memory (int): Dedicated video memory in bytes.
+        dedicated_system_memory (int): Dedicated system memory in bytes.
+        shared_system_memory (int): Shared system memory in bytes.
+        vendor_id (int): PCI vendor ID.
+        device_id (int): PCI device ID.
+        is_hardware (bool): True if hardware‑accelerated.
+        is_discrete (bool): True if discrete GPU.
     """
 
     __slots__ = ("_handle",)
@@ -287,42 +324,34 @@ class Device:
 
     @property
     def name(self) -> str:
-        """Device name (e.g., 'NVIDIA GeForce RTX 3060')."""
         return self._handle.name
 
     @property
     def dedicated_video_memory(self) -> int:
-        """Dedicated video memory in bytes."""
         return self._handle.dedicated_video_memory
 
     @property
     def dedicated_system_memory(self) -> int:
-        """Dedicated system memory in bytes."""
         return self._handle.dedicated_system_memory
 
     @property
     def shared_system_memory(self) -> int:
-        """Shared system memory in bytes."""
         return self._handle.shared_system_memory
 
     @property
     def vendor_id(self) -> int:
-        """PCI vendor ID."""
         return self._handle.vendor_id
 
     @property
     def device_id(self) -> int:
-        """PCI device ID."""
         return self._handle.device_id
 
     @property
     def is_hardware(self) -> bool:
-        """True if this is a hardware‑accelerated device."""
         return bool(self._handle.is_hardware)
 
     @property
     def is_discrete(self) -> bool:
-        """True if this is a discrete GPU."""
         return bool(self._handle.is_discrete)
 
     def set_buffer_pool_size(self, size: int) -> None:
@@ -338,7 +367,16 @@ class Device:
         return self._handle.get_debug_messages()
 
     def create_heap(self, heap_type: int, size: int) -> "Heap":
-        """Create a memory heap."""
+        """
+        Create a memory heap.
+
+        Args:
+            heap_type: One of HEAP_DEFAULT, HEAP_UPLOAD, HEAP_READBACK.
+            size: Size in bytes.
+
+        Returns:
+            A new Heap object.
+        """
         return Heap._from_handle(self._handle.create_heap(heap_type, size))
 
     def create_buffer(
@@ -427,11 +465,25 @@ class Device:
 # Heap
 # ----------------------------------------------------------------------
 class Heap:
-    """A contiguous block of GPU memory."""
+    """
+    A contiguous block of GPU memory.
+
+    Attributes:
+        size (int): Size of the heap in bytes.
+        heap_type (int): Heap type (0=DEFAULT, 1=UPLOAD, 2=READBACK).
+    """
 
     __slots__ = ("_handle",)
 
     def __init__(self, heap_type: int, size: int, device: Optional[Device] = None):
+        """
+        Create a new heap.
+
+        Args:
+            heap_type: HEAP_DEFAULT, HEAP_UPLOAD, or HEAP_READBACK.
+            size: Size in bytes.
+            device: Optional device (uses current if None).
+        """
         dev = device or get_current_device()
         self._handle = dev.create_heap(heap_type, size)
 
@@ -443,28 +495,32 @@ class Heap:
 
     @property
     def size(self) -> int:
-        """Size of the heap in bytes."""
         return self._handle.size
 
     @property
     def heap_type(self) -> int:
-        """Heap type (0=DEFAULT, 1=UPLOAD, 2=READBACK)."""
         return self._handle.heap_type
 
     def __repr__(self) -> str:
-        return f"<Heap type={self.heap_type} size={self.size}>"
+        type_names = ["DEFAULT", "UPLOAD", "READBACK"]
+        type_str = type_names[self.heap_type] if self.heap_type < 3 else "UNKNOWN"
+        return f"<Heap type={type_str} size={self.size}>"
 
 
 # ----------------------------------------------------------------------
 # Resource (base class)
 # ----------------------------------------------------------------------
 class Resource:
-    """Base class for buffers and textures."""
+    """
+    Base class for buffers and textures.
+
+    This class should not be instantiated directly.
+    """
 
     __slots__ = ("_handle",)
 
     def __init__(self) -> None:
-        raise TypeError("Use Device.create_* methods or subclass constructors")
+        pass
 
     @property
     def size(self) -> int:
@@ -524,7 +580,11 @@ class Resource:
         src_slice: int = 0,
         dst_slice: int = 0,
     ) -> None:
-        """Copy data to another resource."""
+        """
+        Copy data to another resource.
+
+        The exact meaning of parameters depends on the source and destination types.
+        """
         self._handle.copy_to(
             destination._handle,
             size,
@@ -552,7 +612,15 @@ class Resource:
         heap_offset: int = 0,
         slice: int = 0,
     ) -> None:
-        """Bind a heap to a sparse tile."""
+        """
+        Bind a heap to a sparse tile.
+
+        Args:
+            x, y, z: Tile coordinates.
+            heap: Heap to bind (or None to unbind).
+            heap_offset: Offset within the heap.
+            slice: Array slice (for textures).
+        """
         self._handle.bind_tile(
             x, y, z, heap._handle if heap else None, heap_offset, slice
         )
@@ -567,6 +635,11 @@ class Buffer(Resource):
 
     Supports upload, readback, and use as constant buffer, storage buffer,
     or indirect argument buffer.
+
+    Example:
+        buf = Buffer(1024, heap_type=HEAP_UPLOAD)
+        buf.upload(b"Hello")
+        data = buf.readback()
     """
 
     __slots__ = ()
@@ -582,6 +655,19 @@ class Buffer(Resource):
         sparse: bool = False,
         device: Optional[Device] = None,
     ) -> None:
+        """
+        Create a buffer.
+
+        Args:
+            size: Size in bytes.
+            heap_type: Memory type (DEFAULT, UPLOAD, READBACK).
+            stride: For structured buffers.
+            format: Pixel format for formatted buffers (0 = none).
+            heap: Optional heap to sub‑allocate from.
+            heap_offset: Offset within the heap.
+            sparse: Create as a sparse resource.
+            device: Optional device (uses current if None).
+        """
         dev = device or get_current_device()
         handle = dev.create_buffer(
             heap_type,
@@ -619,20 +705,6 @@ class Buffer(Resource):
 
 
 # ----------------------------------------------------------------------
-# Texture1D (placeholder – not implemented in C++ backend)
-# ----------------------------------------------------------------------
-class Texture1D(Resource):
-    __slots__ = ()
-
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError("Texture1D not implemented in Vulkan backend")
-
-    @classmethod
-    def _from_handle(cls, handle):
-        raise NotImplementedError
-
-
-# ----------------------------------------------------------------------
 # Texture2D
 # ----------------------------------------------------------------------
 class Texture2D(Resource):
@@ -641,6 +713,10 @@ class Texture2D(Resource):
 
     Can be used as shader resource (SRV) or unordered access (UAV).
     Supports sub‑region uploads and downloads.
+
+    Example:
+        tex = Texture2D(1920, 1080, B8G8R8A8_UNORM)
+        tex.upload_subresource(pixel_data, 0, 0, 1920, 1080)
     """
 
     __slots__ = ()
@@ -656,6 +732,19 @@ class Texture2D(Resource):
         sparse: bool = False,
         device: Optional[Device] = None,
     ) -> None:
+        """
+        Create a 2D texture.
+
+        Args:
+            width: Width in pixels.
+            height: Height in pixels.
+            format: Pixel format constant (e.g., R8G8B8A8_UNORM).
+            heap: Optional heap to sub‑allocate from.
+            heap_offset: Offset within the heap.
+            slices: Number of array slices.
+            sparse: Create as a sparse resource.
+            device: Optional device (uses current if None).
+        """
         dev = device or get_current_device()
         handle = dev.create_texture2d(
             width,
@@ -704,6 +793,7 @@ class Texture2D(Resource):
 
         Args:
             regions: List of (x, y, width, height) tuples.
+
         Returns:
             List of bytes objects, one per region.
         """
@@ -731,20 +821,6 @@ class Texture2D(Resource):
 
 
 # ----------------------------------------------------------------------
-# Texture3D (placeholder)
-# ----------------------------------------------------------------------
-class Texture3D(Resource):
-    __slots__ = ()
-
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError("Texture3D not implemented in Vulkan backend")
-
-    @classmethod
-    def _from_handle(cls, handle):
-        raise NotImplementedError
-
-
-# ----------------------------------------------------------------------
 # Sampler
 # ----------------------------------------------------------------------
 class Sampler:
@@ -765,6 +841,14 @@ class Sampler:
         filter_mag: int = SAMPLER_FILTER_POINT,
         device: Optional[Device] = None,
     ) -> None:
+        """
+        Create a sampler.
+
+        Args:
+            address_mode_u/v/w: WRAP, MIRROR, or CLAMP.
+            filter_min/mag: POINT or LINEAR.
+            device: Optional device (uses current if None).
+        """
         dev = device or get_current_device()
         self._handle = dev.create_sampler(
             address_mode_u, address_mode_v, address_mode_w, filter_min, filter_mag
@@ -788,6 +872,11 @@ class Compute:
     Compute pipeline.
 
     Executes SPIR‑V compute shaders with bound resources.
+
+    Example:
+        shader = open("shader.spv", "rb").read()
+        comp = Compute(shader, cbv=[buf1], srv=[tex1], uav=[tex2])
+        comp.dispatch(8, 8, 1)
     """
 
     __slots__ = ("_handle",)
@@ -804,6 +893,20 @@ class Compute:
         max_bindless: int = 64,
         device: Optional[Device] = None,
     ) -> None:
+        """
+        Create a compute pipeline.
+
+        Args:
+            shader: SPIR‑V bytecode.
+            cbv: List of constant buffer views.
+            srv: List of shader resource views.
+            uav: List of unordered access views.
+            samplers: List of samplers.
+            push_size: Size of push constant block (bytes).
+            bindless: Enable bindless resource indexing.
+            max_bindless: Maximum number of bindless slots.
+            device: Optional device (uses current if None).
+        """
         dev = device or get_current_device()
         cbv_handles = [r._handle for r in (cbv or [])]
         srv_handles = [r._handle for r in (srv or [])]
@@ -826,13 +929,26 @@ class Compute:
         return self
 
     def dispatch(self, x: int, y: int, z: int, push: bytes = b"") -> None:
-        """Dispatch compute workgroups."""
+        """
+        Dispatch compute workgroups.
+
+        Args:
+            x, y, z: Number of workgroups in each dimension.
+            push: Optional push constant data.
+        """
         self._handle.dispatch(x, y, z, push)
 
     def dispatch_indirect(
         self, indirect_buffer: Buffer, offset: int = 0, push: bytes = b""
     ) -> None:
-        """Dispatch using indirect arguments from a buffer."""
+        """
+        Dispatch using indirect arguments from a buffer.
+
+        Args:
+            indirect_buffer: Buffer containing {x, y, z} as three uint32s.
+            offset: Byte offset into the buffer.
+            push: Optional push constant data.
+        """
         self._handle.dispatch_indirect(indirect_buffer._handle, offset, push)
 
     def dispatch_sequence(
@@ -877,7 +993,14 @@ class Compute:
         tile_width: int,
         tile_height: int,
     ) -> None:
-        """Dispatch multiple tiles with per‑tile push constants."""
+        """
+        Dispatch multiple tiles with per‑tile push constants.
+
+        Args:
+            tiles: List of (tile_x, tile_y, push_data) tuples.
+            tile_width: Width of each tile in pixels.
+            tile_height: Height of each tile in pixels.
+        """
         self._handle.dispatch_tiles(tiles, tile_width, tile_height)
 
     def bind_cbv(self, index: int, resource: Union[Buffer, Texture2D]) -> None:
@@ -904,6 +1027,11 @@ class Swapchain:
     Presentation swapchain.
 
     Manages a queue of presentable images for displaying on screen.
+
+    Example:
+        # On X11: window_handle = (display, window)
+        sc = Swapchain((display, window), B8G8R8A8_UNORM, num_buffers=3)
+        sc.present(texture)
     """
 
     __slots__ = ("_handle",)
@@ -918,10 +1046,27 @@ class Swapchain:
         height: int = 0,
         present_mode: str = "fifo",
     ) -> None:
+        """
+        Create a swapchain.
+
+        Args:
+            window_handle: Platform‑specific tuple:
+                X11: (display_ptr, window_id)
+                Wayland: (wl_display_ptr, wl_surface_ptr)
+            format: Pixel format (e.g., B8G8R8A8_UNORM).
+            num_buffers: Number of swapchain images (default 3).
+            device: Optional device (uses current if None).
+            width, height: Desired dimensions (0 = use surface's).
+            present_mode: "fifo", "mailbox", "immediate", "fifo_relaxed".
+        """
         dev = device or get_current_device()
-        self._handle = dev.create_swapchain(
+        handle = dev.create_swapchain(
             window_handle, format, num_buffers, width, height, present_mode
         )
+        if handle is None:
+            # The C++ layer has set a Python exception; re-raise it
+            raise RuntimeError("Failed to create swapchain") from None
+        self._handle = handle
 
     @classmethod
     def _from_handle(cls, handle):
@@ -942,7 +1087,14 @@ class Swapchain:
     def present(
         self, texture: Texture2D, x: int = 0, y: int = 0, wait_for_fence: bool = True
     ) -> None:
-        """Present a texture to the swapchain."""
+        """
+        Present a texture to the swapchain.
+
+        Args:
+            texture: Texture2D to present.
+            x, y: Offset within the swapchain (top‑left).
+            wait_for_fence: If True, block until presentation completes.
+        """
         self._handle.present(texture._handle, x, y, wait_for_fence)
 
     def is_suboptimal(self) -> bool:
