@@ -102,6 +102,7 @@ bool vkcomp_check_copy_to(
 /* -------------------------------------------------------------------------
    Descriptor validation (C version – no templates)
    ------------------------------------------------------------------------- */
+
 bool vkcomp_check_descriptors(PyTypeObject *py_resource_type, PyObject *py_cbv,
                               VkComp_Resource ***cbv_out, size_t *cbv_count,
                               PyObject *py_srv, VkComp_Resource ***srv_out,
@@ -111,29 +112,25 @@ bool vkcomp_check_descriptors(PyTypeObject *py_resource_type, PyObject *py_cbv,
                               PyObject *py_samplers,
                               VkComp_Sampler ***samplers_out,
                               size_t *samplers_count) {
-/* Helper macro to process an iterable */
-#define PROCESS_LIST(list_obj, out_array, out_count, type_check, elem_type)    \
+  /* Macro to extract C pointers from a Python iterable of wrapper objects.
+   * Assumes each item has a `_handle` attribute that is a PyCapsule containing
+   * the actual Vulkan object pointer. */
+#define PROCESS_LIST(list_obj, out_array, out_count, elem_type)                \
   do {                                                                         \
-    if (list_obj) {                                                            \
+    out_array = NULL;                                                          \
+    out_count = 0;                                                             \
+    if ((list_obj) && (list_obj) != Py_None) {                                 \
       PyObject *iter = PyObject_GetIter(list_obj);                             \
-      if (!iter)                                                               \
-        return false;                                                          \
+      if (!iter) {                                                             \
+        PyErr_Format(PyExc_TypeError, "Expected an iterable");                 \
+        goto error;                                                            \
+      }                                                                        \
       size_t cap = 0;                                                          \
-      out_array = NULL;                                                        \
-      out_count = 0;                                                           \
       PyObject *item;                                                          \
       while ((item = PyIter_Next(iter)) != NULL) {                             \
-        int is_inst = PyObject_IsInstance(item, (PyObject *)type_check);       \
-        if (is_inst < 0) {                                                     \
+        if (item == Py_None) {                                                 \
           Py_DECREF(item);                                                     \
-          Py_DECREF(iter);                                                     \
-          goto error;                                                          \
-        } else if (is_inst == 0) {                                             \
-          Py_DECREF(item);                                                     \
-          Py_DECREF(iter);                                                     \
-          PyErr_SetString(PyExc_TypeError,                                     \
-                          "Expected a " #elem_type " object");                 \
-          goto error;                                                          \
+          continue;                                                            \
         }                                                                      \
         if (out_count >= cap) {                                                \
           cap = cap ? cap * 2 : 4;                                             \
@@ -152,47 +149,43 @@ bool vkcomp_check_descriptors(PyTypeObject *py_resource_type, PyObject *py_cbv,
       Py_DECREF(iter);                                                         \
       if (PyErr_Occurred())                                                    \
         goto error;                                                            \
-    } else {                                                                   \
-      out_array = NULL;                                                        \
-      out_count = 0;                                                           \
     }                                                                          \
   } while (0)
 
-  PROCESS_LIST(py_cbv, *cbv_out, *cbv_count, py_resource_type, VkComp_Resource);
-  PROCESS_LIST(py_srv, *srv_out, *srv_count, py_resource_type, VkComp_Resource);
-  PROCESS_LIST(py_uav, *uav_out, *uav_count, py_resource_type, VkComp_Resource);
-  PROCESS_LIST(py_samplers, *samplers_out, *samplers_count, py_sampler_type,
-               VkComp_Sampler);
+  *cbv_out = NULL;
+  *cbv_count = 0;
+  *srv_out = NULL;
+  *srv_count = 0;
+  *uav_out = NULL;
+  *uav_count = 0;
+  *samplers_out = NULL;
+  *samplers_count = 0;
+
+  PROCESS_LIST(py_cbv, *cbv_out, *cbv_count, VkComp_Resource);
+  PROCESS_LIST(py_srv, *srv_out, *srv_count, VkComp_Resource);
+  PROCESS_LIST(py_uav, *uav_out, *uav_count, VkComp_Resource);
+  PROCESS_LIST(py_samplers, *samplers_out, *samplers_count, VkComp_Sampler);
 
 #undef PROCESS_LIST
   return true;
 
 error:
-  /* Cleanup on error */
   if (*cbv_out) {
-    for (size_t i = 0; i < *cbv_count; ++i)
-      Py_DECREF((*cbv_out)[i]);
     PyMem_Free(*cbv_out);
     *cbv_out = NULL;
     *cbv_count = 0;
   }
   if (*srv_out) {
-    for (size_t i = 0; i < *srv_count; ++i)
-      Py_DECREF((*srv_out)[i]);
     PyMem_Free(*srv_out);
     *srv_out = NULL;
     *srv_count = 0;
   }
   if (*uav_out) {
-    for (size_t i = 0; i < *uav_count; ++i)
-      Py_DECREF((*uav_out)[i]);
     PyMem_Free(*uav_out);
     *uav_out = NULL;
     *uav_count = 0;
   }
   if (*samplers_out) {
-    for (size_t i = 0; i < *samplers_count; ++i)
-      Py_DECREF((*samplers_out)[i]);
     PyMem_Free(*samplers_out);
     *samplers_out = NULL;
     *samplers_count = 0;

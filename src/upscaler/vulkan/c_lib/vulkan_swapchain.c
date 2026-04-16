@@ -37,8 +37,7 @@ static PyMemberDef VkComp_Swapchain_members[] = {
      "Swapchain width"},
     {"height", Py_T_UINT, offsetof(VkComp_Swapchain, image_extent.height), 0,
      "Swapchain height"},
-    {NULL}
-};
+    {NULL}};
 
 static PyMethodDef VkComp_Swapchain_methods[] = {
     {"present", (PyCFunction)VkComp_Swapchain_Present, METH_VARARGS,

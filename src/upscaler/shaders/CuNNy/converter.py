@@ -592,7 +592,7 @@ def main() -> None:
         print(f"Error: {shader_path} not found.")
         return
 
-    with open(shader_path, "r") as f:
+    with open(shader_path, "rb") as f:
         content = f.read()
 
     # Parse the shader

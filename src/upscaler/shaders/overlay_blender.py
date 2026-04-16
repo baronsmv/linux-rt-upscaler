@@ -31,7 +31,7 @@ class OverlayBlender:
         self._create_resources()
 
     def _load_shader(self):
-        with open(self.shader_path, "r") as f:
+        with open(self.shader_path, "rb") as f:
             self.shader = f.read()
 
     def _create_resources(self):

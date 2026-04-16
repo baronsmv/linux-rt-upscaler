@@ -80,14 +80,14 @@ class BuildSharedLibs(build_ext):
 
 # Vulkan extension
 vulkan_lib_dir = Path("src/upscaler/vulkan/lib")
-vulkan_sources = [str(f) for f in vulkan_lib_dir.glob("*.c")]
+vulkan_sources = [str(f) for f in vulkan_lib_dir.glob("*.cpp")]
 
 vulkan_extension = Extension(
     "upscaler.vulkan.vulkan",
     sources=vulkan_sources,
-    include_dirs=[str(vulkan_lib_dir), "/usr/include/vulkan"],
     libraries=["vulkan"],
-    extra_compile_args=["-O3", "-mtune=generic"],
+    extra_compile_args=["-std=c++14", "-O3", "-mtune=generic"],
+    language="c++",
 )
 
 setup(
