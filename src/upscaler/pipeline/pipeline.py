@@ -357,6 +357,18 @@ class Pipeline:
                 self._osd_texture = None
                 self._osd_expiry_time = None
 
+    def _expand_damage_rects(self, rects):
+        margin = self.config.tile_context_margin
+        expanded = []
+        for rx, ry, rw, rh, _ in rects:
+            ex0 = max(0, rx - margin)
+            ey0 = max(0, ry - margin)
+            ex1 = min(self.crop_width, rx + rw + margin)
+            ey1 = min(self.crop_height, ry + rh + margin)
+            if ex1 > ex0 and ey1 > ey0:
+                expanded.append((ex0, ey0, ex1 - ex0, ey1 - ey0))
+        return expanded
+
     def _process_one_frame(self) -> None:
         """
         Process a single frame:
@@ -418,13 +430,13 @@ class Pipeline:
         if self.config.use_damage_tracking and rects:
             upload_list = []
             stride = self.crop_width * 4
-            for rx, ry, rw, rh, hash in rects:
+            for ex, ey, ew, eh in self._expand_damage_rects(rects):
                 # Extract sub-rectangle data from the full frame buffer
                 sub_data = bytearray()
-                for row in range(ry, ry + rh):
-                    start = row * stride + rx * 4
-                    sub_data.extend(frame[start : start + rw * 4])
-                upload_list.append((bytes(sub_data), rx, ry, rw, rh))
+                for row in range(ey, ey + eh):
+                    start = row * stride + ex * 4
+                    sub_data.extend(frame[start : start + ew * 4])
+                upload_list.append((bytes(sub_data), ex, ey, ew, eh))
             self.upscaler.input.upload_subresources(upload_list)
         else:
             self.upscaler.staging.upload(frame)
