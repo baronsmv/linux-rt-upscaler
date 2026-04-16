@@ -7,8 +7,6 @@ from typing import Optional, Tuple
 
 from PySide6.QtCore import QMetaObject, Qt
 
-from vulkan import Texture2D, configure_device, Compute
-from vulkan.constants import R8G8B8A8_UNORM
 from .controller import PipelineController
 from .swapchain import SwapchainManager
 from .text_renderer import TextRenderer
@@ -17,6 +15,7 @@ from ..config import Config, OverlayMode, OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..overlay import OverlayWindow
 from ..shaders import LanczosScaler, OverlayBlender, SRCNN, dispatch_groups
 from ..utils import parse_output_geometry, calculate_scaling_rect
+from ..vulkan import Texture2D, configure_device, Compute, R8G8B8A8_UNORM
 from ..window import WindowInfo, WindowTracker, get_display
 
 logger = logging.getLogger(__name__)

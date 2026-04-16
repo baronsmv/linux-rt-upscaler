@@ -499,10 +499,10 @@ static VkResult allocate_and_update_descriptor_set(
 
   VkDescriptorPoolSize pool_sizes[6];
   uint32_t pool_size_count = 0;
-#define ADD_POOL_SIZE(type, count)                                             \
-  if (count > 0) {                                                             \
-    pool_sizes[pool_size_count].type = type;                                   \
-    pool_sizes[pool_size_count].descriptorCount = count;                       \
+#define ADD_POOL_SIZE(desc_type, count)                                        \
+  if ((count) > 0) {                                                           \
+    pool_sizes[pool_size_count].type = (desc_type);                            \
+    pool_sizes[pool_size_count].descriptorCount = (count);                     \
     pool_size_count++;                                                         \
   }
   ADD_POOL_SIZE(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniform_buffer_count);

@@ -4,9 +4,7 @@ import os
 import struct
 from typing import Dict, List, Optional, Tuple
 
-from vulkan.shaders import hlsl
-
-from vulkan import (
+from ..vulkan import (
     Compute,
     Buffer,
     Texture2D,
@@ -15,8 +13,8 @@ from vulkan import (
     SAMPLER_FILTER_POINT,
     SAMPLER_FILTER_LINEAR,
     SAMPLER_ADDRESS_MODE_CLAMP,
+    R8G8B8A8_UNORM,
 )
-from vulkan.constants import R8G8B8A8_UNORM
 
 logger = logging.getLogger(__name__)
 
@@ -125,11 +123,14 @@ class SRCNN:
         )
 
     def _load_shaders(self) -> None:
+        """Load precompiled SPIR‑V shaders for each pass."""
         self.shaders = []
         for i in range(self.cfg["passes"]):
-            with open(os.path.join(self.model_dir, f"Pass{i + 1}.hlsl"), "r") as f:
-                self.shaders.append(hlsl.compile(f.read()))
-        logger.info(f"Compiled {len(self.shaders)} shaders")
+            spv_path = os.path.join(self.model_dir, f"Pass{i + 1}.spv")
+            with open(spv_path, "rb") as f:
+                spirv_bytes = f.read()
+            self.shaders.append(spirv_bytes)
+        logger.info(f"Loaded {len(self.shaders)} SPIR‑V shaders")
 
     def _create_resources(self) -> None:
         w, h = self.width, self.height

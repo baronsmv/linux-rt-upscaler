@@ -2,7 +2,7 @@ import logging
 import os
 import struct
 
-from vulkan import (
+from ..vulkan import (
     Buffer,
     Compute,
     Sampler,
@@ -11,7 +11,6 @@ from vulkan import (
     SAMPLER_ADDRESS_MODE_CLAMP,
     SAMPLER_FILTER_POINT,
 )
-from vulkan.shaders import hlsl
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +28,7 @@ class LanczosScaler:
     the upscaled texture to the screen texture.
     """
 
-    def __init__(self, shader_path: str = os.path.join(SHADERS_DIR, "lanczos2.hlsl")):
+    def __init__(self, shader_path: str = os.path.join(SHADERS_DIR, "lanczos2.spv")):
         self.shader_path = shader_path
         self._shader = None
         self._push_data = b""
@@ -51,7 +50,7 @@ class LanczosScaler:
 
     def _load_shader(self):
         with open(self.shader_path, "r") as f:
-            self._shader = hlsl.compile(f.read())
+            self._shader = f.read()
 
     def _create_resources(self):
         self._sampler = Sampler(

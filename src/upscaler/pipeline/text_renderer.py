@@ -1,7 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
 
-import vulkan
-from vulkan.constants import R8G8B8A8_UNORM
+from ..vulkan import Texture2D, R8G8B8A8_UNORM, Buffer, HEAP_UPLOAD
 
 
 class TextRenderer:
@@ -60,13 +59,13 @@ class TextRenderer:
         draw.text((padding, padding), text, font=self.font, fill=text_color)
 
         # Upload to GPU
-        tex = vulkan.Texture2D(img_w, img_h, R8G8B8A8_UNORM)
+        tex = Texture2D(img_w, img_h, R8G8B8A8_UNORM)
         buffer_size = img_w * img_h * 4
-        upload_buffer = vulkan.Buffer(buffer_size, heap_type=vulkan.HEAP_UPLOAD)
+        upload_buffer = Buffer(buffer_size, heap_type=HEAP_UPLOAD)
         upload_buffer.upload(img.tobytes())
         upload_buffer.copy_to(tex)
 
         self.cache[text] = tex
 
-    def get_texture(self, text: str) -> vulkan.Texture2D | None:
+    def get_texture(self, text: str) -> Texture2D | None:
         return self.cache.get(text)

@@ -2,8 +2,14 @@ import logging
 import os
 import struct
 
-from vulkan import Compute, Sampler, Buffer, HEAP_UPLOAD
-from vulkan.shaders import hlsl
+from ..vulkan import (
+    Buffer,
+    Compute,
+    Sampler,
+    HEAP_UPLOAD,
+    SAMPLER_ADDRESS_MODE_CLAMP,
+    SAMPLER_FILTER_POINT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +20,7 @@ SHADERS_DIR = os.path.dirname(__file__)
 
 class OverlayBlender:
     def __init__(
-        self, shader_path: str = os.path.join(SHADERS_DIR, "overlay_blend.hlsl")
+        self, shader_path: str = os.path.join(SHADERS_DIR, "overlay_blend.spv")
     ):
         self.shader_path = shader_path
         self.shader = None
@@ -26,11 +32,9 @@ class OverlayBlender:
 
     def _load_shader(self):
         with open(self.shader_path, "r") as f:
-            self.shader = hlsl.compile(f.read())
+            self.shader = f.read()
 
     def _create_resources(self):
-        from vulkan import SAMPLER_ADDRESS_MODE_CLAMP, SAMPLER_FILTER_POINT
-
         self.sampler = Sampler(
             filter_min=SAMPLER_FILTER_POINT,
             filter_mag=SAMPLER_FILTER_POINT,

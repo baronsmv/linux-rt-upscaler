@@ -8,10 +8,9 @@ from typing import TYPE_CHECKING, Tuple
 from PIL import Image
 from PySide6.QtCore import QMetaObject, Qt, Q_ARG
 
-from vulkan import Texture2D
-from vulkan.constants import R8G8B8A8_UNORM
 from ..config import OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..shaders import SRCNN
+from ..vulkan import Texture2D, R8G8B8A8_UNORM
 
 if TYPE_CHECKING:
     from .pipeline import Pipeline

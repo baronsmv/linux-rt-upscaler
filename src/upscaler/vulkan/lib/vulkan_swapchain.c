@@ -28,17 +28,17 @@ static VkResult create_swapchain(VkComp_Swapchain *sc, uint32_t width,
                                  uint32_t height, VkFormat format,
                                  uint32_t num_buffers,
                                  VkPresentModeKHR present_mode);
-static void destroy_swapchain(VkComp_Swapchain *sc);
 
 /* -------------------------------------------------------------------------
    Python type definition
    ------------------------------------------------------------------------- */
 static PyMemberDef VkComp_Swapchain_members[] = {
-    {"width", T_UINT, offsetof(VkComp_Swapchain, image_extent.width), 0,
+    {"width", Py_T_UINT, offsetof(VkComp_Swapchain, image_extent.width), 0,
      "Swapchain width"},
-    {"height", T_UINT, offsetof(VkComp_Swapchain, image_extent.height), 0,
+    {"height", Py_T_UINT, offsetof(VkComp_Swapchain, image_extent.height), 0,
      "Swapchain height"},
-    {NULL}};
+    {NULL}
+};
 
 static PyMethodDef VkComp_Swapchain_methods[] = {
     {"present", (PyCFunction)VkComp_Swapchain_Present, METH_VARARGS,
@@ -141,7 +141,8 @@ VkComp_Swapchain *VkComp_Swapchain_Create(VkComp_Device *device,
   VkPresentModeKHR *modes = PyMem_Malloc(mode_count * sizeof(VkPresentModeKHR));
   if (!modes) {
     Py_DECREF(sc);
-    return PyErr_NoMemory();
+    PyErr_NoMemory();
+    return NULL;
   }
   vkGetPhysicalDeviceSurfacePresentModesKHR(device->physical_device,
                                             sc->surface, &mode_count, modes);

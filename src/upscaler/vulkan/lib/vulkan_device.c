@@ -8,51 +8,33 @@
  */
 
 #include "vulkan_device.h"
+#include "vulkan_compute.h"
+#include "vulkan_swapchain.h"
 #include "vulkan_utils.h"
 #include <stdlib.h>
 #include <string.h>
 
 /* -------------------------------------------------------------------------
-   Forward declarations of Python methods
-   ------------------------------------------------------------------------- */
-static PyObject *VkComp_Device_CreateHeap(VkComp_Device *self, PyObject *args);
-static PyObject *VkComp_Device_CreateBuffer(VkComp_Device *self,
-                                            PyObject *args);
-static PyObject *VkComp_Device_CreateTexture2D(VkComp_Device *self,
-                                               PyObject *args);
-static PyObject *VkComp_Device_CreateSampler(VkComp_Device *self,
-                                             PyObject *args);
-static PyObject *VkComp_Device_CreateCompute(VkComp_Device *self,
-                                             PyObject *args, PyObject *kwds);
-static PyObject *VkComp_Device_CreateSwapchain(VkComp_Device *self,
-                                               PyObject *args);
-static PyObject *VkComp_Device_GetDebugMessages(VkComp_Device *self,
-                                                PyObject *args);
-static PyObject *VkComp_Device_SetBufferPoolSize(VkComp_Device *self,
-                                                 PyObject *args);
-static PyObject *VkComp_Device_WaitIdle(VkComp_Device *self, PyObject *args);
-
-/* -------------------------------------------------------------------------
    Device member table
    ------------------------------------------------------------------------- */
 static PyMemberDef VkComp_Device_members[] = {
-    {"name", T_OBJECT_EX, offsetof(VkComp_Device, name), 0, "Device name"},
-    {"dedicated_video_memory", T_ULONGLONG,
+    {"name", Py_T_OBJECT_EX, offsetof(VkComp_Device, name), 0, "Device name"},
+    {"dedicated_video_memory", Py_T_ULONGLONG,
      offsetof(VkComp_Device, dedicated_video_memory), 0,
      "Dedicated video memory in bytes"},
-    {"dedicated_system_memory", T_ULONGLONG,
+    {"dedicated_system_memory", Py_T_ULONGLONG,
      offsetof(VkComp_Device, dedicated_system_memory), 0,
      "Dedicated system memory in bytes"},
-    {"shared_system_memory", T_ULONGLONG,
+    {"shared_system_memory", Py_T_ULONGLONG,
      offsetof(VkComp_Device, shared_system_memory), 0,
      "Shared system memory in bytes"},
-    {"vendor_id", T_UINT, offsetof(VkComp_Device, vendor_id), 0,
+    {"vendor_id", Py_T_UINT, offsetof(VkComp_Device, vendor_id), 0,
      "PCI vendor ID"},
-    {"device_id", T_UINT, offsetof(VkComp_Device, device_id), 0,
+    {"device_id", Py_T_UINT, offsetof(VkComp_Device, device_id), 0,
      "PCI device ID"},
-    {"is_hardware", T_BOOL, offsetof(VkComp_Device, is_hardware), 0,
+    {"is_hardware", Py_T_BOOL, offsetof(VkComp_Device, is_hardware), 0,
      "True if hardware accelerated"},
-    {"is_discrete", T_BOOL, offsetof(VkComp_Device, is_discrete), 0,
+    {"is_discrete", Py_T_BOOL, offsetof(VkComp_Device, is_discrete), 0,
      "True if discrete GPU"},
     {NULL}};
 
@@ -209,11 +191,20 @@ static VkResult create_logical_device(VkComp_Device *dev) {
     vkCreateQueryPool(dev->device, &qpci, NULL, &dev->timestamp_pool);
   }
 
-  /* Feature flags */
+  /* Feature flags – bindless (descriptor indexing) */
+  VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+  };
+  VkPhysicalDeviceFeatures2 features2_bindless = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+      .pNext = &indexing_features,
+  };
+  vkGetPhysicalDeviceFeatures2(dev->physical_device, &features2_bindless);
   dev->supports_bindless =
-      vk13_features.descriptorIndexing &&
-      vk13_features.shaderSampledImageArrayNonUniformIndexing &&
-      vk13_features.runtimeDescriptorArray;
+      indexing_features.descriptorBindingPartiallyBound &&
+      indexing_features.runtimeDescriptorArray &&
+      indexing_features.shaderSampledImageArrayNonUniformIndexing;
+
   dev->supports_sparse =
       dev->features.sparseBinding && dev->features.sparseResidencyBuffer;
 
@@ -404,7 +395,7 @@ void VkComp_Device_ReleaseStagingBuffer(VkComp_Device *device, VkBuffer buffer,
 /* -------------------------------------------------------------------------
    Python method: create_heap(heap_type, size) -> Heap
    ------------------------------------------------------------------------- */
-static PyObject *VkComp_Device_CreateHeap(VkComp_Device *self, PyObject *args) {
+PyObject *VkComp_Device_CreateHeap(VkComp_Device *self, PyObject *args) {
   int heap_type;
   unsigned long long size;
   if (!PyArg_ParseTuple(args, "iK", &heap_type, &size))
@@ -455,8 +446,7 @@ static PyObject *VkComp_Device_CreateHeap(VkComp_Device *self, PyObject *args) {
 /* -------------------------------------------------------------------------
    Python method: create_buffer(...) -> Resource
    ------------------------------------------------------------------------- */
-static PyObject *VkComp_Device_CreateBuffer(VkComp_Device *self,
-                                            PyObject *args) {
+PyObject *VkComp_Device_CreateBuffer(VkComp_Device *self, PyObject *args) {
   int heap_type, format;
   unsigned long long size;
   unsigned int stride;
@@ -622,8 +612,7 @@ static PyObject *VkComp_Device_CreateBuffer(VkComp_Device *self,
 /* -------------------------------------------------------------------------
    Python method: create_texture2d(...) -> Resource
    ------------------------------------------------------------------------- */
-static PyObject *VkComp_Device_CreateTexture2D(VkComp_Device *self,
-                                               PyObject *args) {
+PyObject *VkComp_Device_CreateTexture2D(VkComp_Device *self, PyObject *args) {
   unsigned int width, height, slices;
   int format;
   PyObject *py_heap = Py_None;
@@ -829,8 +818,7 @@ static PyObject *VkComp_Device_CreateTexture2D(VkComp_Device *self,
 /* -------------------------------------------------------------------------
    Python method: create_sampler(...) -> Sampler
    ------------------------------------------------------------------------- */
-static PyObject *VkComp_Device_CreateSampler(VkComp_Device *self,
-                                             PyObject *args) {
+PyObject *VkComp_Device_CreateSampler(VkComp_Device *self, PyObject *args) {
   int addr_u, addr_v, addr_w, filter_min, filter_mag;
   if (!PyArg_ParseTuple(args, "iiiii", &addr_u, &addr_v, &addr_w, &filter_min,
                         &filter_mag))
@@ -900,8 +888,8 @@ static PyObject *VkComp_Device_CreateSampler(VkComp_Device *self,
 /* -------------------------------------------------------------------------
    Python method: create_compute(...) -> Compute
    ------------------------------------------------------------------------- */
-static PyObject *VkComp_Device_CreateCompute(VkComp_Device *self,
-                                             PyObject *args, PyObject *kwds) {
+PyObject *VkComp_Device_CreateCompute(VkComp_Device *self, PyObject *args,
+                                      PyObject *kwds) {
   static char *kwlist[] = {"shader",   "cbv",       "srv",      "uav",
                            "samplers", "push_size", "bindless", NULL};
   Py_buffer shader_view;
@@ -933,8 +921,7 @@ static PyObject *VkComp_Device_CreateCompute(VkComp_Device *self,
 /* -------------------------------------------------------------------------
    Python method: create_swapchain(...) -> Swapchain
    ------------------------------------------------------------------------- */
-static PyObject *VkComp_Device_CreateSwapchain(VkComp_Device *self,
-                                               PyObject *args) {
+PyObject *VkComp_Device_CreateSwapchain(VkComp_Device *self, PyObject *args) {
   PyObject *window_handle;
   int format;
   unsigned int num_buffers;
@@ -956,8 +943,7 @@ static PyObject *VkComp_Device_CreateSwapchain(VkComp_Device *self,
 /* -------------------------------------------------------------------------
    Python method: get_debug_messages() -> list of strings
    ------------------------------------------------------------------------- */
-static PyObject *VkComp_Device_GetDebugMessages(VkComp_Device *self,
-                                                PyObject *args) {
+PyObject *VkComp_Device_GetDebugMessages(VkComp_Device *self, PyObject *args) {
   extern PyObject *vulkan_get_and_clear_debug_messages(void);
   return vulkan_get_and_clear_debug_messages();
 }
@@ -965,8 +951,7 @@ static PyObject *VkComp_Device_GetDebugMessages(VkComp_Device *self,
 /* -------------------------------------------------------------------------
    Python method: set_buffer_pool_size(size)
    ------------------------------------------------------------------------- */
-static PyObject *VkComp_Device_SetBufferPoolSize(VkComp_Device *self,
-                                                 PyObject *args) {
+PyObject *VkComp_Device_SetBufferPoolSize(VkComp_Device *self, PyObject *args) {
   int size;
   if (!PyArg_ParseTuple(args, "i", &size))
     return NULL;
@@ -1067,7 +1052,7 @@ static PyObject *VkComp_Device_SetBufferPoolSize(VkComp_Device *self,
 /* -------------------------------------------------------------------------
    Python method: wait_idle()
    ------------------------------------------------------------------------- */
-static PyObject *VkComp_Device_WaitIdle(VkComp_Device *self, PyObject *args) {
+PyObject *VkComp_Device_WaitIdle(VkComp_Device *self, PyObject *args) {
   VkComp_Device *dev = VkComp_Device_GetActive(self);
   if (!dev)
     return NULL;

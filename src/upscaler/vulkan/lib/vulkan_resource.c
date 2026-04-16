@@ -36,33 +36,33 @@ static VkResult copy_texture_to_texture(VkComp_Resource *src,
    Python type definition
    ------------------------------------------------------------------------- */
 static PyMemberDef VkComp_Resource_members[] = {
-    {"size", T_ULONGLONG, offsetof(VkComp_Resource, size), 0,
+    {"size", Py_T_ULONGLONG, offsetof(VkComp_Resource, size), 0,
      "Resource size in bytes"},
-    {"width", T_UINT, offsetof(VkComp_Resource, image_extent.width), 0,
+    {"width", Py_T_UINT, offsetof(VkComp_Resource, image_extent.width), 0,
      "Texture width"},
-    {"height", T_UINT, offsetof(VkComp_Resource, image_extent.height), 0,
+    {"height", Py_T_UINT, offsetof(VkComp_Resource, image_extent.height), 0,
      "Texture height"},
-    {"depth", T_UINT, offsetof(VkComp_Resource, image_extent.depth), 0,
+    {"depth", Py_T_UINT, offsetof(VkComp_Resource, image_extent.depth), 0,
      "Texture depth"},
-    {"row_pitch", T_ULONGLONG, offsetof(VkComp_Resource, row_pitch), 0,
+    {"row_pitch", Py_T_ULONGLONG, offsetof(VkComp_Resource, row_pitch), 0,
      "Row pitch in bytes"},
-    {"slices", T_UINT, offsetof(VkComp_Resource, slices), 0,
+    {"slices", Py_T_UINT, offsetof(VkComp_Resource, slices), 0,
      "Number of array slices"},
-    {"heap_size", T_ULONGLONG, offsetof(VkComp_Resource, heap_size), 0,
+    {"heap_size", Py_T_ULONGLONG, offsetof(VkComp_Resource, heap_size), 0,
      "Actual memory size allocated"},
-    {"heap_type", T_INT, offsetof(VkComp_Resource, heap_type), 0,
+    {"heap_type", Py_T_INT, offsetof(VkComp_Resource, heap_type), 0,
      "Heap type (0=DEFAULT,1=UPLOAD,2=READBACK)"},
-    {"tiles_x", T_UINT, offsetof(VkComp_Resource, tiles_x), 0,
+    {"tiles_x", Py_T_UINT, offsetof(VkComp_Resource, tiles_x), 0,
      "Number of tiles in X (sparse)"},
-    {"tiles_y", T_UINT, offsetof(VkComp_Resource, tiles_y), 0,
+    {"tiles_y", Py_T_UINT, offsetof(VkComp_Resource, tiles_y), 0,
      "Number of tiles in Y (sparse)"},
-    {"tiles_z", T_UINT, offsetof(VkComp_Resource, tiles_z), 0,
+    {"tiles_z", Py_T_UINT, offsetof(VkComp_Resource, tiles_z), 0,
      "Number of tiles in Z (sparse)"},
-    {"tile_width", T_UINT, offsetof(VkComp_Resource, tile_width), 0,
+    {"tile_width", Py_T_UINT, offsetof(VkComp_Resource, tile_width), 0,
      "Tile width in pixels (sparse)"},
-    {"tile_height", T_UINT, offsetof(VkComp_Resource, tile_height), 0,
+    {"tile_height", Py_T_UINT, offsetof(VkComp_Resource, tile_height), 0,
      "Tile height in pixels (sparse)"},
-    {"tile_depth", T_UINT, offsetof(VkComp_Resource, tile_depth), 0,
+    {"tile_depth", Py_T_UINT, offsetof(VkComp_Resource, tile_depth), 0,
      "Tile depth in pixels (sparse)"},
     {NULL}};
 
@@ -149,7 +149,6 @@ PyObject *VkComp_Resource_Upload(VkComp_Resource *self, PyObject *args) {
   }
 
   /* Map memory directly if host-visible */
-  VkMemoryPropertyFlags mem_flags;
   vkGetPhysicalDeviceMemoryProperties(dev->physical_device, &dev->mem_props);
   /* Simplified: assume UPLOAD/READBACK heaps are host-visible */
   if (self->heap_type == 1 || self->heap_type == 2) {
@@ -282,7 +281,7 @@ PyObject *VkComp_Resource_Upload2D(VkComp_Resource *self, PyObject *args) {
   VkDeviceSize upload_size = pitch * height;
   VkBuffer staging_buf;
   VkDeviceMemory staging_mem;
-  bool from_pool;
+  VkBool32 from_pool;
   VkResult res = VkComp_Device_AcquireStagingBuffer(
       dev, upload_size, &staging_buf, &staging_mem, &from_pool);
   if (res != VK_SUCCESS) {
@@ -456,7 +455,7 @@ PyObject *VkComp_Resource_Readback(VkComp_Resource *self, PyObject *args) {
   /* Use staging buffer for device-local buffers */
   VkBuffer staging_buf;
   VkDeviceMemory staging_mem;
-  bool from_pool;
+  VkBool32 from_pool;
   VkResult res = VkComp_Device_AcquireStagingBuffer(dev, size, &staging_buf,
                                                     &staging_mem, &from_pool);
   if (res != VK_SUCCESS) {
@@ -529,7 +528,7 @@ PyObject *VkComp_Resource_Download(VkComp_Resource *self, PyObject *args) {
   VkDeviceSize size = self->size;
   VkBuffer staging_buf;
   VkDeviceMemory staging_mem;
-  bool from_pool;
+  VkBool32 from_pool;
   VkResult res = VkComp_Device_AcquireStagingBuffer(dev, size, &staging_buf,
                                                     &staging_mem, &from_pool);
   if (res != VK_SUCCESS) {
@@ -697,7 +696,7 @@ PyObject *VkComp_Resource_DownloadRegions(VkComp_Resource *self,
 
   VkBuffer staging_buf;
   VkDeviceMemory staging_mem;
-  bool from_pool;
+  VkBool32 from_pool;
   VkResult res = VkComp_Device_AcquireStagingBuffer(
       dev, total_size, &staging_buf, &staging_mem, &from_pool);
   if (res != VK_SUCCESS) {
@@ -859,7 +858,7 @@ PyObject *VkComp_Resource_UploadSubresource(VkComp_Resource *self,
   VkDeviceSize size = width * height * 4;
   VkBuffer staging_buf;
   VkDeviceMemory staging_mem;
-  bool from_pool;
+  VkBool32 from_pool;
   VkResult res = VkComp_Device_AcquireStagingBuffer(dev, size, &staging_buf,
                                                     &staging_mem, &from_pool);
   if (res != VK_SUCCESS) {
@@ -1035,7 +1034,7 @@ PyObject *VkComp_Resource_UploadSubresources(VkComp_Resource *self,
 
   VkBuffer staging_buf;
   VkDeviceMemory staging_mem;
-  bool from_pool;
+  VkBool32 from_pool;
   VkResult res = VkComp_Device_AcquireStagingBuffer(
       dev, total_size, &staging_buf, &staging_mem, &from_pool);
   if (res != VK_SUCCESS) {

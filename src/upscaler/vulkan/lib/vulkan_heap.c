@@ -12,8 +12,9 @@
    Python type definition
    ------------------------------------------------------------------------- */
 static PyMemberDef VkComp_Heap_members[] = {
-    {"size", T_ULONGLONG, offsetof(VkComp_Heap, size), 0, "Heap size in bytes"},
-    {"heap_type", T_INT, offsetof(VkComp_Heap, heap_type), 0,
+    {"size", Py_T_ULONGLONG, offsetof(VkComp_Heap, size), 0,
+     "Heap size in bytes"},
+    {"heap_type", Py_T_INT, offsetof(VkComp_Heap, heap_type), 0,
      "Heap type (0=DEFAULT,1=UPLOAD,2=READBACK)"},
     {NULL}};
 
