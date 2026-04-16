@@ -64,4 +64,14 @@ const char *vk_spirv_get_entry_point(const uint32_t *code, size_t size);
 uint32_t *vk_spirv_patch_nonreadable_uav(const uint32_t *code, size_t size,
                                          uint32_t binding);
 
+/* ----------------------------------------------------------------------------
+   Allocates a temporary command buffer from the device's command pool.
+   ------------------------------------------------------------------------- */
+VkCommandBuffer vk_allocate_temp_cmd(vk_Device *dev);
+
+/* ----------------------------------------------------------------------------
+   Frees a temporary command buffer back to the device's command pool.
+   ------------------------------------------------------------------------- */
+void vk_free_temp_cmd(vk_Device *dev, VkCommandBuffer cmd);
+
 #endif /* VK_UTILS_H */

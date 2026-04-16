@@ -222,7 +222,7 @@ PyObject *vk_Resource_upload_subresource(vk_Resource *self, PyObject *args) {
     PyBuffer_Release(&view);
 
     // Record command buffer
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         if (!used_pool) {
             vkDestroyBuffer(dev->device, staging_buffer, nullptr);
@@ -262,7 +262,7 @@ PyObject *vk_Resource_upload_subresource(vk_Resource *self, PyObject *args) {
     vkEndCommandBuffer(cmd);
 
     VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
 
     if (!used_pool) {
         vkDestroyBuffer(dev->device, staging_buffer, nullptr);
@@ -360,7 +360,7 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
     vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool); // unmaps
 
     // Command buffer
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         if (!used_pool) {
             vkDestroyBuffer(dev->device, staging_buffer, nullptr);
@@ -401,7 +401,7 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
     vkEndCommandBuffer(cmd);
 
     VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
 
     if (!used_pool) {
         vkDestroyBuffer(dev->device, staging_buffer, nullptr);
@@ -464,7 +464,7 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
     }
 
     // Command buffer
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
         if (!used_pool) {
@@ -515,7 +515,7 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
     vkEndCommandBuffer(cmd);
 
     VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
 
     if (res != VK_SUCCESS) {
         vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
@@ -612,7 +612,7 @@ PyObject *vk_Resource_download_regions(vk_Resource *self, PyObject *args) {
         return nullptr;
     }
 
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
         if (!used_pool) {
@@ -654,7 +654,7 @@ PyObject *vk_Resource_download_regions(vk_Resource *self, PyObject *args) {
     vkEndCommandBuffer(cmd);
 
     VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
 
     if (res != VK_SUCCESS) {
         vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
@@ -762,7 +762,7 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
         }
     }
 
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
         return nullptr;
@@ -879,7 +879,7 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
 
     vkEndCommandBuffer(cmd);
     VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
 
     if (res != VK_SUCCESS) {
         PyErr_Format(PyExc_RuntimeError, "Copy submission failed (error %d)", res);

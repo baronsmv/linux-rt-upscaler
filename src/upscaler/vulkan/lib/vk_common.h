@@ -40,6 +40,54 @@ typedef struct vk_Swapchain vk_Swapchain;
 typedef struct vk_Sampler vk_Sampler;
 
 /* ----------------------------------------------------------------------------
+   Pixel format constants
+   ------------------------------------------------------------------------- */
+#define R32G32B32A32_FLOAT 2
+#define R32G32B32A32_UINT 3
+#define R32G32B32A32_SINT 4
+#define R32G32B32_FLOAT 6
+#define R32G32B32_UINT 7
+#define R32G32B32_SINT 8
+#define R16G16B16A16_FLOAT 10
+#define R16G16B16A16_UNORM 11
+#define R16G16B16A16_UINT 12
+#define R16G16B16A16_SNORM 13
+#define R16G16B16A16_SINT 14
+#define R32G32_FLOAT 16
+#define R32G32_UINT 17
+#define R32G32_SINT 18
+#define R10G10B10A2_UNORM 24
+#define R10G10B10A2_UINT 25
+#define R8G8B8A8_UNORM 28
+#define R8G8B8A8_UNORM_SRGB 29
+#define R8G8B8A8_UINT 30
+#define R8G8B8A8_SNORM 31
+#define R8G8B8A8_SINT 32
+#define R16G16_FLOAT 34
+#define R16G16_UNORM 35
+#define R16G16_UINT 36
+#define R16G16_SNORM 37
+#define R16G16_SINT 38
+#define R32_FLOAT 41
+#define R32_UINT 42
+#define R32_SINT 43
+#define R8G8_UNORM 49
+#define R8G8_UINT 50
+#define R8G8_SNORM 51
+#define R8G8_SINT 52
+#define R16_FLOAT 54
+#define R16_UNORM 55
+#define R16_UINT 57
+#define R16_SNORM 58
+#define R16_SINT 59
+#define R8_UNORM 61
+#define R8_UINT 62
+#define R8_SNORM 63
+#define R8_SINT 64
+#define B8G8R8A8_UNORM 87
+#define B8G8R8A8_UNORM_SRGB 91
+
+/* ----------------------------------------------------------------------------
    Core object structures (PyObject plus Vulkan handles)
    ------------------------------------------------------------------------- */
 struct vk_Device

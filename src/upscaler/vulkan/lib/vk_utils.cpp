@@ -222,3 +222,21 @@ uint32_t *vk_spirv_patch_nonreadable_uav(const uint32_t *code, size_t size,
 
     return patched;
 }
+
+/* ----------------------------------------------------------------------------
+   Public helpers: allocate a temporary command buffer
+   ------------------------------------------------------------------------- */
+VkCommandBuffer vk_allocate_temp_cmd(vk_Device *dev) {
+    VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    allocInfo.commandPool = dev->command_pool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+    VkCommandBuffer cmd = VK_NULL_HANDLE;
+    vkAllocateCommandBuffers(dev->device, &allocInfo, &cmd);
+    return cmd;
+}
+
+void vk_free_temp_cmd(vk_Device *dev, VkCommandBuffer cmd) {
+    if (cmd)
+        vkFreeCommandBuffers(dev->device, dev->command_pool, 1, &cmd);
+}

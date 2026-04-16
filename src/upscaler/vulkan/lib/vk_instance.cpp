@@ -1,5 +1,7 @@
 #include "vk_instance.h"
 #include <cstring>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <vulkan/vulkan_xlib.h>
 #include <vulkan/vulkan_wayland.h>
 

@@ -10,24 +10,6 @@ extern PyTypeObject vk_Resource_Type;
 extern PyTypeObject vk_Sampler_Type;
 
 /* ----------------------------------------------------------------------------
-   Internal helper: allocate a temporary command buffer
-   ------------------------------------------------------------------------- */
-static VkCommandBuffer allocate_temp_cmd(vk_Device *dev) {
-    VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-    allocInfo.commandPool = dev->command_pool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-    VkCommandBuffer cmd = VK_NULL_HANDLE;
-    vkAllocateCommandBuffers(dev->device, &allocInfo, &cmd);
-    return cmd;
-}
-
-static void free_temp_cmd(vk_Device *dev, VkCommandBuffer cmd) {
-    if (cmd)
-        vkFreeCommandBuffers(dev->device, dev->command_pool, 1, &cmd);
-}
-
-/* ----------------------------------------------------------------------------
    Compute deallocator
    ------------------------------------------------------------------------- */
 void vk_Compute_dealloc(vk_Compute *self) {
@@ -537,7 +519,7 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args) {
     }
 
     vk_Device *dev = self->py_device;
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         if (push.buf) PyBuffer_Release(&push);
         PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
@@ -559,7 +541,7 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args) {
     if (push.buf) PyBuffer_Release(&push);
 
     VkResult res = submit_and_wait(dev, cmd, self->dispatch_fence);
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
     if (res != VK_SUCCESS) {
         PyErr_Format(PyExc_RuntimeError, "Dispatch submission failed (error %d)", res);
         return nullptr;
@@ -585,7 +567,7 @@ PyObject *vk_Compute_dispatch_indirect(vk_Compute *self, PyObject *args) {
     }
 
     vk_Device *dev = self->py_device;
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         if (push.buf) PyBuffer_Release(&push);
         PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
@@ -607,7 +589,7 @@ PyObject *vk_Compute_dispatch_indirect(vk_Compute *self, PyObject *args) {
     if (push.buf) PyBuffer_Release(&push);
 
     VkResult res = submit_and_wait(dev, cmd, self->dispatch_fence);
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
     if (res != VK_SUCCESS) {
         PyErr_Format(PyExc_RuntimeError, "Indirect dispatch failed (error %d)", res);
         return nullptr;
@@ -633,7 +615,7 @@ PyObject *vk_Compute_dispatch_indirect_batch(vk_Compute *self, PyObject *args) {
     }
 
     vk_Device *dev = self->py_device;
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         if (push.buf) PyBuffer_Release(&push);
         PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
@@ -657,7 +639,7 @@ PyObject *vk_Compute_dispatch_indirect_batch(vk_Compute *self, PyObject *args) {
     if (push.buf) PyBuffer_Release(&push);
 
     VkResult res = submit_and_wait(dev, cmd, self->dispatch_fence);
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
     if (res != VK_SUCCESS) {
         PyErr_Format(PyExc_RuntimeError, "Batch indirect dispatch failed (error %d)", res);
         return nullptr;
@@ -773,7 +755,7 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
             ts_copy_before = 1;
             ts_copy_after = 2;
             uint32_t base = 3;
-            for (Py_ssize_t i = 0; i < num_items; ++i)
+            for (Py_ssize_t i = 0; i < num_items; ++i) {
                 ts_before.push_back(base++);
                 ts_after.push_back(base++);
             }
@@ -786,7 +768,7 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
         }
     }
 
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         for (auto p : pushes) Py_DECREF(p);
         PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
@@ -830,7 +812,7 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
     }
 
     // Dispatches
-    for (Py_ssize_t i = 0; i < num_items; ++i)
+    for (Py_ssize_t i = 0; i < num_items; ++i) {
         vk_Compute *comp = comps[i];
         if (use_timestamps) {
             vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dev->timestamp_pool, ts_before[i]);
@@ -841,9 +823,8 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
         if (pushes[i] != Py_None) {
             Py_buffer view;
             if (PyObject_GetBuffer(pushes[i], &view, PyBUF_SIMPLE) < 0) {
-                // error already set
                 vkEndCommandBuffer(cmd);
-                free_temp_cmd(dev, cmd);
+                vk_free_temp_cmd(dev, cmd);
                 for (auto p : pushes) Py_DECREF(p);
                 return nullptr;
             }
@@ -895,7 +876,7 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
     }
 
     VkResult res = submit_and_wait(dev, cmd, fence);
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
     for (auto p : pushes) Py_DECREF(p);
 
     if (temp_fence) vkDestroyFence(dev->device, temp_fence, nullptr);
@@ -941,7 +922,7 @@ PyObject *vk_Compute_dispatch_tiles(vk_Compute *self, PyObject *args) {
         Py_RETURN_NONE;
 
     vk_Device *dev = self->py_device;
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
         return nullptr;
@@ -962,13 +943,13 @@ PyObject *vk_Compute_dispatch_tiles(vk_Compute *self, PyObject *args) {
         PyObject *push_obj;
         if (!PyArg_ParseTuple(tuple, "IIO", &tx, &ty, &push_obj)) {
             vkEndCommandBuffer(cmd);
-            free_temp_cmd(dev, cmd);
+            vk_free_temp_cmd(dev, cmd);
             return nullptr;
         }
         Py_buffer view;
         if (PyObject_GetBuffer(push_obj, &view, PyBUF_SIMPLE) < 0) {
             vkEndCommandBuffer(cmd);
-            free_temp_cmd(dev, cmd);
+            vk_free_temp_cmd(dev, cmd);
             return nullptr;
         }
         if (view.len > 0) {
@@ -989,7 +970,7 @@ PyObject *vk_Compute_dispatch_tiles(vk_Compute *self, PyObject *args) {
 
     vkEndCommandBuffer(cmd);
     VkResult res = submit_and_wait(dev, cmd, self->dispatch_fence);
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
     if (res != VK_SUCCESS) {
         PyErr_Format(PyExc_RuntimeError, "Tile dispatch failed (error %d)", res);
         return nullptr;

@@ -181,7 +181,7 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
     self->suboptimal = (res == VK_SUBOPTIMAL_KHR);
     self->out_of_date = false;
 
-    VkCommandBuffer cmd = allocate_temp_cmd(dev);
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
         return nullptr;
@@ -249,7 +249,7 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
     vkResetFences(dev->device, 1, &fence);
     res = vkQueueSubmit(dev->queue, 1, &submit, fence);
     if (res != VK_SUCCESS) {
-        free_temp_cmd(dev, cmd);
+        vk_free_temp_cmd(dev, cmd);
         PyErr_Format(PyExc_RuntimeError, "Queue submit failed (error %d)", res);
         return nullptr;
     }
@@ -266,7 +266,7 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
         self->out_of_date = (res == VK_ERROR_OUT_OF_DATE_KHR);
         self->suboptimal = (res == VK_SUBOPTIMAL_KHR);
     } else if (res != VK_SUCCESS) {
-        free_temp_cmd(dev, cmd);
+        vk_free_temp_cmd(dev, cmd);
         PyErr_Format(PyExc_RuntimeError, "Present failed (error %d)", res);
         return nullptr;
     }
@@ -275,7 +275,7 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
         vkWaitForFences(dev->device, 1, &fence, VK_TRUE, UINT64_MAX);
     }
 
-    free_temp_cmd(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
     Py_RETURN_NONE;
 }
 

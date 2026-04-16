@@ -127,5 +127,68 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
     vk_format_map[R10G10B10A2_UNORM] = { VK_FORMAT_A2B10G10R10_UNORM_PACK32, 4 };
     vk_format_map[R10G10B10A2_UINT]  = { VK_FORMAT_A2B10G10R10_UINT_PACK32, 4 };
 
+        // Shader binary type
+    PyModule_AddIntConstant(m, "SHADER_BINARY_TYPE_SPIRV", 1);
+
+    // Sampler filters
+    PyModule_AddIntConstant(m, "SAMPLER_FILTER_POINT", 0);
+    PyModule_AddIntConstant(m, "SAMPLER_FILTER_LINEAR", 1);
+
+    // Sampler address modes
+    PyModule_AddIntConstant(m, "SAMPLER_ADDRESS_MODE_WRAP", 0);
+    PyModule_AddIntConstant(m, "SAMPLER_ADDRESS_MODE_MIRROR", 1);
+    PyModule_AddIntConstant(m, "SAMPLER_ADDRESS_MODE_CLAMP", 2);
+
+    // Heap types
+    PyModule_AddIntConstant(m, "HEAP_DEFAULT", 0);
+    PyModule_AddIntConstant(m, "HEAP_UPLOAD", 1);
+    PyModule_AddIntConstant(m, "HEAP_READBACK", 2);
+
+    // Pixel formats (expose the same numeric constants to Python)
+    PyModule_AddIntConstant(m, "R32G32B32A32_FLOAT", R32G32B32A32_FLOAT);
+    PyModule_AddIntConstant(m, "R32G32B32A32_UINT", R32G32B32A32_UINT);
+    PyModule_AddIntConstant(m, "R32G32B32A32_SINT", R32G32B32A32_SINT);
+    PyModule_AddIntConstant(m, "R32G32B32_FLOAT", R32G32B32_FLOAT);
+    PyModule_AddIntConstant(m, "R32G32B32_UINT", R32G32B32_UINT);
+    PyModule_AddIntConstant(m, "R32G32B32_SINT", R32G32B32_SINT);
+    PyModule_AddIntConstant(m, "R16G16B16A16_FLOAT", R16G16B16A16_FLOAT);
+    PyModule_AddIntConstant(m, "R16G16B16A16_UNORM", R16G16B16A16_UNORM);
+    PyModule_AddIntConstant(m, "R16G16B16A16_UINT", R16G16B16A16_UINT);
+    PyModule_AddIntConstant(m, "R16G16B16A16_SNORM", R16G16B16A16_SNORM);
+    PyModule_AddIntConstant(m, "R16G16B16A16_SINT", R16G16B16A16_SINT);
+    PyModule_AddIntConstant(m, "R32G32_FLOAT", R32G32_FLOAT);
+    PyModule_AddIntConstant(m, "R32G32_UINT", R32G32_UINT);
+    PyModule_AddIntConstant(m, "R32G32_SINT", R32G32_SINT);
+    PyModule_AddIntConstant(m, "R10G10B10A2_UNORM", R10G10B10A2_UNORM);
+    PyModule_AddIntConstant(m, "R10G10B10A2_UINT", R10G10B10A2_UINT);
+    PyModule_AddIntConstant(m, "R8G8B8A8_UNORM", R8G8B8A8_UNORM);
+    PyModule_AddIntConstant(m, "R8G8B8A8_UNORM_SRGB", R8G8B8A8_UNORM_SRGB);
+    PyModule_AddIntConstant(m, "R8G8B8A8_UINT", R8G8B8A8_UINT);
+    PyModule_AddIntConstant(m, "R8G8B8A8_SNORM", R8G8B8A8_SNORM);
+    PyModule_AddIntConstant(m, "R8G8B8A8_SINT", R8G8B8A8_SINT);
+    PyModule_AddIntConstant(m, "R16G16_FLOAT", R16G16_FLOAT);
+    PyModule_AddIntConstant(m, "R16G16_UNORM", R16G16_UNORM);
+    PyModule_AddIntConstant(m, "R16G16_UINT", R16G16_UINT);
+    PyModule_AddIntConstant(m, "R16G16_SNORM", R16G16_SNORM);
+    PyModule_AddIntConstant(m, "R16G16_SINT", R16G16_SINT);
+    PyModule_AddIntConstant(m, "R32_FLOAT", R32_FLOAT);
+    PyModule_AddIntConstant(m, "R32_UINT", R32_UINT);
+    PyModule_AddIntConstant(m, "R32_SINT", R32_SINT);
+    PyModule_AddIntConstant(m, "R8G8_UNORM", R8G8_UNORM);
+    PyModule_AddIntConstant(m, "R8G8_UINT", R8G8_UINT);
+    PyModule_AddIntConstant(m, "R8G8_SNORM", R8G8_SNORM);
+    PyModule_AddIntConstant(m, "R8G8_SINT", R8G8_SINT);
+    PyModule_AddIntConstant(m, "R16_FLOAT", R16_FLOAT);
+    PyModule_AddIntConstant(m, "R16_UNORM", R16_UNORM);
+    PyModule_AddIntConstant(m, "R16_UINT", R16_UINT);
+    PyModule_AddIntConstant(m, "R16_SNORM", R16_SNORM);
+    PyModule_AddIntConstant(m, "R16_SINT", R16_SINT);
+    PyModule_AddIntConstant(m, "R8_UNORM", R8_UNORM);
+    PyModule_AddIntConstant(m, "R8_UINT", R8_UINT);
+    PyModule_AddIntConstant(m, "R8_SNORM", R8_SNORM);
+    PyModule_AddIntConstant(m, "R8_SINT", R8_SINT);
+    PyModule_AddIntConstant(m, "B8G8R8A8_UNORM", B8G8R8A8_UNORM);
+    PyModule_AddIntConstant(m, "B8G8R8A8_UNORM_SRGB", B8G8R8A8_UNORM_SRGB);
+
     return m;
 }
