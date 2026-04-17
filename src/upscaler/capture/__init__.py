@@ -3,6 +3,7 @@ import logging
 import os
 import xcffib
 from typing import Any, List, Tuple
+from xcffib import ffi
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,8 @@ class FrameGrabber:
 
         # Open dedicated XCB connection for capture
         self._xcb_conn = xcffib.connect()
-        self._xcb_conn_ptr = self._xcb_conn.get_xcb_connection()
+        # Extract raw xcb_connection_t* as integer using CFFI
+        self._xcb_conn_ptr = int(ffi.cast("uintptr_t", self._xcb_conn._conn))
 
         self.buffer_size = self.width * self.height * 4
         self.buffer = (ctypes.c_ubyte * self.buffer_size)()

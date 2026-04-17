@@ -77,7 +77,7 @@ class WindowTracker:
             # Check if minimized (map_state)
             attr = self._conn.core.GetWindowAttributes(self.handle).reply()
             if attr:
-                self.minimized = attr.map_state != xcffib.xproto.MapState.VIEWABLE
+                self.minimized = attr.map_state != xcffib.xproto.MapState.Viewable
             else:
                 self.minimized = True
 
