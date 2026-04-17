@@ -50,6 +50,22 @@ CaptureContext *capture_create(xcb_connection_t *conn, xcb_window_t xid,
         free(geom);
     }
 
+    // Cache visual info
+    xcb_get_visual_info_cookie_t vi_cookie = xcb_get_visual_info(conn, ctx->visual);
+    xcb_get_visual_info_reply_t *vi = xcb_get_visual_info_reply(conn, vi_cookie, NULL);
+    if (vi) {
+        ctx->red_mask   = vi->red_mask;
+        ctx->green_mask = vi->green_mask;
+        ctx->blue_mask  = vi->blue_mask;
+        ctx->bits_per_pixel = vi->bits_per_rgb_value;
+        free(vi);
+    } else {
+        ctx->red_mask   = 0xFF0000;
+        ctx->green_mask = 0x00FF00;
+        ctx->blue_mask  = 0x0000FF;
+        ctx->bits_per_pixel = 32;
+    }
+
     /* Initialize damage tracking */
     damage_init(ctx);
 

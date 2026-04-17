@@ -6,7 +6,7 @@
 #ifndef TILE_CACHE_H
 #define TILE_CACHE_H
 
-#include "capture_xcb.h"
+#include "capture.h"
 #include <stdint.h>
 
 typedef struct CaptureContext CaptureContext;

@@ -1,6 +1,11 @@
-#include "damage_tracking.h"
+/**
+ * @file damage_tracking.c
+ * @brief XDamage + XFixes integration using XCB.
+ */
+
 #include "capture.h"
 #include <stdlib.h>
+#include <string.h>
 #include <xcb/xcb_aux.h>
 
 /* -------------------------------------------------------------------------
@@ -20,13 +25,11 @@ static int has_extension(xcb_connection_t *conn, const char *name) {
 int damage_init(CaptureContext *ctx) {
     if (!ctx || !ctx->conn) return 0;
 
-    /* Check that both DAMAGE and XFIXES are available */
     if (!has_extension(ctx->conn, "DAMAGE") || !has_extension(ctx->conn, "XFIXES")) {
         ctx->use_damage = 0;
         return 0;
     }
 
-    /* Create a damage object for the window */
     xcb_damage_damage_t damage = xcb_generate_id(ctx->conn);
     xcb_damage_create(ctx->conn, damage, ctx->xid,
                       XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
@@ -56,14 +59,11 @@ int damage_query(CaptureContext *ctx, int *num_rects,
         return 0;
     }
 
-    /* Create an empty region to hold the damage */
     xcb_xfixes_region_t region = xcb_generate_id(ctx->conn);
     xcb_xfixes_create_region(ctx->conn, region, 0, NULL);
 
-    /* Subtract the current damage into our region and clear it */
     xcb_damage_subtract(ctx->conn, ctx->damage, XCB_NONE, region);
 
-    /* Fetch the region's rectangles */
     xcb_xfixes_fetch_region_cookie_t cookie =
         xcb_xfixes_fetch_region_unchecked(ctx->conn, region);
     xcb_xfixes_fetch_region_reply_t *reply =
@@ -77,21 +77,19 @@ int damage_query(CaptureContext *ctx, int *num_rects,
         return 0;
     }
 
-    /* Extract bounding box */
     bounds->x = reply->extents.x;
     bounds->y = reply->extents.y;
     bounds->width = reply->extents.width;
     bounds->height = reply->extents.height;
 
-    *num_rects = reply->num_rects;
+    // Correct function names:
+    int length = xcb_xfixes_fetch_region_rectangles_length(reply);
+    *num_rects = length / sizeof(xcb_rectangle_t);
 
-    /* Allocate and copy rectangle data */
     if (*num_rects > 0) {
-        int rects_size = *num_rects * sizeof(xcb_rectangle_t);
-        *rects = malloc(rects_size);
+        *rects = malloc(length);
         if (*rects) {
-            uint8_t *data = xcb_xfixes_fetch_region_rects(reply);
-            memcpy(*rects, data, rects_size);
+            memcpy(*rects, xcb_xfixes_fetch_region_rectangles(reply), length);
         }
     } else {
         *rects = NULL;
@@ -106,7 +104,6 @@ int damage_query(CaptureContext *ctx, int *num_rects,
 void damage_subtract(CaptureContext *ctx) {
     if (!ctx || !ctx->use_damage) return;
 
-    /* Subtract with None as repair and None as parts clears all damage */
     xcb_damage_subtract(ctx->conn, ctx->damage, XCB_NONE, XCB_NONE);
     xcb_flush(ctx->conn);
 }
