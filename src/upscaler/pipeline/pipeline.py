@@ -15,7 +15,7 @@ from ..overlay import OverlayWindow
 from ..shaders import LanczosScaler, OverlayBlender, SRCNN, dispatch_groups
 from ..utils import parse_output_geometry, calculate_scaling_rect
 from ..vulkan import Texture2D, configure_device, Compute, R8G8B8A8_UNORM
-from ..window import WindowInfo, WindowTracker, get_display
+from ..window import WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
 
@@ -75,10 +75,8 @@ class Pipeline:
         self.controller.set_initial_geometry_index(self.output_geometry)
 
         # Swapchain manager
-        display_id = get_display()
         configure_device(self.config.vulkan_buffer_pool_size)
         self._swapchain_manager = SwapchainManager(
-            display_id,
             overlay.xid,
             self._screen_width,
             self._screen_height,

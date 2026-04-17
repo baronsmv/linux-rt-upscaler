@@ -2,6 +2,7 @@ import gc
 import logging
 import threading
 import time
+import xcffib
 from typing import Optional
 
 from ..vulkan import Swapchain, Texture2D, R8G8B8A8_UNORM
@@ -12,32 +13,36 @@ logger = logging.getLogger(__name__)
 class SwapchainManager:
     """
     Manages a swapchain for presentation, handling recreation when needed.
+    Uses a dedicated XCB connection for Vulkan surface creation.
     """
 
     def __init__(
         self,
-        display_id: int,
         xid: int,
         width: int,
         height: int,
         present_mode: str,
     ):
-        self.display_id = display_id
         self.xid = xid
         self.screen_width = width
         self.screen_height = height
         self.present_mode = present_mode
         self.swapchain: Optional[Swapchain] = None
         self.last_recreate_time = 0.0
-        self._create_swapchain()
         self._lock = threading.Lock()
+
+        # Open dedicated XCB connection for Vulkan
+        self._xcb_conn = xcffib.connect()
+        self._xcb_conn_ptr = self._xcb_conn.get_xcb_connection()
+
+        self._create_swapchain()
 
     def _create_swapchain(self) -> None:
         if self.screen_width == 0 or self.screen_height == 0:
             raise RuntimeError("Cannot create swapchain without screen dimensions")
         start = time.perf_counter()
         self.swapchain = Swapchain(
-            (self.display_id, self.xid),
+            (self._xcb_conn_ptr, self.xid),
             R8G8B8A8_UNORM,
             4,
             present_mode=self.present_mode,
@@ -81,3 +86,10 @@ class SwapchainManager:
 
     def is_suboptimal(self) -> bool:
         return self.swapchain is not None and self.swapchain.is_suboptimal()
+
+    def close(self) -> None:
+        """Close the XCB connection and cleanup."""
+        self.swapchain = None
+        if hasattr(self, "_xcb_conn") and self._xcb_conn:
+            self._xcb_conn.disconnect()
+            self._xcb_conn = None
