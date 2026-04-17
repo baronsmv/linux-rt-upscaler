@@ -1,29 +1,45 @@
 from PIL import Image, ImageDraw, ImageFont
+from typing import Optional, Dict
 
-from ..vulkan import Texture2D, R8G8B8A8_UNORM, Buffer, HEAP_UPLOAD
+
+def _upload_image_to_texture(image: Image.Image) -> Texture2D:
+    tex = Texture2D(image.width, image.height, R8G8B8A8_UNORM)
+    buffer_size = image.width * image.height * 4
+    upload_buffer = Buffer(buffer_size, heap_type=HEAP_UPLOAD)
+    upload_buffer.upload(image.tobytes())
+    upload_buffer.copy_to(tex)
+    return tex
 
 
 class TextRenderer:
+    """Renders text to PIL images; GPU upload is done separately."""
+
     def __init__(
-        self, texts: list[str], screen_height: int = 1080, font_path: str = None
+        self,
+        texts: list[str],
+        screen_height: int = 1080,
+        font_path: Optional[str] = None,
     ):
         # Font size scales with screen height (approx 4%)
         self.font_size = max(24, int(screen_height * 0.04))
+
         try:
             self.font = ImageFont.truetype(
                 font_path or "DejaVuSans.ttf", self.font_size
             )
-        except:
+        except Exception:
             self.font = ImageFont.load_default()
-        self.cache = {}
+        self._image_cache: Dict[str, Image.Image] = {}
+
+        # Pre‑render all required texts (CPU only)
         for text in texts:
             self._render_to_cache(text)
 
-    def _render_to_cache(self, text: str):
-        if text in self.cache:
+    def _render_to_cache(self, text: str) -> None:
+        if text in self._image_cache:
             return
 
-        # Colors: white text, black shadow, dark translucent background
+        # Colors and style
         text_color = (255, 255, 255, 255)
         shadow_color = (0, 0, 0, 180)
         bg_color = (0, 0, 0, 180)
@@ -58,14 +74,7 @@ class TextRenderer:
         # Draw main text
         draw.text((padding, padding), text, font=self.font, fill=text_color)
 
-        # Upload to GPU
-        tex = Texture2D(img_w, img_h, R8G8B8A8_UNORM)
-        buffer_size = img_w * img_h * 4
-        upload_buffer = Buffer(buffer_size, heap_type=HEAP_UPLOAD)
-        upload_buffer.upload(img.tobytes())
-        upload_buffer.copy_to(tex)
+        self._image_cache[text] = img
 
-        self.cache[text] = tex
-
-    def get_texture(self, text: str) -> Texture2D | None:
-        return self.cache.get(text)
+    def get_image(self, text: str) -> Optional[Image.Image]:
+        return self._image_cache.get(text)

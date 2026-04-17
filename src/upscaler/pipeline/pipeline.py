@@ -12,7 +12,7 @@ from .text_renderer import TextRenderer
 from ..capture import FrameGrabber
 from ..config import Config, OverlayMode, OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..overlay import OverlayWindow
-from ..shaders import LanczosScaler, OverlayBlender, SRCNN, dispatch_groups
+from ..shaders import LanczosScaler, SRCNN, dispatch_groups
 from ..utils import parse_output_geometry, calculate_scaling_rect
 from ..vulkan import Texture2D, configure_device, Compute, R8G8B8A8_UNORM
 from ..window import WindowInfo, WindowTracker
@@ -142,8 +142,8 @@ class Pipeline:
             + ["Screenshot saved", "Screenshot failed"]
         )
         self._text_renderer = TextRenderer(osd_texts, screen_height=self._screen_height)
-        self._overlay_blender = OverlayBlender()
-        self._overlay_blender.set_screen_texture(self._screen_tex)
+        self._osd_texture_cache: Dict[str, Texture2D] = {}
+        self._osd_texture: Optional[Texture2D] = None
 
     def start(self) -> None:
         """Start the pipeline thread."""
@@ -334,7 +334,11 @@ class Pipeline:
 
     def show_osd(self, text: str, duration: float = 1.5):
         """Request an OSD message to be displayed."""
-        tex = self._text_renderer.get_texture(text)
+        if text not in self._osd_texture_cache:
+            img = self._text_renderer.get_image(text)
+            if img:
+                self._osd_texture_cache[text] = _upload_image_to_texture(img)
+        tex = self._osd_texture_cache.get(text)
         if tex is not None:
             self._osd_texture = tex
             self._osd_expiry_time = time.monotonic() + duration
