@@ -707,14 +707,6 @@ class Buffer(Resource):
 # ----------------------------------------------------------------------
 # Texture2D
 # ----------------------------------------------------------------------
-class TextureUsage:
-    SAMPLED = 1  # Shader read-only
-    STORAGE = 2  # Shader read/write
-    COLOR_ATTACHMENT = 4  # Render target
-    TRANSFER_SRC = 8
-    TRANSFER_DST = 16
-
-
 class Texture2D(Resource):
     """
     A 2D texture resource.
