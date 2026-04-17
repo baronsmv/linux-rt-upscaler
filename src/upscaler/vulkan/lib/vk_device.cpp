@@ -119,7 +119,7 @@ vk_Device *vk_Device_get_initialized(vk_Device *self) {
 
     uint32_t qf_index = 0;
     for (; qf_index < qf_count; ++qf_index) {
-        if (qf_props[qf_index].queueFlags & VK_QUEUE_COMPUTE_BIT)
+        if (qf_props[qf_index].queueFlags & VK_QUEUE_GRAPHICS_BIT)
             break;
     }
     if (qf_index == qf_count) {
