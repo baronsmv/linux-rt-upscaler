@@ -63,8 +63,9 @@ def get_window_name(
     reply = cookie.reply()
     if reply and reply.value_len:
         try:
-            return bytes(reply.value).decode("utf-8", errors="ignore").strip()
-        except UnicodeDecodeError:
+            # xcffib value is a buffer; use .buf() or .to_bytes()
+            return reply.value.buf().decode("utf-8", errors="ignore").strip()
+        except (UnicodeDecodeError, AttributeError):
             pass
 
     # Fallback to WM_NAME
@@ -74,8 +75,8 @@ def get_window_name(
     reply = cookie.reply()
     if reply and reply.value_len:
         try:
-            return bytes(reply.value).decode("latin1", errors="ignore").strip()
-        except UnicodeDecodeError:
+            return reply.value.buf().decode("latin1", errors="ignore").strip()
+        except (UnicodeDecodeError, AttributeError):
             pass
 
     return None
@@ -90,7 +91,7 @@ def get_window_class(
     )
     reply = cookie.reply()
     if reply and reply.value_len:
-        data = bytes(reply.value)
+        data = reply.value.buf()
         try:
             strings = data.decode("latin1").split("\x00")
             if len(strings) >= 2:
@@ -109,7 +110,8 @@ def get_window_pid(
     )
     reply = cookie.reply()
     if reply and reply.value_len >= 4:
-        return int.from_bytes(reply.value[:4], byteorder="little")
+        # _NET_WM_PID is a CARDINAL (32-bit)
+        return int.from_bytes(reply.value.buf()[:4], byteorder="little")
     return None
 
 
@@ -146,7 +148,8 @@ def is_application_window(
     )
     reply = cookie.reply()
     if reply and reply.value_len:
-        atom_list = list(reply.value.to_atoms())
+        data = reply.value.buf()
+        atom_list = list(struct.unpack(f"<{len(data)//4}I", data))
         is_normal = False
         for atom in atom_list:
             if atom == atoms.get("_NET_WM_WINDOW_TYPE_NORMAL"):
@@ -164,9 +167,9 @@ def is_application_window(
             return False
     else:
         # No type property – check class to exclude XWayland helpers
-        klass = get_window_class(conn, win, atoms)
-        if klass:
-            instance, cls = klass
+        win_class = get_window_class(conn, win, atoms)
+        if win_class:
+            instance, cls = win_class
             if "xwayland" in instance.lower() or "xwayland" in cls.lower():
                 return False
 

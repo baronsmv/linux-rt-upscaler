@@ -38,7 +38,9 @@ def _list_windows() -> List[WindowInfo]:
     )
     reply = cookie.reply()
     if reply and reply.value_len:
-        window_ids = list(reply.value.to_atoms())
+        # Convert buffer to list of window IDs
+        data = reply.value.buf()
+        window_ids = list(struct.unpack(f"<{len(data)//4}I", data))
         windows = window_ids
     else:
         logger.warning(
@@ -92,7 +94,10 @@ def get_active_window() -> Optional[WindowInfo]:
         if not reply or not reply.value_len:
             return None
 
-        active_win = reply.value.to_atoms()[0]
+        data = reply.value.buf()
+        if len(data) < 4:
+            return None
+        active_win = int.from_bytes(data[:4], byteorder="little")
         if active_win == 0:
             return None
 

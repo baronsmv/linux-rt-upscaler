@@ -91,13 +91,13 @@ class OverlayWindow(QMainWindow):
         logger.debug(f"Overlay XID: {self.xid}")
 
         # Install event filter if needed and X display is available
-        if self._should_forward and self._forwarder.display is not None:
+        if self._should_forward and self._forwarder.conn is not None:
             self.installEventFilter(self)
 
         # Fallback if forwarder failed
-        if self._should_forward and self._forwarder.display is None:
+        if self._should_forward and self._forwarder.conn is None:
             logger.warning(
-                "Event forwarding disabled due to X display failure. Window is now click-through."
+                "Event forwarding disabled due to XCB connection failure. Window is now click-through."
             )
             flags = self.windowFlags() | Qt.WindowTransparentForInput
             self.setWindowFlags(flags)
@@ -253,7 +253,7 @@ class OverlayWindow(QMainWindow):
         This method uses the CoordinateMapper to transform overlay coordinates
         to target window coordinates, then calls the appropriate forwarder method.
         """
-        if self._forwarder.display is None or self._forwarder.target_handle is None:
+        if self._forwarder.conn is None or self._forwarder.target_handle is None:
             logger.debug("_handle_mouse called but forwarding not available")
             return
 
