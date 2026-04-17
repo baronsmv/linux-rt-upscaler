@@ -1,3 +1,15 @@
+"""
+X11 event forwarding using pure XCB (xcffib).
+
+This module provides an X11EventForwarder class that sends synthetic
+X11 mouse events (motion, button press/release, wheel) to a target window.
+It is designed to be used from the Qt main thread and opens its own
+dedicated XCB connection, ensuring thread safety.
+
+The event structures are manually packed according to the X11 protocol
+specification (32‑byte wire format) and sent via xcb_send_event.
+"""
+
 import logging
 import struct
 import xcffib
@@ -10,25 +22,36 @@ from ..window import open_xcb_connection, close_xcb_connection
 
 logger = logging.getLogger(__name__)
 
-# Qt button to X11 button number mapping
+# Mapping from Qt mouse buttons to X11 button numbers.
+# See /usr/include/X11/X.h for X11 button definitions.
 BUTTON_MAP = {
     Qt.LeftButton: 1,
     Qt.MiddleButton: 2,
     Qt.RightButton: 3,
-    Qt.XButton1: 8,
-    Qt.XButton2: 9,
+    Qt.XButton1: 8,  # Back
+    Qt.XButton2: 9,  # Forward
 }
 
 
 class X11EventForwarder:
     """
-    Forwards mouse events to a target X11 window using XCB.
+    Forwards mouse events to a target X11 window using synthetic X11 events.
 
-    The forwarder manages an XCB connection and sends ButtonPress,
-    ButtonRelease, and MotionNotify events to a given window ID.
+    The forwarder opens a dedicated XCB connection and sends ButtonPress,
+    ButtonRelease, and MotionNotify events to the specified window ID.
+    Event forwarding can be enabled/disabled via the `enabled` attribute.
+
+    All X11 event structures are packed manually as 32‑byte arrays according
+    to the core X11 protocol. This avoids dependency on higher‑level libraries.
+
+    Attributes:
+        conn (xcffib.Connection): XCB connection used for event sending.
+        target_handle (int | None): X11 window ID to forward events to.
+        enabled (bool): If False, events are silently dropped.
     """
 
     def __init__(self) -> None:
+        """Create an X11EventForwarder and open an XCB connection."""
         self.conn: Optional[xcffib.Connection] = None
         self._root: Optional[int] = None
         self.target_handle: Optional[int] = None
@@ -36,7 +59,11 @@ class X11EventForwarder:
         self._open_connection()
 
     def _open_connection(self) -> None:
-        """Open the XCB connection."""
+        """
+        Open a dedicated XCB connection and retrieve the root window ID.
+
+        If the connection fails, `enabled` is set to False and a warning is logged.
+        """
         self.conn = open_xcb_connection()
         if self.conn:
             self._root = self.conn.get_setup().roots[0].root
@@ -48,17 +75,18 @@ class X11EventForwarder:
             logger.warning("XCB connection unavailable – event forwarding disabled")
 
     def close(self) -> None:
+        """Close the XCB connection and release resources."""
         close_xcb_connection(self.conn)
         self.conn = None
         self._root = None
 
     def _send_event(self, event_data: bytes, event_mask: int) -> None:
         """
-        Send a generic X11 event to the target window.
+        Send a generic 32‑byte X11 event to the target window.
 
         Args:
-            event_data: Raw bytes of the event structure (32 bytes).
-            event_mask: Mask for event propagation (e.g., ButtonPressMask).
+            event_data: 32‑byte packed representation of the event struct.
+            event_mask: X11 event mask (e.g., ButtonPressMask) for propagation.
         """
         if not self.enabled:
             logger.debug("Forwarding disabled, event not sent")
@@ -68,12 +96,12 @@ class X11EventForwarder:
             return
 
         try:
-            # SendEvent(destination, propagate, event_mask, event)
+            # SendEvent(propagate=False, destination, event_mask, event_data)
             self.conn.core.SendEvent(
                 False,  # propagate
                 self.target_handle,  # destination
                 event_mask,  # event_mask
-                event_data,  # event (32 bytes)
+                event_data,  # 32‑byte event payload
             )
             self.conn.flush()
         except Exception as e:
@@ -90,28 +118,39 @@ class X11EventForwarder:
         """
         Send a MotionNotify event to the target window.
 
+        The MotionNotify event structure (32 bytes):
+            - response_type: 6 (MotionNotify opcode)
+            - detail: 0 (unused)
+            - seq: 0 (filled by server)
+            - time: CurrentTime
+            - root: root window ID
+            - event: target window ID
+            - child: 0 (none)
+            - root_x, root_y: 16‑bit screen coordinates
+            - event_x, event_y: 16‑bit window‑relative coordinates
+            - state: button/modifier mask
+            - same_screen: 1 (True)
+            - pad: 0
+
         Args:
             screen_x, screen_y: Global screen coordinates (root coordinates).
             target_x, target_y: Coordinates within the target window.
             button_state: Bitmask of currently pressed buttons (XCB ButtonMask).
         """
-        # MotionNotify event structure (32 bytes)
-        # Format: response_type(1), detail(1), seq(2), time(4), root(4), event(4),
-        #         child(4), root_x(2), root_y(2), event_x(2), event_y(2),
-        #         state(2), same_screen(1), pad(1)
+        # MotionNotify opcode = 6
         event = struct.pack(
             "<BBHIIIIIHHHHBB",
-            xcffib.xproto.MotionNotifyEvent._event_code,  # response_type
-            0,  # detail (unused)
-            0,  # seq (will be filled by server)
+            6,  # response_type
+            0,  # detail
+            0,  # seq (unused)
             xcffib.xproto.Time.CurrentTime,  # time
             self._root,  # root
-            self.target_handle,  # event window
+            self.target_handle,  # event
             0,  # child
             screen_x,
-            screen_y,  # root coordinates (16-bit)
+            screen_y,  # root_x, root_y (16‑bit)
             target_x,
-            target_y,  # event coordinates (16-bit)
+            target_y,  # event_x, event_y (16‑bit)
             button_state,  # state
             1,  # same_screen
             0,  # pad
@@ -130,8 +169,11 @@ class X11EventForwarder:
         """
         Send a ButtonPress or ButtonRelease event.
 
+        The ButtonPress/ButtonRelease event structure (32 bytes) is identical
+        except for the opcode (4 for press, 5 for release) and the event mask.
+
         Args:
-            qt_button: Qt button constant (Qt.LeftButton, etc.).
+            qt_button: Qt button constant (e.g., Qt.LeftButton).
             press: True for press, False for release.
             screen_x, screen_y: Global screen coordinates.
             target_x, target_y: Coordinates within the target window.
@@ -141,26 +183,21 @@ class X11EventForwarder:
             logger.warning(f"Unmapped Qt button {qt_button}, ignoring")
             return
 
-        event_code = (
-            xcffib.xproto.ButtonPressEvent._event_code
-            if press
-            else xcffib.xproto.ButtonReleaseEvent._event_code
-        )
-
+        opcode = 4 if press else 5  # ButtonPress = 4, ButtonRelease = 5
         event = struct.pack(
             "<BBHIIIIIHHHHBB",
-            event_code,
-            x11_button,  # detail (button)
+            opcode,
+            x11_button,  # detail (button number)
             0,  # seq
             xcffib.xproto.Time.CurrentTime,  # time
             self._root,  # root
-            self.target_handle,  # event window
+            self.target_handle,  # event
             0,  # child
             screen_x,
-            screen_y,  # root coordinates (16-bit)
+            screen_y,  # root_x, root_y
             target_x,
-            target_y,  # event coordinates (16-bit)
-            0,  # state (no modifiers for press/release)
+            target_y,  # event_x, event_y
+            0,  # state (no modifiers)
             1,  # same_screen
             0,  # pad
         )
@@ -183,8 +220,12 @@ class X11EventForwarder:
         """
         Send wheel events (simulated as button presses/releases).
 
+        X11 traditionally uses buttons 4 (up), 5 (down), 6 (left), 7 (right)
+        for wheel scrolling. Each "click" of the wheel is sent as a press
+        immediately followed by a release.
+
         Args:
-            delta: Signed wheel movement (e.g., from angleDelta().y()).
+            delta: Signed wheel movement (positive = up/right, negative = down/left).
             horizontal: True for horizontal scroll, False for vertical.
             screen_x, screen_y: Global screen coordinates.
             target_x, target_y: Coordinates within the target window.
@@ -194,13 +235,13 @@ class X11EventForwarder:
         else:
             button = 4 if delta > 0 else 5  # 4 = up, 5 = down
 
-        steps = max(1, abs(delta) // 120)
+        steps = max(1, abs(delta) // 120)  # Qt uses 120 units per wheel click
 
         for _ in range(steps):
-            # ButtonPress
+            # ButtonPress (opcode 4)
             press_event = struct.pack(
                 "<BBHIIIIIHHHHBB",
-                xcffib.xproto.ButtonPressEvent._event_code,
+                4,  # ButtonPress
                 button,
                 0,
                 xcffib.xproto.Time.CurrentTime,
@@ -217,10 +258,10 @@ class X11EventForwarder:
             )
             self._send_event(press_event, xcffib.xproto.EventMask.ButtonPress)
 
-            # ButtonRelease
+            # ButtonRelease (opcode 5)
             release_event = struct.pack(
                 "<BBHIIIIIHHHHBB",
-                xcffib.xproto.ButtonReleaseEvent._event_code,
+                5,  # ButtonRelease
                 button,
                 0,
                 xcffib.xproto.Time.CurrentTime,
@@ -238,7 +279,15 @@ class X11EventForwarder:
             self._send_event(release_event, xcffib.xproto.EventMask.ButtonRelease)
 
     def get_current_button_state(self) -> int:
-        """Return an X11 button state mask based on currently pressed Qt buttons."""
+        """
+        Return an X11 button state mask based on currently pressed Qt buttons.
+
+        The mask is a bitwise OR of values like Button1Mask, Button2Mask, etc.
+        This is used to populate the `state` field of MotionNotify events.
+
+        Returns:
+            int: X11 button mask (see xcffib.xproto.ButtonMask).
+        """
         state = 0
         buttons = QApplication.mouseButtons()
         if buttons & Qt.LeftButton:
@@ -247,5 +296,6 @@ class X11EventForwarder:
             state |= xcffib.xproto.ButtonMask.BUTTON_3
         if buttons & Qt.MiddleButton:
             state |= xcffib.xproto.ButtonMask.BUTTON_2
-        # XCB lacks masks for extra buttons; ignore for simplicity
+        # Additional buttons (XButton1, XButton2) are not exposed in standard
+        # X11 motion state masks, so they are omitted for simplicity.
         return state

@@ -384,10 +384,10 @@ class Device:
         heap_type: int,
         size: int,
         stride: int,
-        format: int,
         heap_handle,
         heap_offset: int,
         sparse: bool,
+        format: int = VK_FORMAT_B8G8R8A8_UNORM,
     ):
         """Internal method used by Buffer.__init__."""
         return self._handle.create_buffer(
@@ -398,11 +398,11 @@ class Device:
         self,
         width: int,
         height: int,
-        format: int,
         heap_handle,
         heap_offset: int,
         slices: int,
         sparse: bool,
+        format: int = VK_FORMAT_B8G8R8A8_UNORM,
     ):
         """Internal method used by Texture2D.__init__."""
         return self._handle.create_texture2d(
@@ -446,11 +446,11 @@ class Device:
     def create_swapchain(
         self,
         window_handle: tuple,
-        format: int,
         num_buffers: int,
         width: int,
         height: int,
         present_mode: str,
+        format: int = VK_FORMAT_B8G8R8A8_UNORM,
     ):
         """Internal method used by Swapchain.__init__."""
         return self._handle.create_swapchain(
@@ -649,7 +649,7 @@ class Buffer(Resource):
         size: int,
         heap_type: int = HEAP_DEFAULT,
         stride: int = 0,
-        format: int = 0,
+        format: int = VK_FORMAT_B8G8R8A8_UNORM,
         heap: Optional[Heap] = None,
         heap_offset: int = 0,
         sparse: bool = False,
@@ -707,6 +707,14 @@ class Buffer(Resource):
 # ----------------------------------------------------------------------
 # Texture2D
 # ----------------------------------------------------------------------
+class TextureUsage:
+    SAMPLED = 1  # Shader read-only
+    STORAGE = 2  # Shader read/write
+    COLOR_ATTACHMENT = 4  # Render target
+    TRANSFER_SRC = 8
+    TRANSFER_DST = 16
+
+
 class Texture2D(Resource):
     """
     A 2D texture resource.
@@ -725,7 +733,7 @@ class Texture2D(Resource):
         self,
         width: int,
         height: int,
-        format: int,
+        format: int = VK_FORMAT_B8G8R8A8_UNORM,
         heap: Optional[Heap] = None,
         heap_offset: int = 0,
         slices: int = 1,
@@ -1039,7 +1047,7 @@ class Swapchain:
     def __init__(
         self,
         window_handle: tuple,
-        format: int,
+        format: int = VK_FORMAT_B8G8R8A8_UNORM,
         num_buffers: int = 3,
         device: Optional[Device] = None,
         width: int = 0,

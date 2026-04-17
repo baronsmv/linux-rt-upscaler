@@ -387,7 +387,7 @@ class Pipeline:
           7. Update mouse mapping for overlay interaction.
           8. Check if swapchain needs recreation.
         """
-        logger.debug("_process_one_frame(): start")
+        # logger.debug("_process_one_frame(): start")
 
         # -------------------------------------------------------------------------
         # 1. Grab frame from X11 (raw BGRA bytes)
@@ -419,9 +419,6 @@ class Pipeline:
         # 3. If frame hasn't changed and no OSD update, skip GPU work
         # -------------------------------------------------------------------------
         if not is_dirty and self._osd_texture is None:
-            logger.debug(
-                "Frame not dirty and no OSD, just presenting existing texture."
-            )
             self._swapchain_manager.present(self._screen_tex)
             return
 
