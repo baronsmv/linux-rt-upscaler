@@ -1,8 +1,8 @@
 #include "vk_device.h"
 #include "vk_swapchain.h"
 #include "vk_utils.h"
-#include <X11/Xlib.h>
-#include <vulkan/vulkan_xlib.h>
+#include <xcb/xcb.h>
+#include <vulkan/vulkan_xcb.h>
 
 void vk_Swapchain_dealloc(vk_Swapchain *self) {
     if (self->py_device) {
@@ -61,13 +61,14 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
     vk_Device *dev = vk_Device_get_initialized(self);
     if (!dev) return nullptr;
 
-    // Parse window handle (X11 only for simplicity)
+    // Parse window handle: expects (xcb_connection_ptr, xcb_window_id)
     if (!PyTuple_Check(py_window_handle) || PyTuple_Size(py_window_handle) != 2) {
-        PyErr_SetString(PyExc_ValueError, "window_handle must be (display_ptr, window_ptr)");
+        PyErr_SetString(PyExc_ValueError, "window_handle must be (xcb_connection_ptr, xcb_window_id)");
         return nullptr;
     }
-    unsigned long display_ptr, window_ptr;
-    if (!PyArg_ParseTuple(py_window_handle, "KK", &display_ptr, &window_ptr))
+    unsigned long long conn_ptr;   // xcb_connection_t* fits in unsigned long long
+    unsigned int xcb_win;          // xcb_window_t is uint32_t
+    if (!PyArg_ParseTuple(py_window_handle, "KI", &conn_ptr, &xcb_win))
         return nullptr;
 
     vk_Swapchain *sc = PyObject_New(vk_Swapchain, &vk_Swapchain_Type);
@@ -78,13 +79,13 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
     Py_INCREF(dev);
     sc->suboptimal = sc->out_of_date = false;
 
-    // Create Xlib surface
-    VkXlibSurfaceCreateInfoKHR surf_info = { VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR };
-    surf_info.dpy = (Display *)display_ptr;
-    surf_info.window = (Window)window_ptr;
-    if (vkCreateXlibSurfaceKHR(vk_instance, &surf_info, nullptr, &sc->surface) != VK_SUCCESS) {
+    // Create XCB surface
+    VkXcbSurfaceCreateInfoKHR surf_info = { VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR };
+    surf_info.connection = reinterpret_cast<xcb_connection_t*>(conn_ptr);
+    surf_info.window = static_cast<xcb_window_t>(xcb_win);
+    if (vkCreateXcbSurfaceKHR(vk_instance, &surf_info, nullptr, &sc->surface) != VK_SUCCESS) {
         Py_DECREF(sc);
-        PyErr_SetString(vk_SwapchainError, "Failed to create Xlib surface");
+        PyErr_SetString(vk_SwapchainError, "Failed to create XCB surface");
         return nullptr;
     }
 

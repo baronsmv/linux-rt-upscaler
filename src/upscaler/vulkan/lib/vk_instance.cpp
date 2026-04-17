@@ -1,8 +1,7 @@
 #include "vk_instance.h"
 #include <cstring>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <vulkan/vulkan_xlib.h>
+#include <xcb/xcb.h>
+#include <vulkan/vulkan_xcb.h>
 #include <vulkan/vulkan_wayland.h>
 
 /* ----------------------------------------------------------------------------
@@ -40,16 +39,16 @@ bool vk_instance_ensure(void) {
     vkEnumerateInstanceExtensionProperties(NULL, &ext_count, exts.data());
 
     std::vector<const char *> enabled_exts;
-    bool has_surface = false, has_xlib_surface = false, has_wayland_surface = false;
+    bool has_surface = false, has_xcb_surface = false, has_wayland_surface = false;
 
     for (const auto &e : exts) {
         if (strcmp(e.extensionName, VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
             enabled_exts.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
             has_surface = true;
         }
-        if (strcmp(e.extensionName, VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
-            enabled_exts.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-            has_xlib_surface = true;
+        if (strcmp(e.extensionName, VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
+            enabled_exts.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+            has_xcb_surface = true;
         }
         if (strcmp(e.extensionName, VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
             enabled_exts.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
@@ -61,7 +60,7 @@ bool vk_instance_ensure(void) {
         }
     }
 
-    vk_supports_swapchain = has_surface && (has_xlib_surface || has_wayland_surface);
+    vk_supports_swapchain = has_surface && (has_xcb_surface || has_wayland_surface);
 
     VkApplicationInfo app_info = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     app_info.pApplicationName = "Vulkan Python Backend";
