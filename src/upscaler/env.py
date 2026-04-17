@@ -1,3 +1,4 @@
+import ctypes
 import os
 
 
@@ -12,3 +13,9 @@ def setup_environment() -> None:
     os.environ["MESA_VK_WSI"] = "x11"  # Mesa drivers (RADV/ANV)
     os.environ["RADV_DEBUG"] = "no_wayland_wsi"  # Fallback for older Mesa
     os.environ["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"  # NVIDIA proprietary driver
+
+    try:
+        x11 = ctypes.CDLL("libX11.so.6")
+        x11.XInitThreads()
+    except Exception as e:
+        print(f"Warning: Could not initialize X11 threading: {e}", file=sys.stderr)
