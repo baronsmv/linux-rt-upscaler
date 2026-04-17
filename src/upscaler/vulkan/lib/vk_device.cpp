@@ -17,6 +17,30 @@ extern PyMethodDef vk_Compute_methods[];
 extern PyMethodDef vk_Swapchain_methods[];
 
 /* ----------------------------------------------------------------------------
+   Forward declaration of the actual compute creation implementation
+   ------------------------------------------------------------------------- */
+extern PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObject *kwds);
+
+/* ----------------------------------------------------------------------------
+   Python method: create_compute (forwarding to implementation in vk_compute.cpp)
+   ------------------------------------------------------------------------- */
+PyObject *vk_Device_create_compute(vk_Device *self, PyObject *args, PyObject *kwds) {
+    return vk_Device_create_compute_impl(self, args, kwds);
+}
+
+/* ----------------------------------------------------------------------------
+   Forward declaration of the actual swapchain creation implementation
+   ------------------------------------------------------------------------- */
+extern PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args);
+
+/* ----------------------------------------------------------------------------
+   Python method: create_swapchain (forwarding to implementation in vk_swapchain.cpp)
+   ------------------------------------------------------------------------- */
+PyObject *vk_Device_create_swapchain(vk_Device *self, PyObject *args) {
+    return vk_Device_create_swapchain_impl(self, args);
+}
+
+/* ----------------------------------------------------------------------------
    vk_Device_dealloc
    ------------------------------------------------------------------------- */
 void vk_Device_dealloc(vk_Device *self) {
@@ -675,6 +699,18 @@ PyObject *vk_Device_get_debug_messages(vk_Device *self, PyObject *ignored) {
 }
 
 /* ----------------------------------------------------------------------------
+   Python method: set_buffer_pool_size
+   ------------------------------------------------------------------------- */
+PyObject *vk_Device_set_buffer_pool_size(vk_Device *self, PyObject *args) {
+    int size;
+    if (!PyArg_ParseTuple(args, "i", &size))
+        return nullptr;
+    // Update the pool size; actual reallocation happens on next acquire
+    self->staging_pool.count = size;
+    Py_RETURN_NONE;
+}
+
+/* ----------------------------------------------------------------------------
    Python method: wait_idle
    ------------------------------------------------------------------------- */
 PyObject *vk_Device_wait_idle(vk_Device *self, PyObject *ignored) {
@@ -707,6 +743,8 @@ static PyMethodDef vk_Device_methods[] = {
      "Create a swapchain for presentation."},
     {"get_debug_messages", (PyCFunction)vk_Device_get_debug_messages, METH_NOARGS,
      "Retrieve and clear Vulkan debug messages."},
+    {"set_buffer_pool_size", (PyCFunction)vk_Device_set_buffer_pool_size, METH_VARARGS,
+     "Set the number of staging buffers in the pool."},
     {"wait_idle", (PyCFunction)vk_Device_wait_idle, METH_NOARGS,
      "Wait for all GPU work to finish."},
     {nullptr, nullptr, 0, nullptr}

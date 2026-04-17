@@ -3,11 +3,6 @@
 #include <cstring>
 
 /* ----------------------------------------------------------------------------
-   Forward declaration of the type (defined at end of file)
-   ------------------------------------------------------------------------- */
-PyTypeObject vk_Resource_Type;
-
-/* ----------------------------------------------------------------------------
    Resource deallocator
    ------------------------------------------------------------------------- */
 void vk_Resource_dealloc(vk_Resource *self) {
@@ -155,26 +150,6 @@ PyObject *vk_Resource_readback(vk_Resource *self, PyObject *args) {
 }
 
 /* ----------------------------------------------------------------------------
-   Helper: transition image layout using the device's internal command buffer
-   ------------------------------------------------------------------------- */
-static bool transition_image_layout(vk_Device *dev, VkImage image,
-                                    VkImageLayout old_layout, VkImageLayout new_layout,
-                                    uint32_t base_layer, uint32_t layer_count,
-                                    VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
-                                    VkAccessFlags src_access, VkAccessFlags dst_access) {
-    VkCommandBuffer cmd = dev->internal_cmd_buffer;
-    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    vkBeginCommandBuffer(cmd, &begin);
-
-    vk_image_barrier(cmd, image, old_layout, new_layout,
-                     src_stage, dst_stage, src_access, dst_access,
-                     0, 1, base_layer, layer_count);
-
-    vkEndCommandBuffer(cmd);
-    return vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr) == VK_SUCCESS;
-}
-
-/* ----------------------------------------------------------------------------
    upload_subresource – texture only
    ------------------------------------------------------------------------- */
 PyObject *vk_Resource_upload_subresource(vk_Resource *self, PyObject *args) {
@@ -218,7 +193,8 @@ PyObject *vk_Resource_upload_subresource(vk_Resource *self, PyObject *args) {
     }
 
     memcpy(mapped, view.buf, view.len);
-    vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool); // unmaps
+    // Unmap now (data is in device-visible memory), but keep buffer alive
+    vkUnmapMemory(dev->device, staging_memory);
     PyBuffer_Release(&view);
 
     // Record command buffer
@@ -264,10 +240,8 @@ PyObject *vk_Resource_upload_subresource(vk_Resource *self, PyObject *args) {
     VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
     vk_free_temp_cmd(dev, cmd);
 
-    if (!used_pool) {
-        vkDestroyBuffer(dev->device, staging_buffer, nullptr);
-        vkFreeMemory(dev->device, staging_memory, nullptr);
-    }
+    // Now safe to release (and potentially free) the staging buffer
+    vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
 
     if (res != VK_SUCCESS) {
         PyErr_Format(PyExc_RuntimeError, "Upload submission failed (error %d)", res);
@@ -357,7 +331,8 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
         memcpy(dst + r.offset, r.view.buf, r.view.len);
         PyBuffer_Release(&r.view);
     }
-    vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool); // unmaps
+    // Unmap now (data is in device-visible memory), but keep buffer alive
+    vkUnmapMemory(dev->device, staging_memory);
 
     // Command buffer
     VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
@@ -403,10 +378,8 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
     VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
     vk_free_temp_cmd(dev, cmd);
 
-    if (!used_pool) {
-        vkDestroyBuffer(dev->device, staging_buffer, nullptr);
-        vkFreeMemory(dev->device, staging_memory, nullptr);
-    }
+    // Now safe to release the staging buffer
+    vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
 
     if (res != VK_SUCCESS) {
         PyErr_Format(PyExc_RuntimeError, "Batch upload submission failed (error %d)", res);

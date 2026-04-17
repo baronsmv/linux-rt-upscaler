@@ -146,6 +146,17 @@ PyObject *vk_Device_create_swapchain(vk_Device *self, PyObject *args);
 PyObject *vk_Device_get_debug_messages(vk_Device *self, PyObject *ignored);
 
 /* ----------------------------------------------------------------------------
+   Python method: set_buffer_pool_size
+   ------------------------------------------------------------------------- */
+/**
+ * Set the number of reusable staging buffers in the device's pool.
+ *
+ * Args:
+ *     size (int): new pool size (number of buffers).
+ */
+PyObject *vk_Device_set_buffer_pool_size(vk_Device *self, PyObject *args);
+
+/* ----------------------------------------------------------------------------
    Python method: wait_idle
    ------------------------------------------------------------------------- */
 /**
