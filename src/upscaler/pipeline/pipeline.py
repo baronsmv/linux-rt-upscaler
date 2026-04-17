@@ -387,6 +387,7 @@ class Pipeline:
           7. Update mouse mapping for overlay interaction.
           8. Check if swapchain needs recreation.
         """
+        logger.debug("_process_one_frame(): start")
 
         # -------------------------------------------------------------------------
         # 1. Grab frame from X11 (raw BGRA bytes)
@@ -394,13 +395,11 @@ class Pipeline:
         try:
             frame, is_dirty, rects = self._grabber.grab()
         except RuntimeError as e:
-            logger.warning(f"Frame grab failed: {e}")
+            logger.error(f"grab() exception: {e}", exc_info=True)
             return
 
-        if rects:
-            logger.debug(f"Damage rects ({len(rects)}): {rects}")
-
         if not self._running:
+            logger.debug("_process_one_frame(): _running False, returning")
             return
 
         # -------------------------------------------------------------------------
@@ -420,30 +419,38 @@ class Pipeline:
         # 3. If frame hasn't changed and no OSD update, skip GPU work
         # -------------------------------------------------------------------------
         if not is_dirty and self._osd_texture is None:
-            # Just present the existing screen texture
+            logger.debug(
+                "Frame not dirty and no OSD, just presenting existing texture."
+            )
             self._swapchain_manager.present(self._screen_tex)
             return
 
         # -------------------------------------------------------------------------
         # 4. Upload captured frame to staging buffer (CPU -> GPU)
         # -------------------------------------------------------------------------
-        if self.config.use_damage_tracking and rects:
-            upload_list = []
-            stride = self.crop_width * 4
-            for ex, ey, ew, eh in self._expand_damage_rects(rects):
-                # Extract sub-rectangle data from the full frame buffer
-                sub_data = bytearray()
-                for row in range(ey, ey + eh):
-                    start = row * stride + ex * 4
-                    sub_data.extend(frame[start : start + ew * 4])
-                upload_list.append((bytes(sub_data), ex, ey, ew, eh))
-            self.upscaler.input.upload_subresources(upload_list)
-        else:
-            self.upscaler.staging.upload(frame)
+        logger.debug("Uploading frame data...")
+        try:
+            if self.config.use_damage_tracking and rects:
+                upload_list = []
+                stride = self.crop_width * 4
+                for ex, ey, ew, eh in self._expand_damage_rects(rects):
+                    sub_data = bytearray()
+                    for row in range(ey, ey + eh):
+                        start = row * stride + ex * 4
+                        sub_data.extend(frame[start : start + ew * 4])
+                    upload_list.append((bytes(sub_data), ex, ey, ew, eh))
+                self.upscaler.input.upload_subresources(upload_list)
+            else:
+                self.upscaler.staging.upload(frame)
+            logger.debug("Frame upload completed.")
+        except Exception as e:
+            logger.error(f"Frame upload failed: {e}", exc_info=True)
+            return
 
         # -------------------------------------------------------------------------
         # 5. Calculate Lanczos destination rectangle and update constants
         # -------------------------------------------------------------------------
+        logger.debug("Calculating Lanczos destination...")
         r_x, r_y, r_w, r_h = calculate_scaling_rect(
             self.src_w,
             self.src_h,
@@ -478,6 +485,7 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 6. Build the list of compute dispatches for this frame
         # -------------------------------------------------------------------------
+        logger.debug("Building dispatch list...")
         dispatches = []
 
         # ---- SRCNN upscale passes (first stage) ----
@@ -542,12 +550,17 @@ class Pipeline:
                 else self.upscaler.staging
             )
 
-        self.upscaler.pipelines_first[0].dispatch_sequence(
-            sequence=dispatches,
-            copy_src=copy_src,
-            copy_dst=self.upscaler.input,
-            present_image=self._screen_tex,
-        )
+        try:
+            self.upscaler.pipelines_first[0].dispatch_sequence(
+                sequence=dispatches,
+                copy_src=copy_src,
+                copy_dst=self.upscaler.input,
+                present_image=self._screen_tex,
+            )
+            logger.debug("dispatch_sequence completed successfully.")
+        except Exception as e:
+            logger.error(f"dispatch_sequence failed: {e}", exc_info=True)
+            return
 
         # -------------------------------------------------------------------------
         # 8. Present the screen texture (no extra GPU work, layout already correct)

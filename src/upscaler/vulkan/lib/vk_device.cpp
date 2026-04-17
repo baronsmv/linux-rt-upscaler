@@ -244,10 +244,10 @@ PyObject *vk_Device_create_heap(vk_Device *self, PyObject *args) {
     VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     switch (heap_type) {
         case 0: break; // DEFAULT
-        case 1: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT; break; // UPLOAD
-        case 2: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT; break; // READBACK
+        case 1: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; break; // UPLOAD
+        case 2: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT; break; // READBACK
         default:
-            PyErr_Format(vk_HeapError, "Invalid heap type %d", heap_type);
+            PyErr_Format(vk_BufferError, "Invalid heap type %d", heap_type);
             return nullptr;
     }
 
@@ -338,11 +338,11 @@ PyObject *vk_Device_create_buffer(vk_Device *self, PyObject *args) {
 
     VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     switch (heap_type) {
-        case 0: break;
-        case 1: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT; break;
-        case 2: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT; break;
+        case 0: break; // DEFAULT
+        case 1: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; break; // UPLOAD
+        case 2: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT; break; // READBACK
         default:
-            PyErr_Format(vk_BufferError, "Invalid heap type %d", heap_type);
+            PyErr_Format(vk_HeapError, "Invalid heap type %d", heap_type);
             return nullptr;
     }
 

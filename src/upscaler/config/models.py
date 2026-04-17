@@ -1,9 +1,8 @@
 import os
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Tuple, Union, Dict
-
 from platformdirs import user_pictures_dir
+from typing import List, Optional, Tuple, Union, Dict
 
 UPSCALING_MODELS = (
     "8x32",
@@ -87,10 +86,10 @@ class Config:
     # Vulkan
     vulkan_present_mode: str = VulkanPresentMode.FIFO.value
     vulkan_buffer_pool_size: int = 8
-    use_damage_tracking: bool = True
+    use_damage_tracking: bool = False
 
     # Cache
-    use_cache: bool = True
+    use_cache: bool = False
     tile_context_margin: int = 8
     tile_threshold: float = 0.3
     tile_cache_size: int = 256
