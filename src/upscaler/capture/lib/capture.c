@@ -72,6 +72,8 @@ CaptureContext *capture_create(xcb_connection_t *conn, xcb_window_t xid,
     xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(conn, geom_cookie, NULL);
     if (geom) {
         ctx->depth = geom->depth;
+        ctx->cached_width = geom->width;
+        ctx->cached_height = geom->height;
         free(geom);
     }
 
@@ -101,6 +103,7 @@ CaptureContext *capture_create(xcb_connection_t *conn, xcb_window_t xid,
             ctx->blue_mask  = visual_type->blue_mask;
             ctx->bits_per_pixel = visual_type->bits_per_rgb_value;
         } else {
+            /* Fallback to typical 24‑bit TrueColor masks */
             ctx->red_mask   = 0xFF0000;
             ctx->green_mask = 0x00FF00;
             ctx->blue_mask  = 0x0000FF;
@@ -113,6 +116,13 @@ CaptureContext *capture_create(xcb_connection_t *conn, xcb_window_t xid,
         ctx->bits_per_pixel = 32;
     }
 
+    /* Precompute bit shifts for fast pixel conversion */
+    ctx->r_shift = __builtin_ctz(ctx->red_mask);
+    ctx->g_shift = __builtin_ctz(ctx->green_mask);
+    ctx->b_shift = __builtin_ctz(ctx->blue_mask);
+    ctx->use_fast_path = (ctx->bits_per_pixel == 32);
+
+    /* Enable Composite extension for reliable 32‑bit capture */
     xcb_composite_redirect_window(conn, xid, XCB_COMPOSITE_REDIRECT_AUTOMATIC);
     ctx->use_composite = 1;
     ctx->composite_pixmap = 0;
@@ -159,6 +169,8 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
             ctx->width = geom->width - ctx->x;
         if (ctx->y + ctx->height > (int)geom->height)
             ctx->height = geom->height - ctx->y;
+        ctx->cached_width = geom->width;
+        ctx->cached_height = geom->height;
         free(geom);
     }
     if (ctx->width <= 0 || ctx->height <= 0)

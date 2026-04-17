@@ -49,8 +49,6 @@ typedef struct CaptureContext {
     uint8_t depth;
     xcb_visualid_t visual;
     int use_fast_path;      /* 1 if visual is 32‑bit TrueColor */
-    int use_composite;              /* 1 if Composite extension is available */
-    xcb_pixmap_t composite_pixmap;  /* off‑screen backing pixmap */
 
     /* Pixel format info for BGRA conversion */
     uint32_t red_mask;
@@ -58,6 +56,11 @@ typedef struct CaptureContext {
     uint32_t blue_mask;
     int bits_per_pixel;
     int had_shm_failure;    /* flag to avoid repeated SHM attempts */
+
+    /* Precomputed shifts for fast conversion */
+    int r_shift;
+    int g_shift;
+    int b_shift;
 
     /* Damage extension */
     int use_damage;
@@ -70,6 +73,14 @@ typedef struct CaptureContext {
     int tile_size;
     int tile_threshold_percent;
     int debug;
+
+    /* Composite extension for universal 32‑bit capture */
+    int use_composite;
+    xcb_pixmap_t composite_pixmap;
+
+    /* Geometry caching to avoid repeated queries */
+    int cached_width;
+    int cached_height;
 } CaptureContext;
 
 /**
