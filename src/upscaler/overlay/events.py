@@ -138,24 +138,25 @@ class X11EventForwarder:
             button_state: Bitmask of currently pressed buttons (XCB ButtonMask).
         """
         # MotionNotify opcode = 6
-        event = struct.pack(
-            "<BBHIIIIIHHHHBB",
-            6,  # response_type
-            0,  # detail
-            0,  # seq (unused)
-            xcffib.xproto.Time.CurrentTime,  # time
-            self._root,  # root
-            self.target_handle,  # event
-            0,  # child
-            screen_x,
-            screen_y,  # root_x, root_y (16‑bit)
-            target_x,
-            target_y,  # event_x, event_y (16‑bit)
-            button_state,  # state
-            1,  # same_screen
-            0,  # pad
+        motion = xcffib.xproto.MotionNotifyEvent.synthetic(
+            detail=0,
+            time=xcffib.xproto.Time.CurrentTime,
+            root=self._root,
+            event=self.target_handle,
+            child=0,
+            root_x=screen_x,
+            root_y=screen_y,
+            event_x=target_x,
+            event_y=target_y,
+            state=button_state,
+            same_screen=True,
         )
-        self._send_event(event, xcffib.xproto.EventMask.ButtonMotion)
+        mask = (
+            xcffib.xproto.EventMask.ButtonPress
+            | xcffib.xproto.EventMask.ButtonRelease
+            | xcffib.xproto.EventMask.PointerMotion
+        )
+        self._send_event(motion.pack(), mask)
 
     def forward_button(
         self,
@@ -183,30 +184,44 @@ class X11EventForwarder:
             logger.warning(f"Unmapped Qt button {qt_button}, ignoring")
             return
 
-        opcode = 4 if press else 5  # ButtonPress = 4, ButtonRelease = 5
-        event = struct.pack(
-            "<BBHIIIIIHHHHBB",
-            opcode,
-            x11_button,  # detail (button number)
-            0,  # seq
-            xcffib.xproto.Time.CurrentTime,  # time
-            self._root,  # root
-            self.target_handle,  # event
-            0,  # child
-            screen_x,
-            screen_y,  # root_x, root_y
-            target_x,
-            target_y,  # event_x, event_y
-            0,  # state (no modifiers)
-            1,  # same_screen
-            0,  # pad
-        )
-        mask = (
-            xcffib.xproto.EventMask.ButtonPress
-            if press
-            else xcffib.xproto.EventMask.ButtonRelease
-        )
-        self._send_event(event, mask)
+        # Get the current button state (already pressed buttons) *before* this event.
+        # This is important for proper drag and drop behaviour.
+        state = self.get_current_button_state()
+
+        # Use the synthetic classmethod to build the event structure.
+        if press:
+            btn_event = xcffib.xproto.ButtonPressEvent.synthetic(
+                detail=x11_button,
+                time=xcffib.xproto.Time.CurrentTime,
+                root=self._root,
+                event=self.target_handle,
+                child=0,
+                root_x=screen_x,
+                root_y=screen_y,
+                event_x=target_x,
+                event_y=target_y,
+                state=state,
+                same_screen=True,
+            )
+            mask = xcffib.xproto.EventMask.ButtonPress
+        else:
+            btn_event = xcffib.xproto.ButtonReleaseEvent.synthetic(
+                detail=x11_button,
+                time=xcffib.xproto.Time.CurrentTime,
+                root=self._root,
+                event=self.target_handle,
+                child=0,
+                root_x=screen_x,
+                root_y=screen_y,
+                event_x=target_x,
+                event_y=target_y,
+                state=state,
+                same_screen=True,
+            )
+            mask = xcffib.xproto.EventMask.ButtonRelease
+
+        # The synthetic event object has a .pack() method that returns the 32‑byte wire format.
+        self._send_event(btn_event.pack(), mask)
 
     def forward_wheel(
         self,
