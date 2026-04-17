@@ -1,10 +1,11 @@
+from typing import Dict, Optional
+
 from PIL import Image, ImageDraw, ImageFont
-from typing import Optional, Dict
 
-from ..vulkan import Buffer
+from ..vulkan import Buffer, Texture2D
 
 
-def _upload_image_to_texture(image: Image.Image) -> Texture2D:
+def upload_image_to_texture(image: Image.Image) -> Texture2D:
     tex = Texture2D(image.width, image.height)
     buffer_size = image.width * image.height * 4
     upload_buffer = Buffer(buffer_size)
@@ -60,7 +61,7 @@ class TextRenderer:
         img_h = text_h + 2 * padding + shadow_offset
 
         # Create image with background
-        img = Image.new("RGBA", (img_w, img_h), (0, 0, 0, 0))
+        img = Image.new("RGBA", (int(img_w), int(img_h)), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
         # Draw rounded rectangle background

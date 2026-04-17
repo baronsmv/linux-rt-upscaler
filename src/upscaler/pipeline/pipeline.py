@@ -2,13 +2,14 @@ import logging
 import struct
 import threading
 import time
-from PySide6.QtCore import QMetaObject, Qt
 from queue import Empty, Queue
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
+
+from PySide6.QtCore import QMetaObject, Qt
 
 from .controller import PipelineController
 from .swapchain import SwapchainManager
-from .text_renderer import TextRenderer
+from .text_renderer import TextRenderer, upload_image_to_texture
 from ..capture import FrameGrabber
 from ..config import Config, OverlayMode, OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..overlay import OverlayWindow
@@ -335,7 +336,7 @@ class Pipeline:
         if text not in self._osd_texture_cache:
             img = self._text_renderer.get_image(text)
             if img:
-                self._osd_texture_cache[text] = _upload_image_to_texture(img)
+                self._osd_texture_cache[text] = upload_image_to_texture(img)
         tex = self._osd_texture_cache.get(text)
         if tex is not None:
             self._osd_texture = tex
