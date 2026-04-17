@@ -114,8 +114,9 @@ bool vk_instance_ensure(void) {
 /* ----------------------------------------------------------------------------
    vk_enable_debug_mode
    ------------------------------------------------------------------------- */
-void vk_enable_debug_mode(void) {
+PyObject *vk_enable_debug_mode(PyObject *self, PyObject *args) {
     vk_debug_enabled = true;
+    Py_RETURN_NONE;
 }
 
 /* ----------------------------------------------------------------------------

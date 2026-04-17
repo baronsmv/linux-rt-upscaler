@@ -13,7 +13,7 @@ bool vk_instance_ensure(void);
    Enables Vulkan debug output (validation layers, debug utils).
    Must be called before vk_instance_ensure().
    ------------------------------------------------------------------------- */
-void vk_enable_debug_mode(void);
+PyObject *vk_enable_debug_mode(PyObject *self, PyObject *args);
 
 /* ----------------------------------------------------------------------------
    Returns the required shader binary type for Vulkan (SPIR-V = 1).

@@ -74,4 +74,48 @@ VkCommandBuffer vk_allocate_temp_cmd(vk_Device *dev);
    ------------------------------------------------------------------------- */
 void vk_free_temp_cmd(vk_Device *dev, VkCommandBuffer cmd);
 
+
+/* ----------------------------------------------------------------------------
+   Create a fence.
+   ------------------------------------------------------------------------- */
+VkFence vk_create_fence(vk_Device *dev);
+
+/* ----------------------------------------------------------------------------
+   Executes a command buffer and waits for completion.
+   Returns VK_SUCCESS or an error code.
+   ------------------------------------------------------------------------- */
+VkResult vk_execute_and_wait(vk_Device *dev, VkCommandBuffer cmd);
+
+/* ----------------------------------------------------------------------------
+   Macro: submit command buffer, wait, free, run cleanup, and handle errors.
+   ------------------------------------------------------------------------- */
+#define VK_SUBMIT_AND_CLEANUP(cmd, dev, cleanup)                               \
+    do {                                                                       \
+        vkEndCommandBuffer(cmd);                                               \
+        VkResult _res = vk_execute_and_wait(dev, cmd);                         \
+        vk_free_temp_cmd(dev, cmd);                                            \
+        cleanup;                                                               \
+        if (_res != VK_SUCCESS) {                                              \
+            PyErr_Format(PyExc_RuntimeError, "GPU submission failed (error %d)", _res); \
+            return nullptr;                                                    \
+        }                                                                      \
+        Py_RETURN_NONE;                                                        \
+    } while (0)
+
+/* ----------------------------------------------------------------------------
+   Macro: submit command buffer, wait, free, run cleanup, and handle errors.
+   ------------------------------------------------------------------------- */
+#define VK_SUBMIT_AND_CLEANUP(cmd, dev, cleanup)                               \
+    do {                                                                       \
+        vkEndCommandBuffer(cmd);                                               \
+        VkResult _res = vk_execute_and_wait(dev, cmd);                         \
+        vk_free_temp_cmd(dev, cmd);                                            \
+        cleanup;                                                               \
+        if (_res != VK_SUCCESS) {                                              \
+            PyErr_Format(PyExc_RuntimeError, "GPU submission failed (error %d)", _res); \
+            return nullptr;                                                    \
+        }                                                                      \
+        Py_RETURN_NONE;                                                        \
+    } while (0)
+
 #endif /* VK_UTILS_H */

@@ -2,10 +2,9 @@ import logging
 import struct
 import threading
 import time
+from PySide6.QtCore import QMetaObject, Qt
 from queue import Empty, Queue
 from typing import Optional, Tuple
-
-from PySide6.QtCore import QMetaObject, Qt
 
 from .controller import PipelineController
 from .swapchain import SwapchainManager

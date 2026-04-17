@@ -1,12 +1,14 @@
 #ifndef VK_COMMON_H
 #define VK_COMMON_H
 
+#include <mutex>
 #include <Python.h>
 #include <structmember.h>
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <string>
 #include <unordered_map>
+
 
 /* ----------------------------------------------------------------------------
    Global Vulkan state (defined in vk_instance.c)
@@ -100,6 +102,7 @@ struct vk_Device
     VkCommandPool command_pool;
     VkCommandBuffer internal_cmd_buffer; // used for short, synchronous operations
     VkPipelineCache pipeline_cache; // shared across all pipelines
+    std::mutex cmd_pool_mutex;
 
     VkPhysicalDeviceMemoryProperties mem_props;
     VkPhysicalDeviceFeatures features;
@@ -240,7 +243,7 @@ extern PyTypeObject vk_Sampler_Type;
    ------------------------------------------------------------------------- */
 // vk_instance.c
 bool vk_instance_ensure(void);
-void vk_enable_debug_mode(void);
+PyObject *vk_enable_debug_mode(PyObject *self, PyObject *args);
 PyObject* vk_get_discovered_devices(PyObject * self, PyObject * args);
 PyObject* vk_get_shader_binary_type(PyObject * self);
 

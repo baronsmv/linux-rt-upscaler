@@ -235,19 +235,9 @@ PyObject *vk_Resource_upload_subresource(vk_Resource *self, PyObject *args) {
                      VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
                      0, 1, 0, 1);
 
-    vkEndCommandBuffer(cmd);
-
-    VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
-    vk_free_temp_cmd(dev, cmd);
-
-    // Now safe to release (and potentially free) the staging buffer
-    vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
-
-    if (res != VK_SUCCESS) {
-        PyErr_Format(PyExc_RuntimeError, "Upload submission failed (error %d)", res);
-        return nullptr;
-    }
-    Py_RETURN_NONE;
+    VK_SUBMIT_AND_CLEANUP(cmd, dev,
+        vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool)
+    );
 }
 
 /* ----------------------------------------------------------------------------
@@ -373,19 +363,9 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
                      VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
                      0, 1, 0, 1);
 
-    vkEndCommandBuffer(cmd);
-
-    VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
-    vk_free_temp_cmd(dev, cmd);
-
-    // Now safe to release the staging buffer
-    vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
-
-    if (res != VK_SUCCESS) {
-        PyErr_Format(PyExc_RuntimeError, "Batch upload submission failed (error %d)", res);
-        return nullptr;
-    }
-    Py_RETURN_NONE;
+    VK_SUBMIT_AND_CLEANUP(cmd, dev,
+        vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool)
+    );
 }
 
 /* ----------------------------------------------------------------------------
@@ -486,11 +466,11 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
                      0, 1, 0, 1);
 
     vkEndCommandBuffer(cmd);
-
-    VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
+    VkResult res = vk_execute_and_wait(dev, cmd);
     vk_free_temp_cmd(dev, cmd);
 
     if (res != VK_SUCCESS) {
+        // Cleanup staging and device buffers
         vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
         if (!used_pool) {
             vkDestroyBuffer(dev->device, staging_buffer, nullptr);
@@ -625,8 +605,7 @@ PyObject *vk_Resource_download_regions(vk_Resource *self, PyObject *args) {
                      0, 1, 0, 1);
 
     vkEndCommandBuffer(cmd);
-
-    VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
+    VkResult res = vk_execute_and_wait(dev, cmd);
     vk_free_temp_cmd(dev, cmd);
 
     if (res != VK_SUCCESS) {
@@ -851,7 +830,7 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
     }
 
     vkEndCommandBuffer(cmd);
-    VkResult res = vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr);
+    VkResult res = vk_execute_and_wait(dev, cmd);
     vk_free_temp_cmd(dev, cmd);
 
     if (res != VK_SUCCESS) {

@@ -227,6 +227,7 @@ uint32_t *vk_spirv_patch_nonreadable_uav(const uint32_t *code, size_t size,
    Public helpers: allocate a temporary command buffer
    ------------------------------------------------------------------------- */
 VkCommandBuffer vk_allocate_temp_cmd(vk_Device *dev) {
+    std::lock_guard<std::mutex> lock(dev->cmd_pool_mutex);
     VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
     allocInfo.commandPool = dev->command_pool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -237,6 +238,33 @@ VkCommandBuffer vk_allocate_temp_cmd(vk_Device *dev) {
 }
 
 void vk_free_temp_cmd(vk_Device *dev, VkCommandBuffer cmd) {
+    std::lock_guard<std::mutex> lock(dev->cmd_pool_mutex);
     if (cmd)
         vkFreeCommandBuffers(dev->device, dev->command_pool, 1, &cmd);
+}
+
+/* ----------------------------------------------------------------------------
+   Fence creation helper
+   ------------------------------------------------------------------------- */
+VkFence vk_create_fence(vk_Device *dev) {
+    VkFenceCreateInfo finfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    VkFence fence = VK_NULL_HANDLE;
+    vkCreateFence(dev->device, &finfo, nullptr, &fence);
+    return fence;
+}
+
+/* ----------------------------------------------------------------------------
+   Execute command buffer and wait for completion
+   ------------------------------------------------------------------------- */
+VkResult vk_execute_and_wait(vk_Device *dev, VkCommandBuffer cmd) {
+    VkFenceCreateInfo finfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    VkFence fence = VK_NULL_HANDLE;
+    vkCreateFence(dev->device, &finfo, nullptr, &fence);
+
+    VkResult res = vk_execute_command_buffer(dev, cmd, fence, 0, nullptr, nullptr, 0, nullptr);
+    if (fence) {
+        vkWaitForFences(dev->device, 1, &fence, VK_TRUE, UINT64_MAX);
+        vkDestroyFence(dev->device, fence, nullptr);
+    }
+    return res;
 }
