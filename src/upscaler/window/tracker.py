@@ -1,21 +1,16 @@
 import logging
+import xcffib
+import xcffib.xproto
 from typing import Optional
 
-from Xlib import X
-from Xlib.display import Display
-from Xlib.error import XError, BadWindow
-from Xlib.xobject.drawable import Window as XlibWindow
-
-from .display import open_x_display, close_x_display
+from .display import open_xcb_connection, close_xcb_connection
+from .info import AtomCache, get_window_geometry
 
 logger = logging.getLogger(__name__)
 
 
 class WindowTracker:
-    """
-    Tracks a target X11 window for changes in its handle and size.
-    Provides a quick alive check and updates internal state on changes.
-    """
+    """Tracks a target X11 window for changes in its handle and size."""
 
     def __init__(self, initial_handle: int, initial_width: int, initial_height: int):
         self.handle = initial_handle
@@ -25,127 +20,103 @@ class WindowTracker:
         self.active = True
         self.minimized = False
 
-        self._x_display: Optional[Display] = None
-        self._x_window: Optional[XlibWindow] = None
-        self._open_x_display()
+        self._conn: Optional[xcffib.Connection] = None
+        self._atoms: Optional[AtomCache] = None
+        self._open_connection()
 
-    def _open_x_display(self) -> None:
-        """Open a fresh X display and create the window resource."""
+    def _open_connection(self) -> None:
+        """Open an XCB connection."""
         try:
-            self._x_display = open_x_display()
-            if self._x_display:
-                self._x_window = self._x_display.create_resource_object(
-                    "window", self.handle
-                )
+            self._conn = open_xcb_connection()
+            if self._conn:
+                self._atoms = AtomCache(self._conn)
             else:
-                logger.warning("Failed to open X display for WindowTracker")
+                logger.warning("Failed to open XCB connection for WindowTracker")
                 self.alive = False
         except Exception as e:
-            logger.error(f"Unexpected error opening X display: {e}")
+            logger.error(f"Unexpected error opening XCB connection: {e}")
             self.alive = False
 
     def close(self) -> None:
-        """Close the X display and release resources."""
-        close_x_display(self._x_display)
-        self._x_display = None
-        self._x_window = None
+        """Close the XCB connection."""
+        close_xcb_connection(self._conn)
+        self._conn = None
+        self._atoms = None
 
     def check_alive(self) -> bool:
-        """
-        Quickly check if the tracked window still exists.
-        Updates the internal `alive` flag and returns the current status.
-        """
-        if not self.alive:
+        """Quickly check if the tracked window still exists."""
+        if not self.alive or self._conn is None:
             return False
 
-        # If no valid X connection, try to reopen
-        if self._x_window is None:
-            self._open_x_display()
-            if self._x_window is None:
-                self.alive = False
-                return False
-
         try:
-            # Lightweight call
-            self._x_window.get_attributes()
+            # Try to get window attributes (lightweight)
+            self._conn.core.GetWindowAttributes(self.handle).reply()
             return True
-        except BadWindow:
-            logger.debug("Window no longer exists (BadWindow in check_alive)")
+        except Exception:
+            logger.debug("Window no longer exists (error in check_alive)")
             self.alive = False
             self.handle = 0
             return False
-        except XError as e:
-            logger.debug(f"X error during alive check: {e}")
-            # Treat other X errors as potentially transient, but if repeated
-            # the caller should eventually see alive=False from update()
-            return True
-        except Exception as e:
-            logger.error(f"Unexpected error in check_alive: {e}")
-            return True  # assume alive to avoid false positives
 
     def update(self, force: bool = False, depth: int = 0) -> bool:
-        """
-        Query the current window handle and size. Returns True if a change occurred.
-        If force is True, always attempt to refresh even if no change.
-        """
-        if not self.alive:
+        """Query current window handle and size. Returns True if changed."""
+        if not self.alive or self._conn is None:
             return False
 
-        # Prevent infinite recursion
         if depth > 2:
             logger.warning("WindowTracker.update recursion depth exceeded")
             return False
 
-        # Ensure we have a valid X window handle
-        if self._x_window is None:
-            if depth == 0:
-                self._open_x_display()
-            return False
-
         try:
-            geom = self._x_window.get_geometry()
-            attrs = self._x_window.get_attributes()
-            new_handle = self._x_window.id
-            new_width = geom.width
-            new_height = geom.height
-            self.minimized = attrs.map_state != X.IsViewable
+            # Get geometry
+            geom = get_window_geometry(self._conn, self.handle)
+            if geom is None:
+                raise Exception("Geometry query failed")
+            _, _, new_width, new_height = geom
 
-            # Query active window from root
-            root = self._x_display.screen().root
-            atom = self._x_display.intern_atom("_NET_ACTIVE_WINDOW")
-            prop = root.get_full_property(atom, X.AnyPropertyType)
-            if prop and prop.value:
-                active_handle = prop.value[0]
+            # Check if minimized (map_state)
+            attr = self._conn.core.GetWindowAttributes(self.handle).reply()
+            if attr:
+                self.minimized = attr.map_state != xcffib.xproto.MapState.VIEWABLE
+            else:
+                self.minimized = True
+
+            # Check if active
+            root = self._conn.get_setup().roots[0].root
+            active_cookie = self._conn.core.GetProperty(
+                False,
+                root,
+                self._atoms.get("_NET_ACTIVE_WINDOW"),
+                xcffib.xproto.Atom.WINDOW,
+                0,
+                1,
+            )
+            active_reply = active_cookie.reply()
+            if active_reply and active_reply.value_len:
+                active_handle = active_reply.value.to_atoms()[0]
                 self.active = active_handle == self.handle
             else:
                 self.active = False
-        except BadWindow:
-            logger.debug("Window no longer exists (BadWindow in update)")
+
+        except Exception as e:
+            logger.debug(f"Error querying window: {e}")
+            if depth == 0:
+                # Attempt to reconnect once
+                self.close()
+                self._open_connection()
+                return self.update(force, depth + 1)
             self.alive = False
             self.handle = 0
             return False
-        except XError as e:
-            logger.debug(f"X error when querying window geometry: {e}")
-            # Attempt to recover by reopening the display once
-            if depth == 0:
-                self.close()
-                self._open_x_display()
-                return self.update(force, depth + 1)
-            return False
-        except Exception as e:
-            logger.error(f"Unexpected error in update: {e}")
-            return False
 
-        handle_changed = new_handle != self.handle
+        handle_changed = False  # handle cannot change in XCB (window ID is constant)
         size_changed = new_width != self.width or new_height != self.height
 
         if handle_changed or size_changed or force:
             logger.info(
-                f"WindowTracker: change detected: handle {self.handle} "
-                f"-> {new_handle}, size {self.width}x{self.height} "
+                f"WindowTracker: change detected: size {self.width}x{self.height} "
                 f"-> {new_width}x{new_height}"
             )
-            self.handle = new_handle
             self.width = new_width
             self.height = new_height
             return True

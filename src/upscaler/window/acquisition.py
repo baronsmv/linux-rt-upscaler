@@ -1,14 +1,11 @@
 import logging
+import psutil
 import subprocess
 import time
-from typing import List, Optional, Tuple
-from typing import Set
+import xcffib
+from typing import List, Optional, Tuple, Set
 
-import psutil
-from Xlib.display import Display
-from Xlib.error import XError
-from ewmh import EWMH
-
+from .display import open_xcb_connection, close_xcb_connection
 from .info import (
     WindowInfo,
     AtomCache,
@@ -26,84 +23,88 @@ logger = logging.getLogger(__name__)
 
 
 def _list_windows() -> List[WindowInfo]:
-    """
-    Enumerate all visible application windows using _NET_CLIENT_LIST.
-    Returns a list of WindowInfo objects.
-    """
+    """Enumerate all visible application windows using _NET_CLIENT_LIST."""
     logger.info("Starting window enumeration")
-    display = Display()
-    atoms = AtomCache(display)
-    root = display.screen().root
+    conn = open_xcb_connection()
+    if not conn:
+        return []
 
-    # Get top‑level client windows
-    client_list_prop = root.get_full_property(atoms.get("_NET_CLIENT_LIST"), 0)
-    if not client_list_prop:
-        logger.warning(
-            "No _NET_CLIENT_LIST property found; falling back to recursive enumeration."
-        )
-        windows = enumerate_all_windows(display)
+    atoms = AtomCache(conn)
+    root = conn.get_setup().roots[0].root
+
+    # Get top-level client windows
+    cookie = conn.core.GetProperty(
+        False, root, atoms.get("_NET_CLIENT_LIST"), xcffib.xproto.Atom.WINDOW, 0, 1024
+    )
+    reply = cookie.reply()
+    if reply and reply.value_len:
+        window_ids = list(reply.value.to_atoms())
+        windows = window_ids
     else:
-        window_ids = client_list_prop.value  # list of ints
-        windows = [display.create_resource_object("window", wid) for wid in window_ids]
+        logger.warning(
+            "No _NET_CLIENT_LIST property; falling back to recursive enumeration."
+        )
+        windows = enumerate_all_windows(conn)
 
     result: List[WindowInfo] = []
     for win in windows:
         try:
-            if not is_application_window(win, atoms):
+            if not is_application_window(conn, win, atoms):
                 continue
 
-            name = get_window_name(win, atoms)
+            name = get_window_name(conn, win, atoms)
             if not name:
-                logger.debug(
-                    f"Window {win.id} passed filters but has no name, skipping"
-                )
                 continue
 
-            geom = get_window_geometry(win)
+            geom = get_window_geometry(conn, win)
             if geom is None:
                 continue
             _, _, w, h = geom
-            result.append(WindowInfo(win.id, w, h, name))
+            result.append(WindowInfo(win, w, h, name))
             logger.info(f"Found application window: {name} ({w}x{h})")
-        except XError as e:
-            logger.debug(
-                f"XError while processing window {getattr(win, 'id', '?')}: {e}"
-            )
+        except Exception as e:
+            logger.debug(f"Error processing window {win}: {e}")
 
-    display.close()
+    close_xcb_connection(conn)
     logger.info(f"Enumeration complete, found {len(result)} windows")
     return result
 
 
-def get_active_window(
-    display: Optional[Display] = None, ewmh: Optional[EWMH] = None
-) -> Optional[WindowInfo]:
-    """
-    Return WindowInfo for the currently active window.
-    If display and ewmh are provided, they are reused; otherwise new connections are opened.
-    """
-    close_display = False
-    if display is None:
-        display = Display()
-        ewmh = EWMH(display)
-        close_display = True
+def get_active_window() -> Optional[WindowInfo]:
+    """Return WindowInfo for the currently active window."""
+    conn = open_xcb_connection()
+    if not conn:
+        return None
 
     try:
-        active = ewmh.getActiveWindow()
-        if not active:
+        atoms = AtomCache(conn)
+        root = conn.get_setup().roots[0].root
+
+        cookie = conn.core.GetProperty(
+            False,
+            root,
+            atoms.get("_NET_ACTIVE_WINDOW"),
+            xcffib.xproto.Atom.WINDOW,
+            0,
+            1,
+        )
+        reply = cookie.reply()
+        if not reply or not reply.value_len:
             return None
 
-        geom = get_window_geometry(active)
+        active_win = reply.value.to_atoms()[0]
+        if active_win == 0:
+            return None
+
+        geom = get_window_geometry(conn, active_win)
         if geom is None:
             return None
         _, _, w, h = geom
 
-        atoms = AtomCache(display)
-        name = get_window_name(active, atoms) or "unknown"
-        return WindowInfo(active.id, w, h, name)
+        name = get_window_name(conn, active_win, atoms) or "unknown"
+        return WindowInfo(active_win, w, h, name)
     finally:
-        if close_display:
-            display.close()
+        close_xcb_connection(conn)
 
 
 def _find_by_pid(
@@ -114,27 +115,13 @@ def _find_by_pid(
     total_timeout: Optional[int] = 60,
     starting_phase: int = 1,
 ) -> WindowInfo:
-    """
-    Locate a window by process ID (and optionally by class hint) using a two‑phase search.
-
-    The search alternates between:
-      1. Phase 1: look for windows whose PID matches the process tree,
-         and optionally also check the class hint.
-      2. Phase 2: if a class hint is given, look purely by class hint
-         (ignoring PID) for `class_timeout` seconds.
-
-    Phases repeat until a window is found or `total_timeout` expires.
-
-    Returns a WindowInfo as soon as a matching, viewable window is found.
-    Raises TimeoutError if no window appears within the total timeout.
-    """
+    """Locate a window by process ID (and optionally by class hint)."""
     logger.info(
         f"find_by_pid called with pid={pid}, class_hint={class_hint}, "
         f"pid_timeout={pid_timeout}, class_timeout={class_timeout}, "
         f"total_timeout={total_timeout}, starting_phase={starting_phase}"
     )
 
-    # Gather all PIDs in the process tree
     try:
         proc = psutil.Process(pid)
         pids: Set[int] = {pid} | {child.pid for child in proc.children(recursive=True)}
@@ -144,21 +131,20 @@ def _find_by_pid(
         pids = {pid}
 
     class_hint_lower = class_hint.lower() if class_hint else None
-    phase = starting_phase  # 1 = PID+class, 2 = pure class
-
+    phase = starting_phase
     overall_start = time.time()
 
-    # Helper to enforce total timeout
     def check_total_timeout() -> None:
         if total_timeout is not None and (time.time() - overall_start) > total_timeout:
             raise TimeoutError(
                 f"No matching window found within total timeout of {total_timeout} seconds"
             )
 
-    # Single Display for the entire search (more efficient)
-    display = Display()
-    atoms = AtomCache(display)
-    ewmh = EWMH(display)
+    conn = open_xcb_connection()
+    if not conn:
+        raise RuntimeError("Failed to open XCB connection")
+
+    atoms = AtomCache(conn)
 
     try:
         while True:
@@ -166,23 +152,20 @@ def _find_by_pid(
             phase_start = time.time()
 
             if phase == 1:
-                # Phase 1: search by PID (optionally also check class)
                 logger.info(f"Phase 1: Trying PID+class for {pid_timeout} seconds...")
                 while time.time() - phase_start < pid_timeout:
                     check_total_timeout()
-                    windows = enumerate_all_windows(display)
+                    windows = enumerate_all_windows(conn)
                     for win in windows:
-                        if not is_viewable(win):
+                        if not is_viewable(conn, win):
                             continue
 
-                        # PID check
-                        win_pid = get_window_pid(win, ewmh)
+                        win_pid = get_window_pid(conn, win, atoms)
                         if win_pid is None or win_pid not in pids:
                             continue
 
-                        # Optional class check (if hint provided)
                         if class_hint_lower:
-                            klass = get_window_class(win, atoms)
+                            klass = get_window_class(conn, win, atoms)
                             if not klass:
                                 continue
                             instance, cls = klass
@@ -192,18 +175,16 @@ def _find_by_pid(
                             ):
                                 continue
 
-                        # Match found
-                        geom = get_window_geometry(win)
+                        geom = get_window_geometry(conn, win)
                         if geom is None:
                             continue
                         _, _, w, h = geom
-                        name = get_window_name(win, atoms) or "unknown"
+                        name = get_window_name(conn, win, atoms) or "unknown"
                         logger.info(f"Found window in phase 1: {name}")
-                        return WindowInfo(win.id, w, h, name)
+                        return WindowInfo(win, w, h, name)
 
                     time.sleep(0.2)
 
-                # Phase 1 timed out
                 if class_hint_lower:
                     phase = 2
                     logger.info(
@@ -220,14 +201,13 @@ def _find_by_pid(
                 )
                 while time.time() - phase_start < class_timeout:
                     check_total_timeout()
-                    windows = enumerate_all_windows(display)
+                    windows = enumerate_all_windows(conn)
                     for win in windows:
-                        if not is_viewable(win):
+                        if not is_viewable(conn, win):
                             continue
 
-                        # Class check only
                         if class_hint_lower:
-                            klass = get_window_class(win, atoms)
+                            klass = get_window_class(conn, win, atoms)
                             if not klass:
                                 continue
                             instance, cls = klass
@@ -237,32 +217,27 @@ def _find_by_pid(
                             ):
                                 continue
 
-                            geom = get_window_geometry(win)
+                            geom = get_window_geometry(conn, win)
                             if geom is None:
                                 continue
                             _, _, w, h = geom
-                            name = get_window_name(win, atoms) or "unknown"
+                            name = get_window_name(conn, win, atoms) or "unknown"
                             logger.info(f"Found window in phase 2: {name}")
-                            return WindowInfo(win.id, w, h, name)
+                            return WindowInfo(win, w, h, name)
 
                     time.sleep(0.2)
 
-                # Phase 2 timed out – go back to phase 1
                 logger.info("Phase 2 timed out, restarting phase 1.")
                 phase = 1
 
     finally:
-        display.close()
-        logger.debug("Closed X display at end of search")
+        close_xcb_connection(conn)
 
 
 def _launch_and_find_window(
     config: Config,
 ) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
-    """
-    Launch the program from config.program and use find_by_pid to locate its window.
-    Returns (WindowInfo, Popen) on success, or (None, None) on failure/timeout.
-    """
+    """Launch the program and find its window."""
     if not config.program:
         logger.error("No program specified in config")
         return None, None
@@ -292,10 +267,7 @@ def _launch_and_find_window(
 
 
 def _select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo]:
-    """
-    Interactively let the user choose a window from the list.
-    Returns the selected WindowInfo or None if the user quits.
-    """
+    """Interactively let the user choose a window."""
     windows.sort(key=lambda w: w.title.lower())
     print("\nAvailable windows:")
     for i, w in enumerate(windows):
@@ -318,9 +290,7 @@ def _select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo
 
 
 def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
-    """
-    Wait target_delay seconds and then return the currently active window.
-    """
+    """Wait target_delay seconds and return the active window."""
     if config.log_level != "ERROR":
         print(
             f"No program specified. Will scale the currently active window in {config.target_delay} seconds..."
@@ -341,10 +311,7 @@ def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
 def acquire_target_window(
     config: Config,
 ) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
-    """
-    Determine which window to upscale based on config.
-    Returns (WindowInfo, optional Popen) or (None, None) on failure/exit.
-    """
+    """Determine which window to upscale based on config."""
     start_time = time.perf_counter()
     if config.select:
         logger.info("Selecting window interactively.")
@@ -357,7 +324,7 @@ def acquire_target_window(
 
         win_info = _select_window_interactive(windows)
         if win_info is None:
-            return None, None  # user quit
+            return None, None
         if config.log_level != "ERROR":
             print(f"Selected: {win_info.title}")
         logger.info(
@@ -374,9 +341,7 @@ def acquire_target_window(
         return result
     else:
         logger.info(
-            "Acquiring currently active window (waiting {} seconds)".format(
-                config.target_delay
-            )
+            f"Acquiring currently active window (waiting {config.target_delay} seconds)"
         )
         win_info = _get_active_window_after_delay(config)
         if win_info:

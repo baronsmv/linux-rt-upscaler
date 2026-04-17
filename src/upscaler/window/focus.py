@@ -1,12 +1,12 @@
 import logging
 import threading
 import time
+import xcffib
+import xcffib.xproto
 from typing import Optional, Callable
 
-from Xlib.display import Display
-from ewmh import EWMH
-
 from .acquisition import get_active_window
+from .display import open_xcb_connection, close_xcb_connection
 from .info import WindowInfo
 
 logger = logging.getLogger(__name__)
@@ -35,26 +35,40 @@ class FocusMonitor:
             logger.info("Focus monitor stopped")
 
     def _poll(self) -> None:
-        # Use a separate X connection to avoid interfering with other threads
-        display = Display()
-        ewmh = EWMH(display)
+        # Use a separate XCB connection for monitoring
+        conn = open_xcb_connection()
+        if not conn:
+            return
 
-        while self._running:
-            try:
-                active = ewmh.getActiveWindow()
-                if active and active.id != self._current_handle:
-                    # Get full window info
-                    win_info = get_active_window(display, ewmh)
-                    if win_info:
-                        logger.info(
-                            f"Focus changed to: {win_info.handle} - {win_info.title}"
-                        )
-                        self._current_handle = win_info.handle
-                        if self._callback:
-                            self._callback(win_info)
-            except Exception as e:
-                logger.debug(f"Error polling active window: {e}")
+        try:
+            atoms = AtomCache(conn)
+            root = conn.get_setup().roots[0].root
 
-            time.sleep(self.interval)
+            while self._running:
+                try:
+                    cookie = conn.core.GetProperty(
+                        False,
+                        root,
+                        atoms.get("_NET_ACTIVE_WINDOW"),
+                        xcffib.xproto.Atom.WINDOW,
+                        0,
+                        1,
+                    )
+                    reply = cookie.reply()
+                    if reply and reply.value_len:
+                        active_win = reply.value.to_atoms()[0]
+                        if active_win != 0 and active_win != self._current_handle:
+                            win_info = get_active_window()
+                            if win_info:
+                                logger.info(
+                                    f"Focus changed to: {win_info.handle} - {win_info.title}"
+                                )
+                                self._current_handle = win_info.handle
+                                if self._callback:
+                                    self._callback(win_info)
+                except Exception as e:
+                    logger.debug(f"Error polling active window: {e}")
 
-        display.close()
+                time.sleep(self.interval)
+        finally:
+            close_xcb_connection(conn)
