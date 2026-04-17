@@ -1,11 +1,13 @@
 from PIL import Image, ImageDraw, ImageFont
 from typing import Optional, Dict
 
+from ..vulkan import Buffer
+
 
 def _upload_image_to_texture(image: Image.Image) -> Texture2D:
-    tex = Texture2D(image.width, image.height, R8G8B8A8_UNORM)
+    tex = Texture2D(image.width, image.height)
     buffer_size = image.width * image.height * 4
-    upload_buffer = Buffer(buffer_size, heap_type=HEAP_UPLOAD)
+    upload_buffer = Buffer(buffer_size)
     upload_buffer.upload(image.tobytes())
     upload_buffer.copy_to(tex)
     return tex

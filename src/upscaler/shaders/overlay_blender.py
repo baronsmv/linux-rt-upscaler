@@ -6,8 +6,6 @@ from ..vulkan import (
     Buffer,
     Compute,
     Sampler,
-    HEAP_UPLOAD,
-    SAMPLER_ADDRESS_MODE_CLAMP,
     SAMPLER_FILTER_POINT,
 )
 
@@ -38,11 +36,8 @@ class OverlayBlender:
         self.sampler = Sampler(
             filter_min=SAMPLER_FILTER_POINT,
             filter_mag=SAMPLER_FILTER_POINT,
-            address_mode_u=SAMPLER_ADDRESS_MODE_CLAMP,
-            address_mode_v=SAMPLER_ADDRESS_MODE_CLAMP,
-            address_mode_w=SAMPLER_ADDRESS_MODE_CLAMP,
         )
-        self.cb = Buffer(CB_SIZE, heap_type=HEAP_UPLOAD)
+        self.cb = Buffer(CB_SIZE)
         logger.debug("OverlayBlender resources created.")
 
     def set_screen_texture(self, tex):

@@ -8,12 +8,9 @@ from ..vulkan import (
     Compute,
     Buffer,
     Texture2D,
-    HEAP_UPLOAD,
     Sampler,
     SAMPLER_FILTER_POINT,
     SAMPLER_FILTER_LINEAR,
-    SAMPLER_ADDRESS_MODE_CLAMP,
-    R8G8B8A8_UNORM,
 )
 
 logger = logging.getLogger(__name__)
@@ -134,23 +131,23 @@ class SRCNN:
 
     def _create_resources(self) -> None:
         w, h = self.width, self.height
-        self.input = Texture2D(w, h, R8G8B8A8_UNORM)
-        self.staging = Buffer(self.input.size, HEAP_UPLOAD)
+        self.input = Texture2D(w, h)
+        self.staging = Buffer(self.input.size)
 
         if self.double_upscale:
-            self.intermediate = Texture2D(w * 2, h * 2, R8G8B8A8_UNORM)
-            self.output = Texture2D(w * 4, h * 4, R8G8B8A8_UNORM)
+            self.intermediate = Texture2D(w * 2, h * 2)
+            self.output = Texture2D(w * 4, h * 4)
         else:
-            self.output = Texture2D(w * 2, h * 2, R8G8B8A8_UNORM)
+            self.output = Texture2D(w * 2, h * 2)
 
         self.textures: Dict[str, Texture2D] = {}
         for i in range(self.cfg["num_textures"]):
-            self.textures[f"t{i}"] = Texture2D(w, h, R8G8B8A8_UNORM)
+            self.textures[f"t{i}"] = Texture2D(w, h)
 
         cb_size = struct.calcsize("IIIIffff")
         self.cbs: List[Buffer] = []
         for i in range(self.cfg["passes"]):
-            cb = Buffer(cb_size, HEAP_UPLOAD)
+            cb = Buffer(cb_size)
             if i < self.cfg["passes"] - 1:
                 cb.upload(_pack_cb(w, h, w, h))
             else:
@@ -160,16 +157,10 @@ class SRCNN:
         self.sampler_point = Sampler(
             filter_min=SAMPLER_FILTER_POINT,
             filter_mag=SAMPLER_FILTER_POINT,
-            address_mode_u=SAMPLER_ADDRESS_MODE_CLAMP,
-            address_mode_v=SAMPLER_ADDRESS_MODE_CLAMP,
-            address_mode_w=SAMPLER_ADDRESS_MODE_CLAMP,
         )
         self.sampler_linear = Sampler(
             filter_min=SAMPLER_FILTER_LINEAR,
             filter_mag=SAMPLER_FILTER_LINEAR,
-            address_mode_u=SAMPLER_ADDRESS_MODE_CLAMP,
-            address_mode_v=SAMPLER_ADDRESS_MODE_CLAMP,
-            address_mode_w=SAMPLER_ADDRESS_MODE_CLAMP,
         )
 
         self.pipelines_first: Optional[List[Compute]] = None
@@ -183,12 +174,11 @@ class SRCNN:
         new_w = self.width * 2
         new_h = self.height * 2
         second_textures = {
-            f"t{i}": Texture2D(new_w, new_h, R8G8B8A8_UNORM)
-            for i in range(self.cfg["num_textures"])
+            f"t{i}": Texture2D(new_w, new_h) for i in range(self.cfg["num_textures"])
         }
         second_cbs = []
         for i in range(self.cfg["passes"]):
-            cb = Buffer(struct.calcsize("IIIIffff"), HEAP_UPLOAD)
+            cb = Buffer(struct.calcsize("IIIIffff"))
             if i < self.cfg["passes"] - 1:
                 cb.upload(_pack_cb(new_w, new_h, new_w, new_h))
             else:

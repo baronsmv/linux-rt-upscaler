@@ -384,10 +384,10 @@ class Device:
         heap_type: int,
         size: int,
         stride: int,
+        format: int,
         heap_handle,
         heap_offset: int,
         sparse: bool,
-        format: int = VK_FORMAT_B8G8R8A8_UNORM,
     ):
         """Internal method used by Buffer.__init__."""
         return self._handle.create_buffer(
@@ -398,11 +398,11 @@ class Device:
         self,
         width: int,
         height: int,
+        format: int,
         heap_handle,
         heap_offset: int,
         slices: int,
         sparse: bool,
-        format: int = VK_FORMAT_B8G8R8A8_UNORM,
     ):
         """Internal method used by Texture2D.__init__."""
         return self._handle.create_texture2d(
@@ -446,11 +446,11 @@ class Device:
     def create_swapchain(
         self,
         window_handle: tuple,
+        format: int,
         num_buffers: int,
         width: int,
         height: int,
         present_mode: str,
-        format: int = VK_FORMAT_B8G8R8A8_UNORM,
     ):
         """Internal method used by Swapchain.__init__."""
         return self._handle.create_swapchain(
@@ -647,9 +647,9 @@ class Buffer(Resource):
     def __init__(
         self,
         size: int,
-        heap_type: int = HEAP_DEFAULT,
+        heap_type: int = HEAP_UPLOAD,
         stride: int = 0,
-        format: int = VK_FORMAT_B8G8R8A8_UNORM,
+        format: int = R8G8B8A8_UNORM,
         heap: Optional[Heap] = None,
         heap_offset: int = 0,
         sparse: bool = False,
@@ -733,7 +733,7 @@ class Texture2D(Resource):
         self,
         width: int,
         height: int,
-        format: int = VK_FORMAT_B8G8R8A8_UNORM,
+        format: int = R8G8B8A8_UNORM,
         heap: Optional[Heap] = None,
         heap_offset: int = 0,
         slices: int = 1,
@@ -842,9 +842,9 @@ class Sampler:
 
     def __init__(
         self,
-        address_mode_u: int = SAMPLER_ADDRESS_MODE_WRAP,
-        address_mode_v: int = SAMPLER_ADDRESS_MODE_WRAP,
-        address_mode_w: int = SAMPLER_ADDRESS_MODE_WRAP,
+        address_mode_u: int = SAMPLER_ADDRESS_MODE_CLAMP,
+        address_mode_v: int = SAMPLER_ADDRESS_MODE_CLAMP,
+        address_mode_w: int = SAMPLER_ADDRESS_MODE_CLAMP,
         filter_min: int = SAMPLER_FILTER_POINT,
         filter_mag: int = SAMPLER_FILTER_POINT,
         device: Optional[Device] = None,
@@ -1046,9 +1046,9 @@ class Swapchain:
 
     def __init__(
         self,
-        window_handle: tuple,
-        format: int = VK_FORMAT_B8G8R8A8_UNORM,
+        window_handle: Tuple,
         num_buffers: int = 3,
+        format: int = R8G8B8A8_UNORM,
         device: Optional[Device] = None,
         width: int = 0,
         height: int = 0,

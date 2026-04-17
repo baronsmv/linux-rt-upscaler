@@ -14,7 +14,7 @@ from ..config import Config, OverlayMode, OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..overlay import OverlayWindow
 from ..shaders import LanczosScaler, SRCNN, dispatch_groups
 from ..utils import parse_output_geometry, calculate_scaling_rect
-from ..vulkan import Texture2D, configure_device, Compute, R8G8B8A8_UNORM
+from ..vulkan import Texture2D, configure_device, Compute
 from ..window import WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
@@ -84,9 +84,7 @@ class Pipeline:
         )
 
         # Screen texture
-        self._screen_tex = Texture2D(
-            self._screen_width, self._screen_height, format=R8G8B8A8_UNORM
-        )
+        self._screen_tex = Texture2D(self._screen_width, self._screen_height)
 
         # Upscaler
         self.upscaler = SRCNN(
@@ -641,7 +639,7 @@ class Pipeline:
         if new_width != self._screen_width or new_height != self._screen_height:
             self._screen_width = new_width
             self._screen_height = new_height
-            self._screen_tex = Texture2D(new_width, new_height, format=R8G8B8A8_UNORM)
+            self._screen_tex = Texture2D(new_width, new_height)
             self._groups_x = (new_width + 15) // 16
             self._groups_y = (new_height + 15) // 16
             self.lanczos_scaler.set_target_texture(self._screen_tex)

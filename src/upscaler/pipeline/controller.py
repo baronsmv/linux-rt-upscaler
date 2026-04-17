@@ -1,16 +1,15 @@
 import logging
 import os
 import threading
+from PIL import Image
+from PySide6.QtCore import QMetaObject, Qt, Q_ARG
 from datetime import datetime
 from queue import Queue, Empty
 from typing import TYPE_CHECKING, Tuple
 
-from PIL import Image
-from PySide6.QtCore import QMetaObject, Qt, Q_ARG
-
 from ..config import OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..shaders import SRCNN
-from ..vulkan import Texture2D, R8G8B8A8_UNORM
+from ..vulkan import Texture2D
 
 if TYPE_CHECKING:
     from .pipeline import Pipeline
@@ -169,9 +168,7 @@ class PipelineController:
     def _save_screenshot(self) -> None:
         """Capture the raw upscaled texture and offload saving to a background thread."""
         try:
-            temp_tex = Texture2D(
-                self._pipeline.src_w, self._pipeline.src_h, R8G8B8A8_UNORM
-            )
+            temp_tex = Texture2D(self._pipeline.src_w, self._pipeline.src_h)
             self._pipeline.upscaler.output.copy_to(temp_tex)
 
             threading.Thread(

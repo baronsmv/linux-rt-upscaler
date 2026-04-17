@@ -2,15 +2,7 @@ import logging
 import os
 import struct
 
-from ..vulkan import (
-    Buffer,
-    Compute,
-    Sampler,
-    Texture2D,
-    HEAP_UPLOAD,
-    SAMPLER_ADDRESS_MODE_CLAMP,
-    SAMPLER_FILTER_POINT,
-)
+from ..vulkan import Buffer, Compute, Sampler, Texture2D, SAMPLER_FILTER_POINT
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +48,8 @@ class LanczosScaler:
         self._sampler = Sampler(
             filter_min=SAMPLER_FILTER_POINT,
             filter_mag=SAMPLER_FILTER_POINT,
-            address_mode_u=SAMPLER_ADDRESS_MODE_CLAMP,
-            address_mode_v=SAMPLER_ADDRESS_MODE_CLAMP,
-            address_mode_w=SAMPLER_ADDRESS_MODE_CLAMP,
         )
-        self._cb = Buffer(CB_SIZE, heap_type=HEAP_UPLOAD)
+        self._cb = Buffer(CB_SIZE)
         logger.debug("Lanczos scaler resources created.")
 
     def set_source_texture(self, tex: Texture2D) -> None:
