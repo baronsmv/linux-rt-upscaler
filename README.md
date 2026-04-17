@@ -74,25 +74,25 @@ pipx install linux-rt-upscaler
 
 ```sh
 sudo apt update
-sudo apt install gcc make libvulkan-dev libx11-dev libxcb-dev libxext-dev libxdamage-dev libxfixes-dev
+sudo apt install gcc make libvulkan-dev libxcb1-dev libxcb-shm0-dev libxcb-damage0-dev libxcb-xfixes0-dev libxcb-util0-dev
 ```
 
 #### Fedora / RHEL / CentOS
 
 ```sh
-sudo dnf install gcc make vulkan-loader-devel libX11-devel libxcb-devel libXext-devel libXdamage-devel libXfixes-devel
+sudo dnf install gcc make vulkan-loader-devel libxcb-devel xcb-util-devel
 ```
 
 #### Arch Linux / CachyOS
 
 ```sh
-sudo pacman -S base-devel vulkan-devel libx11 libxcb libxext libxdamage libxfixes
+sudo pacman -S base-devel vulkan-devel libxcb xcb-util
 ```
 
 #### openSUSE
 
 ```sh
-sudo zypper install gcc make vulkan-devel libX11-devel libxcb-devel libXext-devel libXdamage-devel libXfixes-devel
+sudo zypper install gcc make vulkan-devel libxcb-devel xcb-util-devel
 ```
 
 ---

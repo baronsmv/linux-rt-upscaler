@@ -25,7 +25,7 @@ def get_version_from_pyproject():
 
 
 class BuildSharedLibs(build_ext):
-    """Compile capture_x11.so (plain C) then continue with Python extensions."""
+    """Compile capture.so (plain C) then continue with Python extensions."""
 
     def run(self):
         if getattr(self, "_capture_lib_built", False):
@@ -37,7 +37,7 @@ class BuildSharedLibs(build_ext):
 
         project_root = Path(__file__).parent
 
-        # --- capture_x11.so ---
+        # --- capture.so ---
         capture_dir = project_root / "src" / "upscaler" / "capture"
         capture_lib_dir = capture_dir / "lib"
 
@@ -52,7 +52,7 @@ class BuildSharedLibs(build_ext):
             sys.stderr.write(f"No C source files found in {capture_lib_dir}\n")
             sys.exit(1)
 
-        capture_so = capture_target_dir / "capture_x11.so"
+        capture_so = capture_target_dir / "capture.so"
         capture_cmd = [
             "gcc",
             "-shared",
@@ -63,16 +63,17 @@ class BuildSharedLibs(build_ext):
             *[str(f) for f in capture_src],
             "-o",
             str(capture_so),
-            "-lX11",
-            "-lXext",
-            "-lXdamage",
-            "-lXfixes",
+            "-lxcb",
+            "-lxcb-shm",
+            "-lxcb-damage",
+            "-lxcb-xfixes",
+            "-lxcb-aux",
             "-lpthread",
         ]
 
         print(f"Running: {' '.join(capture_cmd)}", file=sys.stderr)
         subprocess.check_call(capture_cmd, stdout=sys.stderr, stderr=sys.stderr)
-        print("capture_x11.so compiled successfully.", file=sys.stderr)
+        print("capture.so compiled successfully.", file=sys.stderr)
 
         self._capture_lib_built = True
         super().run()

@@ -6,15 +6,15 @@
 #ifndef TILE_CACHE_H
 #define TILE_CACHE_H
 
-#include "capture.h"
+#include "capture_xcb.h"
 #include <stdint.h>
 
 typedef struct CaptureContext CaptureContext;
 typedef struct TileCacheEntry TileCacheEntry;
 
 /** Compute the xxHash64 of a single tile. */
-unsigned long long tile_compute_hash(unsigned char *buf, int stride, int tx,
-                                     int ty, int tw, int th);
+unsigned long long tile_compute_hash(const unsigned char *buf, int stride,
+                                     int tx, int ty, int tw, int th);
 
 /** Initialize the tile cache for the given dimensions and tile size. */
 int tile_cache_init(CaptureContext *ctx);
@@ -38,8 +38,8 @@ void tile_cache_free(CaptureContext *ctx);
  */
 int tile_cache_detect_changes(CaptureContext *ctx, int full_frame,
                               unsigned char *output_data,
-                              unsigned char *partial_buf, int cap_x, int cap_y,
-                              int cap_w, int cap_h, OutputRect *rects,
-                              int max_rects);
+                              unsigned char *partial_buf,
+                              int cap_x, int cap_y, int cap_w, int cap_h,
+                              OutputRect *rects, int max_rects);
 
 #endif /* TILE_CACHE_H */
