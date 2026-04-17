@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <xcb/xcb_aux.h>
+#include <xcb/composite.h>
 
 /* -------------------------------------------------------------------------
  *  Clamping Utilities
@@ -23,6 +24,30 @@ static void clamp_rect(int *x, int *y, int *w, int *h, int max_w, int max_h) {
     if (*y + *h > max_h) *h = max_h - *y;
     if (*w < 0) *w = 0;
     if (*h < 0) *h = 0;
+}
+
+/* -------------------------------------------------------------------------
+ *  Helper: Find screen number for a given window
+ * ------------------------------------------------------------------------- */
+static int get_screen_for_window(xcb_connection_t *conn, xcb_window_t window) {
+    xcb_get_geometry_cookie_t geom_cookie = xcb_get_geometry(conn, window);
+    xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(conn, geom_cookie, NULL);
+    if (!geom) return 0;
+
+    xcb_window_t root = geom->root;
+    free(geom);
+
+    const xcb_setup_t *setup = xcb_get_setup(conn);
+    xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
+    int screen_num = 0;
+    while (iter.rem) {
+        if (iter.data->root == root) {
+            return screen_num;
+        }
+        xcb_screen_next(&iter);
+        screen_num++;
+    }
+    return 0;
 }
 
 /* -------------------------------------------------------------------------
@@ -57,7 +82,6 @@ CaptureContext *capture_create(xcb_connection_t *conn, xcb_window_t xid,
         ctx->visual = attr->visual;
         free(attr);
     } else {
-        // Fallback: use default visual of the screen
         const xcb_setup_t *setup = xcb_get_setup(conn);
         xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
         if (iter.rem > 0) {
@@ -67,9 +91,10 @@ CaptureContext *capture_create(xcb_connection_t *conn, xcb_window_t xid,
         }
     }
 
-    /* Obtain visual info (color masks, bits per pixel) using xcb-aux */
+    /* Obtain visual info using the correct screen */
     if (ctx->visual != 0) {
-        xcb_visualtype_t *visual_type = xcb_aux_get_visualtype(conn, 0, ctx->visual);  // 0 = default screen
+        int screen_num = get_screen_for_window(conn, xid);
+        xcb_visualtype_t *visual_type = xcb_aux_get_visualtype(conn, screen_num, ctx->visual);
         if (visual_type) {
             ctx->red_mask   = visual_type->red_mask;
             ctx->green_mask = visual_type->green_mask;
@@ -87,6 +112,10 @@ CaptureContext *capture_create(xcb_connection_t *conn, xcb_window_t xid,
         ctx->blue_mask  = 0x0000FF;
         ctx->bits_per_pixel = 32;
     }
+
+    xcb_composite_redirect_window(conn, xid, XCB_COMPOSITE_REDIRECT_AUTOMATIC);
+    ctx->use_composite = 1;
+    ctx->composite_pixmap = 0;
 
     /* Initialize damage tracking */
     damage_init(ctx);
@@ -298,6 +327,9 @@ int capture_grab(CaptureContext *ctx, unsigned char *output_data) {
 
 void capture_destroy(CaptureContext *ctx) {
     if (!ctx) return;
+    if (ctx->composite_pixmap) {
+        xcb_free_pixmap(ctx->conn, ctx->composite_pixmap);
+    }
     shm_destroy_image(ctx);
     damage_destroy(ctx);
     tile_cache_free(ctx);

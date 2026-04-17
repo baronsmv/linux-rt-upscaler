@@ -65,6 +65,7 @@ class BuildSharedLibs(build_ext):
             str(capture_so),
             "-lxcb",
             "-lxcb-shm",
+            "-lxcb-composite",
             "-lxcb-damage",
             "-lxcb-xfixes",
             "-lxcb-util",

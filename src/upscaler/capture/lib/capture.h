@@ -49,6 +49,8 @@ typedef struct CaptureContext {
     uint8_t depth;
     xcb_visualid_t visual;
     int use_fast_path;      /* 1 if visual is 32‑bit TrueColor */
+    int use_composite;              /* 1 if Composite extension is available */
+    xcb_pixmap_t composite_pixmap;  /* off‑screen backing pixmap */
 
     /* Pixel format info for BGRA conversion */
     uint32_t red_mask;

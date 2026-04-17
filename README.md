@@ -74,7 +74,7 @@ pipx install linux-rt-upscaler
 
 ```sh
 sudo apt update
-sudo apt install gcc make libvulkan-dev libxcb1-dev libxcb-shm0-dev libxcb-damage0-dev libxcb-xfixes0-dev libxcb-util0-dev
+sudo apt install gcc make libvulkan-dev libxcb1-dev libxcb-shm0-dev libxcb-composite0-dev libxcb-damage0-dev libxcb-xfixes0-dev libxcb-util0-dev
 ```
 
 #### Fedora / RHEL / CentOS

@@ -15,7 +15,7 @@ void shm_destroy_image(CaptureContext *ctx);
  * Ensure a valid SHM segment exists for the current window visual/depth/size.
  * @return 1 on success, 0 on failure.
  */
-int shm_recreate_if_needed(CaptureContext *ctx);
+int shm_recreate_if_needed(CaptureContext *ctx, int req_w, int req_h);
 
 /**
  * Capture a rectangular region into a pre‑allocated BGRA buffer.
