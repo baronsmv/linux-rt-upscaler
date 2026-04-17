@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <xcb/xcb_aux.h>
 
 /* -------------------------------------------------------------------------
  *  Clamping Utilities
@@ -41,24 +42,45 @@ CaptureContext *capture_create(xcb_connection_t *conn, xcb_window_t xid,
     ctx->width = width;
     ctx->height = height;
 
-    /* Query window geometry to cache visual/depth for SHM */
+    /* Query window geometry to cache depth */
     xcb_get_geometry_cookie_t geom_cookie = xcb_get_geometry(conn, xid);
     xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(conn, geom_cookie, NULL);
     if (geom) {
         ctx->depth = geom->depth;
-        ctx->visual = geom->visual;
         free(geom);
     }
 
-    // Cache visual info
-    xcb_get_visual_info_cookie_t vi_cookie = xcb_get_visual_info(conn, ctx->visual);
-    xcb_get_visual_info_reply_t *vi = xcb_get_visual_info_reply(conn, vi_cookie, NULL);
-    if (vi) {
-        ctx->red_mask   = vi->red_mask;
-        ctx->green_mask = vi->green_mask;
-        ctx->blue_mask  = vi->blue_mask;
-        ctx->bits_per_pixel = vi->bits_per_rgb_value;
-        free(vi);
+    /* Get the window's visual ID from attributes */
+    xcb_get_window_attributes_cookie_t attr_cookie = xcb_get_window_attributes(conn, xid);
+    xcb_get_window_attributes_reply_t *attr = xcb_get_window_attributes_reply(conn, attr_cookie, NULL);
+    if (attr) {
+        ctx->visual = attr->visual;
+        free(attr);
+    } else {
+        // Fallback: use default visual of the screen
+        const xcb_setup_t *setup = xcb_get_setup(conn);
+        xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
+        if (iter.rem > 0) {
+            ctx->visual = iter.data->root_visual;
+        } else {
+            ctx->visual = 0;
+        }
+    }
+
+    /* Obtain visual info (color masks, bits per pixel) using xcb-aux */
+    if (ctx->visual != 0) {
+        xcb_visualtype_t *visual_type = xcb_aux_get_visualtype(conn, 0, ctx->visual);  // 0 = default screen
+        if (visual_type) {
+            ctx->red_mask   = visual_type->red_mask;
+            ctx->green_mask = visual_type->green_mask;
+            ctx->blue_mask  = visual_type->blue_mask;
+            ctx->bits_per_pixel = visual_type->bits_per_rgb_value;
+        } else {
+            ctx->red_mask   = 0xFF0000;
+            ctx->green_mask = 0x00FF00;
+            ctx->blue_mask  = 0x0000FF;
+            ctx->bits_per_pixel = 32;
+        }
     } else {
         ctx->red_mask   = 0xFF0000;
         ctx->green_mask = 0x00FF00;

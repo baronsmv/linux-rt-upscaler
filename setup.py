@@ -67,7 +67,7 @@ class BuildSharedLibs(build_ext):
             "-lxcb-shm",
             "-lxcb-damage",
             "-lxcb-xfixes",
-            "-lxcb-aux",
+            "-lxcb-util",
             "-lpthread",
         ]
 
