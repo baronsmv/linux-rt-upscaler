@@ -1,16 +1,16 @@
 import logging
-from typing import Optional
-
+import struct
+import xcffib
+import xcffib.xproto
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
-from Xlib import X, display
-from Xlib.protocol import event as xevent
+from typing import Optional
 
-from ..window import open_x_display, close_x_display
+from ..window import open_xcb_connection, close_xcb_connection
 
 logger = logging.getLogger(__name__)
 
-# Mapping from Qt button to X11 button number (1–3, 4–5 for scroll, 8–9 for extra)
+# Qt button to X11 button number mapping
 BUTTON_MAP = {
     Qt.LeftButton: 1,
     Qt.MiddleButton: 2,
@@ -22,63 +22,60 @@ BUTTON_MAP = {
 
 class X11EventForwarder:
     """
-    Forwards mouse events to a target X11 window.
+    Forwards mouse events to a target X11 window using XCB.
 
-    The forwarder manages an X11 display connection, sends ButtonPress,
+    The forwarder manages an XCB connection and sends ButtonPress,
     ButtonRelease, and MotionNotify events to a given window ID.
-
-    Attributes:
-        target_handle: X11 window ID of the target window (int).
-        enabled: Whether forwarding is currently allowed (used for minimization).
     """
 
     def __init__(self) -> None:
-        """Create an X11EventForwarder with no display connection (lazy open)."""
-        self.display: Optional[display.Display] = None
+        self.conn: Optional[xcffib.Connection] = None
         self._root: Optional[int] = None
         self.target_handle: Optional[int] = None
         self.enabled: bool = True
+        self._open_connection()
 
-        self._open_display()
-
-    def _open_display(self) -> None:
-        """Open the X11 display and install a custom error handler."""
-        self.display = open_x_display()
-        if self.display:
-            self._root = int(self.display.screen().root.id)
-            logger.debug(f"Opened X display for event forwarding. Root: {self._root}")
+    def _open_connection(self) -> None:
+        """Open the XCB connection."""
+        self.conn = open_xcb_connection()
+        if self.conn:
+            self._root = self.conn.get_setup().roots[0].root
+            logger.debug(
+                f"Opened XCB connection for event forwarding. Root: {self._root}"
+            )
         else:
             self.enabled = False
-            logger.warning("X11 display unavailable – event forwarding disabled")
+            logger.warning("XCB connection unavailable – event forwarding disabled")
 
     def close(self) -> None:
-        close_x_display(self.display)
-        self.display = None
+        close_xcb_connection(self.conn)
+        self.conn = None
         self._root = None
 
-    def _send_event(self, event: xevent.KeyButtonPointer) -> None:
+    def _send_event(self, event_data: bytes, event_mask: int) -> None:
         """
-        Send an X11 event to the target window.
+        Send a generic X11 event to the target window.
 
-        The custom error handler will log errors without printing to stderr.
+        Args:
+            event_data: Raw bytes of the event structure (32 bytes).
+            event_mask: Mask for event propagation (e.g., ButtonPressMask).
         """
         if not self.enabled:
             logger.debug("Forwarding disabled, event not sent")
             return
-        if self.display is None or self.target_handle is None:
-            logger.error("Cannot send event: no X display or target handle")
+        if self.conn is None or self.target_handle is None:
+            logger.error("Cannot send event: no XCB connection or target handle")
             return
 
         try:
-            self.display.send_event(
-                self.target_handle,
-                event,
-                event_mask=X.ButtonPressMask
-                | X.ButtonReleaseMask
-                | X.PointerMotionMask,
+            # SendEvent(destination, propagate, event_mask, event)
+            self.conn.core.SendEvent(
+                False,  # propagate
+                self.target_handle,  # destination
+                event_mask,  # event_mask
+                event_data,  # event (32 bytes)
             )
-            self.display.flush()
-            logger.debug(f"Sent event: {event}")
+            self.conn.flush()
         except Exception as e:
             logger.error(f"Unexpected error sending X11 event: {e}", exc_info=True)
 
@@ -96,22 +93,30 @@ class X11EventForwarder:
         Args:
             screen_x, screen_y: Global screen coordinates (root coordinates).
             target_x, target_y: Coordinates within the target window.
-            button_state: Bitmask of currently pressed buttons (X.Button*Mask).
+            button_state: Bitmask of currently pressed buttons (XCB ButtonMask).
         """
-        ev = xevent.MotionNotify(
-            window=self.target_handle,
-            root=self._root,
-            same_screen=1,
-            root_x=screen_x,
-            root_y=screen_y,
-            time=X.CurrentTime,
-            detail=0,  # not used for motion
-            state=button_state,
-            event_x=target_x,
-            event_y=target_y,
-            child=0,
+        # MotionNotify event structure (32 bytes)
+        # Format: response_type(1), detail(1), seq(2), time(4), root(4), event(4),
+        #         child(4), root_x(2), root_y(2), event_x(2), event_y(2),
+        #         state(2), same_screen(1), pad(1)
+        event = struct.pack(
+            "<BBHIIIIIHHHHBB",
+            xcffib.xproto.MotionNotifyEvent._event_code,  # response_type
+            0,  # detail (unused)
+            0,  # seq (will be filled by server)
+            xcffib.xproto.Time.CurrentTime,  # time
+            self._root,  # root
+            self.target_handle,  # event window
+            0,  # child
+            screen_x,
+            screen_y,  # root coordinates (16-bit)
+            target_x,
+            target_y,  # event coordinates (16-bit)
+            button_state,  # state
+            1,  # same_screen
+            0,  # pad
         )
-        self._send_event(ev)
+        self._send_event(event, xcffib.xproto.EventMask.ButtonMotion)
 
     def forward_button(
         self,
@@ -136,39 +141,39 @@ class X11EventForwarder:
             logger.warning(f"Unmapped Qt button {qt_button}, ignoring")
             return
 
-        if press:
-            ev = xevent.ButtonPress(
-                window=self.target_handle,
-                root=self._root,
-                same_screen=1,
-                root_x=screen_x,
-                root_y=screen_y,
-                time=X.CurrentTime,
-                detail=x11_button,
-                state=0,  # no modifiers for press (state is for events with buttons already down)
-                event_x=target_x,
-                event_y=target_y,
-                child=0,
-            )
-        else:
-            ev = xevent.ButtonRelease(
-                window=self.target_handle,
-                root=self._root,
-                same_screen=1,
-                root_x=screen_x,
-                root_y=screen_y,
-                time=X.CurrentTime,
-                detail=x11_button,
-                state=0,
-                event_x=target_x,
-                event_y=target_y,
-                child=0,
-            )
-        self._send_event(ev)
+        event_code = (
+            xcffib.xproto.ButtonPressEvent._event_code
+            if press
+            else xcffib.xproto.ButtonReleaseEvent._event_code
+        )
+
+        event = struct.pack(
+            "<BBHIIIIIHHHHBB",
+            event_code,
+            x11_button,  # detail (button)
+            0,  # seq
+            xcffib.xproto.Time.CurrentTime,  # time
+            self._root,  # root
+            self.target_handle,  # event window
+            0,  # child
+            screen_x,
+            screen_y,  # root coordinates (16-bit)
+            target_x,
+            target_y,  # event coordinates (16-bit)
+            0,  # state (no modifiers for press/release)
+            1,  # same_screen
+            0,  # pad
+        )
+        mask = (
+            xcffib.xproto.EventMask.ButtonPress
+            if press
+            else xcffib.xproto.EventMask.ButtonRelease
+        )
+        self._send_event(event, mask)
 
     def forward_wheel(
         self,
-        delta: int,  # positive = up/right, negative = down/left
+        delta: int,
         horizontal: bool,
         screen_x: int,
         screen_y: int,
@@ -184,63 +189,63 @@ class X11EventForwarder:
             screen_x, screen_y: Global screen coordinates.
             target_x, target_y: Coordinates within the target window.
         """
-        # Determine button number based on direction
         if horizontal:
-            button = 6 if delta > 0 else 7  # 6 = right, 7 = left (X11 convention)
+            button = 6 if delta > 0 else 7  # 6 = right, 7 = left
         else:
             button = 4 if delta > 0 else 5  # 4 = up, 5 = down
 
-        # Calculate number of steps (usually delta is multiple of 120)
-        steps = abs(delta) // 120
-        if steps == 0:
-            steps = 1
+        steps = max(1, abs(delta) // 120)
 
         for _ in range(steps):
-            # Send press and release for each step
-            press_ev = xevent.ButtonPress(
-                window=self.target_handle,
-                root=self._root,
-                same_screen=1,
-                root_x=screen_x,
-                root_y=screen_y,
-                time=X.CurrentTime,
-                detail=button,
-                state=0,
-                event_x=target_x,
-                event_y=target_y,
-                child=0,
+            # ButtonPress
+            press_event = struct.pack(
+                "<BBHIIIIIHHHHBB",
+                xcffib.xproto.ButtonPressEvent._event_code,
+                button,
+                0,
+                xcffib.xproto.Time.CurrentTime,
+                self._root,
+                self.target_handle,
+                0,
+                screen_x,
+                screen_y,
+                target_x,
+                target_y,
+                0,
+                1,
+                0,
             )
-            self._send_event(press_ev)
+            self._send_event(press_event, xcffib.xproto.EventMask.ButtonPress)
 
-            release_ev = xevent.ButtonRelease(
-                window=self.target_handle,
-                root=self._root,
-                same_screen=1,
-                root_x=screen_x,
-                root_y=screen_y,
-                time=X.CurrentTime,
-                detail=button,
-                state=0,
-                event_x=target_x,
-                event_y=target_y,
-                child=0,
+            # ButtonRelease
+            release_event = struct.pack(
+                "<BBHIIIIIHHHHBB",
+                xcffib.xproto.ButtonReleaseEvent._event_code,
+                button,
+                0,
+                xcffib.xproto.Time.CurrentTime,
+                self._root,
+                self.target_handle,
+                0,
+                screen_x,
+                screen_y,
+                target_x,
+                target_y,
+                0,
+                1,
+                0,
             )
-            self._send_event(release_ev)
+            self._send_event(release_event, xcffib.xproto.EventMask.ButtonRelease)
 
     def get_current_button_state(self) -> int:
-        """
-        Return an X11 button state mask based on currently pressed Qt buttons.
-
-        This method uses QApplication.mouseButtons() to get the current state.
-        """
-
+        """Return an X11 button state mask based on currently pressed Qt buttons."""
         state = 0
         buttons = QApplication.mouseButtons()
         if buttons & Qt.LeftButton:
-            state |= X.Button1Mask
+            state |= xcffib.xproto.ButtonMask.BUTTON_1
         if buttons & Qt.RightButton:
-            state |= X.Button3Mask
+            state |= xcffib.xproto.ButtonMask.BUTTON_3
         if buttons & Qt.MiddleButton:
-            state |= X.Button2Mask
-        # Additional buttons (XButton1, XButton2) are not part of the standard masks
+            state |= xcffib.xproto.ButtonMask.BUTTON_2
+        # XCB lacks masks for extra buttons; ignore for simplicity
         return state
