@@ -4,6 +4,7 @@ import threading
 import time
 import xcffib
 from typing import Optional
+from xcffib import ffi
 
 from ..vulkan import Swapchain, Texture2D, R8G8B8A8_UNORM
 
@@ -33,7 +34,8 @@ class SwapchainManager:
 
         # Open dedicated XCB connection for Vulkan
         self._xcb_conn = xcffib.connect()
-        self._xcb_conn_ptr = self._xcb_conn.get_xcb_connection()
+        # Extract raw xcb_connection_t* as integer using CFFI cast
+        self._xcb_conn_ptr = int(ffi.cast("uintptr_t", self._xcb_conn._conn))
 
         self._create_swapchain()
 
