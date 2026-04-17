@@ -2,7 +2,7 @@ import logging
 import struct
 import threading
 import time
-from queue import Empty, Queue
+from queue import Empty, Queue, Full
 from typing import Optional, Tuple, Dict
 
 from PySide6.QtCore import QMetaObject, Qt
@@ -13,7 +13,7 @@ from .text_renderer import TextRenderer, upload_image_to_texture
 from ..capture import FrameGrabber
 from ..config import Config, OverlayMode, OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..overlay import OverlayWindow
-from ..shaders import LanczosScaler, SRCNN, dispatch_groups
+from ..shaders import LanczosScaler, OverlayBlender, SRCNN, dispatch_groups
 from ..utils import parse_output_geometry, calculate_scaling_rect
 from ..vulkan import Texture2D, configure_device, Compute
 from ..window import WindowInfo, WindowTracker
@@ -140,6 +140,7 @@ class Pipeline:
             + [f"Geometry: {g}" for g in OUTPUT_GEOMETRIES]
             + ["Screenshot saved", "Screenshot failed"]
         )
+        self._overlay_blender = OverlayBlender()
         self._text_renderer = TextRenderer(osd_texts, screen_height=self._screen_height)
         self._osd_texture_cache: Dict[str, Texture2D] = {}
         self._osd_texture: Optional[Texture2D] = None
@@ -160,7 +161,7 @@ class Pipeline:
         dummy = bytearray(self._win_info.width * self._win_info.height * 4)
         try:
             self._frame_queue.put_nowait(dummy)
-        except Queue.Full:
+        except Full:
             pass
 
         if self._thread is not None:
@@ -217,8 +218,8 @@ class Pipeline:
         while self._running:
             try:
                 # Process switch requests
+                new_win = None
                 try:
-                    new_win = None
                     while True:
                         new_win = self._switch_queue.get_nowait()
                 except Empty:
