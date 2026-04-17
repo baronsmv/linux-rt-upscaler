@@ -423,7 +423,7 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 4. Upload captured frame to staging buffer (CPU -> GPU)
         # -------------------------------------------------------------------------
-        logger.debug("Uploading frame data...")
+        # logger.debug("Uploading frame data...")
         try:
             if self.config.use_damage_tracking and rects:
                 upload_list = []
@@ -437,7 +437,7 @@ class Pipeline:
                 self.upscaler.input.upload_subresources(upload_list)
             else:
                 self.upscaler.staging.upload(frame)
-            logger.debug("Frame upload completed.")
+            # logger.debug("Frame upload completed.")
         except Exception as e:
             logger.error(f"Frame upload failed: {e}", exc_info=True)
             return
@@ -445,7 +445,7 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 5. Calculate Lanczos destination rectangle and update constants
         # -------------------------------------------------------------------------
-        logger.debug("Calculating Lanczos destination...")
+        # logger.debug("Calculating Lanczos destination...")
         r_x, r_y, r_w, r_h = calculate_scaling_rect(
             self.src_w,
             self.src_h,
@@ -480,7 +480,7 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 6. Build the list of compute dispatches for this frame
         # -------------------------------------------------------------------------
-        logger.debug("Building dispatch list...")
+        # logger.debug("Building dispatch list...")
         dispatches = []
 
         # ---- SRCNN upscale passes (first stage) ----
@@ -552,7 +552,7 @@ class Pipeline:
                 copy_dst=self.upscaler.input,
                 present_image=self._screen_tex,
             )
-            logger.debug("dispatch_sequence completed successfully.")
+            # logger.debug("dispatch_sequence completed successfully.")
         except Exception as e:
             logger.error(f"dispatch_sequence failed: {e}", exc_info=True)
             return

@@ -291,9 +291,9 @@ class X11EventForwarder:
         state = 0
         buttons = QApplication.mouseButtons()
         if buttons & Qt.LeftButton:
-            state |= xcffib.xproto.ButtonMask.Button1  # 256
+            state |= 256  # Button1Mask
         if buttons & Qt.MiddleButton:
-            state |= xcffib.xproto.ButtonMask.Button2  # 512
+            state |= 512  # Button2Mask
         if buttons & Qt.RightButton:
-            state |= xcffib.xproto.ButtonMask.Button3  # 1024
+            state |= 1024  # Button3Mask
         return state
