@@ -472,12 +472,13 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
 
     // Barrier 3: source texture back → GENERAL
     src_barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    src_barrier.dstAccessMask = 0;
+    src_barrier.dstAccessMask = 0;  // No need for explicit access; layout change only
     src_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     src_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0,
-                         0, nullptr, 0, nullptr, 1, &src_barrier);
+    vkCmdPipelineBarrier(cmd,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         0, 0, nullptr, 0, nullptr, 1, &src_barrier);
 
     // Barrier 4: swapchain image → PRESENT_SRC_KHR
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
