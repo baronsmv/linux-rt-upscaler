@@ -139,6 +139,7 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
     // Create per-image fences and semaphores
     sc->fences = (VkFence *)PyMem_Malloc(sizeof(VkFence) * img_count);
     VkFenceCreateInfo finfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    finfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     for (uint32_t i = 0; i < img_count; ++i) {
         vkCreateFence(dev->device, &finfo, nullptr, &sc->fences[i]);
     }
@@ -248,6 +249,7 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
     submit.pSignalSemaphores = &self->present_semaphore;
 
     VkFence fence = self->fences[image_index];
+    vkWaitForFences(dev->device, 1, &fence, VK_TRUE, UINT64_MAX);
     vkResetFences(dev->device, 1, &fence);
     res = vkQueueSubmit(dev->queue, 1, &submit, fence);
     if (res != VK_SUCCESS) {
