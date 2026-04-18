@@ -253,11 +253,10 @@ bool vk_Swapchain_recreate(vk_Swapchain* self, uint32_t width, uint32_t height) 
         compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
     }
     swap_info.compositeAlpha = compositeAlpha;
-    swap_info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;  // Force immediate for now
+    swap_info.presentMode = self->present_mode;
     swap_info.clipped = VK_TRUE;
     swap_info.oldSwapchain = self->swapchain;
 
-    fprintf(stderr, "[Vulkan] Creating swapchain with presentMode = %d\n", swap_info.presentMode);
     VkResult res = vkCreateSwapchainKHR(device, &swap_info, nullptr, &self->swapchain);
     if (res != VK_SUCCESS) {
         PyErr_Format(vk_SwapchainError, "Failed to create swapchain (error %d)", res);
@@ -558,11 +557,6 @@ src_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         texture->image_extent.height,
         1
     };
-
-    fprintf(stderr, "[Vulkan] Copy extent: %ux%u, texture: %ux%u, swapchain: %ux%u\n",
-            copy_region.extent.width, copy_region.extent.height,
-            texture->image_extent.width, texture->image_extent.height,
-            self->image_extent.width, self->image_extent.height);
 
     // Clear the entire swapchain image to black to avoid stale content
     VkClearColorValue clear_color = {{0.0f, 0.0f, 0.0f, 1.0f}};
