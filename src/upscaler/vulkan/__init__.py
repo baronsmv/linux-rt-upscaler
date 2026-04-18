@@ -70,59 +70,6 @@ R8_SINT = 64
 B8G8R8A8_UNORM = 87
 B8G8R8A8_UNORM_SRGB = 91
 
-# Pixel sizes in bytes (for convenience)
-_PIXEL_SIZE = {
-    R32G32B32A32_FLOAT: 16,
-    R32G32B32A32_UINT: 16,
-    R32G32B32A32_SINT: 16,
-    R32G32B32_FLOAT: 12,
-    R32G32B32_UINT: 12,
-    R32G32B32_SINT: 12,
-    R16G16B16A16_FLOAT: 8,
-    R16G16B16A16_UNORM: 8,
-    R16G16B16A16_UINT: 8,
-    R16G16B16A16_SNORM: 8,
-    R16G16B16A16_SINT: 8,
-    R32G32_FLOAT: 8,
-    R32G32_UINT: 8,
-    R32G32_SINT: 8,
-    R10G10B10A2_UNORM: 4,
-    R10G10B10A2_UINT: 4,
-    R8G8B8A8_UNORM: 4,
-    R8G8B8A8_UNORM_SRGB: 4,
-    R8G8B8A8_UINT: 4,
-    R8G8B8A8_SNORM: 4,
-    R8G8B8A8_SINT: 4,
-    R16G16_FLOAT: 4,
-    R16G16_UNORM: 4,
-    R16G16_UINT: 4,
-    R16G16_SNORM: 4,
-    R16G16_SINT: 4,
-    R32_FLOAT: 4,
-    R32_UINT: 4,
-    R32_SINT: 4,
-    R8G8_UNORM: 2,
-    R8G8_UINT: 2,
-    R8G8_SNORM: 2,
-    R8G8_SINT: 2,
-    R16_FLOAT: 2,
-    R16_UNORM: 2,
-    R16_UINT: 2,
-    R16_SNORM: 2,
-    R16_SINT: 2,
-    R8_UNORM: 1,
-    R8_UINT: 1,
-    R8_SNORM: 1,
-    R8_SINT: 1,
-    B8G8R8A8_UNORM: 4,
-    B8G8R8A8_UNORM_SRGB: 4,
-}
-
-
-def get_pixel_size(fmt: int) -> int:
-    """Return the size in bytes of one pixel of the given format."""
-    return _PIXEL_SIZE[fmt]
-
 
 # ----------------------------------------------------------------------
 # Vulkan Context (device selection and debug)
@@ -377,7 +324,7 @@ class Device:
         Returns:
             A new Heap object.
         """
-        return Heap._from_handle(self._handle.create_heap(heap_type, size))
+        return Heap.from_handle(self._handle.create_heap(heap_type, size))
 
     def create_buffer(
         self,
@@ -488,7 +435,7 @@ class Heap:
         self._handle = dev.create_heap(heap_type, size)
 
     @classmethod
-    def _from_handle(cls, handle):
+    def from_handle(cls, handle):
         self = cls.__new__(cls)
         self._handle = handle
         return self
@@ -526,41 +473,6 @@ class Resource:
     def size(self) -> int:
         """Size of the resource in bytes."""
         return self._handle.size
-
-    @property
-    def heap_size(self) -> int:
-        """Actual memory size allocated."""
-        return self._handle.heap_size
-
-    @property
-    def tiles_x(self) -> int:
-        """Number of sparse tiles in X direction."""
-        return self._handle.tiles_x
-
-    @property
-    def tiles_y(self) -> int:
-        """Number of sparse tiles in Y direction."""
-        return self._handle.tiles_y
-
-    @property
-    def tiles_z(self) -> int:
-        """Number of sparse tiles in Z direction."""
-        return self._handle.tiles_z
-
-    @property
-    def tile_width(self) -> int:
-        """Tile width in pixels (sparse)."""
-        return self._handle.tile_width
-
-    @property
-    def tile_height(self) -> int:
-        """Tile height in pixels (sparse)."""
-        return self._handle.tile_height
-
-    @property
-    def tile_depth(self) -> int:
-        """Tile depth in pixels (sparse)."""
-        return self._handle.tile_depth
 
     def copy_to(
         self,
@@ -601,28 +513,6 @@ class Resource:
             dst_z,
             src_slice,
             dst_slice,
-        )
-
-    def bind_tile(
-        self,
-        x: int,
-        y: int,
-        z: int,
-        heap: Optional[Heap] = None,
-        heap_offset: int = 0,
-        slice: int = 0,
-    ) -> None:
-        """
-        Bind a heap to a sparse tile.
-
-        Args:
-            x, y, z: Tile coordinates.
-            heap: Heap to bind (or None to unbind).
-            heap_offset: Offset within the heap.
-            slice: Array slice (for textures).
-        """
-        self._handle.bind_tile(
-            x, y, z, heap._handle if heap else None, heap_offset, slice
         )
 
 
@@ -669,7 +559,7 @@ class Buffer(Resource):
             device: Optional device (uses current if None).
         """
         dev = device or get_current_device()
-        handle = dev.create_buffer(
+        self._handle = dev.create_buffer(
             heap_type,
             size,
             stride,
@@ -678,27 +568,10 @@ class Buffer(Resource):
             heap_offset,
             sparse,
         )
-        self._handle = handle
-
-    @classmethod
-    def _from_handle(cls, handle):
-        self = cls.__new__(cls)
-        self._handle = handle
-        return self
 
     def upload(self, data: bytes, offset: int = 0) -> None:
         """Upload data to the buffer at the given offset."""
         self._handle.upload(data, offset)
-
-    def upload2d(
-        self, data: bytes, pitch: int, width: int, height: int, bpp: int
-    ) -> None:
-        """Upload 2D data with custom pitch."""
-        self._handle.upload2d(data, pitch, width, height, bpp)
-
-    def readback(self, size: int = 0, offset: int = 0) -> bytes:
-        """Read back buffer data as bytes."""
-        return self._handle.readback(size, offset)
 
     def __repr__(self) -> str:
         return f"<Buffer size={self.size}>"
@@ -757,12 +630,6 @@ class Texture2D(Resource):
         )
         self._handle = handle
 
-    @classmethod
-    def _from_handle(cls, handle):
-        self = cls.__new__(cls)
-        self._handle = handle
-        return self
-
     @property
     def width(self) -> int:
         """Width in pixels."""
@@ -773,37 +640,9 @@ class Texture2D(Resource):
         """Height in pixels."""
         return self._handle.height
 
-    @property
-    def slices(self) -> int:
-        """Number of array slices."""
-        return self._handle.slices
-
-    @property
-    def row_pitch(self) -> int:
-        """Row pitch in bytes."""
-        return self._handle.row_pitch
-
     def download(self) -> bytes:
         """Download entire texture contents as RGBA8 bytes."""
         return self._handle.download()
-
-    def download_regions(self, regions: List[Tuple[int, int, int, int]]) -> List[bytes]:
-        """
-        Download multiple rectangular regions in one GPU submission.
-
-        Args:
-            regions: List of (x, y, width, height) tuples.
-
-        Returns:
-            List of bytes objects, one per region.
-        """
-        return self._handle.download_regions(regions)
-
-    def upload_subresource(
-        self, data: bytes, x: int, y: int, width: int, height: int
-    ) -> None:
-        """Upload pixel data to a rectangular region."""
-        self._handle.upload_subresource(data, x, y, width, height)
 
     def upload_subresources(
         self, rects: List[Tuple[bytes, int, int, int, int]]
@@ -853,12 +692,6 @@ class Sampler:
         self._handle = dev.create_sampler(
             address_mode_u, address_mode_v, address_mode_w, filter_min, filter_mag
         )
-
-    @classmethod
-    def _from_handle(cls, handle):
-        self = cls.__new__(cls)
-        self._handle = handle
-        return self
 
     def __repr__(self) -> str:
         return "<Sampler>"
@@ -922,12 +755,6 @@ class Compute:
             max_bindless if bindless else 0,
         )
 
-    @classmethod
-    def _from_handle(cls, handle):
-        self = cls.__new__(cls)
-        self._handle = handle
-        return self
-
     def dispatch(self, x: int, y: int, z: int, push: bytes = b"") -> None:
         """
         Dispatch compute workgroups.
@@ -937,19 +764,6 @@ class Compute:
             push: Optional push constant data.
         """
         self._handle.dispatch(x, y, z, push)
-
-    def dispatch_indirect(
-        self, indirect_buffer: Buffer, offset: int = 0, push: bytes = b""
-    ) -> None:
-        """
-        Dispatch using indirect arguments from a buffer.
-
-        Args:
-            indirect_buffer: Buffer containing {x, y, z} as three uint32s.
-            offset: Byte offset into the buffer.
-            push: Optional push constant data.
-        """
-        self._handle.dispatch_indirect(indirect_buffer._handle, offset, push)
 
     def dispatch_sequence(
         self,
@@ -986,34 +800,6 @@ class Compute:
             present_image=pres,
             timestamps=timestamps,
         )
-
-    def dispatch_tiles(
-        self,
-        tiles: List[Tuple[int, int, bytes]],
-        tile_width: int,
-        tile_height: int,
-    ) -> None:
-        """
-        Dispatch multiple tiles with per‑tile push constants.
-
-        Args:
-            tiles: List of (tile_x, tile_y, push_data) tuples.
-            tile_width: Width of each tile in pixels.
-            tile_height: Height of each tile in pixels.
-        """
-        self._handle.dispatch_tiles(tiles, tile_width, tile_height)
-
-    def bind_cbv(self, index: int, resource: Union[Buffer, Texture2D]) -> None:
-        """Bind a constant buffer view (bindless mode only)."""
-        self._handle.bind_cbv(index, resource._handle)
-
-    def bind_srv(self, index: int, resource: Union[Buffer, Texture2D]) -> None:
-        """Bind a shader resource view (bindless mode only)."""
-        self._handle.bind_srv(index, resource._handle)
-
-    def bind_uav(self, index: int, resource: Union[Buffer, Texture2D]) -> None:
-        """Bind an unordered access view (bindless mode only)."""
-        self._handle.bind_uav(index, resource._handle)
 
     def __repr__(self) -> str:
         return "<Compute>"
@@ -1067,12 +853,6 @@ class Swapchain:
             # The C++ layer has set a Python exception; re-raise it
             raise RuntimeError("Failed to create swapchain") from None
         self._handle = handle
-
-    @classmethod
-    def _from_handle(cls, handle):
-        self = cls.__new__(cls)
-        self._handle = handle
-        return self
 
     @property
     def width(self) -> int:

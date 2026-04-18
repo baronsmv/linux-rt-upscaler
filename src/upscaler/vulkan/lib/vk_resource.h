@@ -26,36 +26,6 @@ void vk_Resource_dealloc(vk_Resource *self);
 PyObject *vk_Resource_upload(vk_Resource *self, PyObject *args);
 
 /* ----------------------------------------------------------------------------
-   Python method: upload2d
-   ------------------------------------------------------------------------- */
-/**
- * Upload data into a buffer resource with 2D pitch.
- *
- * Args:
- *     data (bytes): source data.
- *     pitch (int): destination row pitch in bytes.
- *     width (int): width of the rectangle in pixels.
- *     height (int): height of the rectangle in pixels.
- *     bpp (int): bytes per pixel.
- */
-PyObject *vk_Resource_upload2d(vk_Resource *self, PyObject *args);
-
-/* ----------------------------------------------------------------------------
-   Python method: upload_subresource
-   ------------------------------------------------------------------------- */
-/**
- * Upload a rectangular region into a texture resource.
- *
- * Args:
- *     data (bytes): source data.
- *     x (int): destination X offset.
- *     y (int): destination Y offset.
- *     width (int): width in pixels.
- *     height (int): height in pixels.
- */
-PyObject *vk_Resource_upload_subresource(vk_Resource *self, PyObject *args);
-
-/* ----------------------------------------------------------------------------
    Python method: upload_subresources
    ------------------------------------------------------------------------- */
 /**
@@ -65,21 +35,6 @@ PyObject *vk_Resource_upload_subresource(vk_Resource *self, PyObject *args);
  *     rects (list): list of 5‑tuples (data, x, y, width, height).
  */
 PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args);
-
-/* ----------------------------------------------------------------------------
-   Python method: readback
-   ------------------------------------------------------------------------- */
-/**
- * Read back data from a buffer resource.
- *
- * Args:
- *     size (int, optional): number of bytes to read (default = remaining).
- *     offset (int, optional): source offset in bytes (default 0).
- *
- * Returns:
- *     bytes: the data.
- */
-PyObject *vk_Resource_readback(vk_Resource *self, PyObject *args);
 
 /* ----------------------------------------------------------------------------
    Python method: download
@@ -92,20 +47,6 @@ PyObject *vk_Resource_readback(vk_Resource *self, PyObject *args);
  *     bytes: raw pixel data (row‑major, RGBA).
  */
 PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored);
-
-/* ----------------------------------------------------------------------------
-   Python method: download_regions
-   ------------------------------------------------------------------------- */
-/**
- * Download multiple rectangular regions from a texture resource.
- *
- * Args:
- *     regions (list): list of 4‑tuples (x, y, width, height).
- *
- * Returns:
- *     list[bytes]: one bytes object per region.
- */
-PyObject *vk_Resource_download_regions(vk_Resource *self, PyObject *args);
 
 /* ----------------------------------------------------------------------------
    Python method: copy_to
