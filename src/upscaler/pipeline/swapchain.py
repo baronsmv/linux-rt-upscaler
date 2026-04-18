@@ -2,8 +2,9 @@ import gc
 import logging
 import threading
 import time
-import xcffib
 from typing import Optional
+
+import xcffib
 from xcffib import ffi
 
 from ..vulkan import Swapchain, Texture2D
@@ -45,7 +46,6 @@ class SwapchainManager:
         start = time.perf_counter()
         self.swapchain = Swapchain(
             (self._xcb_conn_ptr, self.xid),
-            num_buffers=4,
             present_mode=self.present_mode,
         )
         logger.debug(

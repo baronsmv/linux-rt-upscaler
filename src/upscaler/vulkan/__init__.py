@@ -903,7 +903,7 @@ class Swapchain:
     def __init__(
         self,
         window_handle: Tuple,
-        num_buffers: int = 2,
+        num_buffers: int = 3,
         format: int = R8G8B8A8_UNORM,
         device: Optional[Device] = None,
         width: int = 0,

@@ -21,6 +21,7 @@ struct vk_Swapchain {
     VkFence* fences;                         // One fence per swapchain image
     VkSemaphore image_available_semaphore;   // Shared
     VkSemaphore render_finished_semaphore;   // Shared
+    VkCommandBuffer* command_buffers;        // One command buffer per image
 
     bool suboptimal;
     bool out_of_date;

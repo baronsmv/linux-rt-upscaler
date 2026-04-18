@@ -228,6 +228,23 @@ bool vk_Swapchain_recreate(vk_Swapchain* self, uint32_t width, uint32_t height) 
         }
     }
 
+    // Allocate per‑image command buffers (persistent, avoids per‑frame allocation jitter)
+    self->command_buffers = (VkCommandBuffer*)PyMem_Malloc(sizeof(VkCommandBuffer) * self->image_count);
+    VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    alloc_info.commandPool = dev->command_pool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = self->image_count;
+    if (vkAllocateCommandBuffers(device, &alloc_info, self->command_buffers) != VK_SUCCESS) {
+        for (uint32_t j = 0; j < self->image_count; ++j)
+            vkDestroyFence(device, self->fences[j], nullptr);
+        PyMem_Free(self->fences);
+        PyMem_Free(self->command_buffers);
+        self->fences = nullptr;
+        self->command_buffers = nullptr;
+        PyErr_SetString(vk_SwapchainError, "Failed to allocate command buffers");
+        return false;
+    }
+
     self->suboptimal = false;
     self->out_of_date = false;
     self->framebuffer_resized = false;
@@ -325,6 +342,11 @@ void vk_Swapchain_dealloc(vk_Swapchain* self) {
                 vkDestroyFence(device, self->fences[i], nullptr);
             PyMem_Free(self->fences);
         }
+        if (self->command_buffers) {
+            vkFreeCommandBuffers(device, self->py_device->command_pool,
+                                 self->image_count, self->command_buffers);
+            PyMem_Free(self->command_buffers);
+        }
         if (self->image_available_semaphore)
             vkDestroySemaphore(device, self->image_available_semaphore, nullptr);
         if (self->render_finished_semaphore)
@@ -386,16 +408,13 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
         return nullptr;
     }
 
-    // Wait for fence for THIS image
+    // Wait for the fence associated with THIS image
     vkWaitForFences(dev->device, 1, &self->fences[image_index], VK_TRUE, UINT64_MAX);
     vkResetFences(dev->device, 1, &self->fences[image_index]);
 
-    // Temporary command buffer (proven performance)
-    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
-    if (!cmd) {
-        PyErr_SetString(vk_SwapchainError, "Failed to allocate command buffer");
-        return nullptr;
-    }
+    // Use persistent command buffer for this image
+    VkCommandBuffer cmd = self->command_buffers[image_index];
+    vkResetCommandBuffer(cmd, 0);   // Reset before recording
 
     VkCommandBufferBeginInfo begin_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -484,7 +503,6 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
 
     res = vkQueueSubmit(dev->queue, 1, &submit, self->fences[image_index]);
     if (res != VK_SUCCESS) {
-        vk_free_temp_cmd(dev, cmd);
         PyErr_Format(vk_SwapchainError, "Queue submit failed (error %d)", res);
         return nullptr;
     }
@@ -498,7 +516,6 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
     present_info.pImageIndices = &image_index;
 
     res = vkQueuePresentKHR(dev->queue, &present_info);
-    vk_free_temp_cmd(dev, cmd);
 
     if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || self->framebuffer_resized) {
         self->out_of_date = true;
