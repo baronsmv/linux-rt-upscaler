@@ -192,42 +192,30 @@ static bool create_frame_sync(vk_Device* dev, uint32_t count,
    ------------------------------------------------------------------------- */
 bool vk_Swapchain_recreate(vk_Swapchain* self, uint32_t width, uint32_t height) {
     vk_Device* dev = self->py_device;
-    VkPhysicalDevice phys = dev->physical_device;
     VkDevice device = dev->device;
+    VkPhysicalDevice phys = dev->physical_device;
 
     // Query current surface capabilities
     VkSurfaceCapabilitiesKHR caps;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys, self->surface, &caps);
 
-    // Determine extent
-    if (width == 0 || height == 0) {
-        if (caps.currentExtent.width != UINT32_MAX) {
-            self->image_extent = caps.currentExtent;
-        } else {
-            self->image_extent.width = std::clamp(width ? width : 800,
-                                                  caps.minImageExtent.width,
-                                                  caps.maxImageExtent.width);
-            self->image_extent.height = std::clamp(height ? height : 600,
-                                                   caps.minImageExtent.height,
-                                                   caps.maxImageExtent.height);
-        }
-    } else {
-        self->image_extent.width = width;
-        self->image_extent.height = height;
-    }
-
-    // Wait for device idle before destroying old swapchain
     vkDeviceWaitIdle(device);
 
-    // Destroy old synchronization objects and command buffers
-    for (auto& sync : self->frame_sync) {
-        vkDestroySemaphore(device, sync.image_available_semaphore, nullptr);
-        vkDestroySemaphore(device, sync.render_finished_semaphore, nullptr);
-        vkDestroyFence(device, sync.in_flight_fence, nullptr);
-        vkFreeCommandBuffers(device, dev->command_pool, 1, &sync.command_buffer);
+    // Destroy old per-image resources
+    if (self->fences) {
+        for (uint32_t i = 0; i < self->image_count; ++i)
+            vkDestroyFence(device, self->fences[i], nullptr);
+        PyMem_Free(self->fences);
+        self->fences = nullptr;
     }
-    self->frame_sync.clear();
-
+    if (self->image_available_semaphore) {
+        vkDestroySemaphore(device, self->image_available_semaphore, nullptr);
+        self->image_available_semaphore = VK_NULL_HANDLE;
+    }
+    if (self->render_finished_semaphore) {
+        vkDestroySemaphore(device, self->render_finished_semaphore, nullptr);
+        self->render_finished_semaphore = VK_NULL_HANDLE;
+    }
     for (auto view : self->image_views)
         vkDestroyImageView(device, view, nullptr);
     self->image_views.clear();
@@ -260,36 +248,29 @@ bool vk_Swapchain_recreate(vk_Swapchain* self, uint32_t width, uint32_t height) 
     VkResult res = vkCreateSwapchainKHR(device, &swap_info, nullptr, &self->swapchain);
     if (res != VK_SUCCESS) {
         PyErr_Format(vk_SwapchainError, "Failed to create swapchain (error %d)", res);
+
+    // Create shared semaphores
+    VkSemaphoreCreateInfo sem_info = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    if (vkCreateSemaphore(device, &sem_info, nullptr, &self->image_available_semaphore) != VK_SUCCESS ||
+        vkCreateSemaphore(device, &sem_info, nullptr, &self->render_finished_semaphore) != VK_SUCCESS) {
+        PyErr_SetString(vk_SwapchainError, "Failed to create semaphores");
         return false;
     }
 
-    if (swap_info.oldSwapchain != VK_NULL_HANDLE)
-        vkDestroySwapchainKHR(device, swap_info.oldSwapchain, nullptr);
-
-    // Retrieve swapchain images
-    uint32_t count;
-    vkGetSwapchainImagesKHR(device, self->swapchain, &count, nullptr);
-    self->images.resize(count);
-    vkGetSwapchainImagesKHR(device, self->swapchain, &count, self->images.data());
-    self->image_count = count;
-
-    // Create image views
-    if (!create_image_views(device, self->format, self->images, self->image_views)) {
-        PyErr_SetString(vk_SwapchainError, "Failed to create swapchain image views");
-        return false;
+    // Create per-image fences (signaled initially)
+    self->fences = (VkFence*)PyMem_Malloc(sizeof(VkFence) * self->image_count);
+    VkFenceCreateInfo fence_info = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    for (uint32_t i = 0; i < self->image_count; ++i) {
+        if (vkCreateFence(device, &fence_info, nullptr, &self->fences[i]) != VK_SUCCESS) {
+            // Cleanup and error
+            return false;
+        }
     }
 
-    // Create synchronization objects and command buffers (one per image)
-    if (!create_frame_sync(dev, count, self->frame_sync)) {
-        PyErr_SetString(vk_SwapchainError, "Failed to create frame synchronization objects");
-        return false;
-    }
-
-    self->current_frame = 0;
     self->suboptimal = false;
     self->out_of_date = false;
     self->framebuffer_resized = false;
-
     return true;
 }
 
@@ -394,12 +375,16 @@ void vk_Swapchain_dealloc(vk_Swapchain* self) {
         VkDevice device = self->py_device->device;
         vkDeviceWaitIdle(device);
 
-        for (auto& sync : self->frame_sync) {
-            vkDestroySemaphore(device, sync.image_available_semaphore, nullptr);
-            vkDestroySemaphore(device, sync.render_finished_semaphore, nullptr);
-            vkDestroyFence(device, sync.in_flight_fence, nullptr);
-            vkFreeCommandBuffers(device, self->py_device->command_pool, 1, &sync.command_buffer);
+        if (self->fences) {
+            for (uint32_t i = 0; i < self->image_count; ++i)
+                vkDestroyFence(device, self->fences[i], nullptr);
+            PyMem_Free(self->fences);
         }
+        if (self->image_available_semaphore)
+            vkDestroySemaphore(device, self->image_available_semaphore, nullptr);
+        if (self->render_finished_semaphore)
+            vkDestroySemaphore(device, self->render_finished_semaphore, nullptr);
+
         for (auto view : self->image_views)
             vkDestroyImageView(device, view, nullptr);
         if (self->swapchain)
@@ -409,36 +394,6 @@ void vk_Swapchain_dealloc(vk_Swapchain* self) {
         Py_DECREF(self->py_device);
     }
     Py_TYPE(self)->tp_free(reinterpret_cast<PyObject*>(self));
-}
-
-/* ----------------------------------------------------------------------------
-   vk_Swapchain_acquire_next_image
-   ------------------------------------------------------------------------- */
-PyObject* vk_Swapchain_acquire_next_image(vk_Swapchain* self, PyObject* args) {
-    vk_Device* dev = self->py_device;
-    FrameSync& sync = self->frame_sync[self->current_frame];
-
-    // Wait for the fence to ensure frame resources are free
-    vkWaitForFences(dev->device, 1, &sync.in_flight_fence, VK_TRUE, UINT64_MAX);
-    vkResetFences(dev->device, 1, &sync.in_flight_fence);
-
-    uint32_t image_index;
-    VkResult res = vkAcquireNextImageKHR(dev->device, self->swapchain, UINT64_MAX,
-                                         sync.image_available_semaphore,
-                                         VK_NULL_HANDLE, &image_index);
-    if (res == VK_ERROR_OUT_OF_DATE_KHR) {
-        self->out_of_date = true;
-        return PyLong_FromLong(-1);
-    } else if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR) {
-        PyErr_Format(vk_SwapchainError, "Failed to acquire next image (error %d)", res);
-        return nullptr;
-    }
-
-    self->image_index = image_index;
-    if (res == VK_SUBOPTIMAL_KHR)
-        self->suboptimal = true;
-
-    return PyLong_FromUnsignedLong(image_index);
 }
 
 /* ----------------------------------------------------------------------------
@@ -473,17 +428,13 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
     }
 
     vk_Device* dev = self->py_device;
-    FrameSync& sync = self->frame_sync[self->current_frame];
+    VkResult res;
 
-    // ALWAYS wait for the fence – ensures the previous frame's GPU work is done.
-    vkWaitForFences(dev->device, 1, &sync.in_flight_fence, VK_TRUE, UINT64_MAX);
-    vkResetFences(dev->device, 1, &sync.in_flight_fence);
-
-    // Acquire next swapchain image
+    // Acquire next image (use shared semaphore)
     uint32_t image_index;
-    VkResult res = vkAcquireNextImageKHR(dev->device, self->swapchain, UINT64_MAX,
-                                         sync.image_available_semaphore,
-                                         VK_NULL_HANDLE, &image_index);
+    res = vkAcquireNextImageKHR(dev->device, self->swapchain, UINT64_MAX,
+                                self->image_available_semaphore, VK_NULL_HANDLE,
+                                &image_index);
     if (res == VK_ERROR_OUT_OF_DATE_KHR) {
         self->out_of_date = true;
         Py_RETURN_FALSE;
@@ -491,12 +442,18 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
         PyErr_Format(vk_SwapchainError, "Failed to acquire next image (error %d)", res);
         return nullptr;
     }
-    self->image_index = image_index;
-    if (res == VK_SUBOPTIMAL_KHR)
-        self->suboptimal = true;
 
-    // Record commands into the per‑frame command buffer
-    VkCommandBuffer cmd = sync.command_buffer;
+    // Wait for the fence associated with THIS image
+    vkWaitForFences(dev->device, 1, &self->fences[image_index], VK_TRUE, UINT64_MAX);
+    vkResetFences(dev->device, 1, &self->fences[image_index]);
+
+    // Allocate temporary command buffer (as in dev version)
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
+    if (!cmd) {
+        PyErr_SetString(vk_SwapchainError, "Failed to allocate command buffer");
+        return nullptr;
+    }
+
     VkCommandBufferBeginInfo begin_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkBeginCommandBuffer(cmd, &begin_info);
@@ -601,44 +558,45 @@ src_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
     vkEndCommandBuffer(cmd);
 
-    // Submit: wait for image_available, signal render_finished, and signal fence
+    // Submit
     VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
     submit.waitSemaphoreCount = 1;
-    submit.pWaitSemaphores = &sync.image_available_semaphore;
+    submit.pWaitSemaphores = &self->image_available_semaphore;
     submit.pWaitDstStageMask = &wait_stage;
     submit.commandBufferCount = 1;
     submit.pCommandBuffers = &cmd;
     submit.signalSemaphoreCount = 1;
-    submit.pSignalSemaphores = &sync.render_finished_semaphore;
+    submit.pSignalSemaphores = &self->render_finished_semaphore;
 
-    res = vkQueueSubmit(dev->queue, 1, &submit, sync.in_flight_fence);
+    res = vkQueueSubmit(dev->queue, 1, &submit, self->fences[image_index]);
     if (res != VK_SUCCESS) {
-        PyErr_Format(vk_SwapchainError, "Failed to submit copy command (error %d)", res);
+        vk_free_temp_cmd(dev, cmd);
+        PyErr_Format(vk_SwapchainError, "Queue submit failed (error %d)", res);
         return nullptr;
     }
 
     // Present
     VkPresentInfoKHR present_info = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &sync.render_finished_semaphore;
+    present_info.pWaitSemaphores = &self->render_finished_semaphore;
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &self->swapchain;
     present_info.pImageIndices = &image_index;
 
     res = vkQueuePresentKHR(dev->queue, &present_info);
 
+    vk_free_temp_cmd(dev, cmd);  // Free after submission
+
     if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || self->framebuffer_resized) {
         self->out_of_date = true;
         Py_RETURN_FALSE;
     } else if (res != VK_SUCCESS) {
-        PyErr_Format(vk_SwapchainError, "Failed to present image (error %d)", res);
+        PyErr_Format(vk_SwapchainError, "Present failed (error %d)", res);
         return nullptr;
     }
 
-    // Advance to next frame
-    self->current_frame = (self->current_frame + 1) % self->image_count;
-
+    self->image_index = image_index;
     Py_RETURN_TRUE;
 }
 
