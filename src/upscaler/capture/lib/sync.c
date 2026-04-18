@@ -1,31 +1,24 @@
+/**
+ * @file sync.c
+ * @brief X11 thread safety and error handling.
+ */
+
 #include "sync.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <xcb/xcb_aux.h>
 
-/* -------------------------------------------------------------------------
- *  Public Functions
- * ------------------------------------------------------------------------- */
-xcb_connection_t *xcb_connect_default(int debug) {
-    int screen_num;
-    xcb_connection_t *conn = xcb_connect(NULL, &screen_num);
-    if (!conn || xcb_connection_has_error(conn)) {
-        fprintf(stderr, "[xcb] Failed to connect to X server\n");
-        return NULL;
-    }
-    if (debug) {
-        fprintf(stderr, "[xcb] Connected to display :%d\n", screen_num);
-    }
-    return conn;
+pthread_mutex_t xlib_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static int x11_error_handler(Display *dpy, XErrorEvent *ev) {
+  (void)dpy;
+  /* Suppress BadMatch during SHM attachment */
+  if (ev->error_code == BadMatch && ev->request_code == 130)
+    return 0;
+  /* Other errors could be logged here if desired */
+  return 0;
 }
 
-void xcb_sync(xcb_connection_t *conn) {
-    if (!conn) return;
-    xcb_aux_sync(conn);   /* Flushes and waits for events */
-}
+void x11_install_error_handler(void) { XSetErrorHandler(x11_error_handler); }
 
-void xcb_disconnect(xcb_connection_t *conn) {
-    if (conn) {
-        xcb_disconnect(conn);
-    }
-}
+void x11_lock(void) { pthread_mutex_lock(&xlib_mutex); }
+
+void x11_unlock(void) { pthread_mutex_unlock(&xlib_mutex); }

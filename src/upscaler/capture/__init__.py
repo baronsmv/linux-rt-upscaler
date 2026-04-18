@@ -1,9 +1,7 @@
 import ctypes
 import logging
 import os
-import xcffib
 from typing import Any, List, Tuple
-from xcffib import ffi
 
 logger = logging.getLogger(__name__)
 
@@ -23,27 +21,28 @@ class DamageRect(ctypes.Structure):
     ]
 
 
-# Function signatures for XCB
 _lib.capture_create.argtypes = [
-    ctypes.c_void_p,  # xcb_connection_t *
-    ctypes.c_uint32,  # xcb_window_t
-    ctypes.c_int,  # crop_left
-    ctypes.c_int,  # crop_top
-    ctypes.c_int,  # width
-    ctypes.c_int,  # height
+    ctypes.c_ulong,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
 ]
 _lib.capture_create.restype = ctypes.c_void_p
 
 _lib.capture_grab_damage.argtypes = [
-    ctypes.c_void_p,  # CaptureContext *
-    ctypes.POINTER(ctypes.c_ubyte),  # output buffer
-    ctypes.POINTER(DamageRect),  # rects array
-    ctypes.c_int,  # max_rects
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.POINTER(DamageRect),
+    ctypes.c_int,
 ]
 _lib.capture_grab_damage.restype = ctypes.c_int
 
 _lib.capture_destroy.argtypes = [ctypes.c_void_p]
 _lib.capture_destroy.restype = None
+
+_lib.capture_get_xcb_connection.argtypes = [ctypes.c_void_p]
+_lib.capture_get_xcb_connection.restype = ctypes.c_void_p
 
 
 class FrameGrabber:
@@ -70,22 +69,12 @@ class FrameGrabber:
         # Set tile size for C library
         os.environ["CAPTURE_TILE_SIZE"] = str(tile_size)
 
-        # Open dedicated XCB connection for capture
-        self._xcb_conn = xcffib.connect()
-        # Extract raw xcb_connection_t* as integer using CFFI
-        self._xcb_conn_ptr = int(ffi.cast("uintptr_t", self._xcb_conn._conn))
-
         self.buffer_size = self.width * self.height * 4
         self.buffer = (ctypes.c_ubyte * self.buffer_size)()
         self._rects_buffer = (DamageRect * _MAX_DAMAGE_RECTS)()
 
         self._ctx = _lib.capture_create(
-            self._xcb_conn_ptr,
-            self.handle,
-            self.crop_left,
-            self.crop_top,
-            self.width,
-            self.height,
+            self.handle, self.crop_left, self.crop_top, self.width, self.height
         )
         if not self._ctx:
             raise RuntimeError("Failed to create capture context")
@@ -93,6 +82,11 @@ class FrameGrabber:
         logger.info(
             f"FrameGrabber initialized: {self.width}x{self.height}, tile_size={tile_size}"
         )
+
+    class FrameGrabber:
+        def get_xcb_connection(self) -> int:
+            """Return the raw xcb_connection_t* as an integer."""
+            return _lib.capture_get_xcb_connection(self._ctx)
 
     def grab(self) -> Tuple[memoryview, bool, List[Tuple[int, int, int, int, int]]]:
         ctypes.memset(self._rects_buffer, 0, ctypes.sizeof(self._rects_buffer))
@@ -113,9 +107,6 @@ class FrameGrabber:
         if hasattr(self, "_ctx") and self._ctx:
             _lib.capture_destroy(self._ctx)
             self._ctx = None
-        if hasattr(self, "_xcb_conn") and self._xcb_conn:
-            self._xcb_conn.disconnect()
-            self._xcb_conn = None
 
     def __del__(self):
         self.close()

@@ -63,12 +63,12 @@ class BuildSharedLibs(build_ext):
             *[str(f) for f in capture_src],
             "-o",
             str(capture_so),
+            "-lX11",
+            "-lX11-xcb",
+            "-lXext",
+            "-lXdamage",
+            "-lXfixes",
             "-lxcb",
-            "-lxcb-shm",
-            "-lxcb-composite",
-            "-lxcb-damage",
-            "-lxcb-xfixes",
-            "-lxcb-util",
             "-lpthread",
         ]
 

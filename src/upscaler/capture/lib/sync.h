@@ -1,39 +1,24 @@
 /**
  * @file sync.h
- * @brief XCB connection utilities and error handling.
+ * @brief Thread‑safety and error handling for X11 calls.
  */
 
 #ifndef SYNC_H
 #define SYNC_H
 
-#include <xcb/xcb.h>
+#include <X11/Xlib.h>
+#include <pthread.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/** Global mutex protecting all Xlib calls. */
+extern pthread_mutex_t xlib_mutex;
 
-/**
- * Open an XCB connection to the default display.
- * @param debug   If non‑zero, enable verbose logging of XCB errors.
- * @return Connection pointer, or NULL on failure.
- */
-xcb_connection_t *xcb_connect_default(int debug);
+/** Install the custom X11 error handler. */
+void x11_install_error_handler(void);
 
-/**
- * Flush the connection and wait for all pending requests to be processed.
- * This ensures that SHM operations are visible to the CPU.
- * @param conn   XCB connection.
- */
-void xcb_sync(xcb_connection_t *conn);
+/** Lock the Xlib mutex. */
+void x11_lock(void);
 
-/**
- * Close the XCB connection.
- * @param conn   Connection to close.
- */
-void xcb_disconnect(xcb_connection_t *conn);
-
-#ifdef __cplusplus
-}
-#endif
+/** Unlock the Xlib mutex. */
+void x11_unlock(void);
 
 #endif /* SYNC_H */
