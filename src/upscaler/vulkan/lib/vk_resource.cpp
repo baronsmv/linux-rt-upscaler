@@ -31,15 +31,43 @@ struct PyBufferGuard {
 template<typename RecordFunc>
 static VkResult execute_commands(vk_Device *dev, RecordFunc &&record) {
     VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
-    if (!cmd) return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+    if (!cmd) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to allocate temporary command buffer");
+        return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+    }
 
     VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     vkBeginCommandBuffer(cmd, &begin);
     record(cmd);
-    vkEndCommandBuffer(cmd);
+    VkResult res = vkEndCommandBuffer(cmd);
+    if (res != VK_SUCCESS) {
+        vk_free_temp_cmd(dev, cmd);
+        return res;
+    }
 
-    VkResult res = vk_execute_and_wait(dev, cmd);
+    VkFenceCreateInfo finfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    VkFence fence;
+    vkCreateFence(dev->device, &finfo, nullptr, &fence);
+
+    VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submit.commandBufferCount = 1;
+    submit.pCommandBuffers = &cmd;
+    res = vkQueueSubmit(dev->queue, 1, &submit, fence);
+    if (res != VK_SUCCESS) {
+        vkDestroyFence(dev->device, fence, nullptr);
+        vk_free_temp_cmd(dev, cmd);
+        return res;
+    }
+
+    // Wait with timeout (5 seconds)
+    res = vkWaitForFences(dev->device, 1, &fence, VK_TRUE, 5'000'000'000);
+    vkDestroyFence(dev->device, fence, nullptr);
     vk_free_temp_cmd(dev, cmd);
+
+    if (res == VK_TIMEOUT) {
+        PyErr_SetString(PyExc_TimeoutError, "Vulkan command timed out after 5 seconds");
+        return VK_TIMEOUT;
+    }
     return res;
 }
 
@@ -430,10 +458,17 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
             vkCmdCopyBuffer(cmd, self->buffer, dst->buffer, 1, &region);
         }
         else if (src_is_buf && !dst_is_buf) {
+            // Determine if this is the first upload to this texture
+            bool first_use = (dst->image_view == VK_NULL_HANDLE);
+            VkImageLayout srcLayout = first_use ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_GENERAL;
+            VkAccessFlags srcAccess = first_use ? 0 : VK_ACCESS_SHADER_WRITE_BIT;
+            VkPipelineStageFlags srcStage = first_use ? VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+                                                      : VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
             cmd_image_barrier(cmd, dst->image,
-                              VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                              VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+                              srcLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                              srcStage, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                              srcAccess, VK_ACCESS_TRANSFER_WRITE_BIT,
                               0, 1, dst_slice, 1);
 
             VkBufferImageCopy region = {};

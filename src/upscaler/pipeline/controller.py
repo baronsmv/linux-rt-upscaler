@@ -1,11 +1,12 @@
 import logging
 import os
 import threading
-from PIL import Image
-from PySide6.QtCore import QMetaObject, Qt, Q_ARG
 from datetime import datetime
 from queue import Queue, Empty
 from typing import TYPE_CHECKING, Tuple
+
+from PIL import Image
+from PySide6.QtCore import QMetaObject, Qt, Q_ARG
 
 from ..config import OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..shaders import SRCNN
@@ -136,7 +137,7 @@ class PipelineController:
         self._pipeline.clear_frame_queue()
 
         # Show OSD feedback
-        self._pipeline.show_osd(f"Model: {new_model}", OSD_DURATION)
+        self._pipeline.osd.show(f"Model: {new_model}", OSD_DURATION)
 
     def _apply_geometry_cycle(self) -> None:
         total = len(self._available_geometries)
@@ -163,7 +164,7 @@ class PipelineController:
         self._pipeline.update_content_dimensions()
 
         # Show OSD feedback
-        self._pipeline.show_osd(f"Geometry: {new_geometry}", OSD_DURATION)
+        self._pipeline.osd.show(f"Geometry: {new_geometry}", OSD_DURATION)
 
     def _save_screenshot(self) -> None:
         """Capture the raw upscaled texture and offload saving to a background thread."""

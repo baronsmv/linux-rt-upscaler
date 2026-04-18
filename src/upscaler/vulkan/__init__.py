@@ -130,7 +130,7 @@ class VulkanContext:
         """
         if self._discovered_devices is None:
             raw_list = _vk.get_discovered_devices()
-            self._discovered_devices = [Device._from_handle(d) for d in raw_list]
+            self._discovered_devices = [Device.from_handle(d) for d in raw_list]
         return self._discovered_devices
 
     def set_current_device(self, index: int) -> None:
@@ -236,6 +236,12 @@ def configure_device(buffer_pool_size: int = 0) -> None:
         dev.set_buffer_pool_size(buffer_pool_size)
 
 
+def device_wait_idle() -> None:
+    """Wait for the Vulkan device to finish all queued work."""
+    dev = get_current_device()
+    dev.wait_idle()
+
+
 # ----------------------------------------------------------------------
 # Device
 # ----------------------------------------------------------------------
@@ -263,7 +269,7 @@ class Device:
         raise TypeError("Use get_discovered_devices() to obtain Device instances")
 
     @classmethod
-    def _from_handle(cls, handle):
+    def from_handle(cls, handle):
         """Internal: create Device from C++ handle."""
         self = cls.__new__(cls)
         self._handle = handle
@@ -474,6 +480,41 @@ class Resource:
         """Size of the resource in bytes."""
         return self._handle.size
 
+    @property
+    def heap_size(self) -> int:
+        """Actual memory size allocated."""
+        return self._handle.heap_size
+
+    @property
+    def tiles_x(self) -> int:
+        """Number of sparse tiles in X direction."""
+        return self._handle.tiles_x
+
+    @property
+    def tiles_y(self) -> int:
+        """Number of sparse tiles in Y direction."""
+        return self._handle.tiles_y
+
+    @property
+    def tiles_z(self) -> int:
+        """Number of sparse tiles in Z direction."""
+        return self._handle.tiles_z
+
+    @property
+    def tile_width(self) -> int:
+        """Tile width in pixels (sparse)."""
+        return self._handle.tile_width
+
+    @property
+    def tile_height(self) -> int:
+        """Tile height in pixels (sparse)."""
+        return self._handle.tile_height
+
+    @property
+    def tile_depth(self) -> int:
+        """Tile depth in pixels (sparse)."""
+        return self._handle.tile_depth
+
     def copy_to(
         self,
         destination: "Resource",
@@ -569,6 +610,12 @@ class Buffer(Resource):
             sparse,
         )
 
+    @classmethod
+    def from_handle(cls, handle):
+        self = cls.__new__(cls)
+        self._handle = handle
+        return self
+
     def upload(self, data: bytes, offset: int = 0) -> None:
         """Upload data to the buffer at the given offset."""
         self._handle.upload(data, offset)
@@ -630,6 +677,12 @@ class Texture2D(Resource):
         )
         self._handle = handle
 
+    @classmethod
+    def from_handle(cls, handle):
+        self = cls.__new__(cls)
+        self._handle = handle
+        return self
+
     @property
     def width(self) -> int:
         """Width in pixels."""
@@ -639,6 +692,16 @@ class Texture2D(Resource):
     def height(self) -> int:
         """Height in pixels."""
         return self._handle.height
+
+    @property
+    def slices(self) -> int:
+        """Number of array slices."""
+        return self._handle.slices
+
+    @property
+    def row_pitch(self) -> int:
+        """Row pitch in bytes."""
+        return self._handle.row_pitch
 
     def download(self) -> bytes:
         """Download entire texture contents as RGBA8 bytes."""
@@ -692,6 +755,12 @@ class Sampler:
         self._handle = dev.create_sampler(
             address_mode_u, address_mode_v, address_mode_w, filter_min, filter_mag
         )
+
+    @classmethod
+    def from_handle(cls, handle):
+        self = cls.__new__(cls)
+        self._handle = handle
+        return self
 
     def __repr__(self) -> str:
         return "<Sampler>"
@@ -754,6 +823,12 @@ class Compute:
             push_size,
             max_bindless if bindless else 0,
         )
+
+    @classmethod
+    def from_handle(cls, handle):
+        self = cls.__new__(cls)
+        self._handle = handle
+        return self
 
     def dispatch(self, x: int, y: int, z: int, push: bytes = b"") -> None:
         """
@@ -853,6 +928,12 @@ class Swapchain:
             # The C++ layer has set a Python exception; re-raise it
             raise RuntimeError("Failed to create swapchain") from None
         self._handle = handle
+
+    @classmethod
+    def from_handle(cls, handle):
+        self = cls.__new__(cls)
+        self._handle = handle
+        return self
 
     @property
     def width(self) -> int:

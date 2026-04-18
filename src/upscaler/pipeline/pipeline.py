@@ -1,21 +1,20 @@
 import logging
-import struct
 import threading
 import time
 from queue import Empty, Queue, Full
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple
 
 from PySide6.QtCore import QMetaObject, Qt
 
 from .controller import PipelineController
+from .osd import OSDManager
 from .swapchain import SwapchainManager
-from .text_renderer import TextRenderer, upload_image_to_texture
 from ..capture import FrameGrabber
 from ..config import Config, OverlayMode, OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..overlay import OverlayWindow
-from ..shaders import LanczosScaler, OverlayBlender, SRCNN, dispatch_groups
+from ..shaders import LanczosScaler, SRCNN, dispatch_groups
 from ..utils import parse_output_geometry, calculate_scaling_rect
-from ..vulkan import Texture2D, configure_device, Compute
+from ..vulkan import Texture2D, configure_device, device_wait_idle
 from ..window import WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
@@ -132,18 +131,14 @@ class Pipeline:
         self._consecutive_failures = 0
 
         # OSD
-        self._osd_texture: Optional[Texture2D] = None
-        self._needs_osd_redraw = False
-        self._osd_expiry_time: Optional[float] = None
-        osd_texts = (
+        osd_texts = tuple(
             [f"Model: {m}" for m in UPSCALING_MODELS]
             + [f"Geometry: {g}" for g in OUTPUT_GEOMETRIES]
             + ["Screenshot saved", "Screenshot failed"]
         )
-        self._overlay_blender = OverlayBlender()
-        self._text_renderer = TextRenderer(osd_texts, screen_height=self._screen_height)
-        self._osd_texture_cache: Dict[str, Texture2D] = {}
-        self._osd_texture: Optional[Texture2D] = None
+        self.osd = OSDManager(osd_texts, self._screen_width, self._screen_height)
+        device_wait_idle()
+        self.osd.prepare_textures()
 
     def start(self) -> None:
         """Start the pipeline thread."""
@@ -307,7 +302,7 @@ class Pipeline:
                 # Process OSD requests from other threads
                 try:
                     text, duration = self.osd_queue.get_nowait()
-                    self.show_osd(text, duration)
+                    self.osd.show(text, duration)
                 except Empty:
                     pass
 
@@ -331,31 +326,6 @@ class Pipeline:
         QMetaObject.invokeMethod(
             self.overlay, "on_pipeline_stopped", Qt.QueuedConnection
         )
-
-    def show_osd(self, text: str, duration: float = 1.5):
-        """Request an OSD message to be displayed."""
-        if text not in self._osd_texture_cache:
-            img = self._text_renderer.get_image(text)
-            if img:
-                self._osd_texture_cache[text] = upload_image_to_texture(img)
-        tex = self._osd_texture_cache.get(text)
-        if tex is not None:
-            self._osd_texture = tex
-            self._osd_expiry_time = time.monotonic() + duration
-            self._needs_osd_redraw = True
-
-    def _draw_osd(self) -> None:
-        if self._osd_texture is not None:
-            w, h = self._osd_texture.width, self._osd_texture.height
-            x = (self._screen_width - w) // 2
-            y = (self._screen_height - h) // 2
-            self._overlay_blender.blend(self._osd_texture, x, y, w, h)
-
-    def _update_osd_timer(self) -> None:
-        if self._osd_texture is not None and self._osd_expiry_time is not None:
-            if time.monotonic() >= self._osd_expiry_time:
-                self._osd_texture = None
-                self._osd_expiry_time = None
 
     def _expand_damage_rects(self, rects):
         margin = self.config.tile_context_margin
@@ -387,8 +357,6 @@ class Pipeline:
           7. Update mouse mapping for overlay interaction.
           8. Check if swapchain needs recreation.
         """
-        # logger.debug("_process_one_frame(): start")
-
         # -------------------------------------------------------------------------
         # 1. Grab frame from X11 (raw BGRA bytes)
         # -------------------------------------------------------------------------
@@ -403,14 +371,11 @@ class Pipeline:
             return
 
         # -------------------------------------------------------------------------
-        # 2. Handle OSD expiry (auto‑hide after duration)
+        # 2. Update OSD state and get active texture
         # -------------------------------------------------------------------------
-        self._update_osd_timer()
-
-        # Force a redraw if the OSD just expired (to clear it from screen)
-        if self._needs_osd_redraw:
+        osd_texture, needs_redraw = self.osd.update()
+        if needs_redraw:
             is_dirty = True
-            self._needs_osd_redraw = False
 
         # Always update overlay window opacity (may change due to focus)
         self.overlay.update_opacity()
@@ -418,14 +383,13 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 3. If frame hasn't changed and no OSD update, skip GPU work
         # -------------------------------------------------------------------------
-        if not is_dirty and self._osd_texture is None:
+        if not is_dirty and osd_texture is None:
             self._swapchain_manager.present(self._screen_tex)
             return
 
         # -------------------------------------------------------------------------
         # 4. Upload captured frame to staging buffer (CPU -> GPU)
         # -------------------------------------------------------------------------
-        # logger.debug("Uploading frame data...")
         try:
             if self.config.use_damage_tracking and rects:
                 upload_list = []
@@ -439,7 +403,6 @@ class Pipeline:
                 self.upscaler.input.upload_subresources(upload_list)
             else:
                 self.upscaler.staging.upload(frame)
-            # logger.debug("Frame upload completed.")
         except Exception as e:
             logger.error(f"Frame upload failed: {e}", exc_info=True)
             return
@@ -447,7 +410,6 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 5. Calculate Lanczos destination rectangle and update constants
         # -------------------------------------------------------------------------
-        # logger.debug("Calculating Lanczos destination...")
         r_x, r_y, r_w, r_h = calculate_scaling_rect(
             self.src_w,
             self.src_h,
@@ -482,7 +444,6 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 6. Build the list of compute dispatches for this frame
         # -------------------------------------------------------------------------
-        # logger.debug("Building dispatch list...")
         dispatches = []
 
         # ---- SRCNN upscale passes (first stage) ----
@@ -506,30 +467,15 @@ class Pipeline:
         )
 
         # ---- OSD blend pass (if OSD is active) ----
-        if self._osd_texture is not None:
-            # Update OSD constant buffer with position and size
-            osd_w = self._osd_texture.width
-            osd_h = self._osd_texture.height
+        if osd_texture is not None:
+            osd_w = osd_texture.width
+            osd_h = osd_texture.height
             osd_x = (self._screen_width - osd_w) // 2
             osd_y = (self._screen_height - osd_h) // 2
 
-            # The OverlayBlender uses a CBV with four ints: x, y, w, h
-            cb_data = struct.pack("iiii", osd_x, osd_y, osd_w, osd_h)
-            self._overlay_blender.cb.upload(cb_data)
+            self.osd.update_constants(osd_x, osd_y, osd_w, osd_h)
+            osd_compute = self.osd.get_compute_pipeline(osd_texture, self._screen_tex)
 
-            # Create (or reuse) the compute pipeline for this specific OSD texture.
-            # Since the OSD texture changes rarely, we can recreate the pipeline
-            # each time; it's lightweight and only happens when OSD is shown.
-            osd_compute = Compute(
-                self._overlay_blender.shader,
-                srv=[self._screen_tex, self._osd_texture],
-                uav=[self._screen_tex],
-                cbv=[self._overlay_blender.cb],
-                samplers=[self._overlay_blender.sampler],
-                push_size=0,
-            )
-
-            # Dispatch enough groups to cover the OSD rectangle (16x16 threads)
             groups_x = (osd_w + 15) // 16
             groups_y = (osd_h + 15) // 16
             dispatches.append((osd_compute, groups_x, groups_y, 1, b""))
@@ -537,15 +483,11 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 7. Submit EVERYTHING in one Vulkan command buffer
         # -------------------------------------------------------------------------
-        if self.config.use_damage_tracking and rects:
-            # Damage upload was done directly; skip the copy stage
-            copy_src = None
-        else:
-            copy_src = (
-                None
-                if self.config.use_damage_tracking and rects
-                else self.upscaler.staging
-            )
+        copy_src = (
+            None
+            if (self.config.use_damage_tracking and rects)
+            else self.upscaler.staging
+        )
 
         try:
             self.upscaler.pipelines_first[0].dispatch_sequence(
@@ -554,7 +496,6 @@ class Pipeline:
                 copy_dst=self.upscaler.input,
                 present_image=self._screen_tex,
             )
-            # logger.debug("dispatch_sequence completed successfully.")
         except Exception as e:
             logger.error(f"dispatch_sequence failed: {e}", exc_info=True)
             return
@@ -653,6 +594,7 @@ class Pipeline:
             f"-> new size {new_width}x{new_height}"
         )
         self._swapchain_manager.recreate(self._screen_width, self._screen_height)
+        self.osd.clear_compute_cache()
 
     def update_content_dimensions(self) -> None:
         """Recalculate content dimensions based on current overlay size and crop."""
