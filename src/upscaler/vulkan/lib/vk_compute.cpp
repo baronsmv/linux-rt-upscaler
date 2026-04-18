@@ -1,3 +1,13 @@
+/**
+ * @file vk_compute.cpp
+ * @brief Vulkan compute pipeline implementation.
+ *
+ * This file implements the vk.Compute Python type, which encapsulates a
+ * Vulkan compute pipeline, descriptor set, and associated resources.
+ * It provides methods to dispatch compute shaders and execute sequences
+ * of dispatches with optional pre‑copy and presentation.
+ */
+
 #include "vk_device.h"
 #include "vk_compute.h"
 #include "vk_utils.h"
@@ -5,7 +15,7 @@
 #include <vector>
 #include <cstring>
 
-// Forward declare resource type for checking
+// Forward declarations of Python type objects (defined elsewhere)
 extern PyTypeObject vk_Resource_Type;
 extern PyTypeObject vk_Sampler_Type;
 
@@ -15,12 +25,12 @@ extern PyTypeObject vk_Sampler_Type;
 void vk_Compute_dealloc(vk_Compute *self) {
     if (self->py_device) {
         VkDevice dev = self->py_device->device;
-        if (self->pipeline) vkDestroyPipeline(dev, self->pipeline, nullptr);
-        if (self->pipeline_layout) vkDestroyPipelineLayout(dev, self->pipeline_layout, nullptr);
-        if (self->descriptor_pool) vkDestroyDescriptorPool(dev, self->descriptor_pool, nullptr);
+        if (self->pipeline)           vkDestroyPipeline(dev, self->pipeline, nullptr);
+        if (self->pipeline_layout)    vkDestroyPipelineLayout(dev, self->pipeline_layout, nullptr);
+        if (self->descriptor_pool)    vkDestroyDescriptorPool(dev, self->descriptor_pool, nullptr);
         if (self->descriptor_set_layout) vkDestroyDescriptorSetLayout(dev, self->descriptor_set_layout, nullptr);
-        if (self->shader_module) vkDestroyShaderModule(dev, self->shader_module, nullptr);
-        if (self->dispatch_fence) vkDestroyFence(dev, self->dispatch_fence, nullptr);
+        if (self->shader_module)      vkDestroyShaderModule(dev, self->shader_module, nullptr);
+        if (self->dispatch_fence)     vkDestroyFence(dev, self->dispatch_fence, nullptr);
         Py_DECREF(self->py_device);
     }
     Py_XDECREF(self->py_cbv_list);
@@ -31,262 +41,21 @@ void vk_Compute_dealloc(vk_Compute *self) {
 }
 
 /* ----------------------------------------------------------------------------
-   Helper: create descriptor set layout and pipeline layout
+   vk_Device_create_compute_impl
    ------------------------------------------------------------------------- */
-static bool create_descriptor_set_layout(vk_Device *dev,
-                                         const std::vector<vk_Resource *> &cbv,
-                                         const std::vector<vk_Resource *> &srv,
-                                         const std::vector<vk_Resource *> &uav,
-                                         const std::vector<vk_Sampler *> &samplers,
-                                         uint32_t bindless,
-                                         VkDescriptorSetLayout *out_layout) {
-    std::vector<VkDescriptorSetLayoutBinding> bindings;
-    std::vector<VkDescriptorBindingFlags> binding_flags;
-    bool use_update_after_bind = (bindless > 0) && dev->supports_bindless;
-
-    auto add_binding = [&](uint32_t binding, VkDescriptorType type, uint32_t count) {
-        VkDescriptorSetLayoutBinding lb = {};
-        lb.binding = binding;
-        lb.descriptorType = type;
-        lb.descriptorCount = count;
-        lb.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-        bindings.push_back(lb);
-        if (use_update_after_bind) {
-            binding_flags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
-                                    VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT);
-        }
-    };
-
-    if (bindless == 0) {
-        // Non‑bindless: each resource gets its own binding
-        uint32_t idx = 0;
-        for (size_t i = 0; i < cbv.size(); ++i)
-            add_binding(idx++, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
-        idx = 1024;
-        for (size_t i = 0; i < srv.size(); ++i) {
-            vk_Resource *res = srv[i];
-            VkDescriptorType type;
-            if (res->buffer) {
-                type = res->buffer_view ? VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            } else {
-                type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            }
-            add_binding(idx++, type, 1);
-        }
-        idx = 2048;
-        for (size_t i = 0; i < uav.size(); ++i) {
-            vk_Resource *res = uav[i];
-            VkDescriptorType type;
-            if (res->buffer) {
-                type = res->buffer_view ? VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            } else {
-                type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            }
-            add_binding(idx++, type, 1);
-        }
-        idx = 3072;
-        for (size_t i = 0; i < samplers.size(); ++i) {
-            add_binding(idx++, VK_DESCRIPTOR_TYPE_SAMPLER, 1);
-        }
-    } else {
-        // Bindless: three large arrays (CBV, SRV, UAV)
-        if (dev->supports_bindless) {
-            add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, bindless);
-            add_binding(1024, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, bindless);
-            add_binding(2048, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, bindless);
-            // Samplers still separate
-            uint32_t idx = 3072;
-            for (size_t i = 0; i < samplers.size(); ++i)
-                add_binding(idx++, VK_DESCRIPTOR_TYPE_SAMPLER, 1);
-        } else {
-            PyErr_SetString(PyExc_ValueError, "Bindless not supported on this device");
-            return false;
-        }
-    }
-
-    VkDescriptorSetLayoutCreateInfo dsl_info = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-    dsl_info.bindingCount = static_cast<uint32_t>(bindings.size());
-    dsl_info.pBindings = bindings.data();
-
-    VkDescriptorSetLayoutBindingFlagsCreateInfo flags_info = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
-    if (use_update_after_bind) {
-        flags_info.bindingCount = static_cast<uint32_t>(binding_flags.size());
-        flags_info.pBindingFlags = binding_flags.data();
-        dsl_info.pNext = &flags_info;
-        dsl_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-    }
-
-    return vkCreateDescriptorSetLayout(dev->device, &dsl_info, nullptr, out_layout) == VK_SUCCESS;
-}
-
-/* ----------------------------------------------------------------------------
-   Helper: create descriptor pool and allocate descriptor set
-   ------------------------------------------------------------------------- */
-static bool create_descriptor_pool_and_set(vk_Device *dev,
-                                           const std::vector<vk_Resource *> &cbv,
-                                           const std::vector<vk_Resource *> &srv,
-                                           const std::vector<vk_Resource *> &uav,
-                                           const std::vector<vk_Sampler *> &samplers,
-                                           uint32_t bindless,
-                                           VkDescriptorSetLayout layout,
-                                           VkDescriptorPool *out_pool,
-                                           VkDescriptorSet *out_set) {
-    std::unordered_map<VkDescriptorType, uint32_t> type_counts;
-    auto count_type = [&](VkDescriptorType type, uint32_t count = 1) {
-        type_counts[type] += count;
-    };
-
-    if (bindless == 0) {
-        for (size_t i = 0; i < cbv.size(); ++i)
-            count_type(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-        for (vk_Resource *res : srv) {
-            VkDescriptorType type = res->buffer
-                ? (res->buffer_view ? VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-                : VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            count_type(type);
-        }
-        for (vk_Resource *res : uav) {
-            VkDescriptorType type = res->buffer
-                ? (res->buffer_view ? VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
-                : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            count_type(type);
-        }
-        for (size_t i = 0; i < samplers.size(); ++i)
-            count_type(VK_DESCRIPTOR_TYPE_SAMPLER);
-    } else {
-        if (dev->supports_bindless) {
-            count_type(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, bindless);
-            count_type(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, bindless);
-            count_type(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, bindless);
-            for (size_t i = 0; i < samplers.size(); ++i)
-                count_type(VK_DESCRIPTOR_TYPE_SAMPLER);
-        }
-    }
-
-    std::vector<VkDescriptorPoolSize> pool_sizes;
-    for (const auto &kv : type_counts) {
-        VkDescriptorPoolSize ps = { kv.first, kv.second };
-        pool_sizes.push_back(ps);
-    }
-
-    VkDescriptorPoolCreateInfo dp_info = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-    dp_info.maxSets = 1;
-    dp_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
-    dp_info.pPoolSizes = pool_sizes.data();
-    if (bindless > 0 && dev->supports_bindless)
-        dp_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-
-    if (vkCreateDescriptorPool(dev->device, &dp_info, nullptr, out_pool) != VK_SUCCESS)
-        return false;
-
-    VkDescriptorSetAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-    alloc_info.descriptorPool = *out_pool;
-    alloc_info.descriptorSetCount = 1;
-    alloc_info.pSetLayouts = &layout;
-
-    return vkAllocateDescriptorSets(dev->device, &alloc_info, out_set) == VK_SUCCESS;
-}
-
-/* ----------------------------------------------------------------------------
-   Helper: write descriptors into the set
-   ------------------------------------------------------------------------- */
-static void write_descriptors(vk_Device *dev,
-                              VkDescriptorSet set,
-                              const std::vector<vk_Resource *> &cbv,
-                              const std::vector<vk_Resource *> &srv,
-                              const std::vector<vk_Resource *> &uav,
-                              const std::vector<vk_Sampler *> &samplers,
-                              uint32_t bindless) {
-    std::vector<VkWriteDescriptorSet> writes;
-    std::vector<VkDescriptorBufferInfo> buffer_infos;
-    std::vector<VkDescriptorImageInfo> image_infos;
-    std::vector<VkBufferView> buffer_views;
-
-    auto add_write = [&](uint32_t binding, VkDescriptorType type,
-                         VkDescriptorBufferInfo *buf_info = nullptr,
-                         VkDescriptorImageInfo *img_info = nullptr,
-                         VkBufferView *buf_view = nullptr) {
-        VkWriteDescriptorSet w = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-        w.dstSet = set;
-        w.dstBinding = binding;
-        w.descriptorCount = 1;
-        w.descriptorType = type;
-        if (buf_info) w.pBufferInfo = buf_info;
-        if (img_info) w.pImageInfo = img_info;
-        if (buf_view) w.pTexelBufferView = buf_view;
-        writes.push_back(w);
-    };
-
-    if (bindless == 0) {
-        uint32_t idx = 0;
-        for (vk_Resource *res : cbv)
-            add_write(idx++, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &res->descriptor_buffer_info);
-        idx = 1024;
-        for (vk_Resource *res : srv) {
-            if (res->buffer) {
-                if (res->buffer_view) {
-                    add_write(idx, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, nullptr, nullptr, &res->buffer_view);
-                } else {
-                    add_write(idx, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &res->descriptor_buffer_info);
-                }
-            } else {
-                add_write(idx, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, nullptr, &res->descriptor_image_info);
-            }
-            ++idx;
-        }
-        idx = 2048;
-        for (vk_Resource *res : uav) {
-            if (res->buffer) {
-                if (res->buffer_view) {
-                    add_write(idx, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, nullptr, nullptr, &res->buffer_view);
-                } else {
-                    add_write(idx, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, &res->descriptor_buffer_info);
-                }
-            } else {
-                add_write(idx, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, nullptr, &res->descriptor_image_info);
-            }
-            ++idx;
-        }
-        idx = 3072;
-        for (vk_Sampler *samp : samplers) {
-            add_write(idx++, VK_DESCRIPTOR_TYPE_SAMPLER, nullptr, &samp->descriptor_image_info);
-        }
-    } else {
-        // Bindless: we need to write arrays
-        // For simplicity, we'll write one element at a time using array index
-        // (Vulkan allows writing individual elements of an array binding)
-        for (size_t i = 0; i < cbv.size(); ++i) {
-            add_write(i, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &cbv[i]->descriptor_buffer_info);
-        }
-        for (size_t i = 0; i < srv.size(); ++i) {
-            vk_Resource *res = srv[i];
-            if (res->image) {
-                add_write(1024 + i, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, nullptr, &res->descriptor_image_info);
-            } else {
-                // In bindless, we only support images for SRV; buffers would need separate array.
-                // For simplicity, we assume images only.
-            }
-        }
-        for (size_t i = 0; i < uav.size(); ++i) {
-            vk_Resource *res = uav[i];
-            if (res->image) {
-                add_write(2048 + i, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, nullptr, &res->descriptor_image_info);
-            }
-        }
-        uint32_t idx = 3072;
-        for (vk_Sampler *samp : samplers) {
-            add_write(idx++, VK_DESCRIPTOR_TYPE_SAMPLER, nullptr, &samp->descriptor_image_info);
-        }
-    }
-
-    vkUpdateDescriptorSets(dev->device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
-}
-
-/* ----------------------------------------------------------------------------
-   vk_Device_create_compute_impl (called from vk_Device_create_compute)
-   ------------------------------------------------------------------------- */
+/**
+ * Internal implementation of Device.create_compute().
+ * Creates a compute pipeline, descriptor set layout, descriptor pool,
+ * and descriptor set from the provided shader and resource lists.
+ *
+ * @param self   vk.Device instance.
+ * @param args   Tuple containing shader bytes and optional lists.
+ * @param kwds   Keyword arguments (cbv, srv, uav, samplers, push_size, bindless).
+ * @return       New vk.Compute object or NULL with Python exception set.
+ */
 PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObject *kwds) {
-    static const char *kwlist[] = {"shader", "cbv", "srv", "uav", "samplers", "push_size", "bindless", nullptr};
+    static const char *kwlist[] = {"shader", "cbv", "srv", "uav", "samplers",
+                                   "push_size", "bindless", nullptr};
     Py_buffer shader_view;
     PyObject *cbv_list = nullptr, *srv_list = nullptr, *uav_list = nullptr, *samplers_list = nullptr;
     uint32_t push_size = 0;
@@ -297,16 +66,18 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
                                      &samplers_list, &push_size, &bindless))
         return nullptr;
 
+    // Ensure device is initialized
     vk_Device *dev = vk_Device_get_initialized(self);
     if (!dev) {
         PyBuffer_Release(&shader_view);
         return nullptr;
     }
 
-    // Collect resource lists
+    // Collect resource lists and validate
     std::vector<vk_Resource *> cbv, srv, uav;
     std::vector<vk_Sampler *> samplers;
-    if (!vk_check_descriptor_lists(&vk_Resource_Type, cbv_list, cbv, srv_list, srv, uav_list, uav,
+    if (!vk_check_descriptor_lists(&vk_Resource_Type, cbv_list, cbv,
+                                   srv_list, srv, uav_list, uav,
                                    &vk_Sampler_Type, samplers_list, samplers)) {
         PyBuffer_Release(&shader_view);
         return nullptr;
@@ -315,11 +86,11 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
     // Check bindless support
     if (bindless > 0 && !dev->supports_bindless) {
         PyBuffer_Release(&shader_view);
-        PyErr_SetString(PyExc_ValueError, "Bindless not supported on this device");
+        PyErr_SetString(vk_ComputeError, "Bindless not supported on this device");
         return nullptr;
     }
 
-    // SPIR‑V patching for BGRA UAVs on Intel (if needed)
+    // SPIR‑V patching for BGRA UAVs if needed
     const uint32_t *spirv_code = static_cast<const uint32_t *>(shader_view.buf);
     size_t spirv_size = shader_view.len;
     uint32_t *patched_code = nullptr;
@@ -327,12 +98,13 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
     if (!dev->features.shaderStorageImageReadWithoutFormat) {
         uint32_t binding = 2048;
         for (vk_Resource *res : uav) {
-            if (res->image && (res->format == VK_FORMAT_B8G8R8A8_UNORM || res->format == VK_FORMAT_B8G8R8A8_SRGB)) {
+            if (res->image && (res->format == VK_FORMAT_B8G8R8A8_UNORM ||
+                               res->format == VK_FORMAT_B8G8R8A8_SRGB)) {
                 patched_code = vk_spirv_patch_nonreadable_uav(spirv_code, spirv_size, binding);
                 if (patched_code) {
                     spirv_code = patched_code;
                     spirv_size += 12; // 3 words added
-                    break; // only patch once (first UAV)
+                    break;
                 }
             }
             ++binding;
@@ -344,7 +116,7 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
     if (!entry_point) {
         if (patched_code) PyMem_Free(patched_code);
         PyBuffer_Release(&shader_view);
-        PyErr_SetString(PyExc_ValueError, "Invalid SPIR‑V or no compute entry point");
+        PyErr_SetString(vk_ComputeError, "Invalid SPIR‑V or no compute entry point");
         return nullptr;
     }
 
@@ -356,17 +128,14 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
     VkResult res = vkCreateShaderModule(dev->device, &sm_info, nullptr, &shader_module);
     if (patched_code) PyMem_Free(patched_code);
     PyBuffer_Release(&shader_view);
-    if (res != VK_SUCCESS) {
-        PyErr_Format(vk_ComputeError, "Failed to create shader module (error %d)", res);
-        return nullptr;
-    }
+    VK_CHECK_OR_RETURN_NULL(res, vk_ComputeError, "Failed to create shader module");
 
     // Create descriptor set layout
     VkDescriptorSetLayout dsl;
-    if (!create_descriptor_set_layout(dev, cbv, srv, uav, samplers, bindless, &dsl)) {
+    if (!vk_create_compute_descriptor_set_layout(dev, cbv, srv, uav, samplers,
+                                                 bindless, &dsl)) {
         vkDestroyShaderModule(dev->device, shader_module, nullptr);
-        PyErr_SetString(vk_ComputeError, "Failed to create descriptor set layout");
-        return nullptr;
+        return nullptr; // error already set
     }
 
     // Create pipeline layout
@@ -379,10 +148,11 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
         pl_info.pPushConstantRanges = &pc_range;
     }
     VkPipelineLayout pipeline_layout;
-    if (vkCreatePipelineLayout(dev->device, &pl_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
+    res = vkCreatePipelineLayout(dev->device, &pl_info, nullptr, &pipeline_layout);
+    if (res != VK_SUCCESS) {
         vkDestroyDescriptorSetLayout(dev->device, dsl, nullptr);
         vkDestroyShaderModule(dev->device, shader_module, nullptr);
-        PyErr_SetString(vk_ComputeError, "Failed to create pipeline layout");
+        PyErr_Format(vk_ComputeError, "Failed to create pipeline layout (error %d)", res);
         return nullptr;
     }
 
@@ -403,36 +173,31 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
         return nullptr;
     }
 
-    // Create descriptor pool and allocate set
+    // Allocate descriptor pool and write descriptor set
     VkDescriptorPool descriptor_pool;
     VkDescriptorSet descriptor_set;
-    if (!create_descriptor_pool_and_set(dev, cbv, srv, uav, samplers, bindless, dsl,
-                                        &descriptor_pool, &descriptor_set)) {
+    if (!vk_allocate_and_write_descriptor_set(dev, cbv, srv, uav, samplers,
+                                              bindless, dsl,
+                                              &descriptor_pool, &descriptor_set)) {
         vkDestroyPipeline(dev->device, pipeline, nullptr);
         vkDestroyPipelineLayout(dev->device, pipeline_layout, nullptr);
         vkDestroyDescriptorSetLayout(dev->device, dsl, nullptr);
         vkDestroyShaderModule(dev->device, shader_module, nullptr);
-        PyErr_SetString(vk_ComputeError, "Failed to create descriptor pool/set");
-        return nullptr;
+        return nullptr; // error already set
     }
 
-    // Write descriptors
-    write_descriptors(dev, descriptor_set, cbv, srv, uav, samplers, bindless);
-
-    // Create dispatch fence
-    VkFenceCreateInfo finfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    VkFence dispatch_fence;
-    if (vkCreateFence(dev->device, &finfo, nullptr, &dispatch_fence) != VK_SUCCESS) {
+    // Create dispatch fence (used for synchronisation)
+    VkFence dispatch_fence = vk_create_fence(dev);
+    if (!dispatch_fence) {
         vkDestroyDescriptorPool(dev->device, descriptor_pool, nullptr);
         vkDestroyPipeline(dev->device, pipeline, nullptr);
         vkDestroyPipelineLayout(dev->device, pipeline_layout, nullptr);
         vkDestroyDescriptorSetLayout(dev->device, dsl, nullptr);
         vkDestroyShaderModule(dev->device, shader_module, nullptr);
-        PyErr_SetString(vk_ComputeError, "Failed to create dispatch fence");
         return nullptr;
     }
 
-    // Allocate Compute object
+    // Allocate Python object
     vk_Compute *comp = PyObject_New(vk_Compute, &vk_Compute_Type);
     if (!comp) {
         vkDestroyFence(dev->device, dispatch_fence, nullptr);
@@ -464,21 +229,18 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
     comp->py_srv_list = PyList_New(num_srv);
     comp->py_uav_list = PyList_New(num_uav);
     comp->py_samplers_list = PyList_New(0);
-    for (size_t i = 0; i < num_cbv; ++i) {
-        PyObject *item = (i < cbv.size()) ? reinterpret_cast<PyObject *>(cbv[i]) : Py_None;
-        Py_INCREF(item);
-        PyList_SetItem(comp->py_cbv_list, i, item);
-    }
-    for (size_t i = 0; i < num_srv; ++i) {
-        PyObject *item = (i < srv.size()) ? reinterpret_cast<PyObject *>(srv[i]) : Py_None;
-        Py_INCREF(item);
-        PyList_SetItem(comp->py_srv_list, i, item);
-    }
-    for (size_t i = 0; i < num_uav; ++i) {
-        PyObject *item = (i < uav.size()) ? reinterpret_cast<PyObject *>(uav[i]) : Py_None;
-        Py_INCREF(item);
-        PyList_SetItem(comp->py_uav_list, i, item);
-    }
+
+    auto fill_list = [](PyObject *list, size_t count, const auto &vec) {
+        for (size_t i = 0; i < count; ++i) {
+            PyObject *item = (i < vec.size()) ? reinterpret_cast<PyObject *>(vec[i]) : Py_None;
+            Py_INCREF(item);
+            PyList_SetItem(list, i, item);
+        }
+    };
+    fill_list(comp->py_cbv_list, num_cbv, cbv);
+    fill_list(comp->py_srv_list, num_srv, srv);
+    fill_list(comp->py_uav_list, num_uav, uav);
+
     for (vk_Sampler *samp : samplers) {
         PyList_Append(comp->py_samplers_list, reinterpret_cast<PyObject *>(samp));
     }
@@ -489,21 +251,16 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
 /* ----------------------------------------------------------------------------
    Dispatch methods
    ------------------------------------------------------------------------- */
-static VkResult submit_and_wait(vk_Device *dev, VkCommandBuffer cmd, VkFence fence) {
-    VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-    submit.commandBufferCount = 1;
-    submit.pCommandBuffers = &cmd;
-    VkResult res = vkQueueSubmit(dev->queue, 1, &submit, fence);
-    if (res != VK_SUCCESS) return res;
-    if (fence) {
-        Py_BEGIN_ALLOW_THREADS;
-        vkWaitForFences(dev->device, 1, &fence, VK_TRUE, UINT64_MAX);
-        vkResetFences(dev->device, 1, &fence);
-        Py_END_ALLOW_THREADS;
-    }
-    return VK_SUCCESS;
-}
 
+/**
+ * Execute a single compute dispatch.
+ *
+ * Args:
+ *     x (int): number of groups in X.
+ *     y (int): number of groups in Y.
+ *     z (int): number of groups in Z.
+ *     push_data (bytes, optional): push constant data (must be multiple of 4).
+ */
 PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args) {
     uint32_t x, y, z;
     Py_buffer push = {0};
@@ -519,39 +276,51 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args) {
     }
 
     vk_Device *dev = self->py_device;
-    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
-    if (!cmd) {
-        if (push.buf) PyBuffer_Release(&push);
-        PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
-        return nullptr;
-    }
 
-    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    vkBeginCommandBuffer(cmd, &begin);
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, self->pipeline);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, self->pipeline_layout,
-                            0, 1, &self->descriptor_set, 0, nullptr);
-    if (push.len > 0) {
-        vkCmdPushConstants(cmd, self->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT,
-                           0, static_cast<uint32_t>(push.len), push.buf);
-    }
-    vkCmdDispatch(cmd, x, y, z);
-    vkEndCommandBuffer(cmd);
+    // Record and execute command buffer using one‑shot helper
+    bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, self->pipeline);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                self->pipeline_layout, 0, 1, &self->descriptor_set, 0, nullptr);
+        if (push.len > 0) {
+            vkCmdPushConstants(cmd, self->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT,
+                               0, static_cast<uint32_t>(push.len), push.buf);
+        }
+        vkCmdDispatch(cmd, x, y, z);
+
+        // Make writes available to future command buffers (especially the copy in present)
+        VkMemoryBarrier mem_barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+        mem_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        mem_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;  // Broad availability
+        vkCmdPipelineBarrier(cmd,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,  // All subsequent commands see the writes
+            0, 1, &mem_barrier, 0, nullptr, 0, nullptr);
+            });
 
     if (push.buf) PyBuffer_Release(&push);
+    if (!ok) return nullptr;
 
-    VkResult res = submit_and_wait(dev, cmd, self->dispatch_fence);
-    vk_free_temp_cmd(dev, cmd);
-    if (res != VK_SUCCESS) {
-        PyErr_Format(PyExc_RuntimeError, "Dispatch submission failed (error %d)", res);
-        return nullptr;
-    }
     Py_RETURN_NONE;
 }
 
 /* ----------------------------------------------------------------------------
-   dispatch_sequence - complex sequence with optional copy and present
+   dispatch_sequence
    ------------------------------------------------------------------------- */
+/**
+ * Execute a sequence of compute dispatches with optional pre‑copy and presentation.
+ *
+ * Args (keyword arguments):
+ *     sequence (list): list of 5‑tuples (compute, x, y, z, push_data).
+ *     copy_src (vk.Resource, optional): source buffer to copy to texture.
+ *     copy_dst (vk.Resource, optional): destination texture.
+ *     copy_slice (int, optional): texture array slice.
+ *     present_image (vk.Resource, optional): texture to transition for present.
+ *     timestamps (bool, optional): enable timestamp queries.
+ *
+ * Returns:
+ *     If timestamps enabled, returns (None, timestamps_list). Else None.
+ */
 PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObject *kwds) {
     static const char *kwlist[] = {"sequence", "copy_src", "copy_dst", "copy_slice",
                                    "present_image", "timestamps", nullptr};
@@ -568,7 +337,7 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
 
     Py_ssize_t num_items = PyList_Size(sequence_list);
 
-    // Validate copy resources if provided
+    // Validate and collect resources
     vk_Resource *src_buf = nullptr, *dst_img = nullptr, *present_img = nullptr;
     vk_Device *dev = nullptr;
     if (copy_src_obj != Py_None && copy_dst_obj != Py_None) {
@@ -606,7 +375,7 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
         }
     }
 
-    // Parse sequence and determine device
+    // Parse sequence of dispatches
     std::vector<vk_Compute *> comps;
     std::vector<uint32_t> xs, ys, zs;
     std::vector<PyObject *> pushes;
@@ -661,135 +430,85 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
                 ts_before.push_back(base++);
                 ts_after.push_back(base++);
             }
-            if (present_img) {
-                ts_present_before = base++;
-                ts_present_after = base++;
-            }
         } else {
             use_timestamps = false;
         }
     }
 
-    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
-    if (!cmd) {
-        for (auto p : pushes) Py_DECREF(p);
-        PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
-        return nullptr;
-    }
-
-    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    vkBeginCommandBuffer(cmd, &begin);
-
-    if (use_timestamps) {
-        vkCmdResetQueryPool(cmd, dev->timestamp_pool, 0, total_ts);
-        vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, dev->timestamp_pool, 0);
-    }
-
-    // Optional pre‑copy
-    if (src_buf && dst_img) {
+    // Record command buffer (using one‑shot execution)
+    bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
         if (use_timestamps) {
-            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, dev->timestamp_pool, ts_copy_before);
+            vkCmdResetQueryPool(cmd, dev->timestamp_pool, 0, total_ts);
+            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                dev->timestamp_pool, 0);
         }
-        vk_image_barrier(cmd, dst_img->image,
-                         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-                         0, 1, copy_slice, 1);
-        VkBufferImageCopy region = {};
-        region.bufferOffset = 0;
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.baseArrayLayer = static_cast<uint32_t>(copy_slice);
-        region.imageSubresource.layerCount = 1;
-        region.imageExtent = dst_img->image_extent;
-        vkCmdCopyBufferToImage(cmd, src_buf->buffer, dst_img->image,
-                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-        vk_image_barrier(cmd, dst_img->image,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                         VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-                         0, 1, copy_slice, 1);
-        if (use_timestamps) {
-            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, dev->timestamp_pool, ts_copy_after);
-        }
-    }
 
-    // Dispatches
-    for (Py_ssize_t i = 0; i < num_items; ++i) {
-        vk_Compute *comp = comps[i];
-        if (use_timestamps) {
-            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dev->timestamp_pool, ts_before[i]);
-        }
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, comp->pipeline);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, comp->pipeline_layout,
-                                0, 1, &comp->descriptor_set, 0, nullptr);
-        if (pushes[i] != Py_None) {
-            Py_buffer view;
-            if (PyObject_GetBuffer(pushes[i], &view, PyBUF_SIMPLE) < 0) {
-                vkEndCommandBuffer(cmd);
-                vk_free_temp_cmd(dev, cmd);
-                for (auto p : pushes) Py_DECREF(p);
-                return nullptr;
+        // Pre‑copy from buffer to texture
+        if (src_buf && dst_img) {
+            if (use_timestamps) {
+                vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                    dev->timestamp_pool, ts_copy_before);
             }
-            if (view.len > 0) {
-                vkCmdPushConstants(cmd, comp->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT,
-                                   0, static_cast<uint32_t>(view.len), view.buf);
+            vk_cmd_transition_for_copy_dst(cmd, dst_img->image, copy_slice, 1);
+            VkBufferImageCopy region = {};
+            region.bufferOffset = 0;
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.baseArrayLayer = static_cast<uint32_t>(copy_slice);
+            region.imageSubresource.layerCount = 1;
+            region.imageExtent = dst_img->image_extent;
+            vkCmdCopyBufferToImage(cmd, src_buf->buffer, dst_img->image,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            vk_cmd_transition_for_compute(cmd, dst_img->image, copy_slice, 1);
+            if (use_timestamps) {
+                vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                    dev->timestamp_pool, ts_copy_after);
             }
-            PyBuffer_Release(&view);
         }
-        vkCmdDispatch(cmd, xs[i], ys[i], zs[i]);
-        if (use_timestamps) {
-            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dev->timestamp_pool, ts_after[i]);
-        }
-        if (i < num_items - 1 || present_img) {
-            VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
-            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
-                                 1, &barrier, 0, nullptr, 0, nullptr);
-        }
-    }
 
-    // Optional present transition
-    if (present_img) {
-        if (use_timestamps) {
-            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dev->timestamp_pool, ts_present_before);
+        // Dispatches
+        for (Py_ssize_t i = 0; i < num_items; ++i) {
+            vk_Compute *comp = comps[i];
+            if (use_timestamps) {
+                vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                    dev->timestamp_pool, ts_before[i]);
+            }
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, comp->pipeline);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                    comp->pipeline_layout, 0, 1, &comp->descriptor_set, 0, nullptr);
+            if (pushes[i] != Py_None) {
+                Py_buffer view;
+                if (PyObject_GetBuffer(pushes[i], &view, PyBUF_SIMPLE) < 0) {
+                    // Cleanup handled by caller
+                    return;
+                }
+                if (view.len > 0) {
+                    vkCmdPushConstants(cmd, comp->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT,
+                                       0, static_cast<uint32_t>(view.len), view.buf);
+                }
+                PyBuffer_Release(&view);
+            }
+            vkCmdDispatch(cmd, xs[i], ys[i], zs[i]);
+            if (use_timestamps) {
+                vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                    dev->timestamp_pool, ts_after[i]);
+            }
+            // Memory barrier between dispatches
+            if (i < num_items - 1 || present_img) {
+                VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+                barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
+                                     1, &barrier, 0, nullptr, 0, nullptr);
+            }
         }
-        vk_image_barrier(cmd, present_img->image,
-                         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         VK_ACCESS_SHADER_WRITE_BIT, 0,
-                         0, 1, 0, 1);
-        if (use_timestamps) {
-            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, dev->timestamp_pool, ts_present_after);
-        }
-    }
+    });
 
-    vkEndCommandBuffer(cmd);
-
-    VkFence fence = (num_items > 0) ? comps[0]->dispatch_fence : VK_NULL_HANDLE;
-    VkFence temp_fence = VK_NULL_HANDLE;
-    if (fence == VK_NULL_HANDLE) {
-        VkFenceCreateInfo finfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-        vkCreateFence(dev->device, &finfo, nullptr, &temp_fence);
-        fence = temp_fence;
-    } else {
-        vkResetFences(dev->device, 1, &fence);
-    }
-
-    VkResult res = submit_and_wait(dev, cmd, fence);
-    vk_free_temp_cmd(dev, cmd);
     for (auto p : pushes) Py_DECREF(p);
+    if (!ok) return nullptr;
 
-    if (temp_fence) vkDestroyFence(dev->device, temp_fence, nullptr);
-
-    if (res != VK_SUCCESS) {
-        PyErr_Format(PyExc_RuntimeError, "Sequence submission failed (error %d)", res);
-        return nullptr;
-    }
-
+    // Read timestamps if requested
     if (use_timestamps) {
-        // Read timestamps
         uint64_t *ts_data = (uint64_t *)PyMem_Malloc(total_ts * sizeof(uint64_t));
         vkGetQueryPoolResults(dev->device, dev->timestamp_pool, 0, total_ts,
                               total_ts * sizeof(uint64_t), ts_data, sizeof(uint64_t),
@@ -814,8 +533,11 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
    Compute type definition
    ------------------------------------------------------------------------- */
 static PyMethodDef vk_Compute_methods[] = {
-    {"dispatch", (PyCFunction)vk_Compute_dispatch, METH_VARARGS, "Execute compute pipeline."},
-    {"dispatch_sequence", (PyCFunction)vk_Compute_dispatch_sequence, METH_VARARGS | METH_KEYWORDS, "Execute sequence of dispatches."},
+    {"dispatch", (PyCFunction)vk_Compute_dispatch, METH_VARARGS,
+     "Execute compute pipeline with given group count."},
+    {"dispatch_sequence", (PyCFunction)vk_Compute_dispatch_sequence,
+     METH_VARARGS | METH_KEYWORDS,
+     "Execute a sequence of dispatches with optional copy and present."},
     {nullptr, nullptr, 0, nullptr}
 };
 

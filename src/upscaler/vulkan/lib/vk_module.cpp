@@ -1,3 +1,11 @@
+/**
+ * @file vk_module.cpp
+ * @brief Python module initialisation for the 'vulkan' extension.
+ *
+ * This file defines the module's methods, constants, and exception types.
+ * It also populates the pixel format mapping table.
+ */
+
 #include "vk_common.h"
 #include "vk_instance.h"
 #include "vk_device.h"
@@ -8,7 +16,7 @@
 #include "vk_swapchain.h"
 
 /* ----------------------------------------------------------------------------
-   Error objects
+   Exception objects (exposed as vulkan.ErrorName)
    ------------------------------------------------------------------------- */
 PyObject *vk_Texture2DError = nullptr;
 PyObject *vk_BufferError = nullptr;
@@ -20,22 +28,22 @@ PyObject *vk_Texture1DError = nullptr;
 PyObject *vk_Texture3DError = nullptr;
 
 /* ----------------------------------------------------------------------------
-   Module methods
+   Module method table
    ------------------------------------------------------------------------- */
 static PyMethodDef vulkan_module_methods[] = {
     {"get_discovered_devices", (PyCFunction)vk_get_discovered_devices, METH_NOARGS,
-     "Return a list of all Vulkan devices in the system."},
+     "Return a list of all Vulkan physical devices in the system."},
     {"enable_debug", (PyCFunction)vk_enable_debug_mode, METH_NOARGS,
-     "Enable Vulkan debug output."},
+     "Enable Vulkan debug output (validation layers and debug utils)."},
     {"get_shader_binary_type", (PyCFunction)vk_get_shader_binary_type, METH_NOARGS,
-     "Return the required shader binary type (SPIR‑V = 1)."},
+     "Return the required shader binary type (1 = SPIR‑V)."},
     {nullptr, nullptr, 0, nullptr}
 };
 
 static struct PyModuleDef vulkan_module = {
     PyModuleDef_HEAD_INIT,
     "vulkan",
-    nullptr,
+    "Low‑level Vulkan bindings with compute and presentation support.",
     -1,
     vulkan_module_methods
 };
@@ -47,7 +55,7 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
     PyObject *m = PyModule_Create(&vulkan_module);
     if (!m) return nullptr;
 
-    // Create error objects
+    // Create and register exception types
     #define MAKE_ERR(name) \
         vk_##name = PyErr_NewException("vulkan." #name, nullptr, nullptr); \
         PyModule_AddObject(m, #name, vk_##name);
@@ -63,7 +71,7 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
 
     #undef MAKE_ERR
 
-    // Register all types
+    // Register all Python types
     #define READY_TYPE(type) \
         if (PyType_Ready(&vk_##type##_Type) < 0) return nullptr; \
         PyModule_AddObject(m, #type, (PyObject *)&vk_##type##_Type);
@@ -77,10 +85,13 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
 
     #undef READY_TYPE
 
-    // Populate format map
-    #define VK_FORMAT_MAP(fmt, size) vk_format_map[fmt] = { VK_FORMAT_##fmt, size }
-    #define VK_FORMAT_MAP_FLOAT(fmt, size) vk_format_map[fmt##_FLOAT] = { VK_FORMAT_##fmt##_SFLOAT, size }
-    #define VK_FORMAT_MAP_SRGB(fmt, size) vk_format_map[fmt##_UNORM_SRGB] = { VK_FORMAT_##fmt##_SRGB, size }
+    // Populate the format map (pixel constant -> VkFormat, bytes per pixel)
+    #define VK_FORMAT_MAP(fmt, size) \
+        vk_format_map[fmt] = { VK_FORMAT_##fmt, size }
+    #define VK_FORMAT_MAP_FLOAT(fmt, size) \
+        vk_format_map[fmt##_FLOAT] = { VK_FORMAT_##fmt##_SFLOAT, size }
+    #define VK_FORMAT_MAP_SRGB(fmt, size) \
+        vk_format_map[fmt##_UNORM_SRGB] = { VK_FORMAT_##fmt##_SRGB, size }
 
     VK_FORMAT_MAP_FLOAT(R32G32B32A32, 16);
     VK_FORMAT_MAP(R32G32B32A32_UINT, 16);
@@ -127,7 +138,7 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
     vk_format_map[R10G10B10A2_UNORM] = { VK_FORMAT_A2B10G10R10_UNORM_PACK32, 4 };
     vk_format_map[R10G10B10A2_UINT]  = { VK_FORMAT_A2B10G10R10_UINT_PACK32, 4 };
 
-        // Shader binary type
+    // Module constants
     PyModule_AddIntConstant(m, "SHADER_BINARY_TYPE_SPIRV", 1);
 
     // Sampler filters
@@ -144,51 +155,55 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
     PyModule_AddIntConstant(m, "HEAP_UPLOAD", 1);
     PyModule_AddIntConstant(m, "HEAP_READBACK", 2);
 
-    // Pixel formats (expose the same numeric constants to Python)
-    PyModule_AddIntConstant(m, "R32G32B32A32_FLOAT", R32G32B32A32_FLOAT);
-    PyModule_AddIntConstant(m, "R32G32B32A32_UINT", R32G32B32A32_UINT);
-    PyModule_AddIntConstant(m, "R32G32B32A32_SINT", R32G32B32A32_SINT);
-    PyModule_AddIntConstant(m, "R32G32B32_FLOAT", R32G32B32_FLOAT);
-    PyModule_AddIntConstant(m, "R32G32B32_UINT", R32G32B32_UINT);
-    PyModule_AddIntConstant(m, "R32G32B32_SINT", R32G32B32_SINT);
-    PyModule_AddIntConstant(m, "R16G16B16A16_FLOAT", R16G16B16A16_FLOAT);
-    PyModule_AddIntConstant(m, "R16G16B16A16_UNORM", R16G16B16A16_UNORM);
-    PyModule_AddIntConstant(m, "R16G16B16A16_UINT", R16G16B16A16_UINT);
-    PyModule_AddIntConstant(m, "R16G16B16A16_SNORM", R16G16B16A16_SNORM);
-    PyModule_AddIntConstant(m, "R16G16B16A16_SINT", R16G16B16A16_SINT);
-    PyModule_AddIntConstant(m, "R32G32_FLOAT", R32G32_FLOAT);
-    PyModule_AddIntConstant(m, "R32G32_UINT", R32G32_UINT);
-    PyModule_AddIntConstant(m, "R32G32_SINT", R32G32_SINT);
-    PyModule_AddIntConstant(m, "R10G10B10A2_UNORM", R10G10B10A2_UNORM);
-    PyModule_AddIntConstant(m, "R10G10B10A2_UINT", R10G10B10A2_UINT);
-    PyModule_AddIntConstant(m, "R8G8B8A8_UNORM", R8G8B8A8_UNORM);
-    PyModule_AddIntConstant(m, "R8G8B8A8_UNORM_SRGB", R8G8B8A8_UNORM_SRGB);
-    PyModule_AddIntConstant(m, "R8G8B8A8_UINT", R8G8B8A8_UINT);
-    PyModule_AddIntConstant(m, "R8G8B8A8_SNORM", R8G8B8A8_SNORM);
-    PyModule_AddIntConstant(m, "R8G8B8A8_SINT", R8G8B8A8_SINT);
-    PyModule_AddIntConstant(m, "R16G16_FLOAT", R16G16_FLOAT);
-    PyModule_AddIntConstant(m, "R16G16_UNORM", R16G16_UNORM);
-    PyModule_AddIntConstant(m, "R16G16_UINT", R16G16_UINT);
-    PyModule_AddIntConstant(m, "R16G16_SNORM", R16G16_SNORM);
-    PyModule_AddIntConstant(m, "R16G16_SINT", R16G16_SINT);
-    PyModule_AddIntConstant(m, "R32_FLOAT", R32_FLOAT);
-    PyModule_AddIntConstant(m, "R32_UINT", R32_UINT);
-    PyModule_AddIntConstant(m, "R32_SINT", R32_SINT);
-    PyModule_AddIntConstant(m, "R8G8_UNORM", R8G8_UNORM);
-    PyModule_AddIntConstant(m, "R8G8_UINT", R8G8_UINT);
-    PyModule_AddIntConstant(m, "R8G8_SNORM", R8G8_SNORM);
-    PyModule_AddIntConstant(m, "R8G8_SINT", R8G8_SINT);
-    PyModule_AddIntConstant(m, "R16_FLOAT", R16_FLOAT);
-    PyModule_AddIntConstant(m, "R16_UNORM", R16_UNORM);
-    PyModule_AddIntConstant(m, "R16_UINT", R16_UINT);
-    PyModule_AddIntConstant(m, "R16_SNORM", R16_SNORM);
-    PyModule_AddIntConstant(m, "R16_SINT", R16_SINT);
-    PyModule_AddIntConstant(m, "R8_UNORM", R8_UNORM);
-    PyModule_AddIntConstant(m, "R8_UINT", R8_UINT);
-    PyModule_AddIntConstant(m, "R8_SNORM", R8_SNORM);
-    PyModule_AddIntConstant(m, "R8_SINT", R8_SINT);
-    PyModule_AddIntConstant(m, "B8G8R8A8_UNORM", B8G8R8A8_UNORM);
-    PyModule_AddIntConstant(m, "B8G8R8A8_UNORM_SRGB", B8G8R8A8_UNORM_SRGB);
+    // Pixel formats (expose numeric constants)
+    #define ADD_CONST(name) PyModule_AddIntConstant(m, #name, name)
+
+    ADD_CONST(R32G32B32A32_FLOAT);
+    ADD_CONST(R32G32B32A32_UINT);
+    ADD_CONST(R32G32B32A32_SINT);
+    ADD_CONST(R32G32B32_FLOAT);
+    ADD_CONST(R32G32B32_UINT);
+    ADD_CONST(R32G32B32_SINT);
+    ADD_CONST(R16G16B16A16_FLOAT);
+    ADD_CONST(R16G16B16A16_UNORM);
+    ADD_CONST(R16G16B16A16_UINT);
+    ADD_CONST(R16G16B16A16_SNORM);
+    ADD_CONST(R16G16B16A16_SINT);
+    ADD_CONST(R32G32_FLOAT);
+    ADD_CONST(R32G32_UINT);
+    ADD_CONST(R32G32_SINT);
+    ADD_CONST(R10G10B10A2_UNORM);
+    ADD_CONST(R10G10B10A2_UINT);
+    ADD_CONST(R8G8B8A8_UNORM);
+    ADD_CONST(R8G8B8A8_UNORM_SRGB);
+    ADD_CONST(R8G8B8A8_UINT);
+    ADD_CONST(R8G8B8A8_SNORM);
+    ADD_CONST(R8G8B8A8_SINT);
+    ADD_CONST(R16G16_FLOAT);
+    ADD_CONST(R16G16_UNORM);
+    ADD_CONST(R16G16_UINT);
+    ADD_CONST(R16G16_SNORM);
+    ADD_CONST(R16G16_SINT);
+    ADD_CONST(R32_FLOAT);
+    ADD_CONST(R32_UINT);
+    ADD_CONST(R32_SINT);
+    ADD_CONST(R8G8_UNORM);
+    ADD_CONST(R8G8_UINT);
+    ADD_CONST(R8G8_SNORM);
+    ADD_CONST(R8G8_SINT);
+    ADD_CONST(R16_FLOAT);
+    ADD_CONST(R16_UNORM);
+    ADD_CONST(R16_UINT);
+    ADD_CONST(R16_SNORM);
+    ADD_CONST(R16_SINT);
+    ADD_CONST(R8_UNORM);
+    ADD_CONST(R8_UINT);
+    ADD_CONST(R8_SNORM);
+    ADD_CONST(R8_SINT);
+    ADD_CONST(B8G8R8A8_UNORM);
+    ADD_CONST(B8G8R8A8_UNORM_SRGB);
+
+    #undef ADD_CONST
 
     return m;
 }

@@ -31,10 +31,10 @@ _lib.capture_create.argtypes = [
 _lib.capture_create.restype = ctypes.c_void_p
 
 _lib.capture_grab_damage.argtypes = [
-    ctypes.c_void_p,
-    ctypes.POINTER(ctypes.c_ubyte),
-    ctypes.POINTER(DamageRect),
-    ctypes.c_int,
+    ctypes.c_void_p,  # CaptureContext *
+    ctypes.POINTER(ctypes.c_ubyte),  # output buffer
+    ctypes.POINTER(DamageRect),  # rects array
+    ctypes.c_int,  # max_rects
 ]
 _lib.capture_grab_damage.restype = ctypes.c_int
 
@@ -83,10 +83,9 @@ class FrameGrabber:
             f"FrameGrabber initialized: {self.width}x{self.height}, tile_size={tile_size}"
         )
 
-    class FrameGrabber:
-        def get_xcb_connection(self) -> int:
-            """Return the raw xcb_connection_t* as an integer."""
-            return _lib.capture_get_xcb_connection(self._ctx)
+    def get_xcb_connection(self) -> int:
+        """Return the raw xcb_connection_t* as an integer."""
+        return _lib.capture_get_xcb_connection(self._ctx)
 
     def grab(self) -> Tuple[memoryview, bool, List[Tuple[int, int, int, int, int]]]:
         ctypes.memset(self._rects_buffer, 0, ctypes.sizeof(self._rects_buffer))

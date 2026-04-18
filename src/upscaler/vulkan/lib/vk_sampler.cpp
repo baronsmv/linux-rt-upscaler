@@ -1,5 +1,16 @@
+/**
+ * @file vk_sampler.cpp
+ * @brief Vulkan sampler implementation.
+ *
+ * A vk.Sampler encapsulates a VkSampler object used for texture sampling
+ * in shaders. It defines addressing modes and filtering.
+ */
+
 #include "vk_sampler.h"
 
+/* ----------------------------------------------------------------------------
+   Sampler deallocator
+   ------------------------------------------------------------------------- */
 void vk_Sampler_dealloc(vk_Sampler *self) {
     if (self->py_device && self->sampler) {
         vkDestroySampler(self->py_device->device, self->sampler, nullptr);
@@ -8,6 +19,9 @@ void vk_Sampler_dealloc(vk_Sampler *self) {
     Py_TYPE(self)->tp_free(reinterpret_cast<PyObject *>(self));
 }
 
+/* ----------------------------------------------------------------------------
+   Sampler type definition
+   ------------------------------------------------------------------------- */
 PyTypeObject vk_Sampler_Type = {
     PyVarObject_HEAD_INIT(nullptr, 0)
     .tp_name = "vulkan.Sampler",

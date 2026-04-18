@@ -1,5 +1,15 @@
+/**
+ * @file vk_instance.cpp
+ * @brief Vulkan instance management and device enumeration.
+ *
+ * This file creates the global VkInstance (Vulkan 1.2), sets up debug
+ * callbacks, and provides functions to list physical devices.
+ */
+
 #include "vk_instance.h"
+#include "vk_utils.h"
 #include <cstring>
+#include <vector>
 #include <xcb/xcb.h>
 #include <vulkan/vulkan_xcb.h>
 #include <vulkan/vulkan_wayland.h>
@@ -14,15 +24,16 @@ std::unordered_map<uint32_t, std::pair<VkFormat, uint32_t>> vk_format_map;
 std::vector<std::string> vk_debug_messages;
 
 /* ----------------------------------------------------------------------------
-   Debug callback
+   Debug callback (VK_EXT_debug_utils)
    ------------------------------------------------------------------------- */
 static VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT severity,
     VkDebugUtilsMessageTypeFlagsEXT type,
     const VkDebugUtilsMessengerCallbackDataEXT *data,
     void *user_data) {
+    // Store messages for later retrieval via Device.get_debug_messages()
     vk_debug_messages.push_back(data->pMessage);
-    return VK_FALSE;
+    return VK_FALSE; // Don't abort
 }
 
 /* ----------------------------------------------------------------------------
@@ -34,9 +45,9 @@ bool vk_instance_ensure(void) {
 
     // Enumerate instance extensions
     uint32_t ext_count;
-    vkEnumerateInstanceExtensionProperties(NULL, &ext_count, NULL);
+    vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr);
     std::vector<VkExtensionProperties> exts(ext_count);
-    vkEnumerateInstanceExtensionProperties(NULL, &ext_count, exts.data());
+    vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, exts.data());
 
     std::vector<const char *> enabled_exts;
     bool has_surface = false, has_xcb_surface = false, has_wayland_surface = false;
@@ -71,21 +82,18 @@ bool vk_instance_ensure(void) {
 
     VkInstanceCreateInfo inst_info = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     inst_info.pApplicationInfo = &app_info;
-    inst_info.enabledExtensionCount = (uint32_t)enabled_exts.size();
+    inst_info.enabledExtensionCount = static_cast<uint32_t>(enabled_exts.size());
     inst_info.ppEnabledExtensionNames = enabled_exts.data();
 
-    // Validation layers (optional)
     const char *validation_layers[] = { "VK_LAYER_KHRONOS_validation" };
     if (vk_debug_enabled) {
         inst_info.enabledLayerCount = 1;
         inst_info.ppEnabledLayerNames = validation_layers;
     }
 
-    VkResult res = vkCreateInstance(&inst_info, NULL, &vk_instance);
-    if (res != VK_SUCCESS) {
-        PyErr_Format(PyExc_RuntimeError, "Failed to create Vulkan instance (error %d)", res);
-        return false;
-    }
+    VkResult res = vkCreateInstance(&inst_info, nullptr, &vk_instance);
+    VK_CHECK_OR_RETURN_FALSE(res, PyExc_RuntimeError,
+                             "Failed to create Vulkan instance");
 
     // Set up debug messenger if requested
     if (vk_debug_enabled) {
@@ -103,7 +111,7 @@ bool vk_instance_ensure(void) {
                               VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
             dbg.pfnUserCallback = vk_debug_callback;
             VkDebugUtilsMessengerEXT messenger;
-            func(vk_instance, &dbg, NULL, &messenger);
+            func(vk_instance, &dbg, nullptr, &messenger);
         }
     }
 
@@ -126,27 +134,26 @@ PyObject *vk_get_shader_binary_type(PyObject *self) {
 }
 
 /* ----------------------------------------------------------------------------
-   vk_get_discovered_devices
+   vk_get_discovered_devices - enumerate physical devices
    ------------------------------------------------------------------------- */
 PyObject *vk_get_discovered_devices(PyObject *self, PyObject *args) {
     if (!vk_instance_ensure())
-        return NULL;
+        return nullptr;
 
     uint32_t count = 0;
-    vkEnumeratePhysicalDevices(vk_instance, &count, NULL);
+    vkEnumeratePhysicalDevices(vk_instance, &count, nullptr);
     if (count == 0) {
         return PyList_New(0);
     }
 
-    VkPhysicalDevice *devices = (VkPhysicalDevice *)PyMem_Malloc(count * sizeof(VkPhysicalDevice));
-    vkEnumeratePhysicalDevices(vk_instance, &count, devices);
+    std::vector<VkPhysicalDevice> devices(count);
+    vkEnumeratePhysicalDevices(vk_instance, &count, devices.data());
 
     PyObject *list = PyList_New(count);
     for (uint32_t i = 0; i < count; i++) {
         vk_Device *dev = PyObject_New(vk_Device, &vk_Device_Type);
         if (!dev) {
             Py_DECREF(list);
-            PyMem_Free(devices);
             return PyErr_NoMemory();
         }
         VK_CLEAR_OBJECT(dev);
@@ -169,8 +176,7 @@ PyObject *vk_get_discovered_devices(PyObject *self, PyObject *args) {
                 dev->shared_system_memory += dev->mem_props.memoryHeaps[j].size;
         }
 
-        PyList_SetItem(list, i, (PyObject *)dev);
+        PyList_SetItem(list, i, reinterpret_cast<PyObject *>(dev));
     }
-    PyMem_Free(devices);
     return list;
 }

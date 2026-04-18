@@ -195,22 +195,8 @@ struct vk_Compute
     PyObject* py_samplers_list;
 };
 
-struct vk_Swapchain
-{
-    PyObject_HEAD;
-    vk_Device* py_device;
-    VkSwapchainKHR swapchain;
-    VkSurfaceKHR surface;
-    VkExtent2D image_extent;
-    VkFormat format;
-    std::vector<VkImage> images;
-    uint32_t image_count;
-    VkSemaphore copy_semaphore;
-    VkSemaphore present_semaphore;
-    VkFence* fences;
-    bool suboptimal;
-    bool out_of_date;
-};
+// Forward declaration; full definition in vk_swapchain.h
+struct vk_Swapchain;
 
 struct vk_Sampler
 {

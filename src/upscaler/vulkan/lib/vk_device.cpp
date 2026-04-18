@@ -1,43 +1,79 @@
+/**
+ * @file vk_device.cpp
+ * @brief Vulkan logical device implementation.
+ *
+ * This file implements the vk.Device Python type, which encapsulates a
+ * Vulkan logical device, command pool, queue, and associated resources.
+ * It provides methods to create heaps, buffers, textures, samplers,
+ * compute pipelines, and swapchains.
+ */
+
 #include "vk_device.h"
 #include "vk_utils.h"
 #include <cmath>
 #include <cstring>
 #include <unordered_set>
 
-// Forward declarations of Python type objects
+// Forward declarations of Python type objects (defined in other modules)
 extern PyTypeObject vk_Heap_Type;
 extern PyTypeObject vk_Resource_Type;
 extern PyTypeObject vk_Compute_Type;
 extern PyTypeObject vk_Swapchain_Type;
 extern PyTypeObject vk_Sampler_Type;
 
-// Forward declarations of methods from other modules
+// Forward declarations of method tables (for completeness)
 extern PyMethodDef vk_Resource_methods[];
 extern PyMethodDef vk_Compute_methods[];
 extern PyMethodDef vk_Swapchain_methods[];
 
-/* ----------------------------------------------------------------------------
-   Forward declaration of the actual compute creation implementation
-   ------------------------------------------------------------------------- */
+// Implementation of compute and swapchain creation (in their respective files)
 extern PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObject *kwds);
+extern PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args);
 
 /* ----------------------------------------------------------------------------
-   Python method: create_compute (forwarding to implementation in vk_compute.cpp)
+   Forwarding methods to other modules
    ------------------------------------------------------------------------- */
 PyObject *vk_Device_create_compute(vk_Device *self, PyObject *args, PyObject *kwds) {
     return vk_Device_create_compute_impl(self, args, kwds);
 }
 
-/* ----------------------------------------------------------------------------
-   Forward declaration of the actual swapchain creation implementation
-   ------------------------------------------------------------------------- */
-extern PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args);
-
-/* ----------------------------------------------------------------------------
-   Python method: create_swapchain (forwarding to implementation in vk_swapchain.cpp)
-   ------------------------------------------------------------------------- */
 PyObject *vk_Device_create_swapchain(vk_Device *self, PyObject *args) {
     return vk_Device_create_swapchain_impl(self, args);
+}
+
+/* ----------------------------------------------------------------------------
+   Helper: Allocate device memory with given property flags
+   ------------------------------------------------------------------------- */
+/**
+ * Allocate a VkDeviceMemory object of the specified size and memory type.
+ *
+ * @param dev        Initialized device.
+ * @param size       Size in bytes.
+ * @param mem_flags  Required memory property flags.
+ * @param out_memory Output memory handle.
+ * @return true on success, false with Python exception set.
+ */
+static bool allocate_device_memory(vk_Device *dev, VkDeviceSize size,
+                                   VkMemoryPropertyFlags mem_flags,
+                                   VkDeviceMemory *out_memory) {
+    uint32_t mem_type_idx = vk_find_memory_type_index(&dev->mem_props, mem_flags);
+    if (mem_type_idx == UINT32_MAX) {
+        PyErr_Format(vk_HeapError,
+                     "No suitable memory type found for flags 0x%x", mem_flags);
+        return false;
+    }
+
+    VkMemoryAllocateInfo alloc = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    alloc.allocationSize = size;
+    alloc.memoryTypeIndex = mem_type_idx;
+
+    VkResult res = vkAllocateMemory(dev->device, &alloc, nullptr, out_memory);
+    if (res != VK_SUCCESS) {
+        PyErr_Format(vk_HeapError, "Failed to allocate %llu bytes (error %d)",
+                     size, res);
+        return false;
+    }
+    return true;
 }
 
 /* ----------------------------------------------------------------------------
@@ -88,7 +124,6 @@ vk_Device *vk_Device_get_initialized(vk_Device *self) {
     vkGetPhysicalDeviceMemoryProperties(phys, &self->mem_props);
     vkGetPhysicalDeviceFeatures(phys, &self->features);
 
-    // Vulkan 1.2 features
     VkPhysicalDeviceVulkan12Features features12 = {
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
     };
@@ -99,19 +134,18 @@ vk_Device *vk_Device_get_initialized(vk_Device *self) {
     vkGetPhysicalDeviceFeatures2(phys, &features2);
     self->features12 = features12;
 
-    // Determine bindless support (descriptor indexing)
+    // Determine optional feature support
     self->supports_bindless = features12.descriptorIndexing &&
                               features12.shaderSampledImageArrayNonUniformIndexing &&
                               features12.shaderStorageImageArrayNonUniformIndexing &&
                               features12.shaderUniformBufferArrayNonUniformIndexing &&
                               features12.shaderStorageBufferArrayNonUniformIndexing;
 
-    // Sparse support
     self->supports_sparse = self->features.sparseBinding &&
                             self->features.sparseResidencyBuffer &&
                             self->features.sparseResidencyImage2D;
 
-    // Find a queue family that supports compute (and optionally graphics)
+    // Find a queue family with compute (and graphics if possible)
     uint32_t qf_count;
     vkGetPhysicalDeviceQueueFamilyProperties(phys, &qf_count, nullptr);
     std::vector<VkQueueFamilyProperties> qf_props(qf_count);
@@ -139,7 +173,6 @@ vk_Device *vk_Device_get_initialized(vk_Device *self) {
     if (vk_supports_swapchain)
         extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-    // Enable required features
     VkPhysicalDeviceFeatures enabled_features = {};
     enabled_features.shaderStorageImageReadWithoutFormat = self->features.shaderStorageImageReadWithoutFormat;
     enabled_features.shaderStorageImageWriteWithoutFormat = self->features.shaderStorageImageWriteWithoutFormat;
@@ -148,7 +181,7 @@ vk_Device *vk_Device_get_initialized(vk_Device *self) {
     enabled_features.sparseResidencyImage2D = self->features.sparseResidencyImage2D;
 
     VkDeviceCreateInfo dinfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-    dinfo.pNext = &features12;   // Vulkan 1.2 features
+    dinfo.pNext = &features12;
     dinfo.queueCreateInfoCount = 1;
     dinfo.pQueueCreateInfos = &qinfo;
     dinfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
@@ -156,10 +189,7 @@ vk_Device *vk_Device_get_initialized(vk_Device *self) {
     dinfo.pEnabledFeatures = &enabled_features;
 
     VkResult res = vkCreateDevice(phys, &dinfo, nullptr, &self->device);
-    if (res != VK_SUCCESS) {
-        PyErr_Format(PyExc_RuntimeError, "Failed to create logical device (error %d)", res);
-        return nullptr;
-    }
+    VK_CHECK_OR_RETURN_NULL(res, PyExc_RuntimeError, "Failed to create logical device");
 
     vkGetDeviceQueue(self->device, qf_index, 0, &self->queue);
 
@@ -169,18 +199,18 @@ vk_Device *vk_Device_get_initialized(vk_Device *self) {
     pinfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     vkCreateCommandPool(self->device, &pinfo, nullptr, &self->command_pool);
 
-    // Internal command buffer for short operations
+    // Internal command buffer for short synchronous operations
     VkCommandBufferAllocateInfo ainfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
     ainfo.commandPool = self->command_pool;
     ainfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     ainfo.commandBufferCount = 1;
     vkAllocateCommandBuffers(self->device, &ainfo, &self->internal_cmd_buffer);
 
-    // Pipeline cache (shared across all pipelines on this device)
+    // Pipeline cache (shared across all pipelines)
     VkPipelineCacheCreateInfo cinfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
     vkCreatePipelineCache(self->device, &cinfo, nullptr, &self->pipeline_cache);
 
-    // Timestamp support
+    // Timestamp query pool
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(phys, &props);
     if (props.limits.timestampComputeAndGraphics) {
@@ -195,15 +225,17 @@ vk_Device *vk_Device_get_initialized(vk_Device *self) {
     }
 
     // Staging buffer pool (default 4 buffers of 2 MiB)
-    self->staging_pool.count = 4;
-    self->staging_pool.buffers = static_cast<VkBuffer *>(PyMem_Malloc(sizeof(VkBuffer) * 4));
-    self->staging_pool.memories = static_cast<VkDeviceMemory *>(PyMem_Malloc(sizeof(VkDeviceMemory) * 4));
-    self->staging_pool.sizes = static_cast<VkDeviceSize *>(PyMem_Malloc(sizeof(VkDeviceSize) * 4));
+    const int DEFAULT_POOL_SIZE = 4;
+    const VkDeviceSize DEFAULT_BUFFER_SIZE = 2 * 1024 * 1024;
+    self->staging_pool.count = DEFAULT_POOL_SIZE;
+    self->staging_pool.buffers = static_cast<VkBuffer *>(PyMem_Malloc(sizeof(VkBuffer) * DEFAULT_POOL_SIZE));
+    self->staging_pool.memories = static_cast<VkDeviceMemory *>(PyMem_Malloc(sizeof(VkDeviceMemory) * DEFAULT_POOL_SIZE));
+    self->staging_pool.sizes = static_cast<VkDeviceSize *>(PyMem_Malloc(sizeof(VkDeviceSize) * DEFAULT_POOL_SIZE));
     self->staging_pool.next = 0;
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < DEFAULT_POOL_SIZE; ++i) {
         VkBufferCreateInfo binfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-        binfo.size = 2 * 1024 * 1024;
+        binfo.size = DEFAULT_BUFFER_SIZE;
         binfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         vkCreateBuffer(self->device, &binfo, nullptr, &self->staging_pool.buffers[i]);
 
@@ -216,7 +248,7 @@ vk_Device *vk_Device_get_initialized(vk_Device *self) {
         vkAllocateMemory(self->device, &alloc, nullptr, &self->staging_pool.memories[i]);
         vkBindBufferMemory(self->device, self->staging_pool.buffers[i],
                            self->staging_pool.memories[i], 0);
-        self->staging_pool.sizes[i] = 2 * 1024 * 1024;
+        self->staging_pool.sizes[i] = DEFAULT_BUFFER_SIZE;
     }
 
     return self;
@@ -243,11 +275,16 @@ PyObject *vk_Device_create_heap(vk_Device *self, PyObject *args) {
 
     VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     switch (heap_type) {
-        case 0: break; // DEFAULT
-        case 1: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; break; // UPLOAD
-        case 2: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT; break; // READBACK
+        case 0: /* DEFAULT */ break;
+        case 1: /* UPLOAD */
+            mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+            break;
+        case 2: /* READBACK */
+            mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                        VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+            break;
         default:
-            PyErr_Format(vk_BufferError, "Invalid heap type %d", heap_type);
+            PyErr_Format(vk_HeapError, "Invalid heap type %d", heap_type);
             return nullptr;
     }
 
@@ -261,14 +298,8 @@ PyObject *vk_Device_create_heap(vk_Device *self, PyObject *args) {
     heap->heap_type = heap_type;
     heap->size = size;
 
-    VkMemoryAllocateInfo alloc = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    alloc.allocationSize = size;
-    alloc.memoryTypeIndex = vk_find_memory_type_index(&dev->mem_props, mem_flags);
-
-    VkResult res = vkAllocateMemory(dev->device, &alloc, nullptr, &heap->memory);
-    if (res != VK_SUCCESS) {
+    if (!allocate_device_memory(dev, size, mem_flags, &heap->memory)) {
         Py_DECREF(heap);
-        PyErr_Format(vk_HeapError, "Failed to allocate heap memory (error %d)", res);
         return nullptr;
     }
 
@@ -276,7 +307,7 @@ PyObject *vk_Device_create_heap(vk_Device *self, PyObject *args) {
 }
 
 /* ----------------------------------------------------------------------------
-   Helper to create a VkImage
+   Helper: create a VkImage (used by create_texture2d)
    ------------------------------------------------------------------------- */
 static VkImage create_vk_image(VkDevice device, VkImageType type, VkFormat format,
                                uint32_t width, uint32_t height, uint32_t depth,
@@ -338,15 +369,14 @@ PyObject *vk_Device_create_buffer(vk_Device *self, PyObject *args) {
 
     VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     switch (heap_type) {
-        case 0: break; // DEFAULT
-        case 1: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; break; // UPLOAD
-        case 2: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT; break; // READBACK
+        case 0: break;
+        case 1: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; break;
+        case 2: mem_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT; break;
         default:
-            PyErr_Format(vk_HeapError, "Invalid heap type %d", heap_type);
+            PyErr_Format(vk_BufferError, "Invalid heap type %d", heap_type);
             return nullptr;
     }
 
-    // Validate format
     if (format > 0 && vk_format_map.find(format) == vk_format_map.end()) {
         PyErr_Format(vk_BufferError, "Invalid pixel format %d", format);
         return nullptr;
@@ -375,11 +405,10 @@ PyObject *vk_Device_create_buffer(vk_Device *self, PyObject *args) {
                       VK_BUFFER_CREATE_SPARSE_ALIASED_BIT;
     }
 
-    if (vkCreateBuffer(dev->device, &binfo, nullptr, &res->buffer) != VK_SUCCESS) {
-        Py_DECREF(res);
-        PyErr_SetString(vk_BufferError, "Failed to create buffer");
-        return nullptr;
-    }
+    VK_CHECK_OR_RETURN_NULL(
+        vkCreateBuffer(dev->device, &binfo, nullptr, &res->buffer),
+        vk_BufferError, "Failed to create buffer"
+    );
 
     VkMemoryRequirements mem_req;
     vkGetBufferMemoryRequirements(dev->device, res->buffer, &mem_req);
@@ -392,7 +421,7 @@ PyObject *vk_Device_create_buffer(vk_Device *self, PyObject *args) {
         res->tiles_x = static_cast<uint32_t>((mem_req.size + mem_req.alignment - 1) / mem_req.alignment);
         res->tiles_y = 1;
         res->tiles_z = 1;
-        // Sparse binding is done separately; we don't allocate memory yet.
+        // Sparse binding handled separately; no memory allocation here.
     } else if (py_heap && py_heap != Py_None) {
         if (!PyObject_TypeCheck(py_heap, &vk_Heap_Type)) {
             Py_DECREF(res);
@@ -420,36 +449,29 @@ PyObject *vk_Device_create_buffer(vk_Device *self, PyObject *args) {
         Py_INCREF(heap);
         res->heap_offset = heap_offset;
     } else {
-        VkMemoryAllocateInfo alloc = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-        alloc.allocationSize = mem_req.size;
-        alloc.memoryTypeIndex = vk_find_memory_type_index(&dev->mem_props, mem_flags);
-        if (vkAllocateMemory(dev->device, &alloc, nullptr, &res->memory) != VK_SUCCESS) {
+        if (!allocate_device_memory(dev, mem_req.size, mem_flags, &res->memory)) {
             Py_DECREF(res);
-            PyErr_SetString(vk_BufferError, "Failed to allocate buffer memory");
             return nullptr;
         }
     }
 
     if (!sparse) {
-        if (vkBindBufferMemory(dev->device, res->buffer, res->memory, res->heap_offset) != VK_SUCCESS) {
-            Py_DECREF(res);
-            PyErr_SetString(vk_BufferError, "Failed to bind buffer memory");
-            return nullptr;
-        }
+        VK_CHECK_OR_RETURN_NULL(
+            vkBindBufferMemory(dev->device, res->buffer, res->memory, res->heap_offset),
+            vk_BufferError, "Failed to bind buffer memory"
+        );
     }
 
-    // Create buffer view if format provided
     if (format > 0) {
         res->format = vk_format_map[format].first;
         VkBufferViewCreateInfo vinfo = { VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO };
         vinfo.buffer = res->buffer;
         vinfo.format = res->format;
         vinfo.range = VK_WHOLE_SIZE;
-        if (vkCreateBufferView(dev->device, &vinfo, nullptr, &res->buffer_view) != VK_SUCCESS) {
-            Py_DECREF(res);
-            PyErr_SetString(vk_BufferError, "Failed to create buffer view");
-            return nullptr;
-        }
+        VK_CHECK_OR_RETURN_NULL(
+            vkCreateBufferView(dev->device, &vinfo, nullptr, &res->buffer_view),
+            vk_BufferError, "Failed to create buffer view"
+        );
     }
 
     res->descriptor_buffer_info.buffer = res->buffer;
@@ -508,7 +530,7 @@ PyObject *vk_Device_create_texture2d(vk_Device *self, PyObject *args) {
     res->row_pitch = width * bpp;
     res->size = res->row_pitch * height;
     res->format = vk_format;
-    res->heap_type = 0; // textures are always device-local
+    res->heap_type = 0; // textures always device-local
 
     res->image = create_vk_image(dev->device, VK_IMAGE_TYPE_2D, vk_format,
                                  width, height, 1, slices, sparse);
@@ -523,7 +545,6 @@ PyObject *vk_Device_create_texture2d(vk_Device *self, PyObject *args) {
     res->heap_size = mem_req.size;
 
     if (sparse) {
-        // Query sparse image memory requirements
         uint32_t sparse_req_count = 0;
         vkGetImageSparseMemoryRequirements(dev->device, res->image, &sparse_req_count, nullptr);
         std::vector<VkSparseImageMemoryRequirements> sparse_reqs(sparse_req_count);
@@ -566,22 +587,19 @@ PyObject *vk_Device_create_texture2d(vk_Device *self, PyObject *args) {
         Py_INCREF(heap);
         res->heap_offset = heap_offset;
     } else {
-        VkMemoryAllocateInfo alloc = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-        alloc.allocationSize = mem_req.size;
-        alloc.memoryTypeIndex = vk_find_memory_type_index(&dev->mem_props, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        if (vkAllocateMemory(dev->device, &alloc, nullptr, &res->memory) != VK_SUCCESS) {
+        if (!allocate_device_memory(dev, mem_req.size,
+                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                    &res->memory)) {
             Py_DECREF(res);
-            PyErr_SetString(vk_Texture2DError, "Failed to allocate image memory");
             return nullptr;
         }
     }
 
     if (!sparse) {
-        if (vkBindImageMemory(dev->device, res->image, res->memory, res->heap_offset) != VK_SUCCESS) {
-            Py_DECREF(res);
-            PyErr_SetString(vk_Texture2DError, "Failed to bind image memory");
-            return nullptr;
-        }
+        VK_CHECK_OR_RETURN_NULL(
+            vkBindImageMemory(dev->device, res->image, res->memory, res->heap_offset),
+            vk_Texture2DError, "Failed to bind image memory"
+        );
     }
 
     // Create image view
@@ -592,28 +610,17 @@ PyObject *vk_Device_create_texture2d(vk_Device *self, PyObject *args) {
     vinfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     vinfo.subresourceRange.levelCount = 1;
     vinfo.subresourceRange.layerCount = slices;
+    VK_CHECK_OR_RETURN_NULL(
+        vkCreateImageView(dev->device, &vinfo, nullptr, &res->image_view),
+        vk_Texture2DError, "Failed to create image view"
+    );
 
-    if (vkCreateImageView(dev->device, &vinfo, nullptr, &res->image_view) != VK_SUCCESS) {
+    // Transition to GENERAL layout for compute shader access
+    if (!vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
+            vk_cmd_transition_for_compute(cmd, res->image, 0, slices);
+        })) {
         Py_DECREF(res);
-        PyErr_SetString(vk_Texture2DError, "Failed to create image view");
-        return nullptr;
-    }
-
-    // Transition to GENERAL layout
-    VkCommandBuffer cmd = dev->internal_cmd_buffer;
-    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    vkBeginCommandBuffer(cmd, &begin);
-    vk_image_barrier(cmd, res->image,
-                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                     0, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-                     0, 1, 0, slices);
-    vkEndCommandBuffer(cmd);
-
-    if (vk_execute_command_buffer(dev, cmd, VK_NULL_HANDLE, 0, nullptr, nullptr, 0, nullptr) != VK_SUCCESS) {
-        Py_DECREF(res);
-        PyErr_SetString(vk_Texture2DError, "Failed to transition image layout");
-        return nullptr;
+        return nullptr; // error already set
     }
 
     res->descriptor_image_info.imageView = res->image_view;
@@ -627,7 +634,8 @@ PyObject *vk_Device_create_texture2d(vk_Device *self, PyObject *args) {
    ------------------------------------------------------------------------- */
 PyObject *vk_Device_create_sampler(vk_Device *self, PyObject *args) {
     int addr_u, addr_v, addr_w, filter_min, filter_mag;
-    if (!PyArg_ParseTuple(args, "iiiii", &addr_u, &addr_v, &addr_w, &filter_min, &filter_mag))
+    if (!PyArg_ParseTuple(args, "iiiii", &addr_u, &addr_v, &addr_w,
+                          &filter_min, &filter_mag))
         return nullptr;
 
     vk_Device *dev = vk_Device_get_initialized(self);
@@ -676,11 +684,10 @@ PyObject *vk_Device_create_sampler(vk_Device *self, PyObject *args) {
     sampler->py_device = dev;
     Py_INCREF(dev);
 
-    if (vkCreateSampler(dev->device, &sinfo, nullptr, &sampler->sampler) != VK_SUCCESS) {
-        Py_DECREF(sampler);
-        PyErr_SetString(vk_SamplerError, "Failed to create sampler");
-        return nullptr;
-    }
+    VK_CHECK_OR_RETURN_NULL(
+        vkCreateSampler(dev->device, &sinfo, nullptr, &sampler->sampler),
+        vk_SamplerError, "Failed to create sampler"
+    );
 
     sampler->descriptor_image_info.sampler = sampler->sampler;
     return reinterpret_cast<PyObject *>(sampler);
@@ -705,7 +712,7 @@ PyObject *vk_Device_set_buffer_pool_size(vk_Device *self, PyObject *args) {
     int size;
     if (!PyArg_ParseTuple(args, "i", &size))
         return nullptr;
-    // Update the pool size; actual reallocation happens on next acquire
+    // Update pool size; actual reallocation happens on next acquire
     self->staging_pool.count = size;
     Py_RETURN_NONE;
 }
@@ -737,8 +744,8 @@ static PyMethodDef vk_Device_methods[] = {
      "Create a 2D texture (or 2D array) resource."},
     {"create_sampler", (PyCFunction)vk_Device_create_sampler, METH_VARARGS,
      "Create a sampler object."},
-    {"create_compute", (PyCFunction)vk_Device_create_compute, METH_VARARGS | METH_KEYWORDS,
-     "Create a compute pipeline."},
+    {"create_compute", (PyCFunction)vk_Device_create_compute,
+     METH_VARARGS | METH_KEYWORDS, "Create a compute pipeline."},
     {"create_swapchain", (PyCFunction)vk_Device_create_swapchain, METH_VARARGS,
      "Create a swapchain for presentation."},
     {"get_debug_messages", (PyCFunction)vk_Device_get_debug_messages, METH_NOARGS,

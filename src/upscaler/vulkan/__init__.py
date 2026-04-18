@@ -718,6 +718,9 @@ class Texture2D(Resource):
         """
         self._handle.upload_subresources(rects)
 
+    def clear_color(self, r: float, g: float, b: float, a: float) -> None:
+        self._handle.clear_color(r, g, b, a)
+
     def __repr__(self) -> str:
         return f"<Texture2D {self.width}x{self.height}>"
 
@@ -900,7 +903,7 @@ class Swapchain:
     def __init__(
         self,
         window_handle: Tuple,
-        num_buffers: int = 3,
+        num_buffers: int = 2,
         format: int = R8G8B8A8_UNORM,
         device: Optional[Device] = None,
         width: int = 0,

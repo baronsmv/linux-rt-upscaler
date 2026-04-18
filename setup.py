@@ -88,7 +88,7 @@ vulkan_extension = Extension(
     "upscaler.vulkan.vulkan",
     sources=vulkan_sources,
     libraries=["vulkan"],
-    extra_compile_args=["-std=c++14", "-O3", "-mtune=generic"],
+    extra_compile_args=["-std=c++17", "-O3", "-mtune=generic"],
     language="c++",
 )
 
