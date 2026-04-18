@@ -15,6 +15,30 @@ struct PyBufferGuard {
     Py_buffer view;
     bool owned = false;
 
+    // Constructor
+    PyBufferGuard() = default;
+
+    // Move constructor
+    PyBufferGuard(PyBufferGuard&& other) noexcept
+        : view(other.view), owned(other.owned) {
+        other.owned = false;
+    }
+
+    // Move assignment
+    PyBufferGuard& operator=(PyBufferGuard&& other) noexcept {
+        if (this != &other) {
+            release();
+            view = other.view;
+            owned = other.owned;
+            other.owned = false;
+        }
+        return *this;
+    }
+
+    // Disable copying
+    PyBufferGuard(const PyBufferGuard&) = delete;
+    PyBufferGuard& operator=(const PyBufferGuard&) = delete;
+
     ~PyBufferGuard() { if (owned) PyBuffer_Release(&view); }
 
     bool acquire(PyObject *obj, int flags = PyBUF_SIMPLE) {
@@ -22,7 +46,13 @@ struct PyBufferGuard {
         owned = true;
         return true;
     }
-    void release() { if (owned) { PyBuffer_Release(&view); owned = false; } }
+
+    void release() {
+        if (owned) {
+            PyBuffer_Release(&view);
+            owned = false;
+        }
+    }
 };
 
 /* ----------------------------------------------------------------------------
@@ -220,11 +250,11 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
         }
 
         RectUpload r = {};
-        // Parse: data, x, y, w, h
-        if (!PyArg_ParseTuple(tuple, "OIIII", &r.buffer, &r.x, &r.y, &r.w, &r.h))
+        PyObject *data_obj = nullptr;
+        if (!PyArg_ParseTuple(tuple, "OIIII", &data_obj, &r.x, &r.y, &r.w, &r.h))
             return nullptr;
-        if (!r.buffer.acquire(reinterpret_cast<PyObject*>(tuple), PyBUF_SIMPLE))
-            return nullptr; // error already set
+        if (!r.buffer.acquire(data_obj, PyBUF_SIMPLE))
+            return nullptr;
 
         if (r.w == 0 || r.h == 0)
             continue;

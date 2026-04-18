@@ -400,6 +400,14 @@ class Pipeline:
                         start = row * stride + ex * 4
                         sub_data.extend(frame[start : start + ew * 4])
                     upload_list.append((bytes(sub_data), ex, ey, ew, eh))
+                if upload_list:
+                    first = upload_list[0]
+                    logger.debug(
+                        f"upload_list[0] type: {type(first)}, len: {len(first)}"
+                    )
+                    logger.debug(f"first element type: {type(first[0])}")
+                    if isinstance(first[0], tuple):
+                        logger.error(f"First element is a tuple, not bytes: {first[0]}")
                 self.upscaler.input.upload_subresources(upload_list)
             else:
                 self.upscaler.staging.upload(frame)
