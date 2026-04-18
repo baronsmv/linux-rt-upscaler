@@ -73,7 +73,7 @@ void vk_Device_dealloc(vk_Device *self) {
 }
 
 /* ----------------------------------------------------------------------------
-   vk_Device_get_initialized – creates logical device and associated objects
+   vk_Device_get_initialized - creates logical device and associated objects
    ------------------------------------------------------------------------- */
 vk_Device *vk_Device_get_initialized(vk_Device *self) {
     if (self->device != VK_NULL_HANDLE)

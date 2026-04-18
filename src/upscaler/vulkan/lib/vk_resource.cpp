@@ -1,6 +1,91 @@
+/**
+ * @file vk_resource.cpp
+ * @brief Vulkan resource methods: upload, download, copy, and batch texture upload.
+ */
+
 #include "vk_resource.h"
 #include "vk_utils.h"
 #include <cstring>
+#include <functional>
+
+/* ----------------------------------------------------------------------------
+   RAII wrapper for Python buffer objects
+   ------------------------------------------------------------------------- */
+struct PyBufferGuard {
+    Py_buffer view;
+    bool owned = false;
+
+    ~PyBufferGuard() { if (owned) PyBuffer_Release(&view); }
+
+    bool acquire(PyObject *obj, int flags = PyBUF_SIMPLE) {
+        if (PyObject_GetBuffer(obj, &view, flags) < 0) return false;
+        owned = true;
+        return true;
+    }
+    void release() { if (owned) { PyBuffer_Release(&view); owned = false; } }
+};
+
+/* ----------------------------------------------------------------------------
+   Helper: Execute a temporary command buffer and wait
+   ------------------------------------------------------------------------- */
+template<typename RecordFunc>
+static VkResult execute_commands(vk_Device *dev, RecordFunc &&record) {
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
+    if (!cmd) return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+
+    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    vkBeginCommandBuffer(cmd, &begin);
+    record(cmd);
+    vkEndCommandBuffer(cmd);
+
+    VkResult res = vk_execute_and_wait(dev, cmd);
+    vk_free_temp_cmd(dev, cmd);
+    return res;
+}
+
+/* ----------------------------------------------------------------------------
+   Helper: Acquire staging buffer, call user, then release
+   ------------------------------------------------------------------------- */
+template<typename UserFunc>
+static bool with_staging_buffer(vk_Device *dev, VkDeviceSize size, UserFunc &&user) {
+    VkBuffer staging_buffer;
+    VkDeviceMemory staging_memory;
+    void *mapped;
+    bool used_pool;
+    if (!vk_staging_buffer_acquire(dev, size, &staging_buffer, &staging_memory,
+                                   &mapped, &used_pool))
+        return false;
+
+    user(staging_buffer, staging_memory, mapped, used_pool);
+    vkUnmapMemory(dev->device, staging_memory);
+    vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
+    return true;
+}
+
+/* ----------------------------------------------------------------------------
+   Helper: Insert an image memory barrier (simplifies repeated calls)
+   ------------------------------------------------------------------------- */
+static void cmd_image_barrier(VkCommandBuffer cmd, VkImage image,
+                              VkImageLayout oldLayout, VkImageLayout newLayout,
+                              VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
+                              VkAccessFlags srcAccess, VkAccessFlags dstAccess,
+                              uint32_t baseMip = 0, uint32_t levelCount = 1,
+                              uint32_t baseLayer = 0, uint32_t layerCount = 1) {
+    VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+    barrier.srcAccessMask = srcAccess;
+    barrier.dstAccessMask = dstAccess;
+    barrier.oldLayout = oldLayout;
+    barrier.newLayout = newLayout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = baseMip;
+    barrier.subresourceRange.levelCount = levelCount;
+    barrier.subresourceRange.baseArrayLayer = baseLayer;
+    barrier.subresourceRange.layerCount = layerCount;
+    vkCmdPipelineBarrier(cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
 
 /* ----------------------------------------------------------------------------
    Resource deallocator
@@ -34,7 +119,7 @@ static void *map_buffer_memory(vk_Device *dev, VkDeviceMemory memory,
 }
 
 /* ----------------------------------------------------------------------------
-   upload – buffer only
+   upload - buffer only
    ------------------------------------------------------------------------- */
 PyObject *vk_Resource_upload(vk_Resource *self, PyObject *args) {
     Py_buffer view;
@@ -70,7 +155,7 @@ PyObject *vk_Resource_upload(vk_Resource *self, PyObject *args) {
 }
 
 /* ----------------------------------------------------------------------------
-   upload_subresources – batch upload of rectangles to a texture
+   upload_subresources - batch upload of rectangles to a texture
    ------------------------------------------------------------------------- */
 PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
     PyObject *rects_list;
@@ -88,10 +173,10 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
 
     vk_Device *dev = self->py_device;
 
-    // First pass: validate and compute total size
+    // First pass: validate rectangles and compute total staging size
     struct RectUpload {
         uint32_t x, y, w, h;
-        Py_buffer view;
+        PyBufferGuard buffer;
         VkDeviceSize offset;
     };
     std::vector<RectUpload> rects;
@@ -107,98 +192,80 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
         }
 
         RectUpload r = {};
-        if (!PyArg_ParseTuple(tuple, "y*IIII", &r.view, &r.x, &r.y, &r.w, &r.h))
+        // Parse: data, x, y, w, h
+        if (!PyArg_ParseTuple(tuple, "OIIII", &r.buffer, &r.x, &r.y, &r.w, &r.h))
             return nullptr;
+        if (!r.buffer.acquire(reinterpret_cast<PyObject*>(tuple), PyBUF_SIMPLE))
+            return nullptr; // error already set
 
-        if (r.w == 0 || r.h == 0) {
-            PyBuffer_Release(&r.view);
+        if (r.w == 0 || r.h == 0)
             continue;
-        }
 
         if (r.x + r.w > self->image_extent.width || r.y + r.h > self->image_extent.height) {
-            PyBuffer_Release(&r.view);
             PyErr_Format(PyExc_ValueError,
                          "Rectangle (%u,%u %ux%u) exceeds texture dimensions (%ux%u)",
                          r.x, r.y, r.w, r.h, self->image_extent.width, self->image_extent.height);
-            for (auto &rr : rects) PyBuffer_Release(&rr.view);
             return nullptr;
         }
 
         VkDeviceSize sz = r.w * r.h * 4;
         r.offset = total_size;
         total_size += sz;
-        rects.push_back(r);
+        rects.push_back(std::move(r));
     }
 
     if (rects.empty())
         Py_RETURN_NONE;
 
-    // Acquire staging buffer
-    VkBuffer staging_buffer;
-    VkDeviceMemory staging_memory;
-    void *mapped;
-    bool used_pool;
-    if (!vk_staging_buffer_acquire(dev, total_size, &staging_buffer, &staging_memory,
-                                   &mapped, &used_pool)) {
-        for (auto &r : rects) PyBuffer_Release(&r.view);
+    // Use staging buffer to gather all rectangles
+    bool success = with_staging_buffer(dev, total_size, [&](VkBuffer staging_buffer, VkDeviceMemory,
+                                                            void *mapped, bool /*used_pool*/) {
+        uint8_t *dst = static_cast<uint8_t *>(mapped);
+        for (auto &r : rects) {
+            memcpy(dst + r.offset, r.buffer.view.buf, r.buffer.view.len);
+        }
+
+        // Execute copy commands
+        VkResult res = execute_commands(dev, [&](VkCommandBuffer cmd) {
+            cmd_image_barrier(cmd, self->image,
+                              VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                              VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+                              0, 1, 0, 1);
+
+            for (const auto &r : rects) {
+                VkBufferImageCopy region = {};
+                region.bufferOffset = r.offset;
+                region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.imageSubresource.layerCount = 1;
+                region.imageOffset = { static_cast<int32_t>(r.x), static_cast<int32_t>(r.y), 0 };
+                region.imageExtent = { r.w, r.h, 1 };
+                vkCmdCopyBufferToImage(cmd, staging_buffer, self->image,
+                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            }
+
+            cmd_image_barrier(cmd, self->image,
+                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
+                              VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                              VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+                              0, 1, 0, 1);
+        });
+
+        if (res != VK_SUCCESS) {
+            PyErr_Format(PyExc_RuntimeError, "Upload submission failed (error %d)", res);
+        }
+    });
+
+    if (!success) {
         PyErr_SetString(PyExc_RuntimeError, "Failed to acquire staging buffer");
         return nullptr;
     }
 
-    uint8_t *dst = static_cast<uint8_t *>(mapped);
-    for (auto &r : rects) {
-        memcpy(dst + r.offset, r.view.buf, r.view.len);
-        PyBuffer_Release(&r.view);
-    }
-    // Unmap now (data is in device-visible memory), but keep buffer alive
-    vkUnmapMemory(dev->device, staging_memory);
-
-    // Command buffer
-    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
-    if (!cmd) {
-        if (!used_pool) {
-            vkDestroyBuffer(dev->device, staging_buffer, nullptr);
-            vkFreeMemory(dev->device, staging_memory, nullptr);
-        }
-        PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
-        return nullptr;
-    }
-
-    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    vkBeginCommandBuffer(cmd, &begin);
-
-    // Transition to TRANSFER_DST_OPTIMAL
-    vk_image_barrier(cmd, self->image,
-                     VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                     VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-                     0, 1, 0, 1);
-
-    for (const auto &r : rects) {
-        VkBufferImageCopy region = {};
-        region.bufferOffset = r.offset;
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.layerCount = 1;
-        region.imageOffset = { static_cast<int32_t>(r.x), static_cast<int32_t>(r.y), 0 };
-        region.imageExtent = { r.w, r.h, 1 };
-        vkCmdCopyBufferToImage(cmd, staging_buffer, self->image,
-                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    }
-
-    // Transition back
-    vk_image_barrier(cmd, self->image,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
-                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                     VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-                     0, 1, 0, 1);
-
-    VK_SUBMIT_AND_CLEANUP(cmd, dev,
-        vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool)
-    );
+    Py_RETURN_NONE;
 }
 
 /* ----------------------------------------------------------------------------
-   download – entire texture to bytes
+   download - entire texture to bytes
    ------------------------------------------------------------------------- */
 PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
     if (!self->image) {
@@ -209,7 +276,7 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
     vk_Device *dev = self->py_device;
     VkDeviceSize buf_size = self->size;
 
-    // Create temporary device‑local buffer
+    // Create temporary device-local buffer
     VkBuffer device_buffer;
     VkDeviceMemory device_memory;
     VkBufferCreateInfo binfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -232,114 +299,75 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
     }
     vkBindBufferMemory(dev->device, device_buffer, device_memory, 0);
 
-    // Staging buffer (host visible)
-    VkBuffer staging_buffer;
-    VkDeviceMemory staging_memory;
-    void *mapped;
-    bool used_pool;
-    if (!vk_staging_buffer_acquire(dev, buf_size, &staging_buffer, &staging_memory,
-                                   &mapped, &used_pool)) {
-        vkDestroyBuffer(dev->device, device_buffer, nullptr);
-        vkFreeMemory(dev->device, device_memory, nullptr);
-        PyErr_SetString(PyExc_RuntimeError, "Failed to acquire staging buffer");
-        return nullptr;
-    }
+    PyObject *result_bytes = nullptr;
 
-    // Command buffer
-    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
-    if (!cmd) {
-        vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
-        if (!used_pool) {
-            vkDestroyBuffer(dev->device, staging_buffer, nullptr);
-            vkFreeMemory(dev->device, staging_memory, nullptr);
+    bool success = with_staging_buffer(dev, buf_size, [&](VkBuffer staging_buffer, VkDeviceMemory staging_memory,
+                                                          void *mapped, bool used_pool) {
+        VkResult res = execute_commands(dev, [&](VkCommandBuffer cmd) {
+            // Transition texture to TRANSFER_SRC_OPTIMAL
+            cmd_image_barrier(cmd, self->image,
+                              VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                              VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+                              0, 1, 0, 1);
+
+            VkBufferImageCopy region = {};
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.layerCount = 1;
+            region.imageExtent = self->image_extent;
+            vkCmdCopyImageToBuffer(cmd, self->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                   device_buffer, 1, &region);
+
+            VkBufferMemoryBarrier buf_barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+            buf_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            buf_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            buf_barrier.buffer = device_buffer;
+            buf_barrier.size = buf_size;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                                 0, nullptr, 1, &buf_barrier, 0, nullptr);
+
+            VkBufferCopy copy = { 0, 0, buf_size };
+            vkCmdCopyBuffer(cmd, device_buffer, staging_buffer, 1, &copy);
+
+            // Transition texture back
+            cmd_image_barrier(cmd, self->image,
+                              VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
+                              VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                              VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+                              0, 1, 0, 1);
+        });
+
+        if (res != VK_SUCCESS) {
+            PyErr_Format(PyExc_RuntimeError, "Download submission failed (error %d)", res);
+            return;
         }
-        vkDestroyBuffer(dev->device, device_buffer, nullptr);
-        vkFreeMemory(dev->device, device_memory, nullptr);
-        PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
-        return nullptr;
-    }
 
-    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    vkBeginCommandBuffer(cmd, &begin);
+        // Map staging and copy to Python bytes
+        void *mapped_data = map_buffer_memory(dev, staging_memory, 0, buf_size);
+        if (!mapped_data) return;
 
-    // Transition texture to TRANSFER_SRC_OPTIMAL
-    vk_image_barrier(cmd, self->image,
-                     VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                     VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-                     0, 1, 0, 1);
+        result_bytes = PyBytes_FromStringAndSize(static_cast<char *>(mapped_data), buf_size);
+        vkUnmapMemory(dev->device, staging_memory);
+    });
 
-    VkBufferImageCopy region = {};
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.layerCount = 1;
-    region.imageExtent = self->image_extent;
-    vkCmdCopyImageToBuffer(cmd, self->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                           device_buffer, 1, &region);
-
-    VkBufferMemoryBarrier buf_barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-    buf_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    buf_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    buf_barrier.buffer = device_buffer;
-    buf_barrier.size = buf_size;
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1, &buf_barrier, 0, nullptr);
-
-    VkBufferCopy copy = { 0, 0, buf_size };
-    vkCmdCopyBuffer(cmd, device_buffer, staging_buffer, 1, &copy);
-
-    // Transition texture back
-    vk_image_barrier(cmd, self->image,
-                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
-                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                     VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-                     0, 1, 0, 1);
-
-    vkEndCommandBuffer(cmd);
-    VkResult res = vk_execute_and_wait(dev, cmd);
-    vk_free_temp_cmd(dev, cmd);
-
-    if (res != VK_SUCCESS) {
-        // Cleanup staging and device buffers
-        vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
-        if (!used_pool) {
-            vkDestroyBuffer(dev->device, staging_buffer, nullptr);
-            vkFreeMemory(dev->device, staging_memory, nullptr);
-        }
-        vkDestroyBuffer(dev->device, device_buffer, nullptr);
-        vkFreeMemory(dev->device, device_memory, nullptr);
-        PyErr_Format(PyExc_RuntimeError, "Download submission failed (error %d)", res);
-        return nullptr;
-    }
-
-    // Map staging and copy to Python bytes
-    void *mapped_data = map_buffer_memory(dev, staging_memory, 0, buf_size);
-    if (!mapped_data) {
-        vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
-        if (!used_pool) {
-            vkDestroyBuffer(dev->device, staging_buffer, nullptr);
-            vkFreeMemory(dev->device, staging_memory, nullptr);
-        }
-        vkDestroyBuffer(dev->device, device_buffer, nullptr);
-        vkFreeMemory(dev->device, device_memory, nullptr);
-        return nullptr;
-    }
-
-    PyObject *bytes = PyBytes_FromStringAndSize(static_cast<char *>(mapped_data), buf_size);
-    vkUnmapMemory(dev->device, staging_memory);
-
-    vk_staging_buffer_release(dev, staging_buffer, staging_memory, used_pool);
-    if (!used_pool) {
-        vkDestroyBuffer(dev->device, staging_buffer, nullptr);
-        vkFreeMemory(dev->device, staging_memory, nullptr);
-    }
+    // Cleanup temporary device buffer
     vkDestroyBuffer(dev->device, device_buffer, nullptr);
     vkFreeMemory(dev->device, device_memory, nullptr);
 
-    return bytes;
+    if (!success) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to acquire staging buffer");
+        return nullptr;
+    }
+    if (!result_bytes) {
+        // Error already set by map_buffer_memory or PyBytes_FromStringAndSize
+        return nullptr;
+    }
+    return result_bytes;
 }
 
 /* ----------------------------------------------------------------------------
-   copy_to – buffer↔buffer, buffer↔texture, texture↔texture
+   copy_to - buffer-buffer, buffer-texture, texture-texture
    ------------------------------------------------------------------------- */
 PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
     PyObject *dst_obj;
@@ -374,6 +402,7 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
     bool src_is_buf = (self->buffer != VK_NULL_HANDLE);
     bool dst_is_buf = (dst->buffer != VK_NULL_HANDLE);
 
+    // Validate parameters
     if (src_is_buf && dst_is_buf) {
         if (size == 0) size = self->size;
         if (src_offset + size > self->size || dst_offset + size > dst->size) {
@@ -395,124 +424,110 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
         }
     }
 
-    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
-    if (!cmd) {
-        PyErr_SetString(vk_ComputeError, "Failed to allocate command buffer");
-        return nullptr;
-    }
+    VkResult res = execute_commands(dev, [&](VkCommandBuffer cmd) {
+        if (src_is_buf && dst_is_buf) {
+            VkBufferCopy region = { src_offset, dst_offset, size };
+            vkCmdCopyBuffer(cmd, self->buffer, dst->buffer, 1, &region);
+        }
+        else if (src_is_buf && !dst_is_buf) {
+            cmd_image_barrier(cmd, dst->image,
+                              VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                              VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+                              0, 1, dst_slice, 1);
 
-    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    vkBeginCommandBuffer(cmd, &begin);
+            VkBufferImageCopy region = {};
+            region.bufferOffset = src_offset;
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.baseArrayLayer = dst_slice;
+            region.imageSubresource.layerCount = 1;
+            region.imageExtent = dst->image_extent;
+            vkCmdCopyBufferToImage(cmd, self->buffer, dst->image,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-    if (src_is_buf && dst_is_buf) {
-        VkBufferCopy region = { src_offset, dst_offset, size };
-        vkCmdCopyBuffer(cmd, self->buffer, dst->buffer, 1, &region);
-    }
-    else if (src_is_buf && !dst_is_buf) {
-        // Buffer -> Texture
-        vk_image_barrier(cmd, dst->image,
-                         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-                         0, 1, dst_slice, 1);
+            cmd_image_barrier(cmd, dst->image,
+                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
+                              VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                              VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+                              0, 1, dst_slice, 1);
+        }
+        else if (!src_is_buf && dst_is_buf) {
+            cmd_image_barrier(cmd, self->image,
+                              VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                              VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+                              0, 1, src_slice, 1);
 
-        VkBufferImageCopy region = {};
-        region.bufferOffset = src_offset;
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.baseArrayLayer = dst_slice;
-        region.imageSubresource.layerCount = 1;
-        region.imageExtent = dst->image_extent;
-        vkCmdCopyBufferToImage(cmd, self->buffer, dst->image,
-                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            VkBufferImageCopy region = {};
+            region.bufferOffset = dst_offset;
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.baseArrayLayer = src_slice;
+            region.imageSubresource.layerCount = 1;
+            region.imageExtent = self->image_extent;
+            vkCmdCopyImageToBuffer(cmd, self->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                   dst->buffer, 1, &region);
 
-        vk_image_barrier(cmd, dst->image,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                         VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-                         0, 1, dst_slice, 1);
-    }
-    else if (!src_is_buf && dst_is_buf) {
-        // Texture -> Buffer
-        vk_image_barrier(cmd, self->image,
-                         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-                         0, 1, src_slice, 1);
+            cmd_image_barrier(cmd, self->image,
+                              VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
+                              VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                              VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+                              0, 1, src_slice, 1);
+        }
+        else /* !src_is_buf && !dst_is_buf */ {
+            VkImageMemoryBarrier barriers[2] = {};
+            barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barriers[0].image = self->image;
+            barriers[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barriers[0].subresourceRange.baseArrayLayer = src_slice;
+            barriers[0].subresourceRange.layerCount = 1;
+            barriers[0].oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+            barriers[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            barriers[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            barriers[0].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-        VkBufferImageCopy region = {};
-        region.bufferOffset = dst_offset;
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.baseArrayLayer = src_slice;
-        region.imageSubresource.layerCount = 1;
-        region.imageExtent = self->image_extent;
-        vkCmdCopyImageToBuffer(cmd, self->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                               dst->buffer, 1, &region);
+            barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barriers[1].image = dst->image;
+            barriers[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barriers[1].subresourceRange.baseArrayLayer = dst_slice;
+            barriers[1].subresourceRange.layerCount = 1;
+            barriers[1].oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+            barriers[1].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barriers[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            barriers[1].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-        vk_image_barrier(cmd, self->image,
-                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                         VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-                         0, 1, src_slice, 1);
-    }
-    else /* !src_is_buf && !dst_is_buf */ {
-        // Texture -> Texture
-        VkImageMemoryBarrier barriers[2] = {};
-        barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barriers[0].image = self->image;
-        barriers[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barriers[0].subresourceRange.baseArrayLayer = src_slice;
-        barriers[0].subresourceRange.layerCount = 1;
-        barriers[0].oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        barriers[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barriers[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        barriers[0].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                                 0, nullptr, 0, nullptr, 2, barriers);
 
-        barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barriers[1].image = dst->image;
-        barriers[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barriers[1].subresourceRange.baseArrayLayer = dst_slice;
-        barriers[1].subresourceRange.layerCount = 1;
-        barriers[1].oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        barriers[1].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barriers[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        barriers[1].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            VkImageCopy region = {};
+            region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.srcSubresource.baseArrayLayer = src_slice;
+            region.srcSubresource.layerCount = 1;
+            region.srcOffset = { static_cast<int32_t>(src_x), static_cast<int32_t>(src_y), static_cast<int32_t>(src_z) };
+            region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.dstSubresource.baseArrayLayer = dst_slice;
+            region.dstSubresource.layerCount = 1;
+            region.dstOffset = { static_cast<int32_t>(dst_x), static_cast<int32_t>(dst_y), static_cast<int32_t>(dst_z) };
+            region.extent = { width, height, depth };
 
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                             VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-                             0, nullptr, 0, nullptr, 2, barriers);
+            vkCmdCopyImage(cmd, self->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                           dst->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-        VkImageCopy region = {};
-        region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.srcSubresource.baseArrayLayer = src_slice;
-        region.srcSubresource.layerCount = 1;
-        region.srcOffset = { static_cast<int32_t>(src_x), static_cast<int32_t>(src_y), static_cast<int32_t>(src_z) };
-        region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.dstSubresource.baseArrayLayer = dst_slice;
-        region.dstSubresource.layerCount = 1;
-        region.dstOffset = { static_cast<int32_t>(dst_x), static_cast<int32_t>(dst_y), static_cast<int32_t>(dst_z) };
-        region.extent = { width, height, depth };
+            barriers[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            barriers[0].newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            barriers[0].srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
-        vkCmdCopyImage(cmd, self->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                       dst->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            barriers[1].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barriers[1].newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            barriers[1].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
-        barriers[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barriers[0].newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        barriers[0].srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-
-        barriers[1].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barriers[1].newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        barriers[1].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
-                             0, nullptr, 0, nullptr, 2, barriers);
-    }
-
-    vkEndCommandBuffer(cmd);
-    VkResult res = vk_execute_and_wait(dev, cmd);
-    vk_free_temp_cmd(dev, cmd);
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
+                                 0, nullptr, 0, nullptr, 2, barriers);
+        }
+    });
 
     if (res != VK_SUCCESS) {
         PyErr_Format(PyExc_RuntimeError, "Copy submission failed (error %d)", res);

@@ -550,7 +550,7 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args) {
 }
 
 /* ----------------------------------------------------------------------------
-   dispatch_sequence – complex sequence with optional copy and present
+   dispatch_sequence - complex sequence with optional copy and present
    ------------------------------------------------------------------------- */
 PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObject *kwds) {
     static const char *kwlist[] = {"sequence", "copy_src", "copy_dst", "copy_slice",
