@@ -11,6 +11,8 @@ from ..vulkan import (
     Sampler,
     SAMPLER_FILTER_POINT,
     SAMPLER_FILTER_LINEAR,
+    R32G32B32A32_FLOAT,
+    R8G8B8A8_UNORM,
 )
 
 logger = logging.getLogger(__name__)
@@ -131,18 +133,18 @@ class SRCNN:
 
     def _create_resources(self) -> None:
         w, h = self.width, self.height
-        self.input = Texture2D(w, h)
+        self.input = Texture2D(w, h, format=R8G8B8A8_UNORM)
         self.staging = Buffer(self.input.size)
 
         if self.double_upscale:
-            self.intermediate = Texture2D(w * 2, h * 2)
-            self.output = Texture2D(w * 4, h * 4)
+            self.intermediate = Texture2D(w * 2, h * 2, format=R32G32B32A32_FLOAT)
+            self.output = Texture2D(w * 4, h * 4, format=R32G32B32A32_FLOAT)
         else:
-            self.output = Texture2D(w * 2, h * 2)
+            self.output = Texture2D(w * 2, h * 2, format=R32G32B32A32_FLOAT)
 
         self.textures: Dict[str, Texture2D] = {}
         for i in range(self.cfg["num_textures"]):
-            self.textures[f"t{i}"] = Texture2D(w, h)
+            self.textures[f"t{i}"] = Texture2D(w, h, format=R32G32B32A32_FLOAT)
 
         cb_size = struct.calcsize("IIIIffff")
         self.cbs: List[Buffer] = []

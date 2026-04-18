@@ -120,7 +120,16 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
     swap_info.imageArrayLayers = 1;
     swap_info.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     swap_info.preTransform = caps.currentTransform;
-    swap_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    if (!(caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)) {
+        if (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR)
+            compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+        else if (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR)
+            compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+        else
+            compositeAlpha = static_cast<VkCompositeAlphaFlagBitsKHR>(caps.supportedCompositeAlpha & 0x7);
+    }
+    swap_info.compositeAlpha = compositeAlpha;
     swap_info.presentMode = present_mode;
     swap_info.clipped = VK_TRUE;
 

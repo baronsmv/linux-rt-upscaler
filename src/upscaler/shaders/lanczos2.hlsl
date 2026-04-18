@@ -2,12 +2,13 @@
 // Adapted from Magpie effect by funnyplanter (CC0‑1.0)
 
 Texture2D<float4> InputTex : register(t0);
+[[vk::image_format("rgba8")]]
 RWTexture2D<float4> OutputTex : register(u0);
 SamplerState PointSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
-    float4 bgColor;
+    float4 bgColor;         // background color
     uint srcWidth;          // upscaled source width
     uint srcHeight;         // upscaled source height
     uint dstTotalWidth;     // physical window width
@@ -28,8 +29,7 @@ float lanczos(float x)
 }
 
 #define K(x) lanczos(x)
-#define D(x) (q4 = (x), q4 * q4)   // square the four samples
-#define E(x) sqrt(x)               // square root after filtering
+#define E(x) sqrt(x)
 
 [numthreads(16, 16, 1)]
 void main(uint3 dtid : SV_DispatchThreadID)
@@ -76,9 +76,14 @@ void main(uint3 dtid : SV_DispatchThreadID)
         for (int x = 0; x < 4; x += 2)
         {
             float2 t = s + float2(x, y) * pt;
-            float4 r = D(InputTex.GatherRed(PointSampler, t));
-            float4 g = D(InputTex.GatherGreen(PointSampler, t));
-            float4 b = D(InputTex.GatherBlue(PointSampler, t));
+
+            float4 r_raw = InputTex.GatherRed(PointSampler, t);
+            float4 g_raw = InputTex.GatherGreen(PointSampler, t);
+            float4 b_raw = InputTex.GatherBlue(PointSampler, t);
+
+            float4 r = r_raw * r_raw;
+            float4 g = g_raw * g_raw;
+            float4 b = b_raw * b_raw;
 
             l[y + 0][x + 0] = L(float3(r.w, g.w, b.w));
             l[y + 0][x + 1] = L(float3(r.z, g.z, b.z));
