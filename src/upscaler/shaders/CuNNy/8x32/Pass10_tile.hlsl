@@ -40,6 +40,12 @@ cbuffer Constants : register(b0) {
     float out_dy;
 };
 
+struct TileParams {
+    uint inputLayer;    // which layer to read from INPUT
+    uint outputLayer;   // which layer to write to all outputs
+};
+[[vk::push_constant]] TileParams tileParams;
+
 float2 GetInputPt() { return float2(in_dx, in_dy); }
 float2 GetOutputPt() { return float2(out_dx, out_dy); }
 uint2 GetInputSize() { return uint2(in_width, in_height); }
@@ -61,7 +67,7 @@ Texture2D<float4> T5 : register(t6);
 Texture2D<float4> T6 : register(t7);
 Texture2D<float4> T7 : register(t8);
 
-RWTexture2D<float4> OUTPUT : register(u0);
+RWTexture2DArray<float4> OUTPUT : register(u0);
 
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);
@@ -404,8 +410,8 @@ void main(uint3 id : SV_DispatchThreadID)
     float2 opt = float2(GetOutputPt());
     float2 fpos = (float2(gxy) + 0.5) * opt;
 
-    OUTPUT[gxy + int2(0, 0)] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(0.0, 0.0) * opt, 0).rgb + float3(r0.x, r1.x, r2.x)), 1.0);
-    OUTPUT[gxy + int2(1, 0)] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(1.0, 0.0) * opt, 0).rgb + float3(r0.y, r1.y, r2.y)), 1.0);
-    OUTPUT[gxy + int2(0, 1)] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(0.0, 1.0) * opt, 0).rgb + float3(r0.z, r1.z, r2.z)), 1.0);
-    OUTPUT[gxy + int2(1, 1)] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(1.0, 1.0) * opt, 0).rgb + float3(r0.w, r1.w, r2.w)), 1.0);
+    OUTPUT[uint3(gxy + int2(0, 0), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(0.0, 0.0) * opt, 0).rgb + float3(r0.x, r1.x, r2.x)), 1.0);
+    OUTPUT[uint3(gxy + int2(1, 0), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(1.0, 0.0) * opt, 0).rgb + float3(r0.y, r1.y, r2.y)), 1.0);
+    OUTPUT[uint3(gxy + int2(0, 1), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(0.0, 1.0) * opt, 0).rgb + float3(r0.z, r1.z, r2.z)), 1.0);
+    OUTPUT[uint3(gxy + int2(1, 1), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(1.0, 1.0) * opt, 0).rgb + float3(r0.w, r1.w, r2.w)), 1.0);
 }

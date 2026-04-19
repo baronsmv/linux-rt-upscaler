@@ -40,6 +40,12 @@ cbuffer Constants : register(b0) {
     float out_dy;
 };
 
+struct TileParams {
+    uint inputLayer;    // which layer to read from INPUT
+    uint outputLayer;   // which layer to write to all outputs
+};
+[[vk::push_constant]] TileParams tileParams;
+
 float2 GetInputPt() { return float2(in_dx, in_dy); }
 float2 GetOutputPt() { return float2(out_dx, out_dy); }
 uint2 GetInputSize() { return uint2(in_width, in_height); }
@@ -54,7 +60,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
 Texture2D<float4> INPUT : register(t0);
 Texture2D<float4> T0 : register(t1);
 
-RWTexture2D<float4> OUTPUT : register(u0);
+RWTexture2DArray<float4> OUTPUT : register(u0);
 
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);
@@ -102,11 +108,11 @@ void main(uint3 id : SV_DispatchThreadID)
     float3 yuv;
 
     yuv = mul(RY, INPUT.SampleLevel(SL, fpos + float2(0.0, 0.0) * opt, 0).rgb);
-    OUTPUT[gxy + int2(0, 0)] = float4(mul(YR, float3(saturate(yuv.r + r0.x), yuv.yz)), 1.0);
+    OUTPUT[uint3(gxy + int2(0, 0), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.x), yuv.yz)), 1.0);
     yuv = mul(RY, INPUT.SampleLevel(SL, fpos + float2(1.0, 0.0) * opt, 0).rgb);
-    OUTPUT[gxy + int2(1, 0)] = float4(mul(YR, float3(saturate(yuv.r + r0.y), yuv.yz)), 1.0);
+    OUTPUT[uint3(gxy + int2(1, 0), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.y), yuv.yz)), 1.0);
     yuv = mul(RY, INPUT.SampleLevel(SL, fpos + float2(0.0, 1.0) * opt, 0).rgb);
-    OUTPUT[gxy + int2(0, 1)] = float4(mul(YR, float3(saturate(yuv.r + r0.z), yuv.yz)), 1.0);
+    OUTPUT[uint3(gxy + int2(0, 1), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.z), yuv.yz)), 1.0);
     yuv = mul(RY, INPUT.SampleLevel(SL, fpos + float2(1.0, 1.0) * opt, 0).rgb);
-    OUTPUT[gxy + int2(1, 1)] = float4(mul(YR, float3(saturate(yuv.r + r0.w), yuv.yz)), 1.0);
+    OUTPUT[uint3(gxy + int2(1, 1), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.w), yuv.yz)), 1.0);
 }

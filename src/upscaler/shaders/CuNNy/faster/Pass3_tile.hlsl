@@ -60,8 +60,8 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
 Texture2DArray<float4> T2 : register(t0);
 Texture2DArray<float4> T3 : register(t1);
 
-RWTexture2D<float4> T0 : register(u0);
-RWTexture2D<float4> T1 : register(u1);
+RWTexture2DArray<float4> T0 : register(u0);
+RWTexture2DArray<float4> T1 : register(u1);
 
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);
@@ -142,9 +142,9 @@ void main(uint3 id : SV_DispatchThreadID)
 
     r0 = max(r0, 0.0);
 
-    T0[gxy] = r0;
+    T0[uint3(gxy, tileParams.outputLayer)] = r0;
 
     r1 = max(r1, 0.0);
 
-    T1[gxy] = r1;
+    T1[uint3(gxy, tileParams.outputLayer)] = r1;
 }

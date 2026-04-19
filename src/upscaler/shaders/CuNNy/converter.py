@@ -214,7 +214,7 @@ class HlslGenerator:
 };
 
 """
-        if per_tile and not is_final:
+        if per_tile:
             header += """struct TileParams {
     uint inputLayer;    // which layer to read from INPUT
     uint outputLayer;   // which layer to write to all outputs
@@ -277,6 +277,26 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         if self.config.separate_sections:
             core_lines = self._reformat_body(core_lines)
 
+        if per_tile:
+            if is_final:
+                core_lines = [
+                    re.sub(
+                        r"OUTPUT\[(.*?)\]",
+                        r"OUTPUT[uint3(\1, tileParams.outputLayer)]",
+                        line,
+                    )
+                    for line in core_lines
+                ]
+            else:
+                core_lines = [
+                    re.sub(
+                        r"(T\d+)\[(\w+)\]",
+                        r"\1[uint3(\2, tileParams.outputLayer)]",
+                        line,
+                    )
+                    for line in core_lines
+                ]
+
         # Build entry point
         entry = self._build_entry(is_final)
 
@@ -338,18 +358,18 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         per_tile: bool,
     ) -> List[str]:
         """Return SRV and UAV declaration lines with registers."""
-        suffix = "Array" if per_tile and not is_final else ""
-        srv_lines = [
-            f"Texture2D{suffix}<float4> {tex} : register(t{idx});"
-            for idx, tex in enumerate(in_textures)
-        ]
-        uav_lines = [
-            f"RWTexture2D<float4> {tex} : register(u{idx});"
-            for idx, tex in enumerate(out_textures)
-        ]
-        if srv_lines and uav_lines:
-            return srv_lines + [""] + uav_lines
-        return srv_lines + uav_lines
+        lines = []
+        # Input textures (SRV) – array only for intermediate tile passes
+        for idx, tex in enumerate(in_textures):
+            suffix = "Array" if (per_tile and not is_final) else ""
+            lines.append(f"Texture2D{suffix}<float4> {tex} : register(t{idx});")
+        if in_textures and out_textures:
+            lines.append("")
+        # Output textures (UAV) – always array in tile mode
+        for idx, tex in enumerate(out_textures):
+            suffix = "Array" if per_tile else ""
+            lines.append(f"RWTexture2D{suffix}<float4> {tex} : register(u{idx});")
+        return lines
 
     def _extract_core_lines(self, body: str) -> List[str]:
         """

@@ -64,12 +64,12 @@ Texture2DArray<float4> T3 : register(t3);
 Texture2DArray<float4> T4 : register(t4);
 Texture2DArray<float4> T5 : register(t5);
 
-RWTexture2D<float4> T6 : register(u0);
-RWTexture2D<float4> T7 : register(u1);
-RWTexture2D<float4> T8 : register(u2);
-RWTexture2D<float4> T9 : register(u3);
-RWTexture2D<float4> T10 : register(u4);
-RWTexture2D<float4> T11 : register(u5);
+RWTexture2DArray<float4> T6 : register(u0);
+RWTexture2DArray<float4> T7 : register(u1);
+RWTexture2DArray<float4> T8 : register(u2);
+RWTexture2DArray<float4> T9 : register(u3);
+RWTexture2DArray<float4> T10 : register(u4);
+RWTexture2DArray<float4> T11 : register(u5);
 
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);
@@ -492,25 +492,25 @@ void main(uint3 id : SV_DispatchThreadID)
 
     r0 = max(r0, 0.0);
 
-    T6[gxy] = r0;
+    T6[uint3(gxy, tileParams.outputLayer)] = r0;
 
     r1 = max(r1, 0.0);
 
-    T7[gxy] = r1;
+    T7[uint3(gxy, tileParams.outputLayer)] = r1;
 
     r2 = max(r2, 0.0);
 
-    T8[gxy] = r2;
+    T8[uint3(gxy, tileParams.outputLayer)] = r2;
 
     r3 = max(r3, 0.0);
 
-    T9[gxy] = r3;
+    T9[uint3(gxy, tileParams.outputLayer)] = r3;
 
     r4 = max(r4, 0.0);
 
-    T10[gxy] = r4;
+    T10[uint3(gxy, tileParams.outputLayer)] = r4;
 
     r5 = max(r5, 0.0);
 
-    T11[gxy] = r5;
+    T11[uint3(gxy, tileParams.outputLayer)] = r5;
 }
