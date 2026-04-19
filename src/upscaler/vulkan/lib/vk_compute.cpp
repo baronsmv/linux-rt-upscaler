@@ -11,7 +11,6 @@
 #include "vk_device.h"
 #include "vk_compute.h"
 #include "vk_utils.h"
-#include "vk_fence.h"
 #include <unordered_map>
 #include <vector>
 #include <cstring>
@@ -357,24 +356,17 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
     PyObject *copy_src_obj = Py_None, *copy_dst_obj = Py_None, *present_obj = Py_None;
     int copy_slice = 0;
     int enable_timestamps = 0;
-    PyObject* fence_obj = nullptr;
+    unsigned long long fence_handle = 0;
     int wait_for_fence = 1;  // Default: wait
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|OOiOppi", (char**)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|OOiOpKi", (char**)kwlist,
                                      &PyList_Type, &sequence_list,
                                      &copy_src_obj, &copy_dst_obj, &copy_slice,
                                      &present_obj, &enable_timestamps,
-                                     &fence_obj, &wait_for_fence))
+                                     &fence_handle, &wait_for_fence))  // "K" for unsigned long long
         return nullptr;
 
-    VkFence fence = VK_NULL_HANDLE;
-    if (fence_obj && fence_obj != Py_None) {
-        if (!PyObject_TypeCheck(fence_obj, &vk_Fence_Type)) {
-            PyErr_SetString(PyExc_TypeError, "fence must be a vk.Fence");
-            return nullptr;
-        }
-        fence = ((vk_Fence*)fence_obj)->fence;
-    }
+    VkFence fence = (VkFence)fence_handle;  // Cast directly
 
     Py_ssize_t num_items = PyList_Size(sequence_list);
 
@@ -479,7 +471,8 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
     VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
     if (!cmd) {
         for (auto p : pushes) Py_DECREF(p);
-        return nullptr;  // error already set by vk_allocate_temp_cmd
+        PyErr_SetString(PyExc_RuntimeError, "Failed to allocate temporary command buffer");
+        return nullptr;
     }
 
     VkCommandBufferBeginInfo begin_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -558,7 +551,9 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
             PyObject* next_uav_list = next_comp->py_uav_list;
 
             for (Py_ssize_t j = 0; j < uav_count; ++j) {
-                vk_Resource* uav_res = (vk_Resource*)PyList_GetItem(uav_list, j);
+                PyObject* item = PyList_GetItem(uav_list, j);
+                if (item == Py_None) continue;  // skip placeholders
+                vk_Resource* uav_res = (vk_Resource*)item;
                 if (!uav_res->image) continue;
 
                 bool used_next = false;

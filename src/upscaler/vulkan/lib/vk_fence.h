@@ -58,4 +58,9 @@ PyObject* vk_Fence_reset(vk_Fence* self, PyObject* ignored);
  */
 PyObject* vk_Fence_is_signaled(vk_Fence* self, PyObject* ignored);
 
+/**
+ * Return the raw VkFence handle as an integer.
+ */
+PyObject* vk_Fence_get_handle(vk_Fence* self, PyObject* ignored);
+
 #endif /* VK_FENCE_H */

@@ -874,7 +874,7 @@ class Compute:
         src = copy_src._handle if copy_src else None
         dst = copy_dst._handle if copy_dst else None
         pres = present_image._handle if present_image else None
-        f = fence._handle if fence else None
+
         return self._handle.dispatch_sequence(
             sequence=seq,
             copy_src=src,
@@ -882,7 +882,7 @@ class Compute:
             copy_slice=copy_slice,
             present_image=pres,
             timestamps=timestamps,
-            fence=f,
+            fence=fence.handle if fence is not None else 0,
             wait_for_fence=wait_for_fence,
         )
 
@@ -985,8 +985,6 @@ class Swapchain:
 
 
 class Fence:
-    """Wrapper for VkFence."""
-
     __slots__ = ("_handle",)
 
     def __init__(self, signaled: bool = False, device: Optional[Device] = None):
@@ -999,8 +997,12 @@ class Fence:
         self._handle = handle
         return self
 
+    @property
+    def handle(self) -> int:
+        """Return the raw VkFence integer handle."""
+        return self._handle.get_handle()  # Access the 'fence' member of the C object
+
     def wait(self, timeout_ns: int = 0xFFFFFFFFFFFFFFFF) -> bool:
-        """Wait for fence. Returns True if signaled, False on timeout."""
         return self._handle.wait(timeout_ns)
 
     def reset(self) -> None:

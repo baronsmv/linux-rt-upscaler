@@ -148,6 +148,17 @@ PyObject* vk_Fence_is_signaled(vk_Fence* self, PyObject* ignored) {
 }
 
 /* ----------------------------------------------------------------------------
+   Fence.get_handle()
+   ------------------------------------------------------------------------- */
+PyObject* vk_Fence_get_handle(vk_Fence* self, PyObject* ignored) {
+    if (!self->fence) {
+        PyErr_SetString(vk_FenceError, "Fence is invalid");
+        return nullptr;
+    }
+    return PyLong_FromUnsignedLongLong((unsigned long long)self->fence);
+}
+
+/* ----------------------------------------------------------------------------
    Fence type definition
    ------------------------------------------------------------------------- */
 static PyMethodDef vk_Fence_methods[] = {
@@ -157,6 +168,8 @@ static PyMethodDef vk_Fence_methods[] = {
      "Reset the fence to unsignaled state."},
     {"is_signaled", (PyCFunction)vk_Fence_is_signaled, METH_NOARGS,
      "Return True if the fence is currently signaled."},
+    {"get_handle", (PyCFunction)vk_Fence_get_handle, METH_NOARGS,
+     "Return the raw VkFence handle as an integer."},
     {nullptr, nullptr, 0, nullptr}
 };
 
