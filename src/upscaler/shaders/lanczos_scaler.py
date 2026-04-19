@@ -70,36 +70,13 @@ class LanczosScaler:
         )
 
     def set_target_texture(self, tex: Texture2D) -> None:
-        logger.debug(
-            f"set_target_texture called: tex={id(tex)} {tex.width}x{tex.height}"
-        )
-        if tex is self._dst_tex and self.compute is not None:
-            logger.debug("Texture unchanged and compute exists, skipping")
+        # Ignore texture changes – always use the first pipeline created
+        self.count = 0
+        if self.count > 2:
             return
 
-        if self._src_tex is None:
-            logger.error("Source texture is None – cannot create Lanczos pipeline")
-            self.compute = None
-            return
-
-        if self._shader is None:
-            logger.critical("Shader not loaded")
-            self.compute = None
-            return
-
-        logger.debug(f"Source texture: {self._src_tex.width}x{self._src_tex.height}")
-
-        tex_id = id(tex)
-        if tex_id in self._compute_cache:
-            self.compute = self._compute_cache[tex_id]
-            self._dst_tex = tex
-            logger.debug(f"Using cached compute for tex id={tex_id}")
-            return
-
-        logger.info(
-            f"Creating new Lanczos compute pipeline for tex {tex.width}x{tex.height}"
-        )
-        # Temporarily remove try/except to let the exception propagate
+        self.count += 1
+        # Create once and never rebuild
         self.compute = Compute(
             self._shader,
             srv=[self._src_tex],
@@ -108,11 +85,7 @@ class LanczosScaler:
             samplers=[self._sampler],
             push_size=0,
         )
-        self._compute_cache[tex_id] = self.compute
         self._dst_tex = tex
-        self._dst_width = tex.width
-        self._dst_height = tex.height
-        logger.info("Lanczos compute pipeline created successfully")
 
     def update_constants(self, background_color, *args) -> None:
         self._push_data = struct.pack(CB_FORMAT, *background_color, *args)
