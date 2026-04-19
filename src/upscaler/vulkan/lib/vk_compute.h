@@ -47,4 +47,22 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args);
  */
 PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObject *kwds);
 
+/* ----------------------------------------------------------------------------
+   Python method: update_uav
+   ------------------------------------------------------------------------- */
+/**
+ * Update the storage image bound to a UAV descriptor without rebuilding the pipeline.
+ *
+ * This allows swapping the output texture of a compute shader efficiently,
+ * which is essential for double‑buffering in an asynchronous pipeline.
+ *
+ * Args:
+ *     binding (int): descriptor binding index (e.g., 0 for register(u0)).
+ *     resource (vk.Resource): new texture to bind. Must be an image.
+ *
+ * Returns:
+ *     None.
+ */
+PyObject *vk_Compute_update_uav(vk_Compute *self, PyObject *args);
+
 #endif /* VK_COMPUTE_H */

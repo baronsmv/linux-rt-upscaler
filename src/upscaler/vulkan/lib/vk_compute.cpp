@@ -691,6 +691,52 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
 }
 
 /* ----------------------------------------------------------------------------
+   update_uav
+   ------------------------------------------------------------------------- */
+/**
+ * Update the storage image bound to a specific UAV binding.
+ *
+ * This function writes a new VkDescriptorImageInfo to the existing descriptor set,
+ * allowing the compute pipeline to target a different texture without the overhead
+ * of recreating pipelines, layouts, or descriptor pools.
+ *
+ * The resource must be an image (vk.Resource with a valid .image handle).
+ *
+ * Args:
+ *     binding (int): descriptor binding index (e.g., 0 for u0).
+ *     resource (vk.Resource): new texture to bind.
+ *
+ * Returns:
+ *     None.
+ */
+PyObject* vk_Compute_update_uav(vk_Compute* self, PyObject* args) {
+    uint32_t binding;
+    PyObject* resource_obj;
+    if (!PyArg_ParseTuple(args, "IO", &binding, &resource_obj))
+        return nullptr;
+
+    if (!PyObject_TypeCheck(resource_obj, &vk_Resource_Type)) {
+        PyErr_SetString(PyExc_TypeError, "Expected a vk.Resource");
+        return nullptr;
+    }
+    vk_Resource* res = (vk_Resource*)resource_obj;
+    if (!res->image) {
+        PyErr_SetString(PyExc_TypeError, "Resource must be an image for UAV update");
+        return nullptr;
+    }
+
+    VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+    write.dstSet = self->descriptor_set;
+    write.dstBinding = binding;
+    write.descriptorCount = 1;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    write.pImageInfo = &res->descriptor_image_info;
+
+    vkUpdateDescriptorSets(self->py_device->device, 1, &write, 0, nullptr);
+    Py_RETURN_NONE;
+}
+
+/* ----------------------------------------------------------------------------
    Compute type definition
    ------------------------------------------------------------------------- */
 static PyMethodDef vk_Compute_methods[] = {
@@ -699,6 +745,8 @@ static PyMethodDef vk_Compute_methods[] = {
     {"dispatch_sequence", (PyCFunction)vk_Compute_dispatch_sequence,
      METH_VARARGS | METH_KEYWORDS,
      "Execute a sequence of dispatches with optional copy and present."},
+    {"update_uav", (PyCFunction)vk_Compute_update_uav, METH_VARARGS,
+     "Update a UAV binding with a new image."},
     {nullptr, nullptr, 0, nullptr}
 };
 

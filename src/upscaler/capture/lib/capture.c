@@ -13,43 +13,31 @@
 #include <string.h>
 #include <X11/Xlib-xcb.h>
 #include <xcb/xcb.h>
+#include <unistd.h>
 
 /* -------------------------------------------------------------------------
  *  Clamping Utilities
  * ------------------------------------------------------------------------- */
 static void clamp_rect(int *x, int *y, int *w, int *h, int max_w, int max_h) {
-  if (*x < 0) {
-    *w += *x;
-    *x = 0;
-  }
-  if (*y < 0) {
-    *h += *y;
-    *y = 0;
-  }
-  if (*x + *w > max_w)
-    *w = max_w - *x;
-  if (*y + *h > max_h)
-    *h = max_h - *y;
-  if (*w < 0)
-    *w = 0;
-  if (*h < 0)
-    *h = 0;
+  if (*x < 0) { *w += *x; *x = 0; }
+  if (*y < 0) { *h += *y; *y = 0; }
+  if (*x + *w > max_w) *w = max_w - *x;
+  if (*y + *h > max_h) *h = max_h - *y;
+  if (*w < 0) *w = 0;
+  if (*h < 0) *h = 0;
 }
 
 /* -------------------------------------------------------------------------
  *  Public API Implementation
  * ------------------------------------------------------------------------- */
 CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
-                               int height) {
+                               int height, int tile_size, int capture_delay_us,
+                               int capture_stabilize_us) {
   CaptureContext *ctx = calloc(1, sizeof(CaptureContext));
-  if (!ctx)
-    return NULL;
+  if (!ctx) return NULL;
 
   ctx->dpy = XOpenDisplay(NULL);
-  if (!ctx->dpy) {
-    free(ctx);
-    return NULL;
-  }
+  if (!ctx->dpy) { free(ctx); return NULL; }
 
   x11_install_error_handler();
 
@@ -67,35 +55,29 @@ CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
 
   damage_init(ctx);
 
-  /* Read configuration from environment */
   ctx->debug = (getenv("CAPTURE_DEBUG") != NULL);
-  ctx->tile_size = DEFAULT_TILE_SIZE;
+  ctx->tile_size = tile_size;
+  ctx->capture_delay_us = capture_delay_us;
+  ctx->capture_stabilize_us = capture_stabilize_us;  // +++
+
   const char *ts = getenv("CAPTURE_TILE_SIZE");
-  if (ts)
-    ctx->tile_size = atoi(ts);
-  if (ctx->tile_size < MIN_TILE_SIZE)
-    ctx->tile_size = MIN_TILE_SIZE;
+  if (ts) ctx->tile_size = atoi(ts);
+  if (ctx->tile_size < MIN_TILE_SIZE) ctx->tile_size = MIN_TILE_SIZE;
 
   ctx->tile_threshold_percent = DEFAULT_THRESHOLD;
   const char *th = getenv("CAPTURE_TILE_THRESHOLD");
-  if (th)
-    ctx->tile_threshold_percent = atoi(th);
-  if (ctx->tile_threshold_percent < 0)
-    ctx->tile_threshold_percent = DEFAULT_THRESHOLD;
-  if (ctx->tile_threshold_percent > 100)
-    ctx->tile_threshold_percent = 100;
+  if (th) ctx->tile_threshold_percent = atoi(th);
+  if (ctx->tile_threshold_percent < 0) ctx->tile_threshold_percent = DEFAULT_THRESHOLD;
+  if (ctx->tile_threshold_percent > 100) ctx->tile_threshold_percent = 100;
 
   if (!tile_cache_init(ctx)) {
     fprintf(stderr, "[capture] Failed to allocate tile cache\n");
-    /* Continue without tile cache (fallback to damage rects) */
   }
 
   if (ctx->debug) {
-    fprintf(stderr,
-            "[capture] Init %dx%d, damage=%d, tile_size=%d, tiles=%dx%d, "
-            "threshold=%d%%\n",
-            width, height, ctx->use_damage, ctx->tile_size, ctx->tiles_x,
-            ctx->tiles_y, ctx->tile_threshold_percent);
+    fprintf(stderr, "[capture] Init %dx%d, damage=%d, tile_size=%d, tiles=%dx%d, threshold=%d%%\n",
+            width, height, ctx->use_damage, ctx->tile_size, ctx->tiles_x, ctx->tiles_y,
+            ctx->tile_threshold_percent);
   }
 
   return ctx;
@@ -103,55 +85,48 @@ CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
 
 int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
                         OutputRect *rects, int max_rects) {
-  if (!ctx || !ctx->dpy)
-    return -1;
+  if (!ctx || !ctx->dpy) return -1;
 
   /* Clamp capture dimensions to current window size */
   XWindowAttributes attrs;
   x11_lock();
   if (XGetWindowAttributes(ctx->dpy, ctx->xid, &attrs)) {
-    if (ctx->x + ctx->width > attrs.width)
-      ctx->width = attrs.width - ctx->x;
-    if (ctx->y + ctx->height > attrs.height)
-      ctx->height = attrs.height - ctx->y;
+    if (ctx->x + ctx->width > attrs.width)  ctx->width = attrs.width - ctx->x;
+    if (ctx->y + ctx->height > attrs.height) ctx->height = attrs.height - ctx->y;
   }
   x11_unlock();
-  if (ctx->width <= 0 || ctx->height <= 0)
-    return 0;
+  if (ctx->width <= 0 || ctx->height <= 0) return 0;
 
   /* Query damage region */
   int num_damage = 0;
-  XRectangle bounds = {0, 0, 0, 0};
+  XRectangle bounds = {0,0,0,0};
   XRectangle *damage_rects = NULL;
   damage_query(ctx, &num_damage, &bounds, &damage_rects);
 
+  if (ctx->capture_delay_us > 0)
+    usleep(ctx->capture_delay_us);
+
   /* First frame: always capture full frame */
   if (!ctx->first_capture_done) {
-    if (shm_capture_region(ctx, 0, 0, ctx->width, ctx->height, output_data) !=
-        0)
+    if (shm_capture_region(ctx, 0, 0, ctx->width, ctx->height, output_data) != 0)
       return -1;
     ctx->first_capture_done = 1;
 
-    /* Initialise tile cache with first frame hashes */
     if (ctx->tile_cache) {
       int stride = ctx->width * 4;
       for (int ty = 0; ty < ctx->tiles_y; ty++) {
         for (int tx = 0; tx < ctx->tiles_x; tx++) {
           int idx = ty * ctx->tiles_x + tx;
           TileCacheEntry *t = &ctx->tile_cache[idx];
-          t->hash = tile_compute_hash(output_data, stride, t->x, t->y, t->width,
-                                      t->height);
+          t->hash = tile_compute_hash(output_data, stride, t->x, t->y, t->width, t->height);
         }
       }
     }
 
-    if (damage_rects)
-      XFree(damage_rects);
+    if (damage_rects) XFree(damage_rects);
     if (max_rects > 0) {
-      rects[0].x = 0;
-      rects[0].y = 0;
-      rects[0].width = ctx->width;
-      rects[0].height = ctx->height;
+      rects[0].x = 0; rects[0].y = 0;
+      rects[0].width = ctx->width; rects[0].height = ctx->height;
       rects[0].hash = 0;
       return 1;
     }
@@ -168,60 +143,132 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
     cap_h = bounds.height;
     clamp_rect(&cap_x, &cap_y, &cap_w, &cap_h, ctx->width, ctx->height);
     if (cap_w <= 0 || cap_h <= 0) {
-      if (damage_rects)
-        XFree(damage_rects);
+      if (damage_rects) XFree(damage_rects);
       return 0;
     }
   } else {
-    cap_x = 0;
-    cap_y = 0;
-    cap_w = ctx->width;
-    cap_h = ctx->height;
+    cap_x = 0; cap_y = 0;
+    cap_w = ctx->width; cap_h = ctx->height;
     use_full_frame = 1;
   }
 
-  /* Perform capture */
+  // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  // Stabilization double‑capture (only when damage is present and enabled)
+  // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   unsigned char *partial_buf = NULL;
-  if (use_full_frame) {
-    if (shm_capture_region(ctx, 0, 0, ctx->width, ctx->height, output_data) !=
-        0) {
-      if (damage_rects)
-        XFree(damage_rects);
-      return -1;
+  int rect_count = 0;
+
+  if (num_damage > 0 && ctx->capture_stabilize_us > 0) {
+    // First capture
+    unsigned char *first_buf = NULL;
+    if (use_full_frame) {
+      first_buf = output_data;
+      if (shm_capture_region(ctx, 0, 0, ctx->width, ctx->height, first_buf) != 0) {
+        if (damage_rects) XFree(damage_rects);
+        return -1;
+      }
+    } else {
+      first_buf = malloc(cap_w * cap_h * 4);
+      if (!first_buf) {
+        if (damage_rects) XFree(damage_rects);
+        return -1;
+      }
+      if (shm_capture_region(ctx, cap_x, cap_y, cap_w, cap_h, first_buf) != 0) {
+        free(first_buf);
+        if (damage_rects) XFree(damage_rects);
+        return -1;
+      }
+    }
+
+    usleep(ctx->capture_stabilize_us);
+
+    // Second capture
+    unsigned char *second_buf = NULL;
+    if (use_full_frame) {
+      second_buf = malloc(ctx->width * ctx->height * 4);
+      if (!second_buf) {
+        if (!use_full_frame) free(first_buf);
+        if (damage_rects) XFree(damage_rects);
+        return -1;
+      }
+      if (shm_capture_region(ctx, 0, 0, ctx->width, ctx->height, second_buf) != 0) {
+        free(second_buf);
+        if (!use_full_frame) free(first_buf);
+        if (damage_rects) XFree(damage_rects);
+        return -1;
+      }
+    } else {
+      second_buf = malloc(cap_w * cap_h * 4);
+      if (!second_buf) {
+        free(first_buf);
+        if (damage_rects) XFree(damage_rects);
+        return -1;
+      }
+      if (shm_capture_region(ctx, cap_x, cap_y, cap_w, cap_h, second_buf) != 0) {
+        free(second_buf);
+        free(first_buf);
+        if (damage_rects) XFree(damage_rects);
+        return -1;
+      }
+    }
+
+    // Compare a portion of the buffers (first 1KB is enough to detect change)
+    size_t cmp_size = use_full_frame ? (ctx->width * ctx->height * 4) : (cap_w * cap_h * 4);
+    if (cmp_size > 1024) cmp_size = 1024;
+    int same = (memcmp(first_buf, second_buf, cmp_size) == 0);
+
+    if (same) {
+      // Keep first buffer
+      if (use_full_frame) {
+        // output_data already holds first frame
+        partial_buf = NULL;
+      } else {
+        partial_buf = first_buf;
+      }
+      free(second_buf);
+    } else {
+      // Use second buffer (newer)
+      if (use_full_frame) {
+        memcpy(output_data, second_buf, ctx->width * ctx->height * 4);
+        partial_buf = NULL;
+      } else {
+        partial_buf = second_buf;
+        free(first_buf);
+      }
     }
   } else {
-    partial_buf = malloc(cap_w * cap_h * 4);
-    if (!partial_buf) {
-      if (damage_rects)
-        XFree(damage_rects);
-      return -1;
-    }
-    if (shm_capture_region(ctx, cap_x, cap_y, cap_w, cap_h, partial_buf) != 0) {
-      free(partial_buf);
-      if (damage_rects)
-        XFree(damage_rects);
-      return -1;
+    // Normal single capture (existing logic)
+    if (use_full_frame) {
+      if (shm_capture_region(ctx, 0, 0, ctx->width, ctx->height, output_data) != 0) {
+        if (damage_rects) XFree(damage_rects);
+        return -1;
+      }
+    } else {
+      partial_buf = malloc(cap_w * cap_h * 4);
+      if (!partial_buf) {
+        if (damage_rects) XFree(damage_rects);
+        return -1;
+      }
+      if (shm_capture_region(ctx, cap_x, cap_y, cap_w, cap_h, partial_buf) != 0) {
+        free(partial_buf);
+        if (damage_rects) XFree(damage_rects);
+        return -1;
+      }
     }
   }
 
-  /* Detect changes using tile cache */
-  int rect_count = 0;
+  // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  // Tile cache change detection (unchanged from original)
+  // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   if (ctx->tile_cache) {
-    rect_count =
-        tile_cache_detect_changes(ctx, use_full_frame, output_data, partial_buf,
-                                  cap_x, cap_y, cap_w, cap_h, rects, max_rects);
+    rect_count = tile_cache_detect_changes(ctx, use_full_frame, output_data, partial_buf,
+                                           cap_x, cap_y, cap_w, cap_h, rects, max_rects);
 
-    /* If threshold exceeded, tile_cache_detect_changes already returned a
-     * full‑frame rect. */
-    if (rect_count == 1 && rects[0].width == ctx->width &&
-        rects[0].height == ctx->height) {
-      /* Full frame was requested – we may need to recapture if we hadn't
-       * already */
+    if (rect_count == 1 && rects[0].width == ctx->width && rects[0].height == ctx->height) {
       if (!use_full_frame) {
         shm_capture_region(ctx, 0, 0, ctx->width, ctx->height, output_data);
       }
     } else if (!use_full_frame && rect_count > 0) {
-      /* Copy changed tiles from partial buffer into the full output buffer */
       int stride_full = ctx->width * 4;
       int stride_part = cap_w * 4;
       for (int i = 0; i < rect_count; i++) {
@@ -231,13 +278,11 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
         unsigned char *src = partial_buf + local_y * stride_part + local_x * 4;
         unsigned char *dst = output_data + r->y * stride_full + r->x * 4;
         for (int row = 0; row < r->height; row++) {
-          memcpy(dst + row * stride_full, src + row * stride_part,
-                 r->width * 4);
+          memcpy(dst + row * stride_full, src + row * stride_part, r->width * 4);
         }
       }
     }
   } else {
-    /* No tile cache – fallback to damage rectangles directly */
     if (num_damage > 0) {
       for (int i = 0; i < num_damage && rect_count < max_rects; i++) {
         int rx = damage_rects[i].x - ctx->x;
@@ -245,28 +290,23 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
         int rw = damage_rects[i].width;
         int rh = damage_rects[i].height;
         clamp_rect(&rx, &ry, &rw, &rh, ctx->width, ctx->height);
-        if (rw <= 0 || rh <= 0)
-          continue;
-        rects[rect_count].x = rx;
-        rects[rect_count].y = ry;
-        rects[rect_count].width = rw;
-        rects[rect_count].height = rh;
+        if (rw <= 0 || rh <= 0) continue;
+        rects[rect_count].x = rx; rects[rect_count].y = ry;
+        rects[rect_count].width = rw; rects[rect_count].height = rh;
         rects[rect_count].hash = 0;
         rect_count++;
       }
     } else if (use_full_frame) {
       if (max_rects > 0) {
-        rects[0].x = 0;
-        rects[0].y = 0;
-        rects[0].width = ctx->width;
-        rects[0].height = ctx->height;
+        rects[0].x = 0; rects[0].y = 0;
+        rects[0].width = ctx->width; rects[0].height = ctx->height;
         rects[0].hash = 0;
         rect_count = 1;
       }
     }
   }
 
-  /* Final bounds validation (paranoia) */
+  /* Final bounds validation */
   for (int i = 0; i < rect_count; i++) {
     if (rects[i].x < 0 || rects[i].y < 0 ||
         rects[i].x + rects[i].width > ctx->width ||
@@ -282,8 +322,7 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
   }
 
   free(partial_buf);
-  if (damage_rects)
-    XFree(damage_rects);
+  if (damage_rects) XFree(damage_rects);
   return rect_count;
 }
 
@@ -294,17 +333,15 @@ int capture_grab(CaptureContext *ctx, unsigned char *output_data) {
 }
 
 void capture_destroy(CaptureContext *ctx) {
-  if (!ctx)
-    return;
+  if (!ctx) return;
   shm_destroy_image(ctx);
   damage_destroy(ctx);
-  if (ctx->dpy)
-    XCloseDisplay(ctx->dpy);
+  if (ctx->dpy) XCloseDisplay(ctx->dpy);
   tile_cache_free(ctx);
   free(ctx);
 }
 
 void* capture_get_xcb_connection(CaptureContext *ctx) {
-    if (!ctx || !ctx->dpy) return NULL;
-    return (void*)XGetXCBConnection(ctx->dpy);
+  if (!ctx || !ctx->dpy) return NULL;
+  return (void*)XGetXCBConnection(ctx->dpy);
 }

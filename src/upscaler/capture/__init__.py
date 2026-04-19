@@ -22,11 +22,14 @@ class DamageRect(ctypes.Structure):
 
 
 _lib.capture_create.argtypes = [
-    ctypes.c_ulong,
-    ctypes.c_int,
-    ctypes.c_int,
-    ctypes.c_int,
-    ctypes.c_int,
+    ctypes.c_ulong,  # xid
+    ctypes.c_int,  # crop_left
+    ctypes.c_int,  # crop_top
+    ctypes.c_int,  # width
+    ctypes.c_int,  # height
+    ctypes.c_int,  # tile_size
+    ctypes.c_int,  # capture_delay_us
+    ctypes.c_int,  # capture_stabilize_us
 ]
 _lib.capture_create.restype = ctypes.c_void_p
 
@@ -46,14 +49,18 @@ _lib.capture_get_xcb_connection.restype = ctypes.c_void_p
 
 
 class FrameGrabber:
+
     def __init__(
         self,
         window_info: Any,
-        crop_left=0,
-        crop_top=0,
-        crop_right=0,
-        crop_bottom=0,
+        *,
+        crop_left: int = 0,
+        crop_top: int = 0,
+        crop_right: int = 0,
+        crop_bottom: int = 0,
         tile_size: int = 64,
+        capture_delay_us: int = 0,
+        capture_stabilize_us: int = 0,
     ):
         self.handle = window_info.handle
         self.crop_left = crop_left
@@ -62,19 +69,24 @@ class FrameGrabber:
         self.crop_bottom = crop_bottom
         self.width = window_info.width - crop_left - crop_right
         self.height = window_info.height - crop_top - crop_bottom
+        self.capture_delay_us = capture_delay_us
 
         if self.width <= 0 or self.height <= 0:
             raise ValueError(f"Invalid cropped dimensions: {self.width}x{self.height}")
-
-        # Set tile size for C library
-        os.environ["CAPTURE_TILE_SIZE"] = str(tile_size)
 
         self.buffer_size = self.width * self.height * 4
         self.buffer = (ctypes.c_ubyte * self.buffer_size)()
         self._rects_buffer = (DamageRect * _MAX_DAMAGE_RECTS)()
 
         self._ctx = _lib.capture_create(
-            self.handle, self.crop_left, self.crop_top, self.width, self.height
+            self.handle,
+            self.crop_left,
+            self.crop_top,
+            self.width,
+            self.height,
+            tile_size,
+            capture_delay_us,
+            capture_stabilize_us,
         )
         if not self._ctx:
             raise RuntimeError("Failed to create capture context")

@@ -89,7 +89,7 @@ class Config:
     vulkan_buffer_pool_size: int = 8
     use_damage_tracking: bool = True
 
-    async_pipeline: bool = False
+    async_pipeline: bool = True
     async_buffer_count: int = 2
 
     # Cache

@@ -95,6 +95,7 @@ class Pipeline:
         # Async
         self._async_enabled = config.async_pipeline
         self._async_buffer_count = config.async_buffer_count
+        self._idle_frame_counter = 0
 
         if self._async_enabled:
             self._screen_textures = []
@@ -397,41 +398,62 @@ class Pipeline:
         self.overlay.update_opacity()
 
         # -------------------------------------------------------------------------
-        # 3. If frame hasn't changed and no OSD update, skip GPU work
+        # 3. If frame hasn't changed and no OSD update, decide whether to render
         # -------------------------------------------------------------------------
         if not is_dirty and osd_texture is None:
-            # In async mode, we still need to present something (the last frame)
             if self._async_enabled:
-                present_tex = self._screen_textures[self._present_tex_idx or 0]
+                self._idle_frame_counter += 1
+                if self._idle_frame_counter >= self._async_buffer_count:
+                    # Render this frame (dispatches only, no upload)
+                    self._idle_frame_counter = 0
+                    is_dirty = False  # will skip upload later
+                    # fall through to rendering
+                else:
+                    # Present the last frame and return
+                    present_tex = self._screen_textures[self._present_tex_idx or 0]
+                    self._swapchain_manager.present(present_tex, wait_for_fence=False)
+                    return
             else:
-                present_tex = self._screen_tex
-            self._swapchain_manager.present(present_tex, wait_for_fence=False)
-            return
+                # Synchronous mode: nothing to do
+                self._swapchain_manager.present(self._screen_tex, wait_for_fence=False)
+                return
+        else:
+            # Frame is dirty or OSD active → reset counter
+            self._idle_frame_counter = 0
 
         # -------------------------------------------------------------------------
-        # 4. Upload captured frame to staging buffer (CPU -> GPU)
+        # 4. Upload captured frame (only if actually dirty)
         # -------------------------------------------------------------------------
-        try:
-            if self.config.use_damage_tracking and rects:
-                upload_list = []
-                stride = self.crop_width * 4
-                for ex, ey, ew, eh in self._expand_damage_rects(rects):
-                    sub_data = bytearray()
-                    for row in range(ey, ey + eh):
-                        start = row * stride + ex * 4
-                        sub_data.extend(frame[start : start + ew * 4])
-                    upload_list.append((bytes(sub_data), ex, ey, ew, eh))
-                self.upscaler.input.upload_subresources(upload_list)
-            else:
-                self.upscaler.staging.upload(frame)
-        except Exception as e:
-            logger.error(f"Frame upload failed: {e}", exc_info=True)
-            return
+        upload_performed = False
+        if is_dirty:
+            try:
+                if self.config.use_damage_tracking and rects:
+                    upload_list = []
+                    stride = self.crop_width * 4
+                    for ex, ey, ew, eh in self._expand_damage_rects(rects):
+                        sub_data = bytearray()
+                        for row in range(ey, ey + eh):
+                            start = row * stride + ex * 4
+                            sub_data.extend(frame[start : start + ew * 4])
+                        upload_list.append((bytes(sub_data), ex, ey, ew, eh))
+                    self.upscaler.input.upload_subresources(upload_list)
+                    upload_performed = (
+                        True  # subresource upload, no staging buffer needed later
+                    )
+                else:
+                    self.upscaler.staging.upload(frame)
+                    upload_performed = True  # staging buffer contains the full frame
+            except Exception as e:
+                logger.error(f"Frame upload failed: {e}", exc_info=True)
+                return
 
         # -------------------------------------------------------------------------
         # 5. Choose target screen texture for this frame
         # -------------------------------------------------------------------------
         if self._async_enabled:
+            logger.debug(
+                f"Writing to tex idx={self._current_tex_idx}, presenting idx={self._present_tex_idx}"
+            )
             next_idx = (self._current_tex_idx + 1) % self._async_buffer_count
             target_tex = self._screen_textures[next_idx]
             target_fence = self._texture_fences[next_idx]
@@ -526,14 +548,19 @@ class Pipeline:
         # -------------------------------------------------------------------------
         # 8. Submit all GPU work with proper synchronization
         # -------------------------------------------------------------------------
-        copy_src = (
-            None
-            if (self.config.use_damage_tracking and rects)
-            else self.upscaler.staging
-        )
+        if upload_performed and self.config.use_damage_tracking and rects:
+            # Subresource upload was used → no staging buffer copy needed
+            copy_src = None
+        elif upload_performed:
+            # Full frame uploaded via staging → copy from staging buffer
+            copy_src = self.upscaler.staging
+        else:
+            # Forced render (idle) → no upload, skip copy
+            copy_src = None
 
         if self._async_enabled:
-            # Use the modified dispatch_sequence that accepts a fence to signal
+            # Use a fence to signal
+            logger.debug(f"Fence for tex {next_idx}: handle = {target_fence.handle}")
             try:
                 self.upscaler.pipelines_first[0].dispatch_sequence(
                     sequence=dispatches,
@@ -543,6 +570,10 @@ class Pipeline:
                     fence=target_fence,
                     wait_for_fence=False,  # don't wait inside
                 )
+                # Optional: wait a tiny bit for the GPU to start
+                time.sleep(0.001)
+                if target_fence.is_signaled():
+                    logger.debug(f"Fence for tex {next_idx} signaled quickly")
             except Exception as e:
                 logger.error(f"dispatch_sequence failed: {e}", exc_info=True)
                 return
@@ -557,6 +588,10 @@ class Pipeline:
             except Exception as e:
                 logger.error(f"dispatch_sequence failed: {e}", exc_info=True)
                 return
+
+        if self._frame_count % 60 == 0:  # every ~1 second at 60fps
+            with open(f"/home/mau/frame_{self._frame_count}.raw", "wb") as f:
+                f.write(frame.tobytes())
 
         # -------------------------------------------------------------------------
         # 9. Present the appropriate texture

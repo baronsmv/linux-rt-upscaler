@@ -886,6 +886,9 @@ class Compute:
             wait_for_fence=wait_for_fence,
         )
 
+    def update_uav(self, binding: int, resource: Texture2D) -> None:
+        self._handle.update_uav(binding, resource._handle)
+
     def __repr__(self) -> str:
         return "<Compute>"
 

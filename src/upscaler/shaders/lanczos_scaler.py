@@ -65,15 +65,17 @@ class LanczosScaler:
         self._rebuild_compute()
 
     def set_target_texture(self, tex: Texture2D) -> None:
-        if (
-            tex is self._dst_tex
-            and tex.width == self._dst_width
-            and tex.height == self._dst_height
-        ):
+        if self._dst_width == tex.width and self._dst_height == tex.height:
+            # Same dimensions: just update the descriptor
+            if self.compute is not None:
+                self.compute.update_uav(0, tex)  # assuming UAV is at binding 0
+            self._dst_tex = tex
             return
+        # Dimensions changed – full rebuild
         self._dst_tex = tex
         self._dst_width = tex.width
         self._dst_height = tex.height
+        self._dst_format = getattr(tex, "format", None)
         self._rebuild_compute()
 
     def update_constants(self, background_color, *args) -> None:

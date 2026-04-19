@@ -12,7 +12,6 @@
 #include <stdint.h>
 
 /* Configuration constants */
-#define DEFAULT_TILE_SIZE 64
 #define MIN_TILE_SIZE 16
 #define DEFAULT_THRESHOLD 30
 
@@ -49,6 +48,8 @@ typedef struct CaptureContext {
   int use_damage;
   Damage damage;
   int first_capture_done;
+  int capture_delay_us;
+  int capture_stabilize_us;
 
   /* Tile cache */
   TileCacheEntry *tile_cache;
@@ -72,7 +73,8 @@ extern "C" {
  * @return Opaque context pointer, or NULL on failure.
  */
 CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
-                               int height);
+                               int height, int tile_size, int capture_delay_us,
+                               int capture_stabilize_us);
 
 /**
  * Capture a frame and return a list of changed rectangles.
