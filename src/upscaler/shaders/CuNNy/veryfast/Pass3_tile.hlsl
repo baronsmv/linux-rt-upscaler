@@ -1,0 +1,127 @@
+// CuNNy-veryfast-NVL - Pass 3 - https://github.com/funnyplanter/CuNNy
+// Generated for linux-rt-upscaler - https://github.com/baronsmv/linux-rt-upscaler
+//
+// Compile with:
+// dxc -T cs_6_0 -E main -spirv <this_file> \
+//     -fvk-auto-shift-bindings \
+//     -fvk-t-shift 1024 0 \
+//     -fvk-u-shift 2048 0 \
+//     -fvk-s-shift 3072 0 \
+//     -fvk-use-dx-layout \
+//     -fvk-use-scalar-layout \
+//     -Fo <output.spv>
+//
+// =============================================================================
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// 
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+// =============================================================================
+
+cbuffer Constants : register(b0) {
+    uint in_width;
+    uint in_height;
+    uint out_width;
+    uint out_height;
+    float in_dx;
+    float in_dy;
+    float out_dx;
+    float out_dy;
+};
+
+struct TileParams {
+    uint inputLayer;    // which layer to read from INPUT
+    uint outputLayer;   // which layer to write to all outputs
+};
+[[vk::push_constant]] TileParams tileParams;
+
+float2 GetInputPt() { return float2(in_dx, in_dy); }
+float2 GetOutputPt() { return float2(out_dx, out_dy); }
+uint2 GetInputSize() { return uint2(in_width, in_height); }
+uint2 GetOutputSize() { return uint2(out_width, out_height); }
+
+#define O(t, x, y) t.SampleLevel(SP, float3(pos + float2(x, y) * pt, tileParams.inputLayer), 0)
+#define V4 min16float4
+#define M4 min16float4x4
+#define V3 min16float3
+#define M3x4 min16float3x4
+
+Texture2DArray<float4> T2 : register(t0);
+Texture2DArray<float4> T3 : register(t1);
+
+RWTexture2D<float4> T0 : register(u0);
+
+SamplerState SP : register(s0);
+SamplerState SL : register(s1);
+
+#define L0(x, y) V4(O(T2, x, y))
+#define L1(x, y) V4(O(T3, x, y))
+
+[numthreads(8,8,1)]
+void main(uint3 id : SV_DispatchThreadID)
+{
+    float2 pt = float2(GetInputPt());
+    uint2 gxy = id.xy;
+    float2 pos = (gxy + 0.5) * pt;
+
+    V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
+    V4 r0 = 0.0;
+
+    s0_0_0 = L0(-1.0, -1.0); s0_0_1 = L0(0.0, -1.0); s0_0_2 = L0(1.0, -1.0);
+    s0_1_0 = L0(-1.0, 0.0); s0_1_1 = L0(0.0, 0.0); s0_1_2 = L0(1.0, 0.0);
+    s0_2_0 = L0(-1.0, 1.0); s0_2_1 = L0(0.0, 1.0); s0_2_2 = L0(1.0, 1.0);
+    s1_0_0 = L1(-1.0, -1.0); s1_0_1 = L1(0.0, -1.0); s1_0_2 = L1(1.0, -1.0);
+    s1_1_0 = L1(-1.0, 0.0); s1_1_1 = L1(0.0, 0.0); s1_1_2 = L1(1.0, 0.0);
+    s1_2_0 = L1(-1.0, 1.0); s1_2_1 = L1(0.0, 1.0); s1_2_2 = L1(1.0, 1.0);
+
+    r0 += mul(s0_0_0, M4(4.652e-02, 2.118e-02, 1.777e-02, -2.906e-02, 3.834e-03, 1.011e-02, -6.713e-02, 1.085e-02, -1.450e-01, -1.499e-01, 2.302e-03, 2.583e-02, -3.711e-04, 2.741e-02, -3.458e-02, 3.259e-02));
+
+    r0 += mul(s0_0_1, M4(-2.569e-04, 4.004e-02, 7.850e-02, -2.020e-01, 5.387e-02, 6.909e-02, -8.329e-02, -3.478e-02, 5.662e-03, -2.999e-02, -1.608e-01, -8.773e-03, -3.874e-02, -6.909e-02, 6.379e-02, 2.815e-02));
+
+    r0 += mul(s0_0_2, M4(-2.328e-02, -3.024e-02, 2.104e-01, -1.535e-01, -9.687e-03, 3.121e-02, 9.264e-05, -2.195e-02, -1.682e-02, -2.241e-02, 3.162e-02, -7.546e-02, 2.338e-02, 1.218e-03, 3.072e-03, 3.387e-02));
+
+    r0 += mul(s0_1_0, M4(3.568e-02, 1.605e-02, -3.021e-02, 1.744e-01, 3.682e-01, 3.291e-01, 1.265e-01, -1.594e-02, -1.668e-01, -9.767e-03, 3.429e-02, -6.392e-01, -1.191e+00, -1.490e-01, -1.627e-01, -2.411e-02));
+
+    r0 += mul(s0_1_1, M4(1.743e-01, 2.075e-02, 6.223e-02, 4.957e-01, -2.777e-01, -2.362e-02, 2.783e-01, 1.053e-01, 7.803e-02, -1.213e-01, -2.707e-02, -9.065e-02, -2.023e-01, -3.512e-01, 1.473e-02, -5.604e-01));
+
+    r0 += mul(s0_1_2, M4(1.044e-01, 1.391e-01, 6.655e-01, 1.817e-01, 5.310e-02, -2.680e-02, 1.876e-02, 1.084e-01, -3.514e-02, 2.059e-02, 3.658e-02, -5.265e-04, -5.674e-02, -3.518e-02, 3.321e-03, -6.615e-02));
+
+    r0 += mul(s0_2_0, M4(-8.915e-02, 6.793e-03, 2.528e-02, -9.072e-02, 7.012e-01, 6.113e-01, 4.309e-02, 8.535e-01, -4.912e-01, -2.744e-01, 1.652e-02, 2.939e-01, -4.359e-02, 8.894e-02, 3.203e-02, -6.715e-02));
+
+    r0 += mul(s0_2_1, M4(-5.987e-01, -4.502e-01, -5.588e-02, -8.027e-01, -4.131e-01, 5.164e-02, -3.366e-02, 3.236e-02, 2.901e-02, -6.327e-02, 7.825e-03, -5.461e-02, -5.164e-02, -1.558e-01, -8.130e-02, -9.202e-01));
+
+    r0 += mul(s0_2_2, M4(2.355e-01, 3.057e-01, 1.048e-01, 4.131e-01, -6.700e-03, -4.599e-02, -1.574e-03, -1.018e-01, -1.610e-02, -8.160e-03, 2.584e-03, 7.788e-02, -2.354e-02, -2.492e-02, 6.279e-04, -3.643e-02));
+
+    r0 += mul(s1_0_0, M4(2.251e-02, 1.874e-02, -4.000e-02, 1.636e-01, -4.309e-02, 1.593e-02, -3.397e-02, -8.663e-03, 6.238e-02, 5.182e-02, 9.493e-02, -2.822e-01, -2.524e-02, -7.151e-02, 1.067e-01, -1.929e-01));
+
+    r0 += mul(s1_0_1, M4(8.030e-02, 3.430e-02, 3.593e-02, 2.046e-01, 6.406e-02, -2.345e-02, 2.400e-02, -1.655e-02, -8.327e-02, 3.853e-02, -1.762e-01, -3.678e-01, 6.226e-02, 4.112e-02, -3.545e-01, -1.427e-02));
+
+    r0 += mul(s1_0_2, M4(-1.224e-02, 4.359e-02, -4.925e-02, 1.750e-02, -3.504e-02, 4.967e-03, -1.392e-02, -6.436e-03, 3.428e-02, 1.307e-02, 4.165e-02, -1.347e-01, 6.182e-03, 6.040e-02, 3.111e-02, 2.771e-02));
+
+    r0 += mul(s1_1_0, M4(4.014e-01, 1.840e-01, 9.982e-02, -3.458e-02, -1.155e-01, 5.106e-02, -9.400e-02, 1.850e-01, -1.450e-01, -9.890e-02, -8.620e-02, 1.938e-01, -1.958e-01, -1.578e-01, -1.347e-01, 8.244e-02));
+
+    r0 += mul(s1_1_1, M4(-2.377e-01, 2.027e-01, 1.880e-01, -1.763e-01, 2.454e-01, -1.255e-01, 2.336e-01, -2.347e-01, 2.803e-01, 2.202e-01, 1.830e-01, 5.304e-01, -2.529e-01, -2.555e-01, -4.357e-02, -1.778e-01));
+
+    r0 += mul(s1_1_2, M4(3.724e-02, -4.195e-03, 6.167e-02, 7.180e-02, -1.265e-01, 2.753e-02, -1.161e-01, -2.013e-03, 4.700e-02, 8.615e-02, -9.542e-03, 6.567e-02, 4.040e-02, -5.118e-02, -1.865e-02, -2.315e-02));
+
+    r0 += mul(s1_2_0, M4(3.271e-01, -1.629e-02, 8.649e-05, 8.125e-02, 5.761e-01, 5.176e-01, 5.844e-02, 3.115e-01, -7.564e-02, -3.276e-03, -1.355e-02, 6.944e-02, -1.690e-01, -1.606e-01, -1.097e-02, -3.740e-01));
+
+    r0 += mul(s1_2_1, M4(-1.664e-01, 2.162e-02, 1.268e-02, 2.446e-01, 2.339e-01, 4.658e-01, 1.592e-02, 5.684e-01, -3.451e-02, -5.517e-02, -4.687e-04, -3.574e-02, -1.812e-01, -1.304e-01, -1.155e-02, -2.764e-01));
+
+    r0 += mul(s1_2_2, M4(1.367e-02, -1.998e-02, -4.510e-02, -6.963e-02, 1.960e-02, 9.689e-02, -3.869e-02, 9.008e-02, 1.116e-01, 4.511e-02, 1.789e-02, 1.987e-01, -3.034e-02, -6.239e-02, -3.647e-03, -1.205e-01));
+
+    r0 = max(r0, 0.0);
+
+    T0[gxy] = r0;
+}
