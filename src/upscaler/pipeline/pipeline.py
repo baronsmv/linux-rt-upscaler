@@ -11,7 +11,7 @@ from .controller import PipelineController
 from .osd import OSDManager
 from .presenter import Presenter
 from .swapchain import SwapchainManager
-from .upscaler import UpscalerManager
+from .upscale import UpscalerManager
 from ..capture import FrameGrabber
 from ..config import Config, OUTPUT_GEOMETRIES, UPSCALING_MODELS, OverlayMode
 from ..overlay import OverlayWindow

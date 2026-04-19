@@ -89,15 +89,14 @@ class Config:
     vulkan_buffer_pool_size: int = 8
     use_damage_tracking: bool = True
 
+    # Tiles
+    tile_size: int = 64
+    tile_context_margin: int = 8
+
     # Cache
-    use_cache: bool = True
+    use_cache: bool = False
     cache_capacity: int = 256
     cache_threshold: float = 0.3
-
-    # Tiles
-    tile_context_margin: int = 8
-    tile_size: int = 64
-    tile_padding: int = 16
 
     # Logging (set via flags, not directly from CLI)
     log_level: str = "WARNING"

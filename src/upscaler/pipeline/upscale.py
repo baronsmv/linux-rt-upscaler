@@ -51,6 +51,8 @@ class UpscalerManager:
         self.upscaled_output: Optional[Texture2D] = None
         self.tile_out_w: int = 0
         self.tile_out_h: int = 0
+        self.output_names: List[str] = []
+        self.output_atlases: List[Texture2D] = []
 
         if use_cache:
             self._init_cache_mode(model_name, double_upscale, cache_capacity)
@@ -59,24 +61,24 @@ class UpscalerManager:
         self, model_name: str, double_upscale: bool, capacity: int
     ) -> None:
         """Create atlases and tile‑mode SRCNN instance."""
-        tile_out = self.tile_size * (4 if double_upscale else 2)
-        self.tile_out_w = tile_out
-        self.tile_out_h = tile_out
+        self.tile_out_w = self.tile_size * (4 if double_upscale else 2)
+        self.tile_out_h = self.tile_size * (4 if double_upscale else 2)
 
         self.atlas_manager = TileAtlasManager(
             capacity=capacity,
-            tile_width=tile_out,
-            tile_height=tile_out,
+            tile_width=self.tile_out_w,
+            tile_height=self.tile_out_h,
         )
 
-        # Create texture arrays for intermediate outputs (T0, T1, ...) and final output
-        num_intermediate = len(self.full_upscaler.outputs)  # e.g., 4
-        self.intermediate_atlases: List[Texture2D] = []
-        for _ in range(num_intermediate):
-            self.intermediate_atlases.append(
-                Texture2D(tile_out, tile_out, slices=capacity)
-            )
-        self.final_atlas = Texture2D(tile_out, tile_out, slices=capacity)
+        # Get the ordered list of UAV names from the full upscaler
+        self.output_names = self.full_upscaler.output_names
+
+        # Create one atlas per UAV output
+        for _ in self.output_names:
+            atlas = Texture2D(self.tile_out_w, self.tile_out_h, slices=capacity)
+            self.output_atlases.append(atlas)
+
+        # Input atlas
         self.input_atlas = Texture2D(self.tile_size, self.tile_size, slices=capacity)
 
         # Full assembled upscaled texture (2D)
@@ -94,8 +96,7 @@ class UpscalerManager:
             tile_mode=True,
             atlas_manager=self.atlas_manager,
             input_atlas=self.input_atlas,
-            output_atlases=self.intermediate_atlases,
-            output_atlas=self.final_atlas,
+            output_atlases=self.output_atlases,
         )
 
     @property
@@ -157,11 +158,13 @@ class UpscalerManager:
         # 1. Process tiles (uploads + dispatches)
         self.tile_upscaler.process_tiles(dirty_tiles)
 
-        # 2. Copy all cached tiles from final atlas to upscaled_output
+        # 2. Copy all cached tiles from the final output atlas to upscaled_output
+        final_atlas = self.output_atlases[self.output_names.index("output")]
+
         for tx, ty, layer in self.atlas_manager.get_all_entries():
             dst_x = tx * self.tile_out_w
             dst_y = ty * self.tile_out_h
-            self.final_atlas.copy_to(
+            final_atlas.copy_to(
                 self.upscaled_output,
                 src_slice=layer,
                 dst_x=dst_x,
@@ -179,8 +182,6 @@ class UpscalerManager:
         if self.use_cache and self.upscaled_output:
             return self.upscaled_output
         return self.full_upscaler.output
-
-    # Inside UpscalerManager class
 
     def upload_full_frame(
         self,
@@ -202,6 +203,7 @@ class UpscalerManager:
             margin: Number of pixels to expand each damage rectangle (context).
         """
         upscaler = self.full_upscaler
+
         if use_damage_tracking and rects:
             upload_list = []
             stride = crop_width * 4
@@ -216,6 +218,8 @@ class UpscalerManager:
             upscaler.input.upload_subresources(upload_list)
         else:
             upscaler.staging.upload(frame)
+
+        upscaler.process_full_frame()
 
     @staticmethod
     def _expand_damage_rects(

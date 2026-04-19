@@ -85,7 +85,6 @@ class SRCNN:
         atlas_manager: Optional["TileAtlasManager"] = None,
         input_atlas: Optional[Texture2D] = None,
         output_atlases: Optional[List[Texture2D]] = None,
-        output_atlas: Optional[Texture2D] = None,
     ) -> None:
         """
         Initialize the SRCNN upscaler.
@@ -101,7 +100,6 @@ class SRCNN:
             input_atlas: Required in tile_mode; Texture2D array for input tiles.
             output_atlases: Required in tile_mode; list of Texture2D arrays for
                 intermediate outputs (one per intermediate texture).
-            output_atlas: Required in tile_mode; Texture2D array for final output tiles.
 
         Raises:
             FileNotFoundError: If the model directory or SPIR‑V shaders are missing.
@@ -116,15 +114,14 @@ class SRCNN:
         self.atlas_manager = atlas_manager
         self.input_atlas = input_atlas
         self.output_atlases = output_atlases
-        self.output_atlas = output_atlas
 
         self._get_model_dir()
         self._load_config()
 
         if tile_mode:
-            if not all([atlas_manager, input_atlas, output_atlases, output_atlas]):
+            if not all([atlas_manager, input_atlas, output_atlases]):
                 raise ValueError(
-                    "Tile mode requires atlas_manager, input_atlas, output_atlases, and output_atlas"
+                    "Tile mode requires atlas_manager, input_atlas, and output_atlases"
                 )
             self._init_tile_mode()
         else:
@@ -144,6 +141,17 @@ class SRCNN:
                 if name != "output":
                     outputs.add(name)
         return sorted(outputs)
+
+    @property
+    def output_names(self) -> List[str]:
+        """
+        Return all unique UAV names used by the model, sorted alphabetically.
+        This determines the required number and order of output atlases.
+        """
+        names = set()
+        for _, uav_names in self.cfg["srv_uav"]:
+            names.update(uav_names)
+        return sorted(names)
 
     # --------------------------------------------------------------------------
     # Internal: model discovery and configuration
@@ -323,33 +331,36 @@ class SRCNN:
     # Tile mode
     # --------------------------------------------------------------------------
     def _init_tile_mode(self) -> None:
-        """Initialize resources and pipelines for tile‑mode (cache‑aware) upscaling."""
+        """Initialize resources and pipelines for tile‑mode upscaling."""
+        if len(self.output_atlases) != len(self.output_names):
+            raise ValueError(
+                f"Expected {len(self.output_names)} output atlases, got {len(self.output_atlases)}"
+            )
+
+        # Build a mapping from UAV name to its corresponding atlas
+        self._output_atlas_map = dict(zip(self.output_names, self.output_atlases))
+
         self._tile_out_w = self.tile_size * (4 if self.double_upscale else 2)
         self._tile_out_h = self.tile_size * (4 if self.double_upscale else 2)
 
         self._load_shaders(tile=True)
         self._create_samplers()
 
+        # First stage constant buffers
         first_cbs = self._create_tile_constant_buffers(
             in_w=self.tile_size,
             in_h=self.tile_size,
             out_w=self._tile_out_w,
             out_h=self._tile_out_h,
         )
-        self.pipelines_first = self._build_tile_pipelines(cbs=first_cbs, is_final=False)
-
+        self.pipelines_first = self._build_tile_pipelines(cbs=first_cbs)
         if self.double_upscale:
             second_in = self.tile_size * 2
             second_out = self._tile_out_w * 2
             second_cbs = self._create_tile_constant_buffers(
-                in_w=second_in,
-                in_h=second_in,
-                out_w=second_out,
-                out_h=second_out,
+                in_w=second_in, in_h=second_in, out_w=second_out, out_h=second_out
             )
-            self.pipelines_second = self._build_tile_pipelines(
-                cbs=second_cbs, is_final=True
-            )
+            self.pipelines_second = self._build_tile_pipelines(cbs=second_cbs)
 
     def _create_tile_constant_buffers(
         self, in_w: int, in_h: int, out_w: int, out_h: int
@@ -366,13 +377,12 @@ class SRCNN:
             cbs.append(cb)
         return cbs
 
-    def _build_tile_pipelines(self, cbs: List[Buffer], is_final: bool) -> List[Compute]:
+    def _build_tile_pipelines(self, cbs: List[Buffer]) -> List[Compute]:
         """
         Build compute pipelines for tile mode.
 
         Args:
             cbs: Constant buffers for this stage.
-            is_final: True if this stage produces the final upscaled output.
         """
         pipelines = []
         for i, (srv_names, uav_names) in enumerate(self.cfg["srv_uav"]):
@@ -381,18 +391,9 @@ class SRCNN:
                 if name == "input":
                     srv_list.append(self.input_atlas)
                 else:
-                    idx = int(name[1:])
-                    srv_list.append(self.output_atlases[idx])
+                    srv_list.append(self._output_atlas_map[name])
 
-            uav_list = []
-            for name in uav_names:
-                if name == "output":
-                    if not is_final:
-                        raise ValueError("'output' UAV only allowed in final stage")
-                    uav_list.append(self.output_atlas)
-                else:
-                    idx = int(name[1:])
-                    uav_list.append(self.output_atlases[idx])
+            uav_list = [self._output_atlas_map[name] for name in uav_names]
 
             samplers = []
             if "point" in self.cfg["samplers"][i]:
@@ -477,3 +478,23 @@ class SRCNN:
                 )
                 for pipe in self.pipelines_second:
                     pipe.dispatch(groups_x2, groups_y2, 1, push=push_data)
+
+    def process_full_frame(self) -> None:
+        """
+        Execute the full‑frame upscaling pipelines.
+        Must be called after uploading input data.
+        """
+        if self.tile_mode:
+            raise RuntimeError("process_full_frame called in tile mode")
+
+        # First stage dispatch
+        groups_x, groups_y = dispatch_groups(self.width, self.height, last_pass=False)
+        for pipe in self.pipelines_first:
+            pipe.dispatch(groups_x, groups_y, 1)
+
+        if self.double_upscale:
+            groups_x2, groups_y2 = dispatch_groups(
+                self.width * 2, self.height * 2, last_pass=True
+            )
+            for pipe in self.pipelines_second:
+                pipe.dispatch(groups_x2, groups_y2, 1)

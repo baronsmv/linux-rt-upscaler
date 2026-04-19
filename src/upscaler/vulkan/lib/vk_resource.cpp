@@ -171,6 +171,13 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
             if (!PyArg_ParseTuple(tuple, "OIIIII", &data_obj, &r.x, &r.y, &r.w, &r.h, &slice))
                 return nullptr;
         }
+        r.slice = slice;
+
+        if (r.slice >= self->slices) {
+            PyErr_Format(PyExc_ValueError,
+                         "Slice %u out of range (max %u)", r.slice, self->slices - 1);
+            return nullptr;
+        }
 
         if (!r.buffer.acquire(data_obj, PyBUF_SIMPLE))
             return nullptr;
@@ -211,7 +218,7 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
     // Execute copy commands using one‑time command buffer
     bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
         // Transition texture to transfer destination
-        vk_cmd_transition_for_copy_dst(cmd, self->image, 0, 1);
+        vk_cmd_transition_for_copy_dst(cmd, self->image, 0, self->slices);
 
         // Issue copy commands for each rectangle
         for (const auto &r : rects) {
@@ -227,7 +234,7 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
         }
 
         // Transition back to GENERAL layout for compute shader access
-        vk_cmd_transition_for_compute(cmd, self->image, 0, 1);
+        vk_cmd_transition_for_compute(cmd, self->image, 0, self->slices);
     });
 
     if (!ok) {
@@ -530,7 +537,7 @@ PyObject* vk_Resource_clear_color(vk_Resource* self, PyObject* args) {
     };
 
     bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
-        vk_cmd_transition_for_copy_dst(cmd, self->image, 0, 1);
+        vk_cmd_transition_for_copy_dst(cmd, self->image, 0, self->slices);
         vkCmdClearColorImage(cmd, self->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                              &clear_value, 1, &range);
         vk_cmd_transition_for_compute(cmd, self->image, 0, 1);
