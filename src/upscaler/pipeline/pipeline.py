@@ -1,30 +1,53 @@
 import logging
 import threading
 import time
-from queue import Empty, Queue, Full
-from typing import Optional, Tuple
+from enum import Enum, auto
+from queue import Empty, Queue
+from typing import List, Optional, Tuple
 
 from PySide6.QtCore import QMetaObject, Qt
 
 from .controller import PipelineController
 from .osd import OSDManager
+from .presenter import Presenter
 from .swapchain import SwapchainManager
+from .upscaler import UpscalerManager
 from ..capture import FrameGrabber
-from ..config import Config, OverlayMode, OUTPUT_GEOMETRIES, UPSCALING_MODELS
+from ..config import Config, OUTPUT_GEOMETRIES, UPSCALING_MODELS, OverlayMode
 from ..overlay import OverlayWindow
-from ..shaders import LanczosScaler, SRCNN, dispatch_groups
-from ..utils import parse_output_geometry, calculate_scaling_rect
-from ..vulkan import Texture2D, configure_device, device_wait_idle
+from ..utils import parse_output_geometry
+from ..vulkan import configure_device, device_wait_idle
 from ..window import WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
 
 
+class PauseReason(Enum):
+    """Reasons why the pipeline may be paused."""
+
+    NONE = auto()
+    USER = auto()  # Manually paused via hotkey
+    MINIMIZED = auto()  # Target window minimized
+    FOCUS_LOST = auto()  # Target window lost focus (when pause_on_focus_loss is set)
+
+
 class Pipeline:
     """
-    Main processing pipeline: captures a window, upscales it via SRCNN,
-    scales to screen size with Lanczos, and presents to a swapchain.
-    Accepts a Config, WindowInfo, and OverlayWindow.
+    Main processing pipeline for real‑time X11 window upscaling.
+
+    Captures a target window, upscales it using SRCNN (full‑frame or tile‑cache),
+    scales to the overlay size via Lanczos, and presents via Vulkan swapchain.
+
+    The pipeline runs in its own thread and communicates with the main thread
+    via thread‑safe queues and Qt signals.
+
+    Attributes:
+        config (Config): Global configuration.
+        overlay (OverlayWindow): The overlay Qt window.
+        controller (PipelineController): Handles hotkeys and user requests.
+        osd (OSDManager): On‑screen display manager.
+        presenter (Presenter): Handles final scaling and presentation.
+        upscaler_mgr (UpscalerManager): Manages SRCNN upscaling (full/tile).
     """
 
     def __init__(
@@ -34,30 +57,15 @@ class Pipeline:
         Initialize the pipeline.
 
         Args:
-            config: Full configuration (model, double_upscale, output_geometry, crop, etc.)
-            win_info: Information about the target window.
-            overlay: The overlay window (already shown and ready).
+            config: Full configuration (model, crop, output geometry, etc.).
+            win_info: Initial target window information.
+            overlay: The overlay window (already shown).
         """
         self.config = config
         self._win_info = win_info
         self.overlay = overlay
 
-        # Upscaling values
-        self.model_name = config.model
-        self.double_upscale = config.double_upscale
-        self.tile_size = config.tile_size
-        self._scale_factor = config.scale_factor
-        self._background_color = config.background_color
-
-        # Screen dimensions from overlay
-        self._screen_width = overlay.width()
-        self._screen_height = overlay.height()
-        self._content_width = overlay.content_width
-        self._content_height = overlay.content_height
-        self.output_geometry = config.output_geometry
-        self.scale_mode = overlay.scale_mode
-
-        # Crop dimensions
+        # Crop and dimension attributes
         self._crop_left = config.crop_left
         self._crop_top = config.crop_top
         self._crop_right = config.crop_right
@@ -65,269 +73,248 @@ class Pipeline:
         self.crop_width = win_info.width - config.crop_left - config.crop_right
         self.crop_height = win_info.height - config.crop_top - config.crop_bottom
 
-        # Source dimensions after upscaling
-        self.src_w = self.crop_width * (4 if self.double_upscale else 2)
-        self.src_h = self.crop_height * (4 if self.double_upscale else 2)
+        self._scale_factor = config.scale_factor
+        self._screen_width = overlay.width()
+        self._screen_height = overlay.height()
 
-        # Pipeline controller
+        # Controller for external commands
         self.controller = PipelineController(self)
-        self.controller.set_initial_model_index(self.model_name)
-        self.controller.set_initial_geometry_index(self.output_geometry)
+        self.controller.set_initial_model_index(config.model)
+        self.controller.set_initial_geometry_index(config.output_geometry)
+
+        # Vulkan device setup
+        configure_device(config.vulkan_buffer_pool_size)
 
         # Swapchain manager
-        configure_device(self.config.vulkan_buffer_pool_size)
         self._swapchain_manager = SwapchainManager(
             overlay.xid,
             self._screen_width,
             self._screen_height,
-            present_mode=self.config.vulkan_present_mode,
+            present_mode=config.vulkan_present_mode,
         )
 
-        # Screen texture
-        self._screen_tex = Texture2D(self._screen_width, self._screen_height)
-
-        # SRCNN upscaler
-        self.upscaler = SRCNN(
-            width=self.crop_width,
-            height=self.crop_height,
-            model_name=self.model_name,
-            double_upscale=self.double_upscale,
-            tile_size=self.tile_size,
-        )
-
-        # Lanczos scaler
-        self.lanczos_scaler = LanczosScaler()
-        self.lanczos_scaler.set_source_texture(self.upscaler.output)
-        self.lanczos_scaler.set_target_texture(self._screen_tex)
-
-        # Compute groups for Lanczos
-        self._groups_x = (self._screen_width + 15) // 16
-        self._groups_y = (self._screen_height + 15) // 16
-
-        # Window tracker (for detecting size/handle changes)
-        self._window_tracker = WindowTracker(
-            win_info.handle, win_info.width, win_info.height
-        )
-
-        # Mouse mapping rect (initially empty)
-        overlay.scaling_rect = [0, 0, 0, 0]
-
-        # Threading variables and control
-        self._running = False
-        self.user_paused = False
-        self.minimized_paused = False
-        self.focus_paused = False
-        self._thread: Optional[threading.Thread] = None
-        self._stopped_event = threading.Event()
-        self._frame_queue: Queue[Optional[bytearray]] = Queue(maxsize=1)
-        self._switch_queue: Queue[Optional[WindowInfo]] = Queue()
-        self.osd_queue: Queue[Tuple[str, float]] = Queue()
-
-        # Performance
-        self._frame_count = 0
-        self._last_fps_log = 0.0
-        self._last_frame_time = 0.0
-        self._grabber = None
-        self._consecutive_failures = 0
-
-        # OSD
+        # On‑screen display manager
         osd_texts = tuple(
             [f"Model: {m}" for m in UPSCALING_MODELS]
             + [f"Geometry: {g}" for g in OUTPUT_GEOMETRIES]
             + ["Screenshot saved", "Screenshot failed"]
         )
         self.osd = OSDManager(osd_texts, self._screen_width, self._screen_height)
+
+        # Presenter (Lanczos + OSD + swapchain)
+        self.presenter = Presenter(
+            screen_width=self._screen_width,
+            screen_height=self._screen_height,
+            content_width=overlay.content_width,
+            content_height=overlay.content_height,
+            scale_mode=overlay.scale_mode,
+            background_color=config.background_color,
+            offset_x=config.offset_x,
+            offset_y=config.offset_y,
+            osd_manager=self.osd,
+            swapchain_manager=self._swapchain_manager,
+        )
+
+        # Upscaler manager (full‑frame and optional tile cache)
+        self.upscaler_mgr = UpscalerManager(
+            crop_width=self.crop_width,
+            crop_height=self.crop_height,
+            model_name=config.model,
+            double_upscale=config.double_upscale,
+            tile_size=config.tile_size,
+            use_cache=config.use_cache,
+            cache_capacity=config.cache_capacity,
+            cache_threshold=config.cache_threshold,
+        )
+
+        # Window tracker for handle/size changes
+        self._window_tracker = WindowTracker(
+            win_info.handle, win_info.width, win_info.height
+        )
+
+        # Mouse mapping rectangle (updated per frame)
+        overlay.scaling_rect = [0, 0, 0, 0]
+
+        # Threading control
+        self._running = False
+        self._pause_reason = PauseReason.NONE
+        self._thread: Optional[threading.Thread] = None
+        self._stopped_event = threading.Event()
+
+        # Queues for cross‑thread communication
+        self._switch_queue: Queue[Optional[WindowInfo]] = Queue()
+        self.osd_queue: Queue[Tuple[str, float]] = Queue()
+
+        # Frame grabber (created in thread)
+        self._grabber: Optional[FrameGrabber] = None
+
+        # Performance counters
+        self._frame_count = 0
+        self._last_fps_log = time.time()
+        self._last_frame_time = time.time()
+
+        # Prepare OSD textures
         device_wait_idle()
         self.osd.prepare_textures()
 
+    # ----------------------------------------------------------------------
+    # Public API
+    # ----------------------------------------------------------------------
     def start(self) -> None:
         """Start the pipeline thread."""
-        logger.info("Starting pipeline thread.")
+        logger.info("Starting pipeline thread")
         self._running = True
         self._thread = threading.Thread(target=self._run, name="PipelineThread")
         self._thread.start()
 
     def stop(self) -> None:
-        """Stop the pipeline thread and clean up resources."""
-        logger.info("Stopping pipeline thread.")
+        """Stop the pipeline thread and release resources."""
+        logger.info("Stopping pipeline thread")
         self._running = False
-
-        # Unblock queue by pushing a dummy frame
-        dummy = bytearray(self._win_info.width * self._win_info.height * 4)
-        try:
-            self._frame_queue.put_nowait(dummy)
-        except Full:
-            pass
-
         if self._thread is not None:
             self._thread.join(timeout=2.0)
-            if self._thread.is_alive():
-                logger.warning("Pipeline thread did not stop gracefully.")
-            else:
-                logger.debug("Pipeline thread joined.")
-
         if self._grabber:
             self._grabber.close()
-            self._grabber = None
-
-        # Clean up components
-        self._swapchain_manager = None
-        self._screen_tex = None
-        self.upscaler = None
-        self.lanczos_scaler = None
         self._window_tracker.close()
+        self._swapchain_manager = None
+
+    def request_switch(self, new_win_info: WindowInfo) -> None:
+        """Request a switch to a new target window (thread‑safe)."""
+        self._switch_queue.put(new_win_info)
+
+    def recreate_upscaler(self) -> None:
+        """
+        Recreate the upscaler manager (e.g., after model change or crop resize).
+        This must be called from the pipeline thread.
+        """
+        logger.info("Recreating upscaler manager")
+        self.upscaler_mgr = UpscalerManager(
+            crop_width=self.crop_width,
+            crop_height=self.crop_height,
+            model_name=self.config.model,
+            double_upscale=self.config.double_upscale,
+            tile_size=self.config.tile_size,
+            use_cache=self.config.use_cache,
+            cache_capacity=self.config.cache_capacity,
+            cache_threshold=self.config.cache_threshold,
+        )
+        # Update presenter's source texture to the new full‑frame output
+        self.presenter.set_source_texture(self.upscaler_mgr.full_upscaler.output)
 
     def clear_frame_queue(self) -> None:
-        while not self._frame_queue.empty():
-            try:
-                self._frame_queue.get_nowait()
-            except Empty:
-                break
+        """Clear any stale frames (no‑op, kept for API compatibility)."""
+        pass
 
-    def _create_grabber(self):
+    # ----------------------------------------------------------------------
+    # Pause state management
+    # ----------------------------------------------------------------------
+    @property
+    def user_paused(self) -> bool:
+        return self._pause_reason == PauseReason.USER
+
+    @user_paused.setter
+    def user_paused(self, value: bool) -> None:
+        if value:
+            self._set_pause_reason(PauseReason.USER)
+        elif self._pause_reason == PauseReason.USER:
+            self._set_pause_reason(PauseReason.NONE)
+
+    def _set_pause_reason(self, reason: PauseReason) -> None:
+        """Update pause reason and show/hide overlay accordingly."""
+        old_reason = self._pause_reason
+        self._pause_reason = reason
+        if old_reason == PauseReason.NONE and reason != PauseReason.NONE:
+            self.overlay.hide()
+        elif old_reason != PauseReason.NONE and reason == PauseReason.NONE:
+            self.overlay.show()
+
+    # ----------------------------------------------------------------------
+    # Frame processing
+    # ----------------------------------------------------------------------
+    def _process_one_frame(self) -> None:
+        """Capture, upscale, and present a single frame."""
+        # 1. Grab frame
         try:
-            if self._grabber is not None:
-                self._grabber.close()
-            start = time.perf_counter()
-            self._grabber = FrameGrabber(
-                self._win_info,
-                crop_left=self._crop_left,
-                crop_top=self._crop_top,
-                crop_right=self._crop_right,
-                crop_bottom=self._crop_bottom,
-                tile_size=self.tile_size,
+            frame, is_dirty, rects = self._grabber.grab()
+        except RuntimeError as e:
+            logger.error(f"Frame grab failed: {e}")
+            return
+
+        if not self._running:
+            return
+
+        # 2. OSD and overlay opacity
+        osd_tex, needs_redraw = self.osd.update()
+        if needs_redraw:
+            is_dirty = True
+        self.overlay.update_opacity()
+
+        if not is_dirty and osd_tex is None:
+            self.presenter.present()
+            return
+
+        # 3. Upscale
+        if self.upscaler_mgr.should_use_tile_mode(len(rects) if rects else 0):
+            dirty_tiles = self.upscaler_mgr.extract_dirty_tiles(rects, frame)
+            self.upscaler_mgr.process_tile_frame(dirty_tiles)
+            src_tex = self.upscaler_mgr.upscaled_output
+        else:
+            self.upscaler_mgr.upload_full_frame(
+                frame=frame,
+                rects=rects,
+                use_damage_tracking=self.config.use_damage_tracking,
+                crop_width=self.crop_width,
+                crop_height=self.crop_height,
+                margin=self.config.tile_context_margin,
             )
-            logger.debug(
-                f"FrameGrabber created for window {self._win_info.handle} in "
-                f"{(time.perf_counter() - start)*1000:.2f} ms"
-            )
-        except Exception as e:
-            logger.error(f"Failed to create FrameGrabber: {e}", exc_info=True)
-            raise
+            src_tex = self.upscaler_mgr.full_upscaler.output
 
-    def _run(self) -> None:
-        """Main pipeline loop."""
-        logger.info("Pipeline thread started.")
-        self._create_grabber()
+        # 4. Present
+        self.presenter.set_source_texture(src_tex)
+        self.presenter.update_lanczos_constants(src_tex.width, src_tex.height)
+        self.presenter.present()
 
-        while self._running:
-            try:
-                # Process switch requests
-                new_win = None
-                try:
-                    while True:
-                        new_win = self._switch_queue.get_nowait()
-                except Empty:
-                    pass
-                if new_win is not None:
-                    self._switch_target(new_win)
+        # 5. Update mouse mapping
+        self.overlay.scaling_rect = self.presenter.get_scaling_rect(self._scale_factor)
 
-                # Window alive check (only when follow_focus is off)
-                if not self.config.follow_focus:
-                    self._window_tracker.check_alive()
-                    if not self._window_tracker.alive:
-                        logger.info("Target window closed – exiting.")
-                        break
+        # 6. Check swapchain recreation
+        if self._swapchain_manager.needs_recreation():
+            if self._swapchain_manager.is_out_of_date():
+                logger.info("Swapchain out-of-date, recreating")
+                self._recreate_swapchain()
 
-                # Update window state
-                changed = self._window_tracker.update()
+    def _upload_full_frame(self, frame: bytes, rects: List) -> None:
+        """
+        Upload full frame (or damage regions) to the full‑frame upscaler.
 
-                # Handle minimization pause
-                if self._window_tracker.minimized:
-                    if not self.minimized_paused:
-                        logger.info(
-                            "Target window minimized, pausing frame processing."
-                        )
-                        self.minimized_paused = True
-                        self.overlay.hide()
-                    time.sleep(0.1)
-                    continue
-                else:
-                    if self.minimized_paused:
-                        logger.info(
-                            "Target window restored, resuming frame processing."
-                        )
-                        self.minimized_paused = False
-                        if not self.user_paused:
-                            self.overlay.show()
+        Args:
+            frame: Raw BGRA pixel data.
+            rects: Damage rectangles (used only if damage tracking is enabled).
+        """
+        upscaler = self.upscaler_mgr.full_upscaler
+        if self.config.use_damage_tracking and rects:
+            upload_list = []
+            stride = self.crop_width * 4
+            for ex, ey, ew, eh in self._expand_damage_rects(rects):
+                sub_data = bytearray()
+                for row in range(ey, ey + eh):
+                    start = row * stride + ex * 4
+                    sub_data.extend(frame[start : start + ew * 4])
+                upload_list.append((bytes(sub_data), ex, ey, ew, eh))
+            upscaler.input.upload_subresources(upload_list)
+        else:
+            upscaler.staging.upload(frame)
 
-                # Handle focus and manual pause
-                bypass_wm = self.config.overlay_mode in (
-                    OverlayMode.ALWAYS_ON_TOP.value,
-                    OverlayMode.ALWAYS_ON_TOP_TRANSPARENT.value,
-                )
+    def _expand_damage_rects(self, rects: List) -> List[Tuple[int, int, int, int]]:
+        """
+        Expand damage rectangles by the configured margin to include context.
 
-                if (
-                    bypass_wm
-                    and self.config.pause_on_focus_loss
-                    and not self._window_tracker.active
-                ):
-                    if not self.focus_paused:
-                        logger.info(
-                            "Target window lost focus, pausing and hiding overlay."
-                        )
-                        self.focus_paused = True
-                        QMetaObject.invokeMethod(
-                            self.overlay, "hide", Qt.QueuedConnection
-                        )
-                    time.sleep(0.1)
-                    continue
-                else:
-                    if self.focus_paused:
-                        logger.info(
-                            "Target window regained focus, resuming and showing overlay."
-                        )
-                        self.focus_paused = False
-                        if not self.user_paused:
-                            QMetaObject.invokeMethod(
-                                self.overlay, "show", Qt.QueuedConnection
-                            )
+        Args:
+            rects: List of (x, y, width, height, hash) from FrameGrabber.
 
-                # Only handle changes if not minimized
-                if changed:
-                    self._handle_window_change()
-
-                # If paused via hotkey, skip frame processing
-                if self.user_paused:
-                    time.sleep(0.1)
-                    continue
-
-                # Frame processing
-                self._process_one_frame()
-                self._frame_count += 1
-
-                # Check controller requests
-                self.controller.process_requests()
-
-                # Process OSD requests from other threads
-                try:
-                    text, duration = self.osd_queue.get_nowait()
-                    self.osd.show(text, duration)
-                except Empty:
-                    pass
-
-                # FPS logging every 2 seconds
-                now = time.time()
-                if now - self._last_fps_log >= 2.0:
-                    elapsed = now - self._last_frame_time
-                    if elapsed > 0:
-                        fps = self._frame_count / elapsed
-                        logger.info(f"FPS: {fps:.1f} (frames: {self._frame_count})")
-                    self._last_frame_time = now
-                    self._frame_count = 0
-                    self._last_fps_log = now
-
-            except Exception as e:
-                logger.debug(f"Fatal error in pipeline loop: {e}")
-                break
-
-        self._stopped_event.set()
-        logger.info("Pipeline stopped event set.")
-        QMetaObject.invokeMethod(
-            self.overlay, "on_pipeline_stopped", Qt.QueuedConnection
-        )
-
-    def _expand_damage_rects(self, rects):
+        Returns:
+            List of expanded rectangles (x, y, width, height).
+        """
         margin = self.config.tile_context_margin
         expanded = []
         for rx, ry, rw, rh, _ in rects:
@@ -339,205 +326,12 @@ class Pipeline:
                 expanded.append((ex0, ey0, ex1 - ex0, ey1 - ey0))
         return expanded
 
-    def _process_one_frame(self) -> None:
-        """
-        Process a single frame:
-          1. Grab frame from the target window.
-          2. Upload to staging buffer.
-          3. Calculate Lanczos destination rectangle and constants.
-          4. Build a list of GPU dispatches:
-             - All upscale passes (SRCNN).
-             - Lanczos scaling pass.
-             - (Optional) OSD blend pass if an OSD message is active.
-          5. Submit everything in ONE Vulkan command buffer, including:
-             - Copy from staging to input texture.
-             - All compute dispatches.
-             - Layout transition of screen texture to PRESENT_SRC_KHR.
-          6. Present the screen texture without waiting for an additional fence.
-          7. Update mouse mapping for overlay interaction.
-          8. Check if swapchain needs recreation.
-        """
-        # -------------------------------------------------------------------------
-        # 1. Grab frame from X11 (raw BGRA bytes)
-        # -------------------------------------------------------------------------
-        try:
-            frame, is_dirty, rects = self._grabber.grab()
-        except RuntimeError as e:
-            logger.error(f"grab() exception: {e}", exc_info=True)
-            return
-
-        if not self._running:
-            logger.debug("_process_one_frame(): _running False, returning")
-            return
-
-        # -------------------------------------------------------------------------
-        # 2. Update OSD state and get active texture
-        # -------------------------------------------------------------------------
-        osd_texture, needs_redraw = self.osd.update()
-        if needs_redraw:
-            is_dirty = True
-
-        # Always update overlay window opacity (may change due to focus)
-        self.overlay.update_opacity()
-
-        # -------------------------------------------------------------------------
-        # 3. If frame hasn't changed and no OSD update, skip GPU work
-        # -------------------------------------------------------------------------
-        if not is_dirty and osd_texture is None:
-            self._swapchain_manager.present(self._screen_tex)
-            return
-
-        # -------------------------------------------------------------------------
-        # 4. Upload captured frame to staging buffer (CPU -> GPU)
-        # -------------------------------------------------------------------------
-        try:
-            if self.config.use_damage_tracking and rects:
-                upload_list = []
-                stride = self.crop_width * 4
-                for ex, ey, ew, eh in self._expand_damage_rects(rects):
-                    sub_data = bytearray()
-                    for row in range(ey, ey + eh):
-                        start = row * stride + ex * 4
-                        sub_data.extend(frame[start : start + ew * 4])
-                    upload_list.append((bytes(sub_data), ex, ey, ew, eh))
-                if upload_list:
-                    first = upload_list[0]
-                    logger.debug(
-                        f"upload_list[0] type: {type(first)}, len: {len(first)}"
-                    )
-                    logger.debug(f"first element type: {type(first[0])}")
-                    if isinstance(first[0], tuple):
-                        logger.error(f"First element is a tuple, not bytes: {first[0]}")
-                self.upscaler.input.upload_subresources(upload_list)
-            else:
-                self.upscaler.staging.upload(frame)
-        except Exception as e:
-            logger.error(f"Frame upload failed: {e}", exc_info=True)
-            return
-
-        # -------------------------------------------------------------------------
-        # 5. Calculate Lanczos destination rectangle and update constants
-        # -------------------------------------------------------------------------
-        r_x, r_y, r_w, r_h = calculate_scaling_rect(
-            self.src_w,
-            self.src_h,
-            self._content_width,
-            self._content_height,
-            self.scale_mode,
-        )
-        canvas_x = (self._screen_width - self._content_width) // 2
-        canvas_y = (self._screen_height - self._content_height) // 2
-        dst_x = canvas_x + r_x + self.config.offset_x
-        dst_y = canvas_y + r_y + self.config.offset_y
-        dst_w, dst_h = r_w, r_h
-
-        if dst_w <= 0 or dst_h <= 0:
-            logger.debug(f"Skipping Lanczos dispatch – invalid rect: {dst_w}x{dst_h}")
-            self._swapchain_manager.present(self._screen_tex)
-            return
-
-        self.lanczos_scaler.update_constants(
-            self._background_color,
-            self.upscaler.output.width,
-            self.upscaler.output.height,
-            self._screen_width,
-            self._screen_height,
-            dst_x,
-            dst_y,
-            r_w,
-            r_h,
-            1.0,  # blur factor
-        )
-
-        # -------------------------------------------------------------------------
-        # 6. Build the list of compute dispatches for this frame
-        # -------------------------------------------------------------------------
-        dispatches = []
-
-        # ---- SRCNN upscale passes (first stage) ----
-        w, h = self.upscaler._first_in_w, self.upscaler._first_in_h
-        for i, pipe in enumerate(self.upscaler.pipelines_first):
-            last = i == self.upscaler.cfg["passes"] - 1
-            gx, gy = dispatch_groups(w, h, last)
-            dispatches.append((pipe, gx, gy, 1, b""))
-
-        # ---- SRCNN second stage (if double upscale enabled) ----
-        if self.double_upscale:
-            w2, h2 = self.upscaler._second_in_w, self.upscaler._second_in_h
-            for i, pipe in enumerate(self.upscaler.pipelines_second):
-                last = i == self.upscaler.cfg["passes"] - 1
-                gx, gy = dispatch_groups(w2, h2, last)
-                dispatches.append((pipe, gx, gy, 1, b""))
-
-        # ---- Lanczos scaling pass ----
-        dispatches.append(
-            (self.lanczos_scaler.compute, self._groups_x, self._groups_y, 1, b"")
-        )
-
-        # ---- OSD blend pass (if OSD is active) ----
-        if osd_texture is not None:
-            osd_w = osd_texture.width
-            osd_h = osd_texture.height
-            osd_x = (self._screen_width - osd_w) // 2
-            osd_y = (self._screen_height - osd_h) // 2
-
-            self.osd.update_constants(osd_x, osd_y, osd_w, osd_h)
-            osd_compute = self.osd.get_compute_pipeline(osd_texture, self._screen_tex)
-
-            groups_x = (osd_w + 15) // 16
-            groups_y = (osd_h + 15) // 16
-            dispatches.append((osd_compute, groups_x, groups_y, 1, b""))
-
-        # -------------------------------------------------------------------------
-        # 7. Submit EVERYTHING in one Vulkan command buffer
-        # -------------------------------------------------------------------------
-        copy_src = (
-            None
-            if (self.config.use_damage_tracking and rects)
-            else self.upscaler.staging
-        )
-
-        try:
-            self.upscaler.pipelines_first[0].dispatch_sequence(
-                sequence=dispatches,
-                copy_src=copy_src,
-                copy_dst=self.upscaler.input,
-                present_image=self._screen_tex,
-            )
-        except Exception as e:
-            logger.error(f"dispatch_sequence failed: {e}", exc_info=True)
-            return
-
-        # -------------------------------------------------------------------------
-        # 8. Present the screen texture (no extra GPU work, layout already correct)
-        # -------------------------------------------------------------------------
-        self._swapchain_manager.present(self._screen_tex, wait_for_fence=False)
-
-        # -------------------------------------------------------------------------
-        # 9. Update mouse mapping rectangle for overlay interaction
-        # -------------------------------------------------------------------------
-        self.overlay.scaling_rect = [
-            dst_x / self._scale_factor,
-            dst_y / self._scale_factor,
-            dst_w / self._scale_factor,
-            dst_h / self._scale_factor,
-        ]
-
-        # -------------------------------------------------------------------------
-        # 10. Check if swapchain needs recreation (e.g., window resized)
-        # -------------------------------------------------------------------------
-        if self._swapchain_manager.needs_recreation():
-            if self._swapchain_manager.is_out_of_date():
-                logger.info("Swapchain out-of-date, recreating.")
-                self._recreate_swapchain()
-            elif self._swapchain_manager.is_suboptimal():
-                logger.debug("Swapchain suboptimal, ignoring")
-
-    def _handle_window_change(self, force: bool = False) -> None:
-        """Update internal state when target window changes."""
-        logger.info(f"Handling window change (force={force})")
-
-        # Update local window info from tracker's current state
+    # ----------------------------------------------------------------------
+    # Window change handling
+    # ----------------------------------------------------------------------
+    def _handle_window_change(self) -> None:
+        """Recreate resources when the target window changes size or handle."""
+        logger.info("Handling window change")
         self._win_info.handle = self._window_tracker.handle
         self._win_info.width = self._window_tracker.width
         self._win_info.height = self._window_tracker.height
@@ -545,121 +339,201 @@ class Pipeline:
         self.overlay.set_target_handle(self._win_info.handle)
         self.overlay.set_target_size(self._win_info.width, self._win_info.height)
 
-        # Recompute crop dimensions
         self.crop_width = self._win_info.width - self._crop_left - self._crop_right
         self.crop_height = self._win_info.height - self._crop_top - self._crop_bottom
         self.overlay.set_crop(
             self._crop_left, self._crop_top, self.crop_width, self.crop_height
         )
 
-        # Update content dimensions (depends on crop and overlay size)
         self.update_content_dimensions()
-
-        # Update source dimensions after upscaling
-        self.src_w = self.crop_width * (4 if self.double_upscale else 2)
-        self.src_h = self.crop_height * (4 if self.double_upscale else 2)
-        logger.debug(f"New src dimensions: {self.src_w}x{self.src_h}")
-
-        # Recreate upscaler with new crop size
-        self.upscaler = SRCNN(
-            width=self.crop_width,
-            height=self.crop_height,
-            model_name=self.model_name,
-            double_upscale=self.double_upscale,
-            tile_size=self.tile_size,
-        )
-        self.lanczos_scaler.set_source_texture(self.upscaler.output)
-
-        # Recreate grabber with new window handle and crop
+        self.recreate_upscaler()
         self._create_grabber()
 
-        # Clear the frame queue to avoid using old frames
-        while not self._frame_queue.empty():
-            try:
-                self._frame_queue.get_nowait()
-            except Empty:
-                break
-
-        logger.info("Window change handled successfully")
-
-    def _recreate_swapchain(self) -> None:
-        """Recreate swapchain and related resources."""
-        new_width = self.overlay.width()
-        new_height = self.overlay.height()
-
-        if new_width != self._screen_width or new_height != self._screen_height:
-            self._screen_width = new_width
-            self._screen_height = new_height
-            self._screen_tex = Texture2D(new_width, new_height)
-            self._groups_x = (new_width + 15) // 16
-            self._groups_y = (new_height + 15) // 16
-            self.lanczos_scaler.set_target_texture(self._screen_tex)
-            self.update_content_dimensions()
-
-        logger.debug(
-            f"Recreating swapchain: "
-            f"old size {self._screen_width}x{self._screen_height} "
-            f"-> new size {new_width}x{new_height}"
-        )
-        self._swapchain_manager.recreate(self._screen_width, self._screen_height)
-        self.osd.clear_compute_cache()
-
     def update_content_dimensions(self) -> None:
-        """Recalculate content dimensions based on current overlay size and crop."""
+        """Recalculate content dimensions based on current overlay and crop."""
         overlay_w = self.overlay.width()
         overlay_h = self.overlay.height()
-        new_content_w, new_content_h, _, _, _ = parse_output_geometry(
-            self.output_geometry,
+        new_cw, new_ch, _, _, _ = parse_output_geometry(
+            self.config.output_geometry,
             self.crop_width,
             self.crop_height,
             overlay_w,
             overlay_h,
         )
-        logger.debug(
-            f"Content dimensions updated: "
-            f"{self._content_width}x{self._content_height} "
-            f"-> {new_content_w}x{new_content_h}, "
-            f"mode={self.scale_mode}"
-        )
         if (
-            new_content_w != self._content_width
-            or new_content_h != self._content_height
+            new_cw != self.presenter.content_width
+            or new_ch != self.presenter.content_height
         ):
-            self._content_width = new_content_w
-            self._content_height = new_content_h
-            self.overlay.set_content_dimensions(new_content_w, new_content_h)
+            self.presenter.content_width = new_cw
+            self.presenter.content_height = new_ch
+            self.overlay.set_content_dimensions(new_cw, new_ch)
 
-    def _switch_target(self, new_win_info: WindowInfo) -> None:
-        """Switch the pipeline to a new target window."""
-        logger.info(
-            f"Switching pipeline to new window: {new_win_info.title} ({new_win_info.width}x{new_win_info.height})"
+    def _recreate_swapchain(self) -> None:
+        """Recreate swapchain and related resources (e.g., after overlay resize)."""
+        new_w = self.overlay.width()
+        new_h = self.overlay.height()
+        if new_w != self._screen_width or new_h != self._screen_height:
+            self._screen_width = new_w
+            self._screen_height = new_h
+            self.presenter.resize(new_w, new_h)
+            self._swapchain_manager.recreate(new_w, new_h)
+            self.update_content_dimensions()
+        else:
+            self._swapchain_manager.recreate(new_w, new_h)
+        self.osd.clear_compute_cache()
+
+    def _create_grabber(self) -> None:
+        """Create (or recreate) the FrameGrabber for the current target window."""
+        if self._grabber:
+            self._grabber.close()
+        self._grabber = FrameGrabber(
+            self._win_info,
+            crop_left=self._crop_left,
+            crop_top=self._crop_top,
+            crop_right=self._crop_right,
+            crop_bottom=self._crop_bottom,
+            tile_size=self.config.tile_size,
         )
 
-        # Test if the window is alive
+    # ----------------------------------------------------------------------
+    # Target window switching
+    # ----------------------------------------------------------------------
+    def _switch_target(self, new_win_info: WindowInfo) -> None:
+        """
+        Switch the pipeline to a new target window.
+
+        Args:
+            new_win_info: Information about the new window.
+        """
+        logger.info(f"Switching to window: {new_win_info.title}")
         test_tracker = WindowTracker(
             new_win_info.handle, new_win_info.width, new_win_info.height
         )
         test_tracker.update(force=True)
         if not test_tracker.alive:
-            logger.warning(
-                f"New window {new_win_info.handle} is not alive, ignoring switch"
-            )
+            logger.warning("New window not alive, ignoring switch")
             test_tracker.close()
             return
 
-        # Close old tracker and replace
         self._window_tracker.close()
         self._window_tracker = test_tracker
         self._win_info = new_win_info
-
-        # Force a full update of all resources
-        self._handle_window_change(force=True)
-
-        # Update overlay with new target info
+        self._handle_window_change()
         self.overlay.set_target_handle(new_win_info.handle)
         self.overlay.set_target_size(new_win_info.width, new_win_info.height)
 
-        logger.info(f"Successfully switched to window {new_win_info.handle}")
+    # ----------------------------------------------------------------------
+    # Main loop
+    # ----------------------------------------------------------------------
+    def _run(self) -> None:
+        """Main pipeline loop (runs in dedicated thread)."""
+        logger.info("Pipeline thread started")
+        self._create_grabber()
 
-    def request_switch(self, new_win_info: WindowInfo) -> None:
-        self._switch_queue.put(new_win_info)
+        while self._running:
+            try:
+                # Process window switch requests
+                self._process_switch_requests()
+
+                # Check window aliveness
+                if not self.config.follow_focus:
+                    self._window_tracker.check_alive()
+                    if not self._window_tracker.alive:
+                        logger.info("Target window closed – exiting")
+                        break
+
+                # Update window state and handle pause conditions
+                changed = self._window_tracker.update()
+                if self._update_pause_state():
+                    time.sleep(0.1)
+                    continue
+
+                if changed:
+                    self._handle_window_change()
+
+                if self._pause_reason != PauseReason.NONE:
+                    time.sleep(0.1)
+                    continue
+
+                # Process frame
+                self._process_one_frame()
+                self._frame_count += 1
+
+                # Handle controller requests (model/geometry switches)
+                self.controller.process_requests()
+
+                # Show pending OSD messages
+                self._process_osd_requests()
+
+                # Periodic FPS logging
+                self._log_fps()
+
+            except Exception as e:
+                logger.exception(f"Fatal error in pipeline loop: {e}")
+                break
+
+        self._stopped_event.set()
+        QMetaObject.invokeMethod(
+            self.overlay, "on_pipeline_stopped", Qt.QueuedConnection
+        )
+        logger.info("Pipeline thread stopped")
+
+    def _process_switch_requests(self) -> None:
+        """Process any pending window switch requests."""
+        try:
+            while True:
+                new_win = self._switch_queue.get_nowait()
+                self._switch_target(new_win)
+        except Empty:
+            pass
+
+    def _update_pause_state(self) -> bool:
+        """
+        Update pause reason based on window state.
+
+        Returns:
+            True if the pipeline is currently paused.
+        """
+        # Minimized pause
+        if self._window_tracker.minimized:
+            self._set_pause_reason(PauseReason.MINIMIZED)
+            return True
+        elif self._pause_reason == PauseReason.MINIMIZED:
+            self._set_pause_reason(PauseReason.NONE)
+
+        # Focus loss pause
+        bypass_wm = self.config.overlay_mode in (
+            OverlayMode.ALWAYS_ON_TOP.value,
+            OverlayMode.ALWAYS_ON_TOP_TRANSPARENT.value,
+        )
+        if (
+            bypass_wm
+            and self.config.pause_on_focus_loss
+            and not self._window_tracker.active
+        ):
+            self._set_pause_reason(PauseReason.FOCUS_LOST)
+            return True
+        elif self._pause_reason == PauseReason.FOCUS_LOST:
+            self._set_pause_reason(PauseReason.NONE)
+
+        return self._pause_reason != PauseReason.NONE
+
+    def _process_osd_requests(self) -> None:
+        """Show any pending OSD messages."""
+        try:
+            text, duration = self.osd_queue.get_nowait()
+            self.osd.show(text, duration)
+        except Empty:
+            pass
+
+    def _log_fps(self) -> None:
+        """Log FPS every 2 seconds."""
+        now = time.time()
+        if now - self._last_fps_log >= 2.0:
+            elapsed = now - self._last_frame_time
+            if elapsed > 0:
+                fps = self._frame_count / elapsed
+                logger.info(f"FPS: {fps:.1f}")
+            self._last_frame_time = now
+            self._frame_count = 0
+            self._last_fps_log = now

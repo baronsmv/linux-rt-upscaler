@@ -90,10 +90,12 @@ class Config:
     use_damage_tracking: bool = True
 
     # Cache
-    use_cache: bool = False
+    use_cache: bool = True
+    cache_capacity: int = 256
+    cache_threshold: float = 0.3
+
+    # Tiles
     tile_context_margin: int = 8
-    tile_threshold: float = 0.3
-    tile_cache_size: int = 256
     tile_size: int = 64
     tile_padding: int = 16
 

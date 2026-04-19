@@ -141,6 +141,7 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
         uint32_t x, y, w, h;
         PyBufferGuard buffer;
         VkDeviceSize offset;
+        uint32_t slice;
     };
     std::vector<RectUpload> rects;
     rects.reserve(num_rects);
@@ -148,16 +149,29 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
 
     for (Py_ssize_t i = 0; i < num_rects; ++i) {
         PyObject *tuple = PyList_GetItem(rects_list, i);
-        if (!PyTuple_Check(tuple) || PyTuple_Size(tuple) != 5) {
+        if (!PyTuple_Check(tuple)) {
+            PyErr_Format(PyExc_TypeError, "Item %zd must be a tuple", i);
+            return nullptr;
+        }
+        Py_ssize_t tsize = PyTuple_Size(tuple);
+        if (tsize != 5 && tsize != 6) {
             PyErr_Format(PyExc_TypeError,
-                         "Item %zd must be a 5‑tuple (data, x, y, width, height)", i);
+                         "Item %zd must be a 5‑ or 6‑tuple (data, x, y, width, height[, slice])", i);
             return nullptr;
         }
 
         RectUpload r = {};
         PyObject *data_obj = nullptr;
-        if (!PyArg_ParseTuple(tuple, "OIIII", &data_obj, &r.x, &r.y, &r.w, &r.h))
-            return nullptr;
+        uint32_t slice = 0;
+
+        if (tsize == 5) {
+            if (!PyArg_ParseTuple(tuple, "OIIII", &data_obj, &r.x, &r.y, &r.w, &r.h))
+                return nullptr;
+        } else {
+            if (!PyArg_ParseTuple(tuple, "OIIIII", &data_obj, &r.x, &r.y, &r.w, &r.h, &slice))
+                return nullptr;
+        }
+
         if (!r.buffer.acquire(data_obj, PyBUF_SIMPLE))
             return nullptr;
 
@@ -204,6 +218,7 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
             VkBufferImageCopy region = {};
             region.bufferOffset = r.offset;
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.baseArrayLayer = r.slice;
             region.imageSubresource.layerCount = 1;
             region.imageOffset = { static_cast<int32_t>(r.x), static_cast<int32_t>(r.y), 0 };
             region.imageExtent = { r.w, r.h, 1 };

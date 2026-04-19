@@ -2,14 +2,13 @@ import logging
 import os
 import threading
 from datetime import datetime
-from queue import Queue, Empty
+from queue import Empty, Queue
 from typing import TYPE_CHECKING, Tuple
 
 from PIL import Image
-from PySide6.QtCore import QMetaObject, Qt, Q_ARG
+from PySide6.QtCore import Q_ARG, QMetaObject, Qt
 
 from ..config import OUTPUT_GEOMETRIES, UPSCALING_MODELS
-from ..shaders import SRCNN
 from ..vulkan import Texture2D
 
 if TYPE_CHECKING:
@@ -45,7 +44,15 @@ def _download_and_save(
 
 
 class PipelineController:
-    """Handles external commands for the Pipeline in a thread‑safe manner."""
+    """
+    Handles external commands for the Pipeline in a thread‑safe manner.
+
+    Commands include:
+        - Toggling overlay visibility.
+        - Switching upscaling models.
+        - Cycling output geometry modes.
+        - Taking screenshots.
+    """
 
     def __init__(
         self,
@@ -57,15 +64,17 @@ class PipelineController:
         self._available_models = available_models
         self._available_geometries = available_geometries
 
-        # Thread‑safe queues (filled from main thread, consumed in pipeline thread)
-        self._model_switch_queue: Queue[bool] = Queue()
+        # Thread‑safe request queues
+        self._model_switch_queue: Queue[bool] = Queue()  # True = next, False = previous
         self._geometry_switch_queue: Queue[bool] = Queue()
         self._screenshot_requested = False
 
-        # Current indices
         self._current_model_index = 0
         self._current_geometry_index = 0
 
+    # ----------------------------------------------------------------------
+    # Public API (called from main thread)
+    # ----------------------------------------------------------------------
     def toggle_overlay(self) -> None:
         """Show/hide the overlay window and pause/resume processing."""
         if self._pipeline.overlay.isVisible():
@@ -76,19 +85,27 @@ class PipelineController:
             self._pipeline.user_paused = False
 
     def switch_model(self, next_model: bool = True) -> None:
-        """Request a model switch."""
-        self._model_switch_queue.put(not next_model)  # Inverse order
+        """
+        Request a model switch.
+
+        Args:
+            next_model: If True, switch to next model; if False, switch to previous.
+        """
+        self._model_switch_queue.put(next_model)
+
+    def switch_geometry(self) -> None:
+        """Request a geometry mode cycle (next mode)."""
+        self._geometry_switch_queue.put(True)
 
     def take_screenshot(self) -> None:
         """Request a screenshot."""
         self._screenshot_requested = True
 
-    def switch_geometry(self) -> None:
-        """Request a geometry mode cycle."""
-        self._geometry_switch_queue.put(True)
-
+    # ----------------------------------------------------------------------
+    # Request processing (called from pipeline thread)
+    # ----------------------------------------------------------------------
     def process_requests(self) -> None:
-        """Consume any pending requests and apply them."""
+        """Consume and apply any pending requests."""
         # Model switch
         try:
             next_model = self._model_switch_queue.get_nowait()
@@ -108,7 +125,11 @@ class PipelineController:
         except Empty:
             pass
 
+    # ----------------------------------------------------------------------
+    # Internal implementation
+    # ----------------------------------------------------------------------
     def _apply_model_switch(self, next_model: bool) -> None:
+        """Switch to the next or previous model."""
         total = len(self._available_models)
         if total == 0:
             return
@@ -120,26 +141,24 @@ class PipelineController:
         )
         new_model = self._available_models[new_idx]
 
-        logger.info(f"Switching model from {self._pipeline.model_name} to {new_model}")
+        old_model = self._pipeline.config.model
+        logger.info(f"Switching model from {old_model} to {new_model}")
         self._current_model_index = new_idx
-        self._pipeline.model_name = new_model
+        self._pipeline.config.model = new_model
 
-        self._pipeline.upscaler = SRCNN(
-            width=self._pipeline.crop_width,
-            height=self._pipeline.crop_height,
-            model_name=new_model,
-            double_upscale=self._pipeline.double_upscale,
-            tile_size=self._pipeline.tile_size,
+        # Delegate the actual upscaler recreation to the pipeline
+        self._pipeline.recreate_upscaler()
+
+        # Update Lanczos source texture
+        self._pipeline.presenter.set_source_texture(
+            self._pipeline.upscaler_mgr.full_upscaler.output
         )
-        self._pipeline.lanczos_scaler.set_source_texture(self._pipeline.upscaler.output)
 
-        # Clear stale frames
         self._pipeline.clear_frame_queue()
-
-        # Show OSD feedback
         self._pipeline.osd.show(f"Model: {new_model}", OSD_DURATION)
 
     def _apply_geometry_cycle(self) -> None:
+        """Cycle to the next output geometry mode."""
         total = len(self._available_geometries)
         if total == 0:
             return
@@ -147,37 +166,42 @@ class PipelineController:
         new_idx = (self._current_geometry_index + 1) % total
         new_geometry = self._available_geometries[new_idx]
 
-        logger.info(
-            f"Switching output geometry from {self._pipeline.output_geometry} to {new_geometry}"
-        )
+        old_geometry = self._pipeline.config.output_geometry
+        logger.info(f"Switching output geometry from {old_geometry} to {new_geometry}")
         self._current_geometry_index = new_idx
-        self._pipeline.output_geometry = new_geometry
+        self._pipeline.config.output_geometry = new_geometry
         self._pipeline.scale_mode = new_geometry
 
-        # Update overlay scale mode
+        # Update overlay scale mode via queued connection
         QMetaObject.invokeMethod(
             self._pipeline.overlay,
             "set_scale_mode",
             Qt.QueuedConnection,
             Q_ARG(str, new_geometry),
         )
-        self._pipeline.update_content_dimensions()
 
-        # Show OSD feedback
+        self._pipeline.update_content_dimensions()
         self._pipeline.osd.show(f"Geometry: {new_geometry}", OSD_DURATION)
 
     def _save_screenshot(self) -> None:
-        """Capture the raw upscaled texture and offload saving to a background thread."""
+        """Capture the current upscaled texture and offload saving to a background thread."""
         try:
-            temp_tex = Texture2D(self._pipeline.src_w, self._pipeline.src_h)
-            self._pipeline.upscaler.output.copy_to(temp_tex)
+            # Get the source texture from the presenter (the fully upscaled image)
+            src_tex = self._pipeline.presenter.lanczos.source_texture
+            if src_tex is None:
+                logger.warning("No source texture available for screenshot")
+                self._pipeline.osd_queue.put(("Screenshot failed", OSD_DURATION))
+                return
+
+            temp_tex = Texture2D(src_tex.width, src_tex.height)
+            src_tex.copy_to(temp_tex)
 
             threading.Thread(
                 target=_download_and_save,
                 args=(
                     temp_tex,
-                    self._pipeline.src_w,
-                    self._pipeline.src_h,
+                    src_tex.width,
+                    src_tex.height,
                     self._pipeline,
                 ),
                 daemon=True,
@@ -187,11 +211,16 @@ class PipelineController:
             logger.error(f"Failed to initiate screenshot: {e}", exc_info=True)
             self._pipeline.osd_queue.put(("Screenshot failed", OSD_DURATION))
 
+    # ----------------------------------------------------------------------
+    # Initialisation helpers
+    # ----------------------------------------------------------------------
     def set_initial_model_index(self, model_name: str) -> None:
+        """Set the current model index based on the config value."""
         if model_name in self._available_models:
             self._current_model_index = self._available_models.index(model_name)
 
     def set_initial_geometry_index(self, geometry_name: str) -> None:
+        """Set the current geometry index based on the config value."""
         if geometry_name in self._available_geometries:
             self._current_geometry_index = self._available_geometries.index(
                 geometry_name

@@ -707,16 +707,26 @@ class Texture2D(Resource):
         """Download entire texture contents as RGBA8 bytes."""
         return self._handle.download()
 
-    def upload_subresources(
-        self, rects: List[Tuple[bytes, int, int, int, int]]
-    ) -> None:
+    def upload_subresources(self, rects: List[Tuple]) -> None:
         """
-        Upload multiple subresource rectangles in one GPU submission.
+        Batch upload rectangles to a texture (optionally to a specific array slice).
 
         Args:
-            rects: List of tuples (data, x, y, width, height).
+            rects: List of tuples. Each tuple can be:
+                - (data, x, y, width, height)           # slice 0
+                - (data, x, y, width, height, slice)    # specific slice
         """
-        self._handle.upload_subresources(rects)
+        normalized = []
+        for t in rects:
+            if len(t) == 5:
+                normalized.append(t + (0,))
+            elif len(t) == 6:
+                normalized.append(t)
+            else:
+                raise ValueError(
+                    "Each rect must be a 5‑ or 6‑tuple (data, x, y, width, height[, slice])"
+                )
+        self._handle.upload_subresources(normalized)
 
     def clear_color(self, r: float, g: float, b: float, a: float) -> None:
         self._handle.clear_color(r, g, b, a)
