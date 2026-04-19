@@ -88,7 +88,7 @@ sudo dnf install gcc make vulkan-loader-devel libX11-devel libxcb-devel libX11-x
 ### Arch Linux / CachyOS
 
 ```sh
-sudo pacman -S base-devel vulkan-devel libx11 libxext libxdamage libxfixes libxcb
+sudo pacman -S base-devel vulkan-devel libx11 libxcb libxext libxdamage libxfixes
 ```
 
 ### openSUSE
