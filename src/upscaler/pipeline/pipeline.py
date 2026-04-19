@@ -42,15 +42,10 @@ class Pipeline:
         self._win_info = win_info
         self.overlay = overlay
 
-        # Relevant config values
-        self._crop_left = config.crop_left
-        self._crop_top = config.crop_top
-        self._crop_right = config.crop_right
-        self._crop_bottom = config.crop_bottom
+        # Upscaling values
+        self.model_name = config.model
         self.double_upscale = config.double_upscale
         self.tile_size = config.tile_size
-        self.model_name = config.model
-        self.output_geometry = config.output_geometry
         self._scale_factor = config.scale_factor
         self._background_color = config.background_color
 
@@ -59,9 +54,14 @@ class Pipeline:
         self._screen_height = overlay.height()
         self._content_width = overlay.content_width
         self._content_height = overlay.content_height
+        self.output_geometry = config.output_geometry
         self.scale_mode = overlay.scale_mode
 
         # Crop dimensions
+        self._crop_left = config.crop_left
+        self._crop_top = config.crop_top
+        self._crop_right = config.crop_right
+        self._crop_bottom = config.crop_bottom
         self.crop_width = win_info.width - config.crop_left - config.crop_right
         self.crop_height = win_info.height - config.crop_top - config.crop_bottom
 
@@ -86,7 +86,7 @@ class Pipeline:
         # Screen texture
         self._screen_tex = Texture2D(self._screen_width, self._screen_height)
 
-        # Upscaler
+        # SRCNN upscaler
         self.upscaler = SRCNN(
             width=self.crop_width,
             height=self.crop_height,
