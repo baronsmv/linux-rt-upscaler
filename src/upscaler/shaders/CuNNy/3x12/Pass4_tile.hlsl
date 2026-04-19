@@ -61,9 +61,9 @@ Texture2DArray<float4> T0 : register(t0);
 Texture2DArray<float4> T1 : register(t1);
 Texture2DArray<float4> T2 : register(t2);
 
-RWTexture2DArray<float4> T3 : register(u0);
-RWTexture2DArray<float4> T4 : register(u1);
-RWTexture2DArray<float4> T5 : register(u2);
+[[vk::image_format("rgba8")]] RWTexture2DArray<float4> T3 : register(u0);
+[[vk::image_format("rgba8")]] RWTexture2DArray<float4> T4 : register(u1);
+[[vk::image_format("rgba8")]] RWTexture2DArray<float4> T5 : register(u2);
 
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);

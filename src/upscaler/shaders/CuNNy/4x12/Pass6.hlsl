@@ -56,7 +56,7 @@ Texture2D<float4> T0 : register(t1);
 Texture2D<float4> T1 : register(t2);
 Texture2D<float4> T2 : register(t3);
 
-RWTexture2D<float4> OUTPUT : register(u0);
+[[vk::image_format("rgba8")]] RWTexture2D<float4> OUTPUT : register(u0);
 
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);

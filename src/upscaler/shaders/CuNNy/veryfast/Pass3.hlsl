@@ -54,7 +54,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
 Texture2D<float4> T2 : register(t0);
 Texture2D<float4> T3 : register(t1);
 
-RWTexture2D<float4> T0 : register(u0);
+[[vk::image_format("rgba8")]] RWTexture2D<float4> T0 : register(u0);
 
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);

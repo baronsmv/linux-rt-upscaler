@@ -368,7 +368,9 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         # Output textures (UAV) – always array in tile mode
         for idx, tex in enumerate(out_textures):
             suffix = "Array" if per_tile else ""
-            lines.append(f"RWTexture2D{suffix}<float4> {tex} : register(u{idx});")
+            lines.append(
+                f'[[vk::image_format("rgba8")]] RWTexture2D{suffix}<float4> {tex} : register(u{idx});'
+            )
         return lines
 
     def _extract_core_lines(self, body: str) -> List[str]:
