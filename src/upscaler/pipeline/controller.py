@@ -133,6 +133,9 @@ class PipelineController:
         )
         self._pipeline.lanczos_scaler.set_source_texture(self._pipeline.upscaler.output)
 
+        # 🔁 Recreate grabber to force a full frame capture and reset tile cache
+        self._pipeline.create_grabber()
+
         # Clear stale frames
         self._pipeline.clear_frame_queue()
 

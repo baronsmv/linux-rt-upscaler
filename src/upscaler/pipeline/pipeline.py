@@ -184,7 +184,7 @@ class Pipeline:
             except Empty:
                 break
 
-    def _create_grabber(self):
+    def create_grabber(self):
         try:
             if self._grabber is not None:
                 self._grabber.close()
@@ -208,7 +208,7 @@ class Pipeline:
     def _run(self) -> None:
         """Main pipeline loop."""
         logger.info("Pipeline thread started.")
-        self._create_grabber()
+        self.create_grabber()
 
         while self._running:
             try:
@@ -571,7 +571,7 @@ class Pipeline:
         self.lanczos_scaler.set_source_texture(self.upscaler.output)
 
         # Recreate grabber with new window handle and crop
-        self._create_grabber()
+        self.create_grabber()
 
         # Clear the frame queue to avoid using old frames
         while not self._frame_queue.empty():
