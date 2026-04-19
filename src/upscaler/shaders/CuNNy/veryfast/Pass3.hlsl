@@ -1,5 +1,33 @@
-// CuNNy-veryfast-NVL - Pass 3
-// Adapted for Compushady compute shader
+// CuNNy-veryfast-NVL - Pass 3 - https://github.com/funnyplanter/CuNNy
+// Generated for linux-rt-upscaler - https://github.com/baronsmv/linux-rt-upscaler
+//
+// Compile with:
+// dxc -T cs_6_0 -E main -spirv <this_file> \
+//     -fvk-auto-shift-bindings \
+//     -fvk-t-shift 1024 0 \
+//     -fvk-u-shift 2048 0 \
+//     -fvk-s-shift 3072 0 \
+//     -fvk-use-dx-layout \
+//     -fvk-use-scalar-layout \
+//     -Fo <output.spv>
+//
+// =============================================================================
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// 
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+// =============================================================================
 
 cbuffer Constants : register(b0) {
     uint in_width;

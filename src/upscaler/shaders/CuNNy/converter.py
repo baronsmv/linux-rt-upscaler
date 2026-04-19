@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Convert a Magpie CuNNy shader to Compushady compute shader format.
+Convert a Magpie CuNNy shader to Vulkan-compatible HLSL compute shader format.
 
 Features:
 - Detects number of passes and textures automatically.
@@ -37,6 +37,7 @@ class Config:
     input_texture_prefix: str = "T"
     special_input: str = "INPUT"
     special_output: str = "OUTPUT"
+    tile_aware: bool = False  # Generate tile‑aware variant
 
 
 @dataclass
@@ -200,7 +201,8 @@ class ModelJsonBuilder:
 class HlslGenerator:
     """Generates the final HLSL source for a single pass."""
 
-    COMMON_HEADER = """cbuffer Constants : register(b0) {
+    def common_header(self, is_final: bool, per_tile: bool) -> str:
+        header = """cbuffer Constants : register(b0) {
     uint in_width;
     uint in_height;
     uint out_width;
@@ -211,32 +213,53 @@ class HlslGenerator:
     float out_dy;
 };
 
-float2 GetInputPt() { return float2(in_dx, in_dy); }
+"""
+        if per_tile and not is_final:
+            header += """struct TileParams {
+    uint inputLayer;    // which layer to read from INPUT
+    uint outputLayer;   // which layer to write to all outputs
+};
+[[vk::push_constant]] TileParams tileParams;
+
+"""
+        header += """float2 GetInputPt() { return float2(in_dx, in_dy); }
 float2 GetOutputPt() { return float2(out_dx, out_dy); }
 uint2 GetInputSize() { return uint2(in_width, in_height); }
 uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
-#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)
+"""
+        if per_tile and not is_final:
+            header += "#define O(t, x, y) t.SampleLevel(SP, float3(pos + float2(x, y) * pt, tileParams.inputLayer), 0)"
+        else:
+            header += "#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)"
+
+        header += """
 #define V4 min16float4
 #define M4 min16float4x4
 #define V3 min16float3
 #define M3x4 min16float3x4
 """
+        return header
 
     def __init__(self, config: Config, model_name: str) -> None:
         self.config = config
         self.model_name = model_name
 
-    def generate(self, pass_info: PassInfo, sampler_order: List[str]) -> str:
+    def generate(
+        self, pass_info: PassInfo, sampler_order: List[str], original_license: str = ""
+    ) -> str:
         pass_num = pass_info.pass_num
         in_textures = pass_info.in_textures
         out_textures = pass_info.out_textures
         pre_lines = pass_info.pre_lines
         body = pass_info.body
         is_final = self.config.special_output in out_textures
+        per_tile = self.config.tile_aware
 
         # Texture declarations with registers
-        tex_decl_lines = self._build_texture_declarations(in_textures, out_textures)
+        tex_decl_lines = self._build_texture_declarations(
+            in_textures, out_textures, is_final, per_tile
+        )
 
         # Sampler declarations
         sampler_lines = [
@@ -257,21 +280,43 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         # Build entry point
         entry = self._build_entry(is_final)
 
+        separator = f"// {"=" * 77}"
+
         # Assemble everything
         lines = [
-            f"// {self.model_name} - Pass {pass_num}",
-            "// Adapted for Compushady compute shader",
-            "",
-            self.COMMON_HEADER.strip(),
-            "",
-            *tex_decl_lines,
-            "",
-            *sampler_lines,
-            "",
-            *l_macros,
-            "",
-            entry,
+            f"// {self.model_name} - Pass {pass_num} - https://github.com/funnyplanter/CuNNy",
+            "// Generated for linux-rt-upscaler - https://github.com/baronsmv/linux-rt-upscaler",
+            "//",
+            "// Compile with:",
+            "// dxc -T cs_6_0 -E main -spirv <this_file> \\",
+            "//     -fvk-auto-shift-bindings \\",
+            "//     -fvk-t-shift 1024 0 \\",
+            "//     -fvk-u-shift 2048 0 \\",
+            "//     -fvk-s-shift 3072 0 \\",
+            "//     -fvk-use-dx-layout \\",
+            "//     -fvk-use-scalar-layout \\",
+            "//     -Fo <output.spv>",
+            "//",
+            separator,
+            "//",
         ]
+        if original_license:
+            for lic_line in original_license.strip().splitlines():
+                lines.append(f"// {lic_line}")
+            lines.extend(["//", separator, ""])
+        lines.extend(
+            [
+                self.common_header(is_final, per_tile).strip(),
+                "",
+                *tex_decl_lines,
+                "",
+                *sampler_lines,
+                "",
+                *l_macros,
+                "",
+                entry,
+            ]
+        )
         # Indent core lines by 4 spaces
         for line in core_lines:
             if line.strip() == "":
@@ -286,11 +331,16 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         return full_shader
 
     def _build_texture_declarations(
-        self, in_textures: List[str], out_textures: List[str]
+        self,
+        in_textures: List[str],
+        out_textures: List[str],
+        is_final: bool,
+        per_tile: bool,
     ) -> List[str]:
         """Return SRV and UAV declaration lines with registers."""
+        suffix = "Array" if per_tile and not is_final else ""
         srv_lines = [
-            f"Texture2D<float4> {tex} : register(t{idx});"
+            f"Texture2D{suffix}<float4> {tex} : register(t{idx});"
             for idx, tex in enumerate(in_textures)
         ]
         uav_lines = [
@@ -580,11 +630,31 @@ void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
 """
 
 
+def extract_license(content: str, start: int = 2) -> str:
+    lines = content.splitlines()[start:]  # Ignore title
+    license_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("//"):
+            license_lines.append(stripped[2:].strip())
+        elif license_lines and not stripped:
+            break  # end of comment block
+        else:
+            break
+    return "\n".join(license_lines)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Convert Magpie CuNNy shader to Compushady format."
     )
     parser.add_argument("shader_path", help="Path to the original .hlsl shader file")
+    parser.add_argument(
+        "-t",
+        "--tile-aware",
+        action="store_true",
+        help="Generate tile‑aware shader variant",
+    )
     args = parser.parse_args()
 
     shader_path = args.shader_path
@@ -592,7 +662,7 @@ def main() -> None:
         print(f"Error: {shader_path} not found.")
         return
 
-    with open(shader_path, "rb") as f:
+    with open(shader_path, "r") as f:
         content = f.read()
 
     # Parse the shader
@@ -601,8 +671,8 @@ def main() -> None:
         print("No passes found in the shader.")
         return
 
-    # Configuration (can be extended with command‑line overrides later)
-    config = Config()
+    # Configuration
+    config = Config(tile_aware=args.tile_aware)
 
     # Build model.json data
     sampler_map = {s.name: s.filter_type for s in parser.samplers}
@@ -630,9 +700,14 @@ def main() -> None:
     # Generate per‑pass HLSL files
     hlsl_gen = HlslGenerator(config, model_name=shader_basename)
     sampler_order = [s.name for s in parser.samplers]
+    suffix = "_tile" if config.tile_aware else ""
     for pinfo in parser.passes:
-        hlsl = hlsl_gen.generate(pinfo, sampler_order)
-        out_path = os.path.join(output_dir, f"Pass{pinfo.pass_num}.hlsl")
+        hlsl = hlsl_gen.generate(
+            pinfo,
+            sampler_order,
+            extract_license(content),
+        )
+        out_path = os.path.join(output_dir, f"Pass{pinfo.pass_num}{suffix}.hlsl")
         with open(out_path, "w") as f:
             f.write(hlsl)
         print(f"Written {out_path}")
