@@ -70,29 +70,36 @@ pipx install linux-rt-upscaler
 <details>
 <summary>Required development packages (click to expand)</summary>
 
-#### Debian / Ubuntu / Linux Mint
+### Debian / Ubuntu / Linux Mint
 
 ```sh
 sudo apt update
-sudo apt install gcc make libvulkan-dev libxcb1-dev libxcb-shm0-dev libxcb-composite0-dev libxcb-damage0-dev libxcb-xfixes0-dev libxcb-util0-dev
+sudo apt install gcc make libvulkan-dev \
+    libx11-dev libxcb1-dev libx11-xcb-dev \
+    libxext-dev libxdamage-dev libxfixes-dev
 ```
 
-#### Fedora / RHEL / CentOS
+### Fedora / RHEL / CentOS
 
 ```sh
-sudo dnf install gcc make vulkan-loader-devel libxcb-devel xcb-util-devel
+sudo dnf install gcc make vulkan-loader-devel \
+    libX11-devel libxcb-devel libX11-xcb-devel \
+    libXext-devel libXdamage-devel libXfixes-devel
 ```
 
-#### Arch Linux / CachyOS
+### Arch Linux / CachyOS
 
 ```sh
-sudo pacman -S base-devel vulkan-devel libxcb xcb-util
+sudo pacman -S base-devel vulkan-devel \
+    libx11 libxext libxdamage libxfixes libxcb
 ```
 
-#### openSUSE
+### openSUSE
 
 ```sh
-sudo zypper install gcc make vulkan-devel libxcb-devel xcb-util-devel
+sudo zypper install gcc make vulkan-devel \
+    libX11-devel libxcb-devel libX11-xcb-devel \
+    libXext-devel libXdamage-devel libXfixes-devel
 ```
 
 ---
