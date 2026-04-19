@@ -74,8 +74,7 @@ pipx install linux-rt-upscaler
 
 ```sh
 sudo apt update
-sudo apt install gcc make libvulkan-dev \
-    libx11-dev libxcb1-dev libx11-xcb-dev \
+sudo apt install gcc make libvulkan-dev libx11-dev libxcb1-dev libx11-xcb-dev \
     libxext-dev libxdamage-dev libxfixes-dev
 ```
 
