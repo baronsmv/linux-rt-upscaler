@@ -14,7 +14,7 @@ from ..config import Config, OverlayMode, OUTPUT_GEOMETRIES, UPSCALING_MODELS
 from ..overlay import OverlayWindow
 from ..shaders import LanczosScaler, SRCNN, dispatch_groups
 from ..utils import parse_output_geometry, calculate_scaling_rect
-from ..vulkan import Texture2D, configure_device, device_wait_idle
+from ..vulkan import Texture2D, configure_device, create_fence, device_wait_idle
 from ..window import WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
@@ -83,9 +83,6 @@ class Pipeline:
             present_mode=self.config.vulkan_present_mode,
         )
 
-        # Screen texture
-        self._screen_tex = Texture2D(self._screen_width, self._screen_height)
-
         # Upscaler
         self.upscaler = SRCNN(
             width=self.crop_width,
@@ -95,10 +92,30 @@ class Pipeline:
             tile_size=self.tile_size,
         )
 
+        # Async
+        self._async_enabled = config.async_pipeline
+        self._async_buffer_count = config.async_buffer_count
+
+        if self._async_enabled:
+            self._screen_textures = []
+            self._texture_fences = []
+            for _ in range(self._async_buffer_count):
+                tex = Texture2D(self._screen_width, self._screen_height)
+                self._screen_textures.append(tex)
+                # Create fence in signaled state
+                fence = create_fence(signaled=True)
+                self._texture_fences.append(fence)
+            self._current_tex_idx = 0
+            self._present_tex_idx = None
+            self._lanczos_target = self._screen_textures[0]
+        else:
+            self._screen_tex = Texture2D(self._screen_width, self._screen_height)
+            self._lanczos_target = self._screen_tex
+
         # Lanczos scaler
         self.lanczos_scaler = LanczosScaler()
         self.lanczos_scaler.set_source_texture(self.upscaler.output)
-        self.lanczos_scaler.set_target_texture(self._screen_tex)
+        self.lanczos_scaler.set_target_texture(self._lanczos_target)
 
         # Compute groups for Lanczos
         self._groups_x = (self._screen_width + 15) // 16
@@ -367,7 +384,6 @@ class Pipeline:
             return
 
         if not self._running:
-            logger.debug("_process_one_frame(): _running False, returning")
             return
 
         # -------------------------------------------------------------------------
@@ -384,7 +400,12 @@ class Pipeline:
         # 3. If frame hasn't changed and no OSD update, skip GPU work
         # -------------------------------------------------------------------------
         if not is_dirty and osd_texture is None:
-            self._swapchain_manager.present(self._screen_tex)
+            # In async mode, we still need to present something (the last frame)
+            if self._async_enabled:
+                present_tex = self._screen_textures[self._present_tex_idx or 0]
+            else:
+                present_tex = self._screen_tex
+            self._swapchain_manager.present(present_tex, wait_for_fence=False)
             return
 
         # -------------------------------------------------------------------------
@@ -400,14 +421,6 @@ class Pipeline:
                         start = row * stride + ex * 4
                         sub_data.extend(frame[start : start + ew * 4])
                     upload_list.append((bytes(sub_data), ex, ey, ew, eh))
-                if upload_list:
-                    first = upload_list[0]
-                    logger.debug(
-                        f"upload_list[0] type: {type(first)}, len: {len(first)}"
-                    )
-                    logger.debug(f"first element type: {type(first[0])}")
-                    if isinstance(first[0], tuple):
-                        logger.error(f"First element is a tuple, not bytes: {first[0]}")
                 self.upscaler.input.upload_subresources(upload_list)
             else:
                 self.upscaler.staging.upload(frame)
@@ -416,7 +429,25 @@ class Pipeline:
             return
 
         # -------------------------------------------------------------------------
-        # 5. Calculate Lanczos destination rectangle and update constants
+        # 5. Choose target screen texture for this frame
+        # -------------------------------------------------------------------------
+        if self._async_enabled:
+            next_idx = (self._current_tex_idx + 1) % self._async_buffer_count
+            target_tex = self._screen_textures[next_idx]
+            target_fence = self._texture_fences[next_idx]
+
+            # Wait until GPU has finished with this texture
+            target_fence.wait()
+            target_fence.reset()
+
+            # Update Lanczos target
+            self.lanczos_scaler.set_target_texture(target_tex)
+            self._current_tex_idx = next_idx
+        else:
+            target_tex = self._screen_tex
+
+        # -------------------------------------------------------------------------
+        # 6. Calculate Lanczos destination rectangle and update constants
         # -------------------------------------------------------------------------
         r_x, r_y, r_w, r_h = calculate_scaling_rect(
             self.src_w,
@@ -433,7 +464,11 @@ class Pipeline:
 
         if dst_w <= 0 or dst_h <= 0:
             logger.debug(f"Skipping Lanczos dispatch – invalid rect: {dst_w}x{dst_h}")
-            self._swapchain_manager.present(self._screen_tex)
+            if self._async_enabled:
+                present_tex = self._screen_textures[self._present_tex_idx or 0]
+            else:
+                present_tex = target_tex
+            self._swapchain_manager.present(present_tex, wait_for_fence=False)
             return
 
         self.lanczos_scaler.update_constants(
@@ -446,22 +481,22 @@ class Pipeline:
             dst_y,
             r_w,
             r_h,
-            1.0,  # blur factor
+            1.0,
         )
 
         # -------------------------------------------------------------------------
-        # 6. Build the list of compute dispatches for this frame
+        # 7. Build the list of compute dispatches for this frame
         # -------------------------------------------------------------------------
         dispatches = []
 
-        # ---- SRCNN upscale passes (first stage) ----
+        # SRCNN first stage
         w, h = self.upscaler._first_in_w, self.upscaler._first_in_h
         for i, pipe in enumerate(self.upscaler.pipelines_first):
             last = i == self.upscaler.cfg["passes"] - 1
             gx, gy = dispatch_groups(w, h, last)
             dispatches.append((pipe, gx, gy, 1, b""))
 
-        # ---- SRCNN second stage (if double upscale enabled) ----
+        # SRCNN second stage
         if self.double_upscale:
             w2, h2 = self.upscaler._second_in_w, self.upscaler._second_in_h
             for i, pipe in enumerate(self.upscaler.pipelines_second):
@@ -469,12 +504,12 @@ class Pipeline:
                 gx, gy = dispatch_groups(w2, h2, last)
                 dispatches.append((pipe, gx, gy, 1, b""))
 
-        # ---- Lanczos scaling pass ----
+        # Lanczos scaling pass
         dispatches.append(
             (self.lanczos_scaler.compute, self._groups_x, self._groups_y, 1, b"")
         )
 
-        # ---- OSD blend pass (if OSD is active) ----
+        # OSD blend pass (if OSD is active)
         if osd_texture is not None:
             osd_w = osd_texture.width
             osd_h = osd_texture.height
@@ -482,14 +517,14 @@ class Pipeline:
             osd_y = (self._screen_height - osd_h) // 2
 
             self.osd.update_constants(osd_x, osd_y, osd_w, osd_h)
-            osd_compute = self.osd.get_compute_pipeline(osd_texture, self._screen_tex)
+            osd_compute = self.osd.get_compute_pipeline(osd_texture, target_tex)
 
             groups_x = (osd_w + 15) // 16
             groups_y = (osd_h + 15) // 16
             dispatches.append((osd_compute, groups_x, groups_y, 1, b""))
 
         # -------------------------------------------------------------------------
-        # 7. Submit EVERYTHING in one Vulkan command buffer
+        # 8. Submit all GPU work with proper synchronization
         # -------------------------------------------------------------------------
         copy_src = (
             None
@@ -497,24 +532,52 @@ class Pipeline:
             else self.upscaler.staging
         )
 
-        try:
-            self.upscaler.pipelines_first[0].dispatch_sequence(
-                sequence=dispatches,
-                copy_src=copy_src,
-                copy_dst=self.upscaler.input,
-                present_image=self._screen_tex,
-            )
-        except Exception as e:
-            logger.error(f"dispatch_sequence failed: {e}", exc_info=True)
-            return
+        if self._async_enabled:
+            # Use the modified dispatch_sequence that accepts a fence to signal
+            try:
+                self.upscaler.pipelines_first[0].dispatch_sequence(
+                    sequence=dispatches,
+                    copy_src=copy_src,
+                    copy_dst=self.upscaler.input,
+                    present_image=None,  # we handle presentation separately
+                    fence=target_fence,
+                    wait_for_fence=False,  # don't wait inside
+                )
+            except Exception as e:
+                logger.error(f"dispatch_sequence failed: {e}", exc_info=True)
+                return
+        else:
+            # Synchronous path: present_image = target_tex, wait inside
+            try:
+                self.upscaler.pipelines_first[0].dispatch_sequence(
+                    sequence=dispatches,
+                    copy_src=copy_src,
+                    copy_dst=self.upscaler.input,
+                )
+            except Exception as e:
+                logger.error(f"dispatch_sequence failed: {e}", exc_info=True)
+                return
 
         # -------------------------------------------------------------------------
-        # 8. Present the screen texture (no extra GPU work, layout already correct)
+        # 9. Present the appropriate texture
         # -------------------------------------------------------------------------
-        self._swapchain_manager.present(self._screen_tex, wait_for_fence=False)
+        if self._async_enabled:
+            # On first frame, we haven't rendered anything yet; present the first texture (empty)
+            if self._present_tex_idx is None:
+                self._present_tex_idx = 0
+            else:
+                # Present the texture that is at least one frame old (guaranteed to be idle)
+                self._present_tex_idx = (
+                    self._current_tex_idx - 1
+                ) % self._async_buffer_count
+            present_tex = self._screen_textures[self._present_tex_idx]
+        else:
+            present_tex = target_tex
+
+        self._swapchain_manager.present(present_tex, wait_for_fence=False)
 
         # -------------------------------------------------------------------------
-        # 9. Update mouse mapping rectangle for overlay interaction
+        # 10. Update mouse mapping and check swapchain
         # -------------------------------------------------------------------------
         self.overlay.scaling_rect = [
             dst_x / self._scale_factor,
@@ -523,9 +586,6 @@ class Pipeline:
             dst_h / self._scale_factor,
         ]
 
-        # -------------------------------------------------------------------------
-        # 10. Check if swapchain needs recreation (e.g., window resized)
-        # -------------------------------------------------------------------------
         if self._swapchain_manager.needs_recreation():
             if self._swapchain_manager.is_out_of_date():
                 logger.info("Swapchain out-of-date, recreating.")
@@ -582,25 +642,29 @@ class Pipeline:
 
         logger.info("Window change handled successfully")
 
-    def _recreate_swapchain(self) -> None:
-        """Recreate swapchain and related resources."""
+    def _recreate_swapchain(self):
         new_width = self.overlay.width()
         new_height = self.overlay.height()
-
         if new_width != self._screen_width or new_height != self._screen_height:
             self._screen_width = new_width
             self._screen_height = new_height
-            self._screen_tex = Texture2D(new_width, new_height)
             self._groups_x = (new_width + 15) // 16
             self._groups_y = (new_height + 15) // 16
-            self.lanczos_scaler.set_target_texture(self._screen_tex)
+
+            if self._async_enabled:
+                for i in range(self._async_buffer_count):
+                    self._screen_textures[i] = Texture2D(new_width, new_height)
+                    # Recreate fence (old one will be garbage‑collected)
+                    self._texture_fences[i] = create_fence(signaled=True)
+                self._lanczos_target = self._screen_textures[self._current_tex_idx]
+                self._present_tex_idx = None  # reset on resize
+            else:
+                self._screen_tex = Texture2D(new_width, new_height)
+                self._lanczos_target = self._screen_tex
+
+            self.lanczos_scaler.set_target_texture(self._lanczos_target)
             self.update_content_dimensions()
 
-        logger.debug(
-            f"Recreating swapchain: "
-            f"old size {self._screen_width}x{self._screen_height} "
-            f"-> new size {new_width}x{new_height}"
-        )
         self._swapchain_manager.recreate(self._screen_width, self._screen_height)
         self.osd.clear_compute_cache()
 

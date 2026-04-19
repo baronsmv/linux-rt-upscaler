@@ -11,6 +11,7 @@
 #include "vk_device.h"
 #include "vk_compute.h"
 #include "vk_utils.h"
+#include "vk_fence.h"
 #include <unordered_map>
 #include <vector>
 #include <cstring>
@@ -341,23 +342,39 @@ static void issue_image_barrier_for_uav(VkCommandBuffer cmd,
  *     copy_slice (int, optional): texture array slice.
  *     present_image (vk.Resource, optional): texture to transition for present.
  *     timestamps (bool, optional): enable timestamp queries.
+ *     fence (vk.Fence, optional): fence to signal when GPU work completes.
+ *     wait_for_fence (bool, optional): whether to wait for the fence (default True).
  *
  * Returns:
  *     If timestamps enabled, returns (None, timestamps_list). Else None.
  */
 PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObject *kwds) {
-    static const char *kwlist[] = {"sequence", "copy_src", "copy_dst", "copy_slice",
-                                   "present_image", "timestamps", nullptr};
+    static const char* kwlist[] = {
+        "sequence", "copy_src", "copy_dst", "copy_slice",
+        "present_image", "timestamps", "fence", "wait_for_fence", nullptr
+    };
     PyObject *sequence_list;
     PyObject *copy_src_obj = Py_None, *copy_dst_obj = Py_None, *present_obj = Py_None;
     int copy_slice = 0;
     int enable_timestamps = 0;
+    PyObject* fence_obj = nullptr;
+    int wait_for_fence = 1;  // Default: wait
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|OOiOp", (char **)kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|OOiOppi", (char**)kwlist,
                                      &PyList_Type, &sequence_list,
                                      &copy_src_obj, &copy_dst_obj, &copy_slice,
-                                     &present_obj, &enable_timestamps))
+                                     &present_obj, &enable_timestamps,
+                                     &fence_obj, &wait_for_fence))
         return nullptr;
+
+    VkFence fence = VK_NULL_HANDLE;
+    if (fence_obj && fence_obj != Py_None) {
+        if (!PyObject_TypeCheck(fence_obj, &vk_Fence_Type)) {
+            PyErr_SetString(PyExc_TypeError, "fence must be a vk.Fence");
+            return nullptr;
+        }
+        fence = ((vk_Fence*)fence_obj)->fence;
+    }
 
     Py_ssize_t num_items = PyList_Size(sequence_list);
 
@@ -443,7 +460,6 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
     uint32_t total_ts = 0;
     std::vector<uint32_t> ts_before, ts_after;
     uint32_t ts_copy_before = 0, ts_copy_after = 0;
-    uint32_t ts_present_before = 0, ts_present_after = 0;
     if (use_timestamps) {
         total_ts = 2 + 2 * static_cast<uint32_t>(num_items) + (present_img ? 2 : 0);
         if (total_ts <= dev->timestamp_count) {
@@ -459,133 +475,217 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
         }
     }
 
-    // Record command buffer (using one‑shot execution)
-    bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
+    // ========== ALLOCATE AND BEGIN COMMAND BUFFER ==========
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
+    if (!cmd) {
+        for (auto p : pushes) Py_DECREF(p);
+        return nullptr;  // error already set by vk_allocate_temp_cmd
+    }
+
+    VkCommandBufferBeginInfo begin_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    VkResult res = vkBeginCommandBuffer(cmd, &begin_info);
+    if (res != VK_SUCCESS) {
+        vk_free_temp_cmd(dev, cmd);
+        for (auto p : pushes) Py_DECREF(p);
+        PyErr_Format(PyExc_RuntimeError, "Failed to begin command buffer (error %d)", res);
+        return nullptr;
+    }
+
+    // ========== RECORD COMMANDS ==========
+    if (use_timestamps) {
+        vkCmdResetQueryPool(cmd, dev->timestamp_pool, 0, total_ts);
+        vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                            dev->timestamp_pool, 0);
+    }
+
+    // Pre‑copy from buffer to texture
+    if (src_buf && dst_img) {
         if (use_timestamps) {
-            vkCmdResetQueryPool(cmd, dev->timestamp_pool, 0, total_ts);
-            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                dev->timestamp_pool, 0);
+            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                dev->timestamp_pool, ts_copy_before);
         }
-
-        // Pre‑copy from buffer to texture
-        if (src_buf && dst_img) {
-            if (use_timestamps) {
-                vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                    dev->timestamp_pool, ts_copy_before);
-            }
-            vk_cmd_transition_for_copy_dst(cmd, dst_img->image, copy_slice, 1);
-            VkBufferImageCopy region = {};
-            region.bufferOffset = 0;
-            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.imageSubresource.baseArrayLayer = static_cast<uint32_t>(copy_slice);
-            region.imageSubresource.layerCount = 1;
-            region.imageExtent = dst_img->image_extent;
-            vkCmdCopyBufferToImage(cmd, src_buf->buffer, dst_img->image,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-            vk_cmd_transition_for_compute(cmd, dst_img->image, copy_slice, 1);
-            if (use_timestamps) {
-                vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                    dev->timestamp_pool, ts_copy_after);
-            }
+        vk_cmd_transition_for_copy_dst(cmd, dst_img->image, copy_slice, 1);
+        VkBufferImageCopy region = {};
+        region.bufferOffset = 0;
+        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.baseArrayLayer = static_cast<uint32_t>(copy_slice);
+        region.imageSubresource.layerCount = 1;
+        region.imageExtent = dst_img->image_extent;
+        vkCmdCopyBufferToImage(cmd, src_buf->buffer, dst_img->image,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        vk_cmd_transition_for_compute(cmd, dst_img->image, copy_slice, 1);
+        if (use_timestamps) {
+            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                dev->timestamp_pool, ts_copy_after);
         }
+    }
 
-        // Dispatches
-        for (Py_ssize_t i = 0; i < num_items; ++i) {
-            vk_Compute *comp = comps[i];
-            if (use_timestamps) {
-                vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                                    dev->timestamp_pool, ts_before[i]);
+    // Dispatches
+    for (Py_ssize_t i = 0; i < num_items; ++i) {
+        vk_Compute *comp = comps[i];
+        if (use_timestamps) {
+            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                dev->timestamp_pool, ts_before[i]);
+        }
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, comp->pipeline);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                comp->pipeline_layout, 0, 1, &comp->descriptor_set, 0, nullptr);
+        if (pushes[i] != Py_None) {
+            Py_buffer view;
+            if (PyObject_GetBuffer(pushes[i], &view, PyBUF_SIMPLE) < 0) {
+                // Cleanup handled by caller
+                vkEndCommandBuffer(cmd);
+                vk_free_temp_cmd(dev, cmd);
+                for (auto p : pushes) Py_DECREF(p);
+                return nullptr;
             }
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, comp->pipeline);
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                    comp->pipeline_layout, 0, 1, &comp->descriptor_set, 0, nullptr);
-            if (pushes[i] != Py_None) {
-                Py_buffer view;
-                if (PyObject_GetBuffer(pushes[i], &view, PyBUF_SIMPLE) < 0) {
-                    // Cleanup handled by caller
-                    return;
-                }
-                if (view.len > 0) {
-                    vkCmdPushConstants(cmd, comp->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT,
-                                       0, static_cast<uint32_t>(view.len), view.buf);
-                }
-                PyBuffer_Release(&view);
+            if (view.len > 0) {
+                vkCmdPushConstants(cmd, comp->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT,
+                                   0, static_cast<uint32_t>(view.len), view.buf);
             }
-            vkCmdDispatch(cmd, xs[i], ys[i], zs[i]);
+            PyBuffer_Release(&view);
+        }
+        vkCmdDispatch(cmd, xs[i], ys[i], zs[i]);
 
-            if (i < num_items - 1) {
-                // Get the UAV list of the *current* compute pipeline
-                PyObject* uav_list = comp->py_uav_list;  // You need to expose this in vk_Compute
-                Py_ssize_t uav_count = PyList_Size(uav_list);
+        // Image barriers for UAV->SRV transitions
+        if (i < num_items - 1) {
+            PyObject* uav_list = comp->py_uav_list;
+            Py_ssize_t uav_count = PyList_Size(uav_list);
 
-                // Get the SRV and UAV lists of the *next* compute pipeline
-                vk_Compute* next_comp = comps[i+1];
-                PyObject* next_srv_list = next_comp->py_srv_list;
-                PyObject* next_uav_list = next_comp->py_uav_list;
+            vk_Compute* next_comp = comps[i+1];
+            PyObject* next_srv_list = next_comp->py_srv_list;
+            PyObject* next_uav_list = next_comp->py_uav_list;
 
-                for (Py_ssize_t j = 0; j < uav_count; ++j) {
-                    vk_Resource* uav_res = (vk_Resource*)PyList_GetItem(uav_list, j);
-                    if (!uav_res->image) continue;
+            for (Py_ssize_t j = 0; j < uav_count; ++j) {
+                vk_Resource* uav_res = (vk_Resource*)PyList_GetItem(uav_list, j);
+                if (!uav_res->image) continue;
 
-                    // Check if this image is used as SRV or UAV in the next dispatch
-                    bool used_next = false;
-                    // Check SRVs
-                    for (Py_ssize_t k = 0; k < PyList_Size(next_srv_list); ++k) {
-                        if (PyList_GetItem(next_srv_list, k) == (PyObject*)uav_res) {
+                bool used_next = false;
+                for (Py_ssize_t k = 0; k < PyList_Size(next_srv_list); ++k) {
+                    if (PyList_GetItem(next_srv_list, k) == (PyObject*)uav_res) {
+                        used_next = true;
+                        break;
+                    }
+                }
+                if (!used_next) {
+                    for (Py_ssize_t k = 0; k < PyList_Size(next_uav_list); ++k) {
+                        if (PyList_GetItem(next_uav_list, k) == (PyObject*)uav_res) {
                             used_next = true;
                             break;
                         }
                     }
-                    // Check UAVs
-                    if (!used_next) {
-                        for (Py_ssize_t k = 0; k < PyList_Size(next_uav_list); ++k) {
-                            if (PyList_GetItem(next_uav_list, k) == (PyObject*)uav_res) {
-                                used_next = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (used_next) {
-                        issue_image_barrier_for_uav(cmd, uav_res,
-                            VK_ACCESS_SHADER_WRITE_BIT,
-                            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
-                    }
+                }
+                if (used_next) {
+                    issue_image_barrier_for_uav(cmd, uav_res,
+                        VK_ACCESS_SHADER_WRITE_BIT,
+                        VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
                 }
             }
-
-            if (use_timestamps) {
-                vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                                    dev->timestamp_pool, ts_after[i]);
-            }
-            // Memory barrier between dispatches
-            if (i < num_items - 1 || present_img) {
-                VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
-                barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
-                                     1, &barrier, 0, nullptr, 0, nullptr);
-            }
         }
-    });
 
+        if (use_timestamps) {
+            vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                dev->timestamp_pool, ts_after[i]);
+        }
+
+        // Memory barrier between dispatches
+        if (i < num_items - 1 || present_img) {
+            VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
+                                 1, &barrier, 0, nullptr, 0, nullptr);
+        }
+    }
+
+    // ========== END COMMAND BUFFER ==========
+    res = vkEndCommandBuffer(cmd);
+    if (res != VK_SUCCESS) {
+        vk_free_temp_cmd(dev, cmd);
+        for (auto p : pushes) Py_DECREF(p);
+        PyErr_Format(PyExc_RuntimeError, "Failed to end command buffer (error %d)", res);
+        return nullptr;
+    }
+
+    // ========== DETERMINE FENCE AND SUBMIT ==========
+    VkFence exec_fence = fence;
+    bool should_wait = wait_for_fence;
+    VkFence temp_fence = VK_NULL_HANDLE;
+    if (exec_fence == VK_NULL_HANDLE) {
+        VkFenceCreateInfo fence_info = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+        res = vkCreateFence(dev->device, &fence_info, nullptr, &temp_fence);
+        if (res != VK_SUCCESS) {
+            vk_free_temp_cmd(dev, cmd);
+            for (auto p : pushes) Py_DECREF(p);
+            PyErr_Format(PyExc_RuntimeError, "Failed to create temporary fence (error %d)", res);
+            return nullptr;
+        }
+        exec_fence = temp_fence;
+        should_wait = true;  // Always wait for a temporary fence
+    }
+
+    VkSubmitInfo submit_info = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &cmd;
+    res = vkQueueSubmit(dev->queue, 1, &submit_info, exec_fence);
+    if (res != VK_SUCCESS) {
+        if (temp_fence) vkDestroyFence(dev->device, temp_fence, nullptr);
+        vk_free_temp_cmd(dev, cmd);
+        for (auto p : pushes) Py_DECREF(p);
+        PyErr_Format(PyExc_RuntimeError, "Queue submit failed (error %d)", res);
+        return nullptr;
+    }
+
+    // ========== OPTIONAL WAIT ==========
+    if (should_wait) {
+        Py_BEGIN_ALLOW_THREADS
+        res = vkWaitForFences(dev->device, 1, &exec_fence, VK_TRUE, UINT64_MAX);
+        Py_END_ALLOW_THREADS
+        if (res != VK_SUCCESS) {
+            if (temp_fence) vkDestroyFence(dev->device, temp_fence, nullptr);
+            vk_free_temp_cmd(dev, cmd);
+            for (auto p : pushes) Py_DECREF(p);
+            PyErr_Format(PyExc_RuntimeError, "Fence wait failed (error %d)", res);
+            return nullptr;
+        }
+    }
+
+    // ========== CLEANUP ==========
+    if (temp_fence) vkDestroyFence(dev->device, temp_fence, nullptr);
+    vk_free_temp_cmd(dev, cmd);
     for (auto p : pushes) Py_DECREF(p);
-    if (!ok) return nullptr;
 
-    // Read timestamps if requested
+    // ========== READ TIMESTAMPS ==========
     if (use_timestamps) {
         uint64_t *ts_data = (uint64_t *)PyMem_Malloc(total_ts * sizeof(uint64_t));
-        vkGetQueryPoolResults(dev->device, dev->timestamp_pool, 0, total_ts,
-                              total_ts * sizeof(uint64_t), ts_data, sizeof(uint64_t),
-                              VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+        if (!ts_data) {
+            return PyErr_NoMemory();
+        }
+        res = vkGetQueryPoolResults(dev->device, dev->timestamp_pool, 0, total_ts,
+                                    total_ts * sizeof(uint64_t), ts_data, sizeof(uint64_t),
+                                    VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+        if (res != VK_SUCCESS) {
+            PyMem_Free(ts_data);
+            PyErr_Format(PyExc_RuntimeError, "Failed to get timestamp results (error %d)", res);
+            return nullptr;
+        }
         PyObject *ts_list = PyList_New(total_ts);
+        if (!ts_list) {
+            PyMem_Free(ts_data);
+            return PyErr_NoMemory();
+        }
         for (uint32_t i = 0; i < total_ts; ++i) {
             double ns = ts_data[i] * dev->timestamp_period;
             PyList_SetItem(ts_list, i, PyFloat_FromDouble(ns));
         }
         PyMem_Free(ts_data);
         PyObject *result = PyTuple_New(2);
+        if (!result) {
+            Py_DECREF(ts_list);
+            return PyErr_NoMemory();
+        }
         Py_INCREF(Py_None);
         PyTuple_SetItem(result, 0, Py_None);
         PyTuple_SetItem(result, 1, ts_list);

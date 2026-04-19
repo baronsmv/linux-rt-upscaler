@@ -9,6 +9,7 @@
 #include "vk_common.h"
 #include "vk_instance.h"
 #include "vk_device.h"
+#include "vk_fence.h"
 #include "vk_heap.h"
 #include "vk_resource.h"
 #include "vk_sampler.h"
@@ -21,6 +22,7 @@
 PyObject *vk_Texture2DError = nullptr;
 PyObject *vk_BufferError = nullptr;
 PyObject *vk_ComputeError = nullptr;
+PyObject* vk_FenceError = nullptr;
 PyObject *vk_SwapchainError = nullptr;
 PyObject *vk_HeapError = nullptr;
 PyObject *vk_SamplerError = nullptr;
@@ -37,6 +39,8 @@ static PyMethodDef vulkan_module_methods[] = {
      "Enable Vulkan debug output (validation layers and debug utils)."},
     {"get_shader_binary_type", (PyCFunction)vk_get_shader_binary_type, METH_NOARGS,
      "Return the required shader binary type (1 = SPIR‑V)."},
+    {"create_fence", (PyCFunction)vk_create_fence, METH_VARARGS | METH_KEYWORDS,
+     "Create a new fence. Optionally specify device and signaled state."},
     {nullptr, nullptr, 0, nullptr}
 };
 
@@ -63,6 +67,7 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
     MAKE_ERR(Texture2DError);
     MAKE_ERR(BufferError);
     MAKE_ERR(ComputeError);
+    MAKE_ERR(FenceError);
     MAKE_ERR(SwapchainError);
     MAKE_ERR(HeapError);
     MAKE_ERR(SamplerError);
@@ -77,6 +82,7 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
         PyModule_AddObject(m, #type, (PyObject *)&vk_##type##_Type);
 
     READY_TYPE(Device);
+    READY_TYPE(Fence);
     READY_TYPE(Heap);
     READY_TYPE(Resource);
     READY_TYPE(Sampler);

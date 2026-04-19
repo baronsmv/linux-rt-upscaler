@@ -851,6 +851,8 @@ class Compute:
         copy_slice: int = 0,
         present_image: Optional[Texture2D] = None,
         timestamps: bool = False,
+        fence: Optional["Fence"] = None,
+        wait_for_fence: bool = True,
     ) -> Optional[Tuple[None, List[float]]]:
         """
         Submit a sequence of dispatches with optional pre/post copies.
@@ -862,6 +864,8 @@ class Compute:
             copy_slice: Destination texture slice.
             present_image: Texture to transition for presentation.
             timestamps: If True, return GPU timings.
+            fence: Optional fence to signal when GPU work completes.
+            wait_for_fence: Whether to wait for the fence (default True).
 
         Returns:
             None, or (None, timestamps_list) if timestamps=True.
@@ -870,6 +874,7 @@ class Compute:
         src = copy_src._handle if copy_src else None
         dst = copy_dst._handle if copy_dst else None
         pres = present_image._handle if present_image else None
+        f = fence._handle if fence else None
         return self._handle.dispatch_sequence(
             sequence=seq,
             copy_src=src,
@@ -877,6 +882,8 @@ class Compute:
             copy_slice=copy_slice,
             present_image=pres,
             timestamps=timestamps,
+            fence=f,
+            wait_for_fence=wait_for_fence,
         )
 
     def __repr__(self) -> str:
@@ -975,3 +982,34 @@ class Swapchain:
 
     def __repr__(self) -> str:
         return f"<Swapchain {self.width}x{self.height}>"
+
+
+class Fence:
+    """Wrapper for VkFence."""
+
+    __slots__ = ("_handle",)
+
+    def __init__(self, signaled: bool = False, device: Optional[Device] = None):
+        dev = device or get_current_device()
+        self._handle = _vk.create_fence(dev._handle, signaled)
+
+    @classmethod
+    def from_handle(cls, handle):
+        self = cls.__new__(cls)
+        self._handle = handle
+        return self
+
+    def wait(self, timeout_ns: int = 0xFFFFFFFFFFFFFFFF) -> bool:
+        """Wait for fence. Returns True if signaled, False on timeout."""
+        return self._handle.wait(timeout_ns)
+
+    def reset(self) -> None:
+        self._handle.reset()
+
+    def is_signaled(self) -> bool:
+        return self._handle.is_signaled()
+
+
+def create_fence(signaled: bool = False, device: Optional[Device] = None) -> Fence:
+    """Create a new VkFence."""
+    return Fence(signaled, device)
