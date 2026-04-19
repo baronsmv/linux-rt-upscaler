@@ -115,8 +115,15 @@ class Pipeline:
 
         # Lanczos scaler
         self.lanczos_scaler = LanczosScaler()
+        logger.info("!!! LanczosScaler created")
         self.lanczos_scaler.set_source_texture(self.upscaler.output)
+        logger.info(
+            f"!!! set_source_texture done, compute={self.lanczos_scaler.compute}"
+        )
         self.lanczos_scaler.set_target_texture(self._lanczos_target)
+        logger.info(
+            f"!!! set_target_texture done, compute={self.lanczos_scaler.compute}"
+        )
 
         # Compute groups for Lanczos
         self._groups_x = (self._screen_width + 15) // 16
@@ -402,14 +409,14 @@ class Pipeline:
         # -------------------------------------------------------------------------
         if not is_dirty and osd_texture is None:
             if self._async_enabled:
-                self._idle_frame_counter += 1
-                if self._idle_frame_counter >= self._async_buffer_count:
-                    # Render this frame (dispatches only, no upload)
-                    self._idle_frame_counter = 0
-                    is_dirty = False  # will skip upload later
-                    # fall through to rendering
+                if self._idle_frame_counter < self._async_buffer_count:
+                    self._idle_frame_counter += 1
+                if self._idle_frame_counter == self._async_buffer_count:
+                    # First time hitting the threshold this idle period → force render
+                    self._idle_frame_counter += 1  # prevent further forced renders
+                    is_dirty = False  # fall through to rendering
                 else:
-                    # Present the last frame and return
+                    # Already rendered once during this idle period → skip
                     present_tex = self._screen_textures[self._present_tex_idx or 0]
                     self._swapchain_manager.present(present_tex, wait_for_fence=False)
                     return
@@ -418,7 +425,6 @@ class Pipeline:
                 self._swapchain_manager.present(self._screen_tex, wait_for_fence=False)
                 return
         else:
-            # Frame is dirty or OSD active → reset counter
             self._idle_frame_counter = 0
 
         # -------------------------------------------------------------------------
