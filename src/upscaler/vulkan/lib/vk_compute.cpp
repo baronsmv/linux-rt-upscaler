@@ -304,6 +304,30 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
+static void issue_image_barrier_for_uav(VkCommandBuffer cmd,
+                                        vk_Resource* uav,
+                                        VkAccessFlags srcAccess,
+                                        VkAccessFlags dstAccess) {
+    if (!uav->image) return; // Only images need this
+
+    VkImageMemoryBarrier imgBarrier = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER
+    };
+    imgBarrier.srcAccessMask = srcAccess;
+    imgBarrier.dstAccessMask = dstAccess;
+    imgBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    imgBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    imgBarrier.image = uav->image;
+    imgBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imgBarrier.subresourceRange.levelCount = 1;
+    imgBarrier.subresourceRange.layerCount = uav->slices;
+
+    vkCmdPipelineBarrier(cmd,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        0, 0, nullptr, 0, nullptr, 1, &imgBarrier);
+}
+
 /* ----------------------------------------------------------------------------
    dispatch_sequence
    ------------------------------------------------------------------------- */
@@ -488,6 +512,48 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
                 PyBuffer_Release(&view);
             }
             vkCmdDispatch(cmd, xs[i], ys[i], zs[i]);
+
+            if (i < num_items - 1) {
+                // Get the UAV list of the *current* compute pipeline
+                PyObject* uav_list = comp->py_uav_list;  // You need to expose this in vk_Compute
+                Py_ssize_t uav_count = PyList_Size(uav_list);
+
+                // Get the SRV and UAV lists of the *next* compute pipeline
+                vk_Compute* next_comp = comps[i+1];
+                PyObject* next_srv_list = next_comp->py_srv_list;
+                PyObject* next_uav_list = next_comp->py_uav_list;
+
+                for (Py_ssize_t j = 0; j < uav_count; ++j) {
+                    vk_Resource* uav_res = (vk_Resource*)PyList_GetItem(uav_list, j);
+                    if (!uav_res->image) continue;
+
+                    // Check if this image is used as SRV or UAV in the next dispatch
+                    bool used_next = false;
+                    // Check SRVs
+                    for (Py_ssize_t k = 0; k < PyList_Size(next_srv_list); ++k) {
+                        if (PyList_GetItem(next_srv_list, k) == (PyObject*)uav_res) {
+                            used_next = true;
+                            break;
+                        }
+                    }
+                    // Check UAVs
+                    if (!used_next) {
+                        for (Py_ssize_t k = 0; k < PyList_Size(next_uav_list); ++k) {
+                            if (PyList_GetItem(next_uav_list, k) == (PyObject*)uav_res) {
+                                used_next = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (used_next) {
+                        issue_image_barrier_for_uav(cmd, uav_res,
+                            VK_ACCESS_SHADER_WRITE_BIT,
+                            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+                    }
+                }
+            }
+
             if (use_timestamps) {
                 vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                                     dev->timestamp_pool, ts_after[i]);
