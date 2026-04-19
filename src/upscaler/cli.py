@@ -23,6 +23,10 @@ from .window import FocusMonitor, HotkeyManager
 
 logger = logging.getLogger(__name__)
 
+from .vulkan import enable_debug
+
+enable_debug()
+
 
 def main() -> None:
     overall_start = time.perf_counter()

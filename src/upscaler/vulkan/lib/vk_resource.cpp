@@ -182,6 +182,13 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
         if (!r.buffer.acquire(data_obj, PyBUF_SIMPLE))
             return nullptr;
 
+        if (r.buffer.view.len < (size_t)(r.w * r.h * 4)) {
+            PyErr_Format(PyExc_ValueError,
+                "Data size %zd too small for %ux%u rectangle (need %u bytes)",
+                r.buffer.view.len, r.w, r.h, r.w * r.h * 4);
+            return nullptr;
+        }
+
         if (r.w == 0 || r.h == 0)
             continue;
 

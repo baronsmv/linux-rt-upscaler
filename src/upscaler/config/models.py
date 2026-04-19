@@ -94,8 +94,8 @@ class Config:
     tile_context_margin: int = 8
 
     # Cache
-    use_cache: bool = False
-    cache_capacity: int = 256
+    use_cache: bool = True
+    cache_capacity: int = 2048
     cache_threshold: float = 0.3
 
     # Logging (set via flags, not directly from CLI)

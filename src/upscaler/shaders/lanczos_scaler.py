@@ -183,9 +183,6 @@ class LanczosScaler:
             blur,
         )
         self._cb.upload(self._push_data)
-        logger.debug(
-            f"Lanczos constants updated: dst={dst_w}x{dst_h} at ({dst_x},{dst_y})"
-        )
 
     # ----------------------------------------------------------------------
     # Pipeline management

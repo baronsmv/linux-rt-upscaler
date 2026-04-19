@@ -1,6 +1,8 @@
 import logging
 from typing import List, Optional, Tuple
 
+import xxhash
+
 from .cache import TileAtlasManager
 from ..shaders import SRCNN
 from ..vulkan import Texture2D
@@ -133,17 +135,45 @@ class UpscalerManager:
         Returns:
             List of (tile_x, tile_y, hash, tile_data_bytes).
         """
-        tiles = []
         stride = self.crop_width * 4
-        for rx, ry, rw, rh, hash_val in rects:
-            tx = rx // self.tile_size
-            ty = ry // self.tile_size
-            data = bytearray()
-            for row in range(ry, ry + rh):
-                start = row * stride + rx * 4
-                data.extend(frame[start : start + rw * 4])
-            tiles.append((tx, ty, hash_val, bytes(data)))
-        return tiles
+        tile_w = self.tile_size
+        tile_h = self.tile_size
+        tiles_x = (self.crop_width + tile_w - 1) // tile_w
+        tiles_y = (self.crop_height + tile_h - 1) // tile_h
+
+        dirty_tile_coords = set()
+        for rx, ry, rw, rh, _ in rects:
+            start_tx = rx // tile_w
+            start_ty = ry // tile_h
+            end_tx = (rx + rw + tile_w - 1) // tile_w
+            end_ty = (ry + rh + tile_h - 1) // tile_h
+            for ty in range(start_ty, min(end_ty, tiles_y)):
+                for tx in range(start_tx, min(end_tx, tiles_x)):
+                    dirty_tile_coords.add((tx, ty))
+
+        result = []
+        full_tile_bytes = tile_w * tile_h * 4
+        for tx, ty in dirty_tile_coords:
+            x = tx * tile_w
+            y = ty * tile_h
+            w = min(tile_w, self.crop_width - x)
+            h = min(tile_h, self.crop_height - y)
+
+            # Start with zero‑filled full tile
+            data = bytearray(full_tile_bytes)
+            # Copy available rows
+            for row in range(h):
+                src_start = (y + row) * stride + x * 4
+                dst_start = row * tile_w * 4
+                data[dst_start : dst_start + w * 4] = frame[
+                    src_start : src_start + w * 4
+                ]
+
+            valid_data = data[: w * h * 4]  # only the real pixel data, without pads
+            tile_hash = xxhash.xxh64(valid_data).intdigest()
+            result.append((tx, ty, tile_hash, bytes(data)))
+
+        return result
 
     def process_tile_frame(
         self, dirty_tiles: List[Tuple[int, int, int, bytes]]
@@ -155,27 +185,38 @@ class UpscalerManager:
         if not self.tile_upscaler:
             raise RuntimeError("Tile mode not enabled")
 
-        # 1. Process tiles (uploads + dispatches)
+        # Process tiles (uploads + dispatches)
         self.tile_upscaler.process_tiles(dirty_tiles)
 
-        # 2. Copy all cached tiles from the final output atlas to upscaled_output
+        # Copy all cached tiles from the final output atlas to upscaled_output
         final_atlas = self.output_atlases[self.output_names.index("output")]
+        output_w = self.upscaled_output.width
+        output_h = self.upscaled_output.height
 
         for tx, ty, layer in self.atlas_manager.get_all_entries():
             dst_x = tx * self.tile_out_w
             dst_y = ty * self.tile_out_h
+
+            # Clamp copy dimensions to output texture bounds
+            copy_w = min(self.tile_out_w, output_w - dst_x)
+            copy_h = min(self.tile_out_h, output_h - dst_y)
+
+            if copy_w <= 0 or copy_h <= 0:
+                continue  # tile completely outside (should not happen)
+
             final_atlas.copy_to(
                 self.upscaled_output,
                 src_slice=layer,
                 dst_x=dst_x,
                 dst_y=dst_y,
-                width=self.tile_out_w,
-                height=self.tile_out_h,
+                width=copy_w,
+                height=copy_h,
             )
 
     def get_output_texture(self) -> Texture2D:
         """
         Return the texture that holds the fully upscaled image.
+
         For full‑frame mode, this is `full_upscaler.output`.
         For tile mode, this is `self.upscaled_output` (must be called after processing).
         """
