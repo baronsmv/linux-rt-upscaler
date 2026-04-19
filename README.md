@@ -82,23 +82,20 @@ sudo apt install gcc make libvulkan-dev \
 ### Fedora / RHEL / CentOS
 
 ```sh
-sudo dnf install gcc make vulkan-loader-devel \
-    libX11-devel libxcb-devel libX11-xcb-devel \
+sudo dnf install gcc make vulkan-loader-devel libX11-devel libxcb-devel libX11-xcb-devel \
     libXext-devel libXdamage-devel libXfixes-devel
 ```
 
 ### Arch Linux / CachyOS
 
 ```sh
-sudo pacman -S base-devel vulkan-devel \
-    libx11 libxext libxdamage libxfixes libxcb
+sudo pacman -S base-devel vulkan-devel libx11 libxext libxdamage libxfixes libxcb
 ```
 
 ### openSUSE
 
 ```sh
-sudo zypper install gcc make vulkan-devel \
-    libX11-devel libxcb-devel libX11-xcb-devel \
+sudo zypper install gcc make vulkan-devel libX11-devel libxcb-devel libX11-xcb-devel \
     libXext-devel libXdamage-devel libXfixes-devel
 ```
 
