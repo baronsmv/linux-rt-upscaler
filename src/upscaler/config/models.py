@@ -94,7 +94,7 @@ class Config:
     tile_context_margin: int = 8
 
     # Cache
-    use_cache: bool = True
+    mode: str = "full"
     cache_capacity: int = 2048
     cache_threshold: float = 0.3
 

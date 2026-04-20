@@ -616,7 +616,7 @@ class Buffer(Resource):
         self._handle = handle
         return self
 
-    def upload(self, data: bytes, offset: int = 0) -> None:
+    def upload(self, data: memoryview, offset: int = 0) -> None:
         """Upload data to the buffer at the given offset."""
         self._handle.upload(data, offset)
 
