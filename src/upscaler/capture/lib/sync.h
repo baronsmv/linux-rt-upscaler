@@ -1,6 +1,6 @@
 /**
  * @file sync.h
- * @brief Thread‑safety and error handling for X11 calls.
+ * @brief Thread-safety and error handling for X11 calls.
  */
 
 #ifndef SYNC_H

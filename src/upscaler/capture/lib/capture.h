@@ -77,7 +77,7 @@ CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
 /**
  * Capture a frame and return a list of changed rectangles.
  * @param ctx         Capture context.
- * @param output_data Pre‑allocated buffer (width*height*4 bytes) to hold BGRA
+ * @param output_data Pre-allocated buffer (width*height*4 bytes) to hold BGRA
  * data.
  * @param rects       Array to receive output rectangles.
  * @param max_rects   Maximum number of rectangles to return.

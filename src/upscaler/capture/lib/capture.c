@@ -212,7 +212,7 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
                                   cap_x, cap_y, cap_w, cap_h, rects, max_rects);
 
     /* If threshold exceeded, tile_cache_detect_changes already returned a
-     * full‑frame rect. */
+     * full-frame rect. */
     if (rect_count == 1 && rects[0].width == ctx->width &&
         rects[0].height == ctx->height) {
       /* Full frame was requested – we may need to recapture if we hadn't

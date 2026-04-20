@@ -1,5 +1,5 @@
 // Lanczos2 with antiringing – compute shader version
-// Adapted from Magpie effect by funnyplanter (CC0‑1.0)
+// Adapted from Magpie effect by funnyplanter (CC0-1.0)
 
 Texture2D<float4> InputTex : register(t0);
 [[vk::image_format("rgba8")]]
@@ -13,8 +13,8 @@ cbuffer Constants : register(b0)
     uint srcHeight;         // upscaled source height
     uint dstTotalWidth;     // physical window width
     uint dstTotalHeight;    // physical window height
-    int dstX;               // rectangle top‑left X
-    int dstY;               // rectangle top‑left Y
+    int dstX;               // rectangle top-left X
+    int dstY;               // rectangle top-left Y
     int dstW;               // rectangle width
     int dstH;               // rectangle height
     float blur;
@@ -55,7 +55,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     float2 pp = inputPos - 0.5;                                   // align so integer positions are pixel centers
     float2 p0 = floor(pp);
     float2 f = pp - p0;                                           // fractional offset from that pixel center
-    float2 s = p0 * pt;                                           // normalized coordinate of top‑left of 4x4 neighborhood
+    float2 s = p0 * pt;                                           // normalized coordinate of top-left of 4x4 neighborhood
 
     // Lanczos weights for the 4x4 neighbourhood (x and y directions)
     float4 wx = float4(K(1 + f.x), K(0 + f.x), K(1 - f.x), K(2 - f.x));

@@ -15,7 +15,7 @@
  *
  * @param expr   Vulkan function call or VkResult variable.
  * @param errObj Python exception type (e.g., vk_ComputeError).
- * @param fmt    printf‑style format string for the error message.
+ * @param fmt    printf-style format string for the error message.
  * @param ...    arguments for the format string.
  */
 #define VK_CHECK_OR_RETURN_NULL(expr, errObj, fmt, ...)                         \
@@ -81,7 +81,7 @@ VkCommandBuffer vk_allocate_temp_cmd(vk_Device *dev);
 void vk_free_temp_cmd(vk_Device *dev, VkCommandBuffer cmd);
 
 /**
- * Execute a one‑time command buffer: allocate, begin, record, end, submit,
+ * Execute a one-time command buffer: allocate, begin, record, end, submit,
  * wait for completion, and free. The recording function is called with the
  * command buffer. Returns true on success, false on failure (Python exception
  * set).

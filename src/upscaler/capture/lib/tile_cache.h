@@ -1,6 +1,6 @@
 /**
  * @file tile_cache.h
- * @brief Tile‑based change detection using xxHash64.
+ * @brief Tile-based change detection using xxHash64.
  */
 
 #ifndef TILE_CACHE_H
@@ -28,7 +28,7 @@ void tile_cache_free(CaptureContext *ctx);
  *
  * @param ctx           Capture context.
  * @param full_frame    1 if output_data contains the complete frame.
- * @param output_data   Full‑frame buffer (used only if full_frame=1).
+ * @param output_data   Full-frame buffer (used only if full_frame=1).
  * @param partial_buf   Partial capture buffer (used if full_frame=0).
  * @param cap_x,cap_y   Offset of partial capture within the full frame.
  * @param cap_w,cap_h   Dimensions of partial capture.

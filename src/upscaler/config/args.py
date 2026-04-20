@@ -26,7 +26,7 @@ def _get_version() -> str:
 def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
     """Parse command line arguments and return (args, profile_name, config_path)."""
     parser = argparse.ArgumentParser(
-        description="Real‑Time Upscaler for Linux",
+        description="Real-Time Upscaler for Linux",
         epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler",
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -92,7 +92,7 @@ Default: %(default)s""",
         "--double-upscale",
         action="store_true",
         help="""Perform two 2x passes (total 4x) for higher resolution
-screens (4k, 1440p) or low‑resolution sources""",
+screens (4k, 1440p) or low-resolution sources""",
     )
 
     # ----------------------------------------------------------------------
@@ -168,7 +168,7 @@ always-on-top works well for this).
 Modes:
   always-on-top    - Floating overlay above all windows
                      and not focusable (bypasses WM).
-  top-transparent  - Same as above but click‑through
+  top-transparent  - Same as above but click-through
                      (mouse passes to window below).
   fullscreen       - Fullscreen window without decorations
                      (covers entire monitor).
@@ -261,12 +261,12 @@ Default: %(default)s""",
 Default: %(default)s
 
 Modes:
-  fifo      - V‑Sync on. Limits FPS to display refresh rate.
+  fifo      - V-Sync on. Limits FPS to display refresh rate.
               Lowest power consumption, no tearing.
-  mailbox   - Tear‑free, lower latency. GPU renders as fast
+  mailbox   - Tear-free, lower latency. GPU renders as fast
               as possible; only the latest complete frame
               is displayed. Higher power usage.
-  immediate - Lowest latency, no V‑Sync. Frames are displayed
+  immediate - Lowest latency, no V-Sync. Frames are displayed
               immediately, may cause visible tearing.
 """,
     )
@@ -274,7 +274,7 @@ Modes:
         "--vulkan-buffer-pool-size",
         type=int,
         default=DEFAULT_CONFIG.vulkan_buffer_pool_size,
-        help=f"""Number of pre‑allocated staging buffers for partial
+        help=f"""Number of pre-allocated staging buffers for partial
 texture updates. Larger values reduce allocation overhead
 during frequent small changes, but use a small amount of
 additional VRAM.
@@ -296,13 +296,13 @@ Default: %(default)s
         "--pid-timeout",
         type=int,
         default=DEFAULT_CONFIG.pid_timeout,
-        help="Seconds to try PID‑based window detection",
+        help="Seconds to try PID-based window detection",
     )
     window_detection_group.add_argument(
         "--class-timeout",
         type=int,
         default=DEFAULT_CONFIG.class_timeout,
-        help="Seconds to try class‑based window detection",
+        help="Seconds to try class-based window detection",
     )
     window_detection_group.add_argument(
         "--total-timeout",

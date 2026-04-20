@@ -118,7 +118,7 @@ PyObject *vk_Resource_upload(vk_Resource *self, PyObject *args) {
  * Batch upload of multiple rectangular regions into a texture resource.
  *
  * Args:
- *     rects (list): list of 5‑tuples (data, x, y, width, height).
+ *     rects (list): list of 5-tuples (data, x, y, width, height).
  */
 PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
     PyObject *rects_list;
@@ -156,7 +156,7 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
         Py_ssize_t tsize = PyTuple_Size(tuple);
         if (tsize != 5 && tsize != 6) {
             PyErr_Format(PyExc_TypeError,
-                         "Item %zd must be a 5‑ or 6‑tuple (data, x, y, width, height[, slice])", i);
+                         "Item %zd must be a 5- or 6-tuple (data, x, y, width, height[, slice])", i);
             return nullptr;
         }
 
@@ -222,7 +222,7 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
         memcpy(dst + r.offset, r.buffer.view.buf, r.buffer.view.len);
     }
 
-    // Execute copy commands using one‑time command buffer
+    // Execute copy commands using one-time command buffer
     bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
         // Transition texture to transfer destination
         vk_cmd_transition_for_copy_dst(cmd, self->image, 0, self->slices);
@@ -259,7 +259,7 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
  * Download the entire texture resource into a bytes object.
  *
  * Returns:
- *     bytes: raw pixel data (row‑major, RGBA).
+ *     bytes: raw pixel data (row-major, RGBA).
  */
 PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
     if (!self->image) {
@@ -295,7 +295,7 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
     }
     vkBindBufferMemory(dev->device, device_buffer, device_memory, 0);
 
-    // Use RAII staging buffer for host‑visible download
+    // Use RAII staging buffer for host-visible download
     ScopedStagingBuffer staging(dev, buf_size);
     if (!staging.valid()) {
         vkDestroyBuffer(dev->device, device_buffer, nullptr);
@@ -356,12 +356,12 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
    ------------------------------------------------------------------------- */
 /**
  * Copy data from this resource to another resource.
- * Supports buffer‑to‑buffer, buffer‑to‑texture, texture‑to‑buffer,
- * and texture‑to‑texture.
+ * Supports buffer-to-buffer, buffer-to-texture, texture-to-buffer,
+ * and texture-to-texture.
  *
  * Args:
  *     dst (vk.Resource): destination resource.
- *     size (int, optional): number of bytes to copy (buffer‑to‑buffer only).
+ *     size (int, optional): number of bytes to copy (buffer-to-buffer only).
  *     src_offset (int, optional): source offset (buffer only).
  *     dst_offset (int, optional): destination offset (buffer only).
  *     width (int, optional): copy width (texture only, default full).
@@ -425,7 +425,7 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
         }
     }
 
-    // Execute copy using one‑time command buffer
+    // Execute copy using one-time command buffer
     bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
         if (src_is_buf && dst_is_buf) {
             VkBufferCopy region = { src_offset, dst_offset, size };

@@ -45,7 +45,7 @@ def _download_and_save(
 
 class PipelineController:
     """
-    Handles external commands for the Pipeline in a thread‑safe manner.
+    Handles external commands for the Pipeline in a thread-safe manner.
 
     Commands include:
         - Toggling overlay visibility.
@@ -64,7 +64,7 @@ class PipelineController:
         self._available_models = available_models
         self._available_geometries = available_geometries
 
-        # Thread‑safe request queues
+        # Thread-safe request queues
         self._model_switch_queue: Queue[bool] = Queue()  # True = next, False = previous
         self._geometry_switch_queue: Queue[bool] = Queue()
         self._screenshot_requested = False

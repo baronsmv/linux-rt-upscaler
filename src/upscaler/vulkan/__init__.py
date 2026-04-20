@@ -12,7 +12,7 @@ HEAP_DEFAULT = 0
 HEAP_UPLOAD = 1
 HEAP_READBACK = 2
 
-# Shader binary type (only SPIR‑V is supported)
+# Shader binary type (only SPIR-V is supported)
 SHADER_BINARY_TYPE_SPIRV = 1
 
 # Sampler filters
@@ -119,7 +119,7 @@ class VulkanContext:
                 self._cleanup_registered = True
 
     def get_shader_binary_type(self) -> int:
-        """Return the shader binary type supported (SPIR‑V = 1)."""
+        """Return the shader binary type supported (SPIR-V = 1)."""
         return _vk.get_shader_binary_type()
 
     def get_discovered_devices(self) -> List["Device"]:
@@ -165,7 +165,7 @@ class VulkanContext:
         Preference order:
             1. Device specified by the `VULKAN_DEVICE` environment variable (index).
             2. Discrete GPU with the most dedicated video memory.
-            3. Any hardware‑accelerated device.
+            3. Any hardware-accelerated device.
 
         Raises:
             RuntimeError: If no Vulkan devices are found.
@@ -192,7 +192,7 @@ _default_context = VulkanContext()
 
 
 # ----------------------------------------------------------------------
-# Module‑level convenience functions (delegate to default context)
+# Module-level convenience functions (delegate to default context)
 # ----------------------------------------------------------------------
 def enable_debug() -> None:
     """Enable Vulkan validation layers (uses default context)."""
@@ -259,7 +259,7 @@ class Device:
         shared_system_memory (int): Shared system memory in bytes.
         vendor_id (int): PCI vendor ID.
         device_id (int): PCI device ID.
-        is_hardware (bool): True if hardware‑accelerated.
+        is_hardware (bool): True if hardware-accelerated.
         is_discrete (bool): True if discrete GPU.
     """
 
@@ -594,7 +594,7 @@ class Buffer(Resource):
             heap_type: Memory type (DEFAULT, UPLOAD, READBACK).
             stride: For structured buffers.
             format: Pixel format for formatted buffers (0 = none).
-            heap: Optional heap to sub‑allocate from.
+            heap: Optional heap to sub-allocate from.
             heap_offset: Offset within the heap.
             sparse: Create as a sparse resource.
             device: Optional device (uses current if None).
@@ -616,7 +616,7 @@ class Buffer(Resource):
         self._handle = handle
         return self
 
-    def upload(self, data: bytes, offset: int = 0) -> None:
+    def upload(self, data: memoryview, offset: int = 0) -> None:
         """Upload data to the buffer at the given offset."""
         self._handle.upload(data, offset)
 
@@ -632,7 +632,7 @@ class Texture2D(Resource):
     A 2D texture resource.
 
     Can be used as shader resource (SRV) or unordered access (UAV).
-    Supports sub‑region uploads and downloads.
+    Supports sub-region uploads and downloads.
 
     Example:
         tex = Texture2D(1920, 1080, B8G8R8A8_UNORM)
@@ -659,7 +659,7 @@ class Texture2D(Resource):
             width: Width in pixels.
             height: Height in pixels.
             format: Pixel format constant (e.g., R8G8B8A8_UNORM).
-            heap: Optional heap to sub‑allocate from.
+            heap: Optional heap to sub-allocate from.
             heap_offset: Offset within the heap.
             slices: Number of array slices.
             sparse: Create as a sparse resource.
@@ -724,7 +724,7 @@ class Texture2D(Resource):
                 normalized.append(t)
             else:
                 raise ValueError(
-                    "Each rect must be a 5‑ or 6‑tuple (data, x, y, width, height[, slice])"
+                    "Each rect must be a 5- or 6-tuple (data, x, y, width, height[, slice])"
                 )
         self._handle.upload_subresources(normalized)
 
@@ -786,7 +786,7 @@ class Compute:
     """
     Compute pipeline.
 
-    Executes SPIR‑V compute shaders with bound resources.
+    Executes SPIR-V compute shaders with bound resources.
 
     Example:
         shader = open("shader.spv", "rb").read()
@@ -812,7 +812,7 @@ class Compute:
         Create a compute pipeline.
 
         Args:
-            shader: SPIR‑V bytecode.
+            shader: SPIR-V bytecode.
             cbv: List of constant buffer views.
             srv: List of shader resource views.
             uav: List of unordered access views.
@@ -924,7 +924,7 @@ class Swapchain:
         Create a swapchain.
 
         Args:
-            window_handle: Platform‑specific tuple:
+            window_handle: Platform-specific tuple:
                 X11: (display_ptr, window_id)
                 Wayland: (wl_display_ptr, wl_surface_ptr)
             format: Pixel format (e.g., B8G8R8A8_UNORM).
@@ -966,7 +966,7 @@ class Swapchain:
 
         Args:
             texture: Texture2D to present.
-            x, y: Offset within the swapchain (top‑left).
+            x, y: Offset within the swapchain (top-left).
             wait_for_fence: If True, block until presentation completes.
         """
         self._handle.present(texture._handle, x, y, wait_for_fence)

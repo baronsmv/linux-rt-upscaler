@@ -130,7 +130,7 @@ int tile_cache_detect_changes(CaptureContext *ctx, int full_frame,
             changed_count, total_tiles, 100.0 * changed_count / total_tiles);
   }
 
-  /* If change exceeds threshold, replace with a single full‑frame rect */
+  /* If change exceeds threshold, replace with a single full-frame rect */
   int threshold_tiles = (total_tiles * ctx->tile_threshold_percent) / 100;
   if (changed_count > threshold_tiles) {
     if (ctx->debug)

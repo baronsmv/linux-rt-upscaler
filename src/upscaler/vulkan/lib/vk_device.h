@@ -8,7 +8,7 @@
    ------------------------------------------------------------------------- */
 /**
  * Ensures that the given vk_Device has its logical device, queues, command
- * pool, and other per‑device structures initialised. This function is
+ * pool, and other per-device structures initialised. This function is
  * idempotent and may be called multiple times safely.
  *
  * Returns the same device pointer on success, or NULL and sets a Python
@@ -102,7 +102,7 @@ PyObject *vk_Device_create_sampler(vk_Device *self, PyObject *args);
  * Create a compute pipeline.
  *
  * Args:
- *     shader (bytes): SPIR‑V binary.
+ *     shader (bytes): SPIR-V binary.
  *     cbv (list[vk.Resource]): constant buffer views.
  *     srv (list[vk.Resource]): shader resource views.
  *     uav (list[vk.Resource]): unordered access views.

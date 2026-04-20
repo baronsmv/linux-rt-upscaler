@@ -19,7 +19,7 @@ class LanczosScaler:
     Lanczos2 scaling via compute shader.
 
     Scales a source texture into a destination texture using the Lanczos2
-    algorithm with optional anti‑ringing. The shader expects a constant buffer
+    algorithm with optional anti-ringing. The shader expects a constant buffer
     containing background color, source/destination dimensions, and rectangle.
 
     Attributes:
@@ -34,7 +34,7 @@ class LanczosScaler:
         Initialize the Lanczos scaler.
 
         Args:
-            shader_path: Path to the compiled SPIR‑V shader.
+            shader_path: Path to the compiled SPIR-V shader.
         """
         self._shader_path = shader_path
         self._shader: Optional[bytes] = None
@@ -82,7 +82,7 @@ class LanczosScaler:
     # Initialisation
     # ----------------------------------------------------------------------
     def _load_shader(self) -> None:
-        """Load SPIR‑V shader binary from disk."""
+        """Load SPIR-V shader binary from disk."""
         with open(self._shader_path, "rb") as f:
             self._shader = f.read()
         logger.debug(f"Loaded Lanczos shader from {self._shader_path}")
@@ -164,7 +164,7 @@ class LanczosScaler:
             background_color: RGBA color used outside the scaled rectangle.
             src_width, src_height: Dimensions of the source texture.
             dst_total_width, dst_total_height: Dimensions of the target texture.
-            dst_x, dst_y: Top‑left corner of the destination rectangle.
+            dst_x, dst_y: Top-left corner of the destination rectangle.
             dst_w, dst_h: Size of the destination rectangle.
             blur: Blur factor (1.0 = standard Lanczos2).
         """

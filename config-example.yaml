@@ -9,27 +9,27 @@
 #   2. General options defined in this file (top level)
 #   3. Profile options (if a profile is selected manually with -p or matches
 #      the window title automatically)
-#   4. Command‑line overrides (e.g., --model 4x24)
+#   4. Command-line overrides (e.g., --model 4x24)
 
 
 # ------------------------------------------------------------------------------
 # General Options (applied to all windows unless overridden by a profile)
 # ------------------------------------------------------------------------------
 
-# Upscaling model (trade‑off between quality and performance).
+# Upscaling model (trade-off between quality and performance).
 # Available models (ordered from highest to lowest quality):
 #   - 8x32, 4x32, 4x24, 4x16, 4x12, 3x12, fast, faster, veryfast
 # Default: fast
 model: fast
 
-# Perform two sequential 2x upscales (total 4x) for very high‑resolution screens
-# or low‑resolution sources. Enabling this increases GPU load.
+# Perform two sequential 2x upscales (total 4x) for very high-resolution screens
+# or low-resolution sources. Enabling this increases GPU load.
 # Default: false
 double_upscale: false
 
 # Monitor selection.
 #   - "primary"         : use the primary monitor (default)
-#   - "all"             : cover all monitors (multi‑monitor spanning)
+#   - "all"             : cover all monitors (multi-monitor spanning)
 #   - "HDMI-1", "eDP-1" : specific monitor name (use xrandr to list names)
 #   - 0, 1, …           : monitor index (0 = first)
 # Default: primary
@@ -38,7 +38,7 @@ monitor: primary
 # Override the automatically detected Wayland scale factor (e.g., 1.5 for 150%).
 # This is required when monitor is set to "all" because scaling cannot be
 # detected reliably across multiple monitors.
-# Default: null (auto‑detected)
+# Default: null (auto-detected)
 scale_factor: null
 
 # ------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ output_geometry: fit
 # Overlay window behaviour.
 #   - "always-on-top"   : floating, unmanaged overlay that stays above all windows
 #                         (mouse events are forwarded to the target window).
-#   - "top-transparent" : same as above but click‑through.
+#   - "top-transparent" : same as above but click-through.
 #   - "fullscreen"      : fullscreen borderless window (covers the whole monitor).
 #   - "windowed"        : normal window with decorations, fixed size.
 # Default: always-on-top
@@ -93,7 +93,7 @@ background_color: "#000000"
 # Interaction Options
 # ------------------------------------------------------------------------------
 
-# Automatically switch to the currently focused window (follow‑focus).
+# Automatically switch to the currently focused window (follow-focus).
 # Default: false
 follow_focus: false
 
@@ -113,17 +113,17 @@ screenshot_dir: "~/Pictures/Screenshots"
 # ------------------------------------------------------------------------------
 # Vulkan Performance Options (Advanced)
 # ------------------------------------------------------------------------------
-# These options control low‑level Vulkan behavior. Adjust them only if you
-# experience performance issues or want to fine‑tune power/performance trade‑offs.
+# These options control low-level Vulkan behavior. Adjust them only if you
+# experience performance issues or want to fine-tune power/performance trade-offs.
 
 # Vulkan presentation mode:
-#   - "fifo"      : V‑Sync on. Lowest power, no tearing. (Default)
-#   - "mailbox"   : No V‑Sync, tear‑free, lower latency, higher GPU usage.
-#   - "immediate" : No V‑Sync, lowest latency, may tear.
+#   - "fifo"      : V-Sync on. Lowest power, no tearing. (Default)
+#   - "mailbox"   : No V-Sync, tear-free, lower latency, higher GPU usage.
+#   - "immediate" : No V-Sync, lowest latency, may tear.
 # Default: fifo
 vulkan_present_mode: fifo
 
-# Number of pre‑allocated staging buffers (each 2 MB) used for partial texture
+# Number of pre-allocated staging buffers (each 2 MB) used for partial texture
 # uploads. Increase this if you notice stuttering during heavy partial updates
 # (e.g., rapid typing in a large window). Each buffer uses ~2 MB VRAM.
 # Default: 8
@@ -137,11 +137,11 @@ vulkan_buffer_pool_size: 8
 # Default: 5
 target_delay: 5
 
-# Timeout for PID‑based window detection (phase 1).
+# Timeout for PID-based window detection (phase 1).
 # Default: 10
 pid_timeout: 10
 
-# Timeout for class‑based window detection (phase 2).
+# Timeout for class-based window detection (phase 2).
 # Default: 10
 class_timeout: 10
 
@@ -183,7 +183,7 @@ hotkeys:
 # ------------------------------------------------------------------------------
 # Profiles
 # ------------------------------------------------------------------------------
-# Profiles allow you to define window‑specific settings. They are applied:
+# Profiles allow you to define window-specific settings. They are applied:
 #   - Manually via the -p/--profile CLI argument, or
 #   - Automatically when the target window title matches a match rule.
 #
@@ -196,15 +196,15 @@ profiles:
   fata_morgana:
     # Automatic matching rules (optional – if omitted, the profile is manual only)
     match:
-      # Exact title match (case‑insensitive)
+      # Exact title match (case-insensitive)
       title: "The House in Fata Morgana"
-      # Substring match (case‑insensitive)
+      # Substring match (case-insensitive)
       title_contains: "Fata Morgana"
       # Title starts with this prefix
       title_startswith: "The House"
       # Title ends with this suffix
       title_endswith: "Morgana"
-      # Regular expression (case‑insensitive)
+      # Regular expression (case-insensitive)
       title_regex: "The House in Fata.*"
     options:
       model: 4x24

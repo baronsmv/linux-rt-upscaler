@@ -128,7 +128,7 @@ def calculate_scaling_rect(
     src_w: int, src_h: int, dst_w: int, dst_h: int, mode: str
 ) -> Tuple[int, int, int, int]:
     """
-    Returns (x, y, w, h) where (x, y) is the top‑left corner of the
+    Returns (x, y, w, h) where (x, y) is the top-left corner of the
     destination rectangle within the output texture of size dst_w x dst_h.
     """
     if mode == "stretch":

@@ -59,7 +59,7 @@ def compute_overlay_geometry(config: Config, win_info: WindowInfo) -> OverlayGeo
             f"(original {win_info.width}x{win_info.height})"
         )
 
-    # Re‑parse output geometry using cropped dimensions (final content size)
+    # Re-parse output geometry using cropped dimensions (final content size)
     final_content_w, final_content_h, _, _, mode = parse_output_geometry(
         config.output_geometry, crop_width, crop_height, base_w, base_h
     )

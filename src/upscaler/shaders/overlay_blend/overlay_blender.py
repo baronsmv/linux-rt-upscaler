@@ -26,7 +26,7 @@ class OverlayBlender:
         Initialize the overlay blender.
 
         Args:
-            shader_path: Path to the compiled SPIR‑V shader.
+            shader_path: Path to the compiled SPIR-V shader.
         """
         self._shader_path = shader_path
         self._shader: Optional[bytes] = None
@@ -45,7 +45,7 @@ class OverlayBlender:
     # Initialisation
     # ----------------------------------------------------------------------
     def _load_shader(self) -> None:
-        """Load SPIR‑V shader binary from disk."""
+        """Load SPIR-V shader binary from disk."""
         with open(self._shader_path, "rb") as f:
             self._shader = f.read()
         logger.debug(f"Loaded overlay blend shader from {self._shader_path}")
@@ -88,7 +88,7 @@ class OverlayBlender:
 
         Args:
             overlay_tex: The overlay texture to blend (RGBA, premultiplied alpha).
-            x, y: Top‑left position on the screen texture.
+            x, y: Top-left position on the screen texture.
             width, height: Dimensions of the overlay texture.
         """
         if self._screen_tex is None:

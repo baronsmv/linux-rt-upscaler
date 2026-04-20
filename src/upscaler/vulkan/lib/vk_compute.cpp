@@ -5,7 +5,7 @@
  * This file implements the vk.Compute Python type, which encapsulates a
  * Vulkan compute pipeline, descriptor set, and associated resources.
  * It provides methods to dispatch compute shaders and execute sequences
- * of dispatches with optional pre‑copy and presentation.
+ * of dispatches with optional pre-copy and presentation.
  */
 
 #include "vk_device.h"
@@ -90,7 +90,7 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
         return nullptr;
     }
 
-    // SPIR‑V patching for BGRA UAVs if needed
+    // SPIR-V patching for BGRA UAVs if needed
     const uint32_t *spirv_code = static_cast<const uint32_t *>(shader_view.buf);
     size_t spirv_size = shader_view.len;
     uint32_t *patched_code = nullptr;
@@ -116,7 +116,7 @@ PyObject *vk_Device_create_compute_impl(vk_Device *self, PyObject *args, PyObjec
     if (!entry_point) {
         if (patched_code) PyMem_Free(patched_code);
         PyBuffer_Release(&shader_view);
-        PyErr_SetString(vk_ComputeError, "Invalid SPIR‑V or no compute entry point");
+        PyErr_SetString(vk_ComputeError, "Invalid SPIR-V or no compute entry point");
         return nullptr;
     }
 
@@ -277,7 +277,7 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args) {
 
     vk_Device *dev = self->py_device;
 
-    // Record and execute command buffer using one‑shot helper
+    // Record and execute command buffer using one-shot helper
     bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, self->pipeline);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -308,10 +308,10 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args) {
    dispatch_sequence
    ------------------------------------------------------------------------- */
 /**
- * Execute a sequence of compute dispatches with optional pre‑copy and presentation.
+ * Execute a sequence of compute dispatches with optional pre-copy and presentation.
  *
  * Args (keyword arguments):
- *     sequence (list): list of 5‑tuples (compute, x, y, z, push_data).
+ *     sequence (list): list of 5-tuples (compute, x, y, z, push_data).
  *     copy_src (vk.Resource, optional): source buffer to copy to texture.
  *     copy_dst (vk.Resource, optional): destination texture.
  *     copy_slice (int, optional): texture array slice.
@@ -383,7 +383,7 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
     for (Py_ssize_t i = 0; i < num_items; ++i) {
         PyObject *tuple = PyList_GetItem(sequence_list, i);
         if (!PyTuple_Check(tuple) || PyTuple_Size(tuple) != 5) {
-            PyErr_Format(PyExc_TypeError, "Item %zd must be a 5‑tuple", i);
+            PyErr_Format(PyExc_TypeError, "Item %zd must be a 5-tuple", i);
             return nullptr;
         }
         PyObject *comp_obj = PyTuple_GetItem(tuple, 0);
@@ -435,7 +435,7 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
         }
     }
 
-    // Record command buffer (using one‑shot execution)
+    // Record command buffer (using one-shot execution)
     bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
         if (use_timestamps) {
             vkCmdResetQueryPool(cmd, dev->timestamp_pool, 0, total_ts);
@@ -443,7 +443,7 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
                                 dev->timestamp_pool, 0);
         }
 
-        // Pre‑copy from buffer to texture
+        // Pre-copy from buffer to texture
         if (src_buf && dst_img) {
             if (use_timestamps) {
                 vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,

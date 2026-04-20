@@ -31,10 +31,10 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args);
    Python method: dispatch_sequence
    ------------------------------------------------------------------------- */
 /**
- * Execute a sequence of compute dispatches with optional pre‑copy and present.
+ * Execute a sequence of compute dispatches with optional pre-copy and present.
  *
  * Args (keyword arguments):
- *     sequence (list): list of 5‑tuples (compute, x, y, z, push_data).
+ *     sequence (list): list of 5-tuples (compute, x, y, z, push_data).
  *     copy_src (vk.Resource, optional): source buffer to copy to texture.
  *     copy_dst (vk.Resource, optional): destination texture.
  *     copy_slice (int, optional): texture array slice.

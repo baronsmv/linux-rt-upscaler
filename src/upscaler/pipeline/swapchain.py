@@ -19,7 +19,7 @@ class SwapchainManager:
     Uses a dedicated XCB connection for surface creation, independent of other
     X11 usage in the application.
 
-    Thread‑safe for use from the pipeline thread.
+    Thread-safe for use from the pipeline thread.
     """
 
     def __init__(
@@ -128,7 +128,7 @@ class SwapchainManager:
             return self._swapchain is None or self._swapchain.needs_recreation()
 
     def is_out_of_date(self) -> bool:
-        """Return True if the swapchain is out‑of‑date (e.g., surface resized)."""
+        """Return True if the swapchain is out-of-date (e.g., surface resized)."""
         with self._lock:
             return self._swapchain is not None and self._swapchain.is_out_of_date()
 

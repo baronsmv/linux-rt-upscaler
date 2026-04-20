@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple
 
 class TileAtlasManager:
     """
-    Thread‑safe manager for a fixed‑capacity tile cache.
+    Thread-safe manager for a fixed-capacity tile cache.
 
     Each tile is identified by (tile_x, tile_y, content_hash). The manager maps
     this key to a layer index in a set of parallel texture arrays (one per

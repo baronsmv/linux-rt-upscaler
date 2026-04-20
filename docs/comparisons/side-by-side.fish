@@ -25,7 +25,7 @@ for f in $argv[1..2]
     end
 end
 
-# Set caption texts (default or user‑supplied)
+# Set caption texts (default or user-supplied)
 set text1 "Image 1"
 set text2 "Image 2"
 if test (count $argv) -eq 8
@@ -70,7 +70,7 @@ magick "$argv[2]" \
     -gravity south -pointsize $text_pointsize -fill black -annotate +0+10 "$text2" \
     "$second_output"
 
-# Combine side‑by‑side
+# Combine side-by-side
 magick "$first_output" "$second_output" \
     +append "$output"_comparison.png
 

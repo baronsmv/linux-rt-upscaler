@@ -3,7 +3,7 @@
  * @brief Utility functions for Vulkan operations.
  *
  * This file provides helpers for memory allocation, command buffer execution,
- * synchronisation, SPIR‑V manipulation, and descriptor set management.
+ * synchronisation, SPIR-V manipulation, and descriptor set management.
  */
 
 #include "vk_utils.h"
@@ -29,7 +29,7 @@ uint32_t vk_find_memory_type_index(VkPhysicalDeviceMemoryProperties *props,
 }
 
 /* ----------------------------------------------------------------------------
-   Low‑level command buffer execution
+   Low-level command buffer execution
    ------------------------------------------------------------------------- */
 VkResult vk_execute_command_buffer(vk_Device *dev, VkCommandBuffer cmd,
                                    VkFence fence,
@@ -160,7 +160,7 @@ void vk_staging_buffer_release(vk_Device *dev, VkBuffer buffer,
 }
 
 /* ----------------------------------------------------------------------------
-   SPIR‑V helpers
+   SPIR-V helpers
    ------------------------------------------------------------------------- */
 const char *vk_spirv_get_entry_point(const uint32_t *code, size_t size) {
     if (size < 20 || (size % 4) != 0) return NULL;
@@ -277,7 +277,7 @@ void vk_free_temp_cmd(vk_Device *dev, VkCommandBuffer cmd) {
 }
 
 /* ----------------------------------------------------------------------------
-   One‑time command buffer execution
+   One-time command buffer execution
    ------------------------------------------------------------------------- */
 bool vk_execute_one_time_commands(vk_Device *dev,
                                   const std::function<void(VkCommandBuffer)>& record_func) {
@@ -443,7 +443,7 @@ bool vk_create_compute_descriptor_set_layout(vk_Device *dev,
     };
 
     if (bindless == 0) {
-        // Non‑bindless: each resource gets its own binding
+        // Non-bindless: each resource gets its own binding
         uint32_t idx = 0;
         for (size_t i = 0; i < cbv.size(); ++i)
             add_binding(idx++, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);

@@ -37,7 +37,7 @@ class Config:
     input_texture_prefix: str = "T"
     special_input: str = "INPUT"
     special_output: str = "OUTPUT"
-    tile_aware: bool = False  # Generate tile‑aware variant
+    tile_aware: bool = False  # Generate tile-aware variant
 
 
 @dataclass
@@ -128,7 +128,7 @@ class ShaderParser:
 
     @staticmethod
     def _extract_in_out(pre_lines: List[str]) -> Tuple[List[str], List[str]]:
-        """Extract //!IN and //!OUT lists from the pre‑pass lines."""
+        """Extract //!IN and //!OUT lists from the pre-pass lines."""
         in_tex, out_tex = [], []
         for line in pre_lines:
             if line.startswith("//!IN"):
@@ -494,7 +494,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         self, blocks: List[Tuple[str, List[str]]]
     ) -> List[Tuple[str, List[str]]]:
         """
-        Find the tail region (from the first non‑decl/s_assign/mul_group block onward)
+        Find the tail region (from the first non-decl/s_assign/mul_group block onward)
         and replace it with a compact block if it consists only of bias, max, and assign lines.
         """
         if not self.config.combine_bias_max:
@@ -675,7 +675,7 @@ def main() -> None:
         "-t",
         "--tile-aware",
         action="store_true",
-        help="Generate tile‑aware shader variant",
+        help="Generate tile-aware shader variant",
     )
     args = parser.parse_args()
 
@@ -719,7 +719,7 @@ def main() -> None:
     with open(os.path.join(output_dir, "model.json"), "w") as f:
         json.dump(model_data, f, indent=2)
 
-    # Generate per‑pass HLSL files
+    # Generate per-pass HLSL files
     hlsl_gen = HlslGenerator(config, model_name=shader_basename)
     sampler_order = [s.name for s in parser.samplers]
     suffix = "_tile" if config.tile_aware else ""

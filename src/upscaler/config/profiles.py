@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 def find_profile(profiles: Dict[str, Any], name: str) -> Optional[Dict[str, Any]]:
-    """Find a profile by name (case‑insensitive)."""
+    """Find a profile by name (case-insensitive)."""
     name_lower = name.lower()
     for profile_name, profile_data in profiles.items():
         if profile_name.lower() == name_lower:
@@ -58,7 +58,7 @@ def find_matching_profile(
                     return profile_name, profile_data
                 continue
 
-            # Future class‑based matches (when window_class is available)
+            # Future class-based matches (when window_class is available)
             """
             if window_class and key == "class":
                 if window_class.lower() == value.lower():

@@ -1,6 +1,6 @@
 /**
  * @file shm_image.h
- * @brief Management of XShm shared‑memory images.
+ * @brief Management of XShm shared-memory images.
  */
 
 #ifndef SHM_IMAGE_H
@@ -21,7 +21,7 @@ void shm_destroy_image(CaptureContext *ctx);
 int shm_recreate_if_needed(CaptureContext *ctx);
 
 /**
- * Capture a rectangular region into a pre‑allocated BGRA buffer.
+ * Capture a rectangular region into a pre-allocated BGRA buffer.
  * Uses SHM if possible, falls back to XGetImage.
  * @param ctx   Capture context.
  * @param rx,ry Region offset within the cropped area.

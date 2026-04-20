@@ -17,7 +17,7 @@ struct vk_Swapchain {
     std::vector<VkImage> images;
     std::vector<VkImageView> image_views;
 
-    // Synchronisation: per‑image fences, shared semaphores
+    // Synchronisation: per-image fences, shared semaphores
     VkFence* fences;                         // One fence per swapchain image
     VkSemaphore image_available_semaphore;   // Shared
     VkSemaphore render_finished_semaphore;   // Shared

@@ -3,7 +3,7 @@ import threading
 import time
 from enum import Enum, auto
 from queue import Empty, Queue
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 from PySide6.QtCore import QMetaObject, Qt
 
@@ -13,7 +13,7 @@ from .presenter import Presenter
 from .swapchain import SwapchainManager
 from .upscale import UpscalerManager
 from ..capture import FrameGrabber
-from ..config import Config, OUTPUT_GEOMETRIES, UPSCALING_MODELS, OverlayMode
+from ..config import Config, OverlayMode
 from ..overlay import OverlayWindow
 from ..utils import parse_output_geometry
 from ..vulkan import configure_device, device_wait_idle
@@ -28,26 +28,24 @@ class PauseReason(Enum):
     NONE = auto()
     USER = auto()  # Manually paused via hotkey
     MINIMIZED = auto()  # Target window minimized
-    FOCUS_LOST = auto()  # Target window lost focus (when pause_on_focus_loss is set)
+    FOCUS_LOST = auto()  # Target window lost focus (if pause_on_focus_loss set)
 
 
 class Pipeline:
     """
-    Main processing pipeline for real‑time X11 window upscaling.
+    Main processing pipeline for real-time upscaling.
 
-    Captures a target window, upscales it using SRCNN (full‑frame or tile‑cache),
-    scales to the overlay size via Lanczos, and presents via Vulkan swapchain.
-
-    The pipeline runs in its own thread and communicates with the main thread
-    via thread‑safe queues and Qt signals.
+    The pipeline captures a target X11 window, upscales it using the
+    configured model and mode, scales the result to the overlay size via
+    Lanczos, and presents via Vulkan swapchain.
 
     Attributes:
         config (Config): Global configuration.
         overlay (OverlayWindow): The overlay Qt window.
         controller (PipelineController): Handles hotkeys and user requests.
-        osd (OSDManager): On‑screen display manager.
+        osd (OSDManager): On-screen display manager.
         presenter (Presenter): Handles final scaling and presentation.
-        upscaler_mgr (UpscalerManager): Manages SRCNN upscaling (full/tile).
+        upscaler_mgr (UpscalerManager): Manages SRCNN upscaling.
     """
 
     def __init__(
@@ -57,7 +55,7 @@ class Pipeline:
         Initialize the pipeline.
 
         Args:
-            config: Full configuration (model, crop, output geometry, etc.).
+            config: Full configuration (model, mode, crop, etc.).
             win_info: Initial target window information.
             overlay: The overlay window (already shown).
         """
@@ -93,10 +91,10 @@ class Pipeline:
             present_mode=config.vulkan_present_mode,
         )
 
-        # On‑screen display manager
+        # On-screen display manager
         osd_texts = tuple(
-            [f"Model: {m}" for m in UPSCALING_MODELS]
-            + [f"Geometry: {g}" for g in OUTPUT_GEOMETRIES]
+            [f"Model: {m}" for m in self.controller._available_models]
+            + [f"Geometry: {g}" for g in self.controller._available_geometries]
             + ["Screenshot saved", "Screenshot failed"]
         )
         self.osd = OSDManager(osd_texts, self._screen_width, self._screen_height)
@@ -115,16 +113,16 @@ class Pipeline:
             swapchain_manager=self._swapchain_manager,
         )
 
-        # Upscaler manager (full‑frame and optional tile cache)
+        # Upscaler manager (full-frame or tile-based)
         self.upscaler_mgr = UpscalerManager(
             crop_width=self.crop_width,
             crop_height=self.crop_height,
             model_name=config.model,
             double_upscale=config.double_upscale,
             tile_size=config.tile_size,
-            use_cache=config.use_cache,
             cache_capacity=config.cache_capacity,
             cache_threshold=config.cache_threshold,
+            mode=config.mode,
         )
 
         # Window tracker for handle/size changes
@@ -141,7 +139,7 @@ class Pipeline:
         self._thread: Optional[threading.Thread] = None
         self._stopped_event = threading.Event()
 
-        # Queues for cross‑thread communication
+        # Queues for cross-thread communication
         self._switch_queue: Queue[Optional[WindowInfo]] = Queue()
         self.osd_queue: Queue[Tuple[str, float]] = Queue()
 
@@ -160,6 +158,7 @@ class Pipeline:
     # ----------------------------------------------------------------------
     # Public API
     # ----------------------------------------------------------------------
+
     def start(self) -> None:
         """Start the pipeline thread."""
         logger.info("Starting pipeline thread")
@@ -179,7 +178,7 @@ class Pipeline:
         self._swapchain_manager = None
 
     def request_switch(self, new_win_info: WindowInfo) -> None:
-        """Request a switch to a new target window (thread‑safe)."""
+        """Request a switch to a new target window (thread-safe)."""
         self._switch_queue.put(new_win_info)
 
     def recreate_upscaler(self) -> None:
@@ -194,20 +193,21 @@ class Pipeline:
             model_name=self.config.model,
             double_upscale=self.config.double_upscale,
             tile_size=self.config.tile_size,
-            use_cache=self.config.use_cache,
             cache_capacity=self.config.cache_capacity,
             cache_threshold=self.config.cache_threshold,
+            mode=self.config.mode,
         )
-        # Update presenter's source texture to the new full‑frame output
-        self.presenter.set_source_texture(self.upscaler_mgr.full_upscaler.output)
+        # Update presenter's source texture to the new output
+        self.presenter.set_source_texture(self.upscaler_mgr.get_output_texture())
 
     def clear_frame_queue(self) -> None:
-        """Clear any stale frames (no‑op, kept for API compatibility)."""
+        """Clear any stale frames (no-op, kept for API compatibility)."""
         pass
 
     # ----------------------------------------------------------------------
     # Pause state management
     # ----------------------------------------------------------------------
+
     @property
     def user_paused(self) -> bool:
         return self._pause_reason == PauseReason.USER
@@ -231,6 +231,7 @@ class Pipeline:
     # ----------------------------------------------------------------------
     # Frame processing
     # ----------------------------------------------------------------------
+
     def _process_one_frame(self) -> None:
         """Capture, upscale, and present a single frame."""
         # 1. Grab frame
@@ -250,15 +251,12 @@ class Pipeline:
         self.overlay.update_opacity()
 
         if not is_dirty and osd_tex is None:
+            # Nothing changed; just present the previous frame
             self.presenter.present()
             return
 
-        # 3. Upscale
-        if self.upscaler_mgr.should_use_tile_mode(len(rects) if rects else 0):
-            dirty_tiles = self.upscaler_mgr.extract_dirty_tiles(rects, frame)
-            self.upscaler_mgr.process_tile_frame(dirty_tiles)
-            src_tex = self.upscaler_mgr.upscaled_output
-        else:
+        # 3. Upscale based on mode
+        if self.upscaler_mgr.mode == "full":
             self.upscaler_mgr.upload_full_frame(
                 frame=frame,
                 rects=rects,
@@ -267,7 +265,27 @@ class Pipeline:
                 crop_height=self.crop_height,
                 margin=self.config.tile_context_margin,
             )
-            src_tex = self.upscaler_mgr.full_upscaler.output
+            self.upscaler_mgr.process_full_frame()
+            src_tex = self.upscaler_mgr.get_output_texture()
+        else:
+            # Tile mode (offset or cache)
+            num_dirty = len(rects)
+            if self.upscaler_mgr.should_use_tile_mode(num_dirty):
+                if self.upscaler_mgr.mode == "offset":
+                    dirty_tiles = self.upscaler_mgr.extract_dirty_tiles(rects, frame)
+                else:  # cache
+                    dirty_tiles = self.upscaler_mgr.extract_dirty_tiles_with_hash(
+                        rects, frame
+                    )
+
+                self.upscaler_mgr.process_tile_frame(dirty_tiles)
+                src_tex = self.upscaler_mgr.get_output_texture()
+            else:
+                # Fallback to full-frame processing for this frame
+                logger.debug("Tile threshold exceeded; using full-frame for this frame")
+                # TODO: Implement full-frame fallback
+                logger.warning("Fallback to full-frame not implemented; skipping frame")
+                return
 
         # 4. Present
         self.presenter.set_source_texture(src_tex)
@@ -283,52 +301,10 @@ class Pipeline:
                 logger.info("Swapchain out-of-date, recreating")
                 self._recreate_swapchain()
 
-    def _upload_full_frame(self, frame: bytes, rects: List) -> None:
-        """
-        Upload full frame (or damage regions) to the full‑frame upscaler.
-
-        Args:
-            frame: Raw BGRA pixel data.
-            rects: Damage rectangles (used only if damage tracking is enabled).
-        """
-        upscaler = self.upscaler_mgr.full_upscaler
-        if self.config.use_damage_tracking and rects:
-            upload_list = []
-            stride = self.crop_width * 4
-            for ex, ey, ew, eh in self._expand_damage_rects(rects):
-                sub_data = bytearray()
-                for row in range(ey, ey + eh):
-                    start = row * stride + ex * 4
-                    sub_data.extend(frame[start : start + ew * 4])
-                upload_list.append((bytes(sub_data), ex, ey, ew, eh))
-            upscaler.input.upload_subresources(upload_list)
-        else:
-            upscaler.staging.upload(frame)
-
-    def _expand_damage_rects(self, rects: List) -> List[Tuple[int, int, int, int]]:
-        """
-        Expand damage rectangles by the configured margin to include context.
-
-        Args:
-            rects: List of (x, y, width, height, hash) from FrameGrabber.
-
-        Returns:
-            List of expanded rectangles (x, y, width, height).
-        """
-        margin = self.config.tile_context_margin
-        expanded = []
-        for rx, ry, rw, rh, _ in rects:
-            ex0 = max(0, rx - margin)
-            ey0 = max(0, ry - margin)
-            ex1 = min(self.crop_width, rx + rw + margin)
-            ey1 = min(self.crop_height, ry + rh + margin)
-            if ex1 > ex0 and ey1 > ey0:
-                expanded.append((ex0, ey0, ex1 - ex0, ey1 - ey0))
-        return expanded
-
     # ----------------------------------------------------------------------
     # Window change handling
     # ----------------------------------------------------------------------
+
     def _handle_window_change(self) -> None:
         """Recreate resources when the target window changes size or handle."""
         logger.info("Handling window change")
@@ -353,6 +329,7 @@ class Pipeline:
         """Recalculate content dimensions based on current overlay and crop."""
         overlay_w = self.overlay.width()
         overlay_h = self.overlay.height()
+
         new_cw, new_ch, _, _, _ = parse_output_geometry(
             self.config.output_geometry,
             self.crop_width,
@@ -380,7 +357,7 @@ class Pipeline:
             self.update_content_dimensions()
         else:
             self._swapchain_manager.recreate(new_w, new_h)
-        self.osd.clear_compute_cache()
+        self.osd.clear_cache()
 
     def _create_grabber(self) -> None:
         """Create (or recreate) the FrameGrabber for the current target window."""
@@ -398,13 +375,9 @@ class Pipeline:
     # ----------------------------------------------------------------------
     # Target window switching
     # ----------------------------------------------------------------------
-    def _switch_target(self, new_win_info: WindowInfo) -> None:
-        """
-        Switch the pipeline to a new target window.
 
-        Args:
-            new_win_info: Information about the new window.
-        """
+    def _switch_target(self, new_win_info: WindowInfo) -> None:
+        """Switch the pipeline to a new target window."""
         logger.info(f"Switching to window: {new_win_info.title}")
         test_tracker = WindowTracker(
             new_win_info.handle, new_win_info.width, new_win_info.height
@@ -425,6 +398,7 @@ class Pipeline:
     # ----------------------------------------------------------------------
     # Main loop
     # ----------------------------------------------------------------------
+
     def _run(self) -> None:
         """Main pipeline loop (runs in dedicated thread)."""
         logger.info("Pipeline thread started")
@@ -488,12 +462,7 @@ class Pipeline:
             pass
 
     def _update_pause_state(self) -> bool:
-        """
-        Update pause reason based on window state.
-
-        Returns:
-            True if the pipeline is currently paused.
-        """
+        """Update pause reason based on window state. Returns True if paused."""
         # Minimized pause
         if self._window_tracker.minimized:
             self._set_pause_reason(PauseReason.MINIMIZED)

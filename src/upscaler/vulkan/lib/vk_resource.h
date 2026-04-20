@@ -37,7 +37,7 @@ PyObject *vk_Resource_upload(vk_Resource *self, PyObject *args);
  * Batch upload of multiple rectangular regions into a texture resource.
  *
  * Args:
- *     rects (list): list of 5‑tuples (data, x, y, width, height).
+ *     rects (list): list of 5-tuples (data, x, y, width, height).
  */
 PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args);
 
@@ -49,7 +49,7 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args);
  * (Only valid for textures.)
  *
  * Returns:
- *     bytes: raw pixel data (row‑major, RGBA).
+ *     bytes: raw pixel data (row-major, RGBA).
  */
 PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored);
 
@@ -58,12 +58,12 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored);
    ------------------------------------------------------------------------- */
 /**
  * Copy data from this resource to another resource.
- * Supports buffer‑to‑buffer, buffer‑to‑texture, texture‑to‑buffer,
- * and texture‑to‑texture.
+ * Supports buffer-to-buffer, buffer-to-texture, texture-to-buffer,
+ * and texture-to-texture.
  *
  * Args:
  *     dst (vk.Resource): destination resource.
- *     size (int, optional): number of bytes to copy (buffer‑to‑buffer only).
+ *     size (int, optional): number of bytes to copy (buffer-to-buffer only).
  *     src_offset (int, optional): source offset (buffer only).
  *     dst_offset (int, optional): destination offset (buffer only).
  *     width (int, optional): copy width (texture only, default full).

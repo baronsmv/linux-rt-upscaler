@@ -36,14 +36,14 @@ static PyMethodDef vulkan_module_methods[] = {
     {"enable_debug", (PyCFunction)vk_enable_debug_mode, METH_NOARGS,
      "Enable Vulkan debug output (validation layers and debug utils)."},
     {"get_shader_binary_type", (PyCFunction)vk_get_shader_binary_type, METH_NOARGS,
-     "Return the required shader binary type (1 = SPIR‑V)."},
+     "Return the required shader binary type (1 = SPIR-V)."},
     {nullptr, nullptr, 0, nullptr}
 };
 
 static struct PyModuleDef vulkan_module = {
     PyModuleDef_HEAD_INIT,
     "vulkan",
-    "Low‑level Vulkan bindings with compute and presentation support.",
+    "Low-level Vulkan bindings with compute and presentation support.",
     -1,
     vulkan_module_methods
 };

@@ -7,7 +7,7 @@ It is designed to be used from the Qt main thread and opens its own
 dedicated XCB connection, ensuring thread safety.
 
 The event structures are manually packed according to the X11 protocol
-specification (32‑byte wire format) and sent via xcb_send_event.
+specification (32-byte wire format) and sent via xcb_send_event.
 """
 
 import logging
@@ -41,8 +41,8 @@ class X11EventForwarder:
     ButtonRelease, and MotionNotify events to the specified window ID.
     Event forwarding can be enabled/disabled via the `enabled` attribute.
 
-    All X11 event structures are packed manually as 32‑byte arrays according
-    to the core X11 protocol. This avoids dependency on higher‑level libraries.
+    All X11 event structures are packed manually as 32-byte arrays according
+    to the core X11 protocol. This avoids dependency on higher-level libraries.
 
     Attributes:
         conn (xcffib.Connection): XCB connection used for event sending.
@@ -82,10 +82,10 @@ class X11EventForwarder:
 
     def _send_event(self, event_data: bytes, event_mask: int) -> None:
         """
-        Send a generic 32‑byte X11 event to the target window.
+        Send a generic 32-byte X11 event to the target window.
 
         Args:
-            event_data: 32‑byte packed representation of the event struct.
+            event_data: 32-byte packed representation of the event struct.
             event_mask: X11 event mask (e.g., ButtonPressMask) for propagation.
         """
         if not self.enabled:
@@ -101,7 +101,7 @@ class X11EventForwarder:
                 False,  # propagate
                 self.target_handle,  # destination
                 event_mask,  # event_mask
-                event_data,  # 32‑byte event payload
+                event_data,  # 32-byte event payload
             )
             self.conn.flush()
         except Exception as e:
@@ -126,8 +126,8 @@ class X11EventForwarder:
             - root: root window ID
             - event: target window ID
             - child: 0 (none)
-            - root_x, root_y: 16‑bit screen coordinates
-            - event_x, event_y: 16‑bit window‑relative coordinates
+            - root_x, root_y: 16-bit screen coordinates
+            - event_x, event_y: 16-bit window-relative coordinates
             - state: button/modifier mask
             - same_screen: 1 (True)
             - pad: 0
@@ -220,7 +220,7 @@ class X11EventForwarder:
             )
             mask = xcffib.xproto.EventMask.ButtonRelease
 
-        # The synthetic event object has a .pack() method that returns the 32‑byte wire format.
+        # The synthetic event object has a .pack() method that returns the 32-byte wire format.
         self._send_event(btn_event.pack(), mask)
 
     def forward_wheel(

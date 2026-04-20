@@ -13,7 +13,7 @@ def _get_screen(screen_spec: str) -> QScreen:
     Return a single QScreen based on the specification.
     - 'primary'          - primary screen
     - integer as string  - screen at that index (e.g., '0')
-    - screen name        - case‑insensitive substring match (e.g., 'HDMI-1')
+    - screen name        - case-insensitive substring match (e.g., 'HDMI-1')
     Raises ValueError if no matching screen is found.
     Note: The 'all' spec is not handled here – _get_virtual_desktop() handles that.
     """
@@ -37,7 +37,7 @@ def _get_screen(screen_spec: str) -> QScreen:
     except ValueError:
         pass  # not an integer, continue
 
-    # Try as screen name (case‑insensitive substring)
+    # Try as screen name (case-insensitive substring)
     spec_lower = screen_spec.lower()
     matches = [s for s in screens if spec_lower in s.name().lower()]
     if len(matches) == 1:
@@ -68,13 +68,13 @@ def _get_virtual_desktop() -> QRect:
 def _get_physical_resolution(screen_name: str) -> Optional[Tuple[int, int]]:
     """
     Return (width_px, height_px) of the physical monitor matching the given screen name.
-    First tries exact case‑insensitive match, then substring match.
+    First tries exact case-insensitive match, then substring match.
     Returns None if no match is found.
     """
     monitors = get_monitors()
     name_lower = screen_name.lower()
 
-    # Exact match (case‑insensitive)
+    # Exact match (case-insensitive)
     for m in monitors:
         if m.name.lower() == name_lower:
             return m.width, m.height

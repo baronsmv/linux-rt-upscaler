@@ -9,7 +9,7 @@ def setup_environment() -> None:
     os.environ["XDG_SESSION_TYPE"] = "x11"  # Force toolkits to use X11
     os.environ.pop("WAYLAND_DISPLAY", None)  # Remove Wayland socket reference
 
-    # Vulkan driver‑specific overrides
+    # Vulkan driver-specific overrides
     os.environ["MESA_VK_WSI"] = "x11"  # Mesa drivers (RADV/ANV)
     os.environ["RADV_DEBUG"] = "no_wayland_wsi"  # Fallback for older Mesa
     os.environ["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"  # NVIDIA proprietary driver

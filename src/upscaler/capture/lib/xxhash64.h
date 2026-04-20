@@ -2,7 +2,7 @@
  * @file xxhash64.h
  * @brief Public domain xxHash64 implementation (embedded).
  *
- * Provides a fast, non‑cryptographic hash for tile change detection.
+ * Provides a fast, non-cryptographic hash for tile change detection.
  */
 
 #ifndef XXHASH64_H

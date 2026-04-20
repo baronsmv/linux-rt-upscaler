@@ -111,7 +111,7 @@ static bool create_image_views(VkDevice device, VkFormat format,
 }
 
 // -----------------------------------------------------------------------------
-// Recreate Swapchain (allocates per‑image fences, shared semaphores)
+// Recreate Swapchain (allocates per-image fences, shared semaphores)
 // -----------------------------------------------------------------------------
 bool vk_Swapchain_recreate(vk_Swapchain* self, uint32_t width, uint32_t height) {
     vk_Device* dev = self->py_device;
@@ -141,7 +141,7 @@ bool vk_Swapchain_recreate(vk_Swapchain* self, uint32_t width, uint32_t height) 
 
     vkDeviceWaitIdle(device);
 
-    // Destroy old per‑image resources
+    // Destroy old per-image resources
     if (self->fences) {
         for (uint32_t i = 0; i < self->image_count; ++i)
             vkDestroyFence(device, self->fences[i], nullptr);
@@ -213,7 +213,7 @@ bool vk_Swapchain_recreate(vk_Swapchain* self, uint32_t width, uint32_t height) 
         return false;
     }
 
-    // Create per‑image fences (signaled initially)
+    // Create per-image fences (signaled initially)
     self->fences = (VkFence*)PyMem_Malloc(sizeof(VkFence) * self->image_count);
     VkFenceCreateInfo fence_info = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -228,7 +228,7 @@ bool vk_Swapchain_recreate(vk_Swapchain* self, uint32_t width, uint32_t height) 
         }
     }
 
-    // Allocate per‑image command buffers (persistent, avoids per‑frame allocation jitter)
+    // Allocate per-image command buffers (persistent, avoids per-frame allocation jitter)
     self->command_buffers = (VkCommandBuffer*)PyMem_Malloc(sizeof(VkCommandBuffer) * self->image_count);
     VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
     alloc_info.commandPool = dev->command_pool;
@@ -364,7 +364,7 @@ void vk_Swapchain_dealloc(vk_Swapchain* self) {
 }
 
 // -----------------------------------------------------------------------------
-// Present (per‑image fences + temporary command buffers)
+// Present (per-image fences + temporary command buffers)
 // -----------------------------------------------------------------------------
 PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
     PyObject* texture_obj;
