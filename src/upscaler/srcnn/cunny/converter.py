@@ -12,6 +12,7 @@ Features:
 - Outputs to a folder named after the shader (without extension) at the same level.
 - Adds "name": "shader_name" to model.json.
 - Easy configuration via a Config dataclass.
+- Supports tile‑aware (cache) and offset‑write (no cache) variants.
 """
 
 import argparse
@@ -37,7 +38,8 @@ class Config:
     input_texture_prefix: str = "T"
     special_input: str = "INPUT"
     special_output: str = "OUTPUT"
-    tile_aware: bool = False  # Generate tile-aware variant
+    tile_aware: bool = False  # generate tile‑aware (atlas) variant
+    offset_write: bool = False  # generate offset‑write (no cache) variant
 
 
 @dataclass
@@ -128,7 +130,7 @@ class ShaderParser:
 
     @staticmethod
     def _extract_in_out(pre_lines: List[str]) -> Tuple[List[str], List[str]]:
-        """Extract //!IN and //!OUT lists from the pre-pass lines."""
+        """Extract //!IN and //!OUT lists from the pre‑pass lines."""
         in_tex, out_tex = [], []
         for line in pre_lines:
             if line.startswith("//!IN"):
@@ -201,7 +203,12 @@ class ModelJsonBuilder:
 class HlslGenerator:
     """Generates the final HLSL source for a single pass."""
 
-    def common_header(self, is_final: bool, per_tile: bool) -> str:
+    def __init__(self, config: Config, model_name: str) -> None:
+        self.config = config
+        self.model_name = model_name
+
+    @staticmethod
+    def common_header(is_final: bool, per_tile: bool, offset_write: bool) -> str:
         header = """cbuffer Constants : register(b0) {
     uint in_width;
     uint in_height;
@@ -214,14 +221,21 @@ class HlslGenerator:
 };
 
 """
-        if per_tile:
-            header += """struct TileParams {
-    uint inputLayer;    // which layer to read from INPUT
-    uint outputLayer;   // which layer to write to all outputs
+        if per_tile or offset_write:
+            if offset_write:
+                header += """struct TileParams {
+    uint inputLayer;
+    uint2 dstOffset;
 };
-[[vk::push_constant]] TileParams tileParams;
-
 """
+            else:
+                header += """struct TileParams {
+    uint inputLayer;
+    uint outputLayer;
+};
+"""
+            header += "[[vk::push_constant]] TileParams tileParams;\n\n"
+
         header += """float2 GetInputPt() { return float2(in_dx, in_dy); }
 float2 GetOutputPt() { return float2(out_dx, out_dy); }
 uint2 GetInputSize() { return uint2(in_width, in_height); }
@@ -241,10 +255,6 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
 """
         return header
 
-    def __init__(self, config: Config, model_name: str) -> None:
-        self.config = config
-        self.model_name = model_name
-
     def generate(
         self, pass_info: PassInfo, sampler_order: List[str], original_license: str = ""
     ) -> str:
@@ -255,10 +265,11 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         body = pass_info.body
         is_final = self.config.special_output in out_textures
         per_tile = self.config.tile_aware
+        offset_write = self.config.offset_write
 
         # Texture declarations with registers
         tex_decl_lines = self._build_texture_declarations(
-            in_textures, out_textures, is_final, per_tile
+            in_textures, out_textures, is_final, per_tile, offset_write
         )
 
         # Sampler declarations
@@ -277,6 +288,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         if self.config.separate_sections:
             core_lines = self._reformat_body(core_lines)
 
+        # Apply tile/offset specific rewrites
         if per_tile:
             if is_final:
                 core_lines = [
@@ -288,6 +300,27 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
                     for line in core_lines
                 ]
             else:
+                core_lines = [
+                    re.sub(
+                        r"(T\d+)\[(\w+)\]",
+                        r"\1[uint3(\2, tileParams.outputLayer)]",
+                        line,
+                    )
+                    for line in core_lines
+                ]
+        elif offset_write:
+            # Offset mode: final output writes to 2D texture with offset
+            if is_final:
+                core_lines = [
+                    re.sub(
+                        r"OUTPUT\[(.*?)\]",
+                        r"OUTPUT[\1 + tileParams.dstOffset]",
+                        line,
+                    )
+                    for line in core_lines
+                ]
+            else:
+                # Intermediate passes write to array slice
                 core_lines = [
                     re.sub(
                         r"(T\d+)\[(\w+)\]",
@@ -326,7 +359,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
             lines.extend(["//", separator, ""])
         lines.extend(
             [
-                self.common_header(is_final, per_tile).strip(),
+                self.common_header(is_final, per_tile, offset_write).strip(),
                 "",
                 *tex_decl_lines,
                 "",
@@ -356,18 +389,23 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         out_textures: List[str],
         is_final: bool,
         per_tile: bool,
+        offset_write: bool,
     ) -> List[str]:
         """Return SRV and UAV declaration lines with registers."""
         lines = []
-        # Input textures (SRV) – array only for intermediate tile passes
+        # Input textures: for tile/offset, use arrays for intermediate passes
         for idx, tex in enumerate(in_textures):
-            suffix = "Array" if (per_tile and not is_final) else ""
+            suffix = "Array" if ((per_tile or offset_write) and not is_final) else ""
             lines.append(f"Texture2D{suffix}<float4> {tex} : register(t{idx});")
         if in_textures and out_textures:
             lines.append("")
-        # Output textures (UAV) – always array in tile mode
+        # Output textures
         for idx, tex in enumerate(out_textures):
-            suffix = "Array" if per_tile else ""
+            if offset_write and tex == self.config.special_output:
+                # Final output is 2D for offset mode
+                suffix = ""
+            else:
+                suffix = "Array" if (per_tile or offset_write) else ""
             lines.append(
                 f'[[vk::image_format("rgba8")]] RWTexture2D{suffix}<float4> {tex} : register(u{idx});'
             )
@@ -404,7 +442,8 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         # Remove any leading/trailing whitespace
         return [line.strip() for line in core]
 
-    def _classify_line(self, line: str) -> str:
+    @staticmethod
+    def _classify_line(line: str) -> str:
         """Return the type of a line."""
         stripped = line.lstrip()
         # Declarations
@@ -612,7 +651,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
     def _blocks_to_lines(self, blocks: List[Tuple[str, List[str]]]) -> List[str]:
         """Convert blocks back to a flat list of lines, with a blank line between blocks."""
         lines = []
-        for i, (btype, blines) in enumerate(blocks):
+        for i, (_, blines) in enumerate(blocks):
             if i > 0:
                 lines.append("")  # blank line between blocks
             lines.extend(blines)
@@ -675,7 +714,13 @@ def main() -> None:
         "-t",
         "--tile-aware",
         action="store_true",
-        help="Generate tile-aware shader variant",
+        help="Generate tile‑aware (cache) shader variant",
+    )
+    parser.add_argument(
+        "-o",
+        "--offset-write",
+        action="store_true",
+        help="Generate offset‑write (no cache) shader variant",
     )
     args = parser.parse_args()
 
@@ -694,7 +739,7 @@ def main() -> None:
         return
 
     # Configuration
-    config = Config(tile_aware=args.tile_aware)
+    config = Config(tile_aware=args.tile_aware, offset_write=args.offset_write)
 
     # Build model.json data
     sampler_map = {s.name: s.filter_type for s in parser.samplers}
@@ -722,7 +767,14 @@ def main() -> None:
     # Generate per-pass HLSL files
     hlsl_gen = HlslGenerator(config, model_name=shader_basename)
     sampler_order = [s.name for s in parser.samplers]
-    suffix = "_tile" if config.tile_aware else ""
+
+    if config.tile_aware:
+        suffix = "_tile"
+    elif config.offset_write:
+        suffix = "_offset"
+    else:
+        suffix = ""
+
     for pinfo in parser.passes:
         hlsl = hlsl_gen.generate(
             pinfo,

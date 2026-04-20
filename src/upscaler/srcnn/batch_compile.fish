@@ -1,6 +1,7 @@
 #!/usr/bin/env fish
 
 set dir (dirname (status --current-filename))
+set cnn_dir "$dir/cunny"
 set models 3x12 4x12 4x16 4x24 4x32 8x32 fast faster veryfast
 
 if not test (which dxc)
@@ -21,15 +22,16 @@ function to_spv -a hlsl
 end
 
 for model in $models
-    set original_model "$dir/.originals/CuNNy-$model-NVL"
-    set model_dir "$dir/$model"
+    set original_model "$cnn_dir/.originals/CuNNy-$model-NVL"
+    set model_dir "$cnn_dir/$model"
 
     if test -d "$model_dir"
         rm -r "$model_dir"
     end
 
-    "$dir/converter.py" "$original_model.hlsl"
-    "$dir/converter.py" -t "$original_model.hlsl"
+    "$cnn_dir/converter.py" "$original_model.hlsl"
+    "$cnn_dir/converter.py" -o "$original_model.hlsl"
+    "$cnn_dir/converter.py" -t "$original_model.hlsl"
 
     mv "$original_model" "$model_dir"
 end
