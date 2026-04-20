@@ -27,8 +27,6 @@ classifiers = [
 keywords = ["upscaler", "ai", "cunny", "linux", "x11", "vulkan"]
 requires-python = ">=3.10"
 dependencies = [
-    #"compushady-lrtu>=0.18.0,<0.19.0",
-    "ewmh",
     "numpy",
     "pillow",
     "platformdirs",
@@ -37,7 +35,6 @@ dependencies = [
     "pyyaml",
     "screeninfo",
     "xcffib",
-    "xlib",
 ]
 
 [project.urls]
