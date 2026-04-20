@@ -20,23 +20,20 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 
 ## Features
 
-- **AI-Powered Upscaling
-  ** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high-quality 2x upscaling of visual novels and illustrations.
+- **AI-Powered Upscaling** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high-quality 2x upscaling of visual novels and illustrations.
 - **Complete Model Selection** – Choose from 9 variants, offering a range of quality/performance trade-offs:
-    - `8x32` – Highest quality, slowest.
-    - `4x32`
-    - `4x24`
-    - `4x16`
-    - `4x12`
-    - `3x12`
-    - `fast` – Default. Recommended for slow machines.
-    - `faster`
-    - `veryfast` – Fastest option, lowest quality.
-- **Attach to Any Window
-  ** – Either grab the currently active window, select from visible windows or launch a new program and capture its window automatically.
+  - `8x32` – Highest quality, slowest.
+  - `4x32`
+  - `4x24`
+  - `4x16`
+  - `4x12`
+  - `3x12`
+  - `fast` – Default. Recommended for slow machines.
+  - `faster`
+  - `veryfast` – Fastest option, lowest quality.
+- **Attach to Any Window** – Either grab the currently active window, select from visible windows or launch a new program and capture its window automatically.
 - **Flexible Output Geometry** – Control the overlay size, scaling mode, offset and borders.
-- **Input Forwarding
-  ** – Click, move, and drag on the upscaled image as if interacting directly with the original window.
+- **Input Forwarding** – Click, move, and drag on the upscaled image as if interacting directly with the original window.
 - **Hardware Accelerated** – Vulkan compute (Compushady) works on NVIDIA, AMD, and Intel GPUs.
 - **XWayland Compatible** – Runs under Wayland compositors by automatically forcing X11 platform for Qt.
 - **Global Hotkeys & On-Screen Display** – Switch models, take lossless screenshots and more using keyboard shortcuts.
@@ -52,8 +49,7 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 >
 > Previously, we advised against Python 3.14 due to a suspected Vulkan backend issue ([#1](https://github.com/baronsmv/linux-rt-upscaler/issues/1#issuecomment-4069065775)). Recent testing shows it should now work without problems.
 >
-> Python 3.14 is supported; **however
-**, our testing has been limited. If you encounter any issues, please [report them](https://github.com/baronsmv/linux-rt-upscaler/issues).
+> Python 3.14 is supported; **however**, our testing has been limited. If you encounter any issues, please [report them](https://github.com/baronsmv/linux-rt-upscaler/issues).
 >
 > For a safe fallback, you can still use Python 3.13:
 >
@@ -154,7 +150,7 @@ upscale --help
 ### Controls
 
 | Shortcut          | Action                                                                   |
-|-------------------|--------------------------------------------------------------------------|
+| ----------------- | ------------------------------------------------------------------------ |
 | `Alt`+`Shift`+`S` | Toggle overlay visibility / pause processing                             |
 | `Alt`+`Shift`+`M` | Switch to the next upscaling model                                       |
 | `Alt`+`Shift`+`G` | Cycle output geometry (fit → stretch → cover)                            |
@@ -168,11 +164,9 @@ All hotkeys can be customised in the configuration file.
 
 You can define named configuration profiles in your YAML config file. Profiles let you quickly switch settings for different games or applications without typing long command lines each time.
 
-Create a config file (e.g., `~/.config/linux-rt-upscaler/config.yaml`) and add a top-level
-`profiles` key. Each profile is a dictionary with an optional `match` section and an `options` section.
+Create a config file (e.g., `~/.config/linux-rt-upscaler/config.yaml`) and add a top-level `profiles` key. Each profile is a dictionary with an optional `match` section and an `options` section.
 
-If no profile is selected manually, the program checks all profiles that have a
-`match` section against the title of the target window. If a profile matches (any match criterion is sufficient), its options are applied automatically.
+If no profile is selected manually, the program checks all profiles that have a `match` section against the title of the target window. If a profile matches (any match criterion is sufficient), its options are applied automatically.
 
 ```yaml
 # General defaults (lowest priority)
@@ -183,8 +177,8 @@ profiles:
   game:
     match:
       title: "Danganronpa"     # Exact match (case-insensitive)
-      title_contains: "ronp"   # Or substring match
-      title_regex: "Dangan.*"  # Or regular expression
+      title_contains: "ronp"   # Or substring match (case-insensitive)
+      title_regex: "Dangan.*"  # Or regular expression (case-insensitive)
     options:
       model: 4x24
       double_upscale: true
@@ -196,14 +190,10 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 
 1. **Window Selection** – Uses X11 to find the target window by PID or WM_CLASS.
 2. **Capture** – Grabs the window's pixels using a fast custom C library.
-3. **AI Upscaling
-   ** – CuNNy compute shaders (written in HLSL, compiled via Compushady) produce a 2x (or 4x) larger image.
-4. **Aspect-Preserving Scaling
-   ** – A lightweight Lanczos2 compute shader scales the upscaled image to fill the monitor, adding black bars to maintain the original aspect ratio.
-5. **Display
-   ** – The result is rendered in a transparent overlay window that bypasses the window manager (so it always stays on top).
-6. **Input Forwarding** – Mouse events are transformed using the scaling ratios and sent to the original window via
-   `XSendEvent`.
+3. **AI Upscaling** – CuNNy compute shaders (written in HLSL, compiled via Compushady) produce a 2x (or 4x) larger image.
+4. **Aspect-Preserving Scaling** – A lightweight Lanczos2 compute shader scales the upscaled image to fill the monitor, adding black bars to maintain the original aspect ratio.
+5. **Display** – The result is rendered in a transparent overlay window that bypasses the window manager (so it always stays on top).
+6. **Input Forwarding** – Mouse events are transformed using the scaling ratios and sent to the original window via `XSendEvent`.
 
 ## Future Plans
 
@@ -224,25 +214,20 @@ For more details, see [issue #7](https://github.com/baronsmv/linux-rt-upscaler/i
 
 ## Motivation
 
-While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their
-**frame generation** capabilities to Linux.
+While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their **frame generation** capabilities to Linux.
 
-This project tackles the other half of the equation: **AI-powered upscaling
-** to deliver a native solution Linux has been missing, an experience similar to [Gamescope](https://github.com/ValveSoftware/gamescope) that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
+This project tackles the other half of the equation: **AI-powered upscaling** to deliver a native solution Linux has been missing, an experience similar to [Gamescope](https://github.com/ValveSoftware/gamescope) that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
 
 ## Acknowledgments
 
 This project stands on the shoulders of several open-source works:
 
-- **[L65536](https://github.com/L65536)
-  ** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real-time CuNNy upscaling on Linux. This project extends that foundation with full-screen scaling, accurate input forwarding, and support for all CuNNy NVL models and GPU vendors.
-- **[funnyplanter](https://github.com/funnyplanter)
-  ** – For [CuNNy](https://github.com/funnyplanter/CuNNy), the neural network upscaling models, especially the Magpie NVL variants trained for visual novel content.
+- **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real-time CuNNy upscaling on Linux. This project extends that foundation with full-screen scaling, accurate input forwarding, and support for all CuNNy NVL models and GPU vendors.
+- **[funnyplanter](https://github.com/funnyplanter)** – For [CuNNy](https://github.com/funnyplanter/CuNNy), the neural network upscaling models, especially the Magpie NVL variants trained for visual novel content.
 - **[Compushady](https://github.com/rdeioris/compushady)** – Python library for GPU compute (Vulkan backend).
 - **[screeninfo](https://github.com/rr-/screeninfo)** – Python library to fetch location and size of physical screens.
 - **[PySide6](https://pypi.org/project/PySide6/)** – Qt bindings used for the overlay window.
-- **[python-xlib](https://github.com/python-xlib/python-xlib)
-  ** – X11 client library for window management and input forwarding.
+- **[python-xlib](https://github.com/python-xlib/python-xlib)** – X11 client library for window management and input forwarding.
 - **[xcffib](https://github.com/tych0/xcffib)** – XCB binding for Python.
 - **[pyewmh](https://github.com/parkouss/pyewmh)** – Query and control of window manager.
 - **[psutil](https://github.com/giampaolo/psutil)** – Library for retrieving information on running processes.
