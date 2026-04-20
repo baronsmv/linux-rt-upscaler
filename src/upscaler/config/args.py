@@ -1,13 +1,15 @@
 import argparse
 import logging
+import sys
 from importlib.metadata import version, PackageNotFoundError
 from typing import Tuple, Dict, Optional, Any
 
+from .logging import setup_logging
 from .models import Config, OverlayMode, UPSCALING_MODELS
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CONFIG = Config()
+DEFAULT_CONFIG: Config = Config()
 
 
 def _get_version() -> str:
@@ -338,30 +340,45 @@ Default: %(default)s
         help="Write logs to this file (parent directories are created)",
     )
 
+    # Build a mapping from every option string to its destination name
+    opt_to_dest = {
+        opt: action.dest for action in parser._actions for opt in action.option_strings
+    }
     args = parser.parse_args()
-    profile_name = args.profile
-    config_path = args.config
 
-    # Add log_level to args
-    if args.debug:
-        args.log_level = "DEBUG"
-    elif args.quiet:
-        args.log_level = "ERROR"
-    else:
-        args.log_level = "WARNING"
-
-    provided_args = {
-        key: value
-        for key in DEFAULT_CONFIG.__dataclass_fields__.keys()
-        if (value := getattr(args, key, None)) is not None
-        and value != getattr(DEFAULT_CONFIG, key)
+    # Scan sys.argv for options that were actually typed by the user
+    explicit_dests = {
+        dest
+        for arg in sys.argv[1:]
+        if (
+            (dest := opt_to_dest.get(arg.split("=")[0]))
+            and dest in DEFAULT_CONFIG.__dataclass_fields__
+            and arg.startswith("-")
+        )
     }
 
-    return provided_args, profile_name, config_path
+    # Build overrides only for explicitly supplied arguments
+    provided_args = {
+        key: getattr(args, key)
+        for key in explicit_dests
+        if getattr(args, key) is not None
+    }
+
+    if args.debug:
+        provided_args["log_level"] = "DEBUG"
+    elif args.quiet:
+        provided_args["log_level"] = "ERROR"
+
+    return provided_args, args.profile, args.config
 
 
 def apply_overrides(config: Config, overrides: Dict[str, Any]) -> None:
     """Update config with values from overrides dict (only keys that exist)."""
+    new_level = overrides.get("log_level", config.log_level)
+    new_file = overrides.get("log_file", config.log_file)
+    if (new_level != config.log_level) or (new_file != config.log_file):
+        setup_logging(new_level, new_file)
+
     for key, value in overrides.items():
         if not hasattr(config, key):
             logger.warning(f"Ignoring unknown configuration key: '{key}'")
@@ -373,7 +390,7 @@ def apply_overrides(config: Config, overrides: Dict[str, Any]) -> None:
         if key == "hotkeys" and isinstance(value, dict):
             # Merge dictionaries: user overrides take precedence
             config.hotkeys = {**config.hotkeys, **value}
-            logger.debug(f"Merged hotkeys override")
+            logger.debug(f"Applied hotkeys override")
         else:
             setattr(config, key, value)
-            logger.debug(f"Applied override: {key} = {value!r}")
+            logger.debug(f"Applied configuration override: {key} = {value!r}")

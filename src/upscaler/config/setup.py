@@ -21,8 +21,8 @@ def setup_config() -> Tuple[Config, WindowInfo, Popen]:
 
     # Base config overrid with CLI options
     config = DEFAULT_CONFIG
-    apply_overrides(config, provided_args)
     setup_logging(config.log_level, config.log_file)
+    apply_overrides(config, provided_args)
 
     # Base config overrid with YAML options
     yaml_options, profiles = load_yaml_config(config_path)
