@@ -41,8 +41,8 @@ cbuffer Constants : register(b0) {
 };
 
 struct TileParams {
-    uint inputLayer;    // which layer to read from INPUT
-    uint outputLayer;   // which layer to write to all outputs
+    uint inputLayer;
+    uint outputLayer;
 };
 [[vk::push_constant]] TileParams tileParams;
 

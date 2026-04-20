@@ -242,7 +242,8 @@ uint2 GetInputSize() { return uint2(in_width, in_height); }
 uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
 """
-        if per_tile and not is_final:
+        # For tile/offset modes with array inputs, we need the layer argument.
+        if (per_tile or offset_write) and not is_final:
             header += "#define O(t, x, y) t.SampleLevel(SP, float3(pos + float2(x, y) * pt, tileParams.inputLayer), 0)"
         else:
             header += "#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)"
@@ -311,6 +312,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         elif offset_write:
             # Offset mode: final output writes to 2D texture with offset
             if is_final:
+                # Final pass writes to 2D texture with offset
                 core_lines = [
                     re.sub(
                         r"OUTPUT\[(.*?)\]",
@@ -320,11 +322,11 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
                     for line in core_lines
                 ]
             else:
-                # Intermediate passes write to array slice
+                # Intermediate passes write to array slice 0 (hardcoded, since we reuse a single slice)
                 core_lines = [
                     re.sub(
                         r"(T\d+)\[(\w+)\]",
-                        r"\1[uint3(\2, tileParams.outputLayer)]",
+                        r"\1[uint3(\2, 0)]",
                         line,
                     )
                     for line in core_lines
@@ -393,9 +395,12 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
     ) -> List[str]:
         """Return SRV and UAV declaration lines with registers."""
         lines = []
-        # Input textures: for tile/offset, use arrays for intermediate passes
+        # Input textures: for tile/offset modes, use arrays for intermediate passes.
+        # The first pass in offset mode reads from a 2D tile; but we treat it as an array
+        # with one slice for consistency (the shader uses tileParams.inputLayer = 0).
+        use_input_array = (per_tile or offset_write) and not is_final
         for idx, tex in enumerate(in_textures):
-            suffix = "Array" if ((per_tile or offset_write) and not is_final) else ""
+            suffix = "Array" if use_input_array else ""
             lines.append(f"Texture2D{suffix}<float4> {tex} : register(t{idx});")
         if in_textures and out_textures:
             lines.append("")
