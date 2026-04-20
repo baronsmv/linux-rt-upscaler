@@ -176,7 +176,7 @@ log_file: null
 hotkeys:
   toggle_scaling: "Alt+Shift+S"   # Show/hide overlay
   cycle_model: "Alt+Shift+M"      # Switch to next upscaling model
-  cycle_geometry: "Alt+Shift+G"   # Cycle output geometry (fit → stretch → cover)
+  cycle_geometry: "Alt+Shift+G"   # Cycle output geometry (fit -> stretch -> cover)
   screenshot: "Alt+Shift+P"       # Take a lossless screenshot (pre-Lanczos)
 
 

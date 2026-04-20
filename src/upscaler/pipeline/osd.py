@@ -15,8 +15,10 @@ logger = logging.getLogger(__name__)
 
 class TextRenderer:
     """
-    Renders text to PIL images with a consistent style (white text, shadow, rounded background).
-    Images are cached to avoid repeated rendering.
+    Renders text to PIL images with a consistent visual style.
+
+    Images are cached to avoid repeated rendering. The style uses white text,
+    a dark shadow, and a semi‑transparent rounded rectangle background.
     """
 
     def __init__(
@@ -25,28 +27,46 @@ class TextRenderer:
         screen_height: int = 1080,
         font_path: Optional[str] = None,
     ) -> None:
+        """
+        Initialize the text renderer.
+
+        Args:
+            texts: List of all possible message strings to pre‑render.
+            screen_height: Used to scale the font size (4% of screen height).
+            font_path: Path to a TrueType font. If None, tries DejaVuSans.
+        """
         self.font_size = max(24, int(screen_height * 0.04))
         try:
             self.font = ImageFont.truetype(
                 font_path or "DejaVuSans.ttf", self.font_size
             )
         except Exception:
+            logger.warning("Could not load TrueType font; using default bitmap font.")
             self.font = ImageFont.load_default()
+
         self._image_cache: Dict[str, Image.Image] = {}
         for text in texts:
             self._render_to_cache(text)
 
     def _render_to_cache(self, text: str) -> None:
-        """Render a single text string to a PIL image and store in cache."""
+        """
+        Render a single text string to a PIL image and store in cache.
+
+        The image has a dark rounded background, white text, and a drop shadow.
+        Dimensions are tightly fitted to the text.
+
+        Args:
+            text: The message to render.
+        """
         if text in self._image_cache:
             return
 
-        # Colors and style
+        # Colors and style constants
         text_color = (255, 255, 255, 255)
         shadow_color = (0, 0, 0, 180)
         bg_color = (0, 0, 0, 180)
 
-        # Measure text
+        # Measure text bounding box
         dummy_img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
         draw = ImageDraw.Draw(dummy_img)
         bbox = draw.textbbox((0, 0), text, font=self.font)
@@ -59,7 +79,7 @@ class TextRenderer:
         img_w = text_w + 2 * padding + shadow_offset
         img_h = text_h + 2 * padding + shadow_offset
 
-        # Create image with background
+        # Create image with transparent background
         img = Image.new("RGBA", (int(img_w), int(img_h)), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
@@ -79,17 +99,34 @@ class TextRenderer:
         self._image_cache[text] = img
 
     def get_image(self, text: str) -> Optional[Image.Image]:
-        """Return the cached PIL image for the given text, or None if not found."""
+        """
+        Return the cached PIL image for the given text.
+
+        Args:
+            text: The message to retrieve.
+
+        Returns:
+            PIL Image object, or None if not found.
+        """
         return self._image_cache.get(text)
 
 
 class OSDManager:
     """
-    Manages on-screen display messages.
+    Manages on‑screen display messages.
 
-    Texts are pre-rendered on the CPU in a background thread, then uploaded to
+    Texts are pre‑rendered on the CPU in a background thread, then uploaded to
     GPU textures on the pipeline thread. Active messages expire after a duration.
-    Thread-safe for showing messages from any thread.
+    Thread‑safe for showing messages from any thread.
+
+    Example:
+        osd = OSDManager(("Hello", "World"), 1920, 1080)
+        osd.prepare_textures()   # call from pipeline thread
+        osd.show("Hello", 2.0)   # call from any thread
+        # In render loop:
+        tex, needs_redraw = osd.update()
+        if tex:
+            osd.blend_active(screen_tex)
     """
 
     def __init__(
@@ -103,14 +140,14 @@ class OSDManager:
         Initialize the OSD manager.
 
         Args:
-            texts: All possible OSD message strings (pre-rendered in background).
+            texts: All possible OSD message strings (pre‑rendered in background).
             screen_width, screen_height: Dimensions of the screen (for centering).
             blender: Optional OverlayBlender instance. If None, a default one is created.
         """
         self._screen_width = screen_width
         self._screen_height = screen_height
 
-        # CPU rendering in background
+        # CPU rendering in background thread
         self._images: Dict[str, Image.Image] = {}
         self._images_ready = threading.Event()
         self._render_executor = ThreadPoolExecutor(max_workers=1)
@@ -131,8 +168,14 @@ class OSDManager:
     # ----------------------------------------------------------------------
     # Background CPU rendering
     # ----------------------------------------------------------------------
+
     def _render_all(self, texts: Tuple[str, ...]) -> None:
-        """Render all texts to PIL images (runs in background thread)."""
+        """
+        Render all texts to PIL images (runs in background thread).
+
+        Args:
+            texts: Tuple of message strings to pre‑render.
+        """
         renderer = TextRenderer(list(texts), screen_height=self._screen_height)
         for text in texts:
             img = renderer.get_image(text)
@@ -144,9 +187,10 @@ class OSDManager:
     # ----------------------------------------------------------------------
     # GPU texture preparation (must be called from pipeline thread)
     # ----------------------------------------------------------------------
+
     def prepare_textures(self) -> None:
         """
-        Upload all pre-rendered images to GPU textures.
+        Upload all pre‑rendered images to GPU textures.
 
         Must be called from the pipeline thread after Vulkan device is ready.
         Blocks until background rendering is complete.
@@ -182,9 +226,12 @@ class OSDManager:
     # ----------------------------------------------------------------------
     # State update (called each frame)
     # ----------------------------------------------------------------------
+
     def update(self) -> Tuple[Optional[Texture2D], bool]:
         """
         Update internal state (expiry) and return the texture to draw.
+
+        This method should be called once per frame from the pipeline thread.
 
         Returns:
             A tuple (active_texture, needs_redraw).
@@ -199,11 +246,10 @@ class OSDManager:
                 self._active_texture = None
                 self._expiry_time = 0.0
 
-            # Lazy texture resolution
+            # Lazy texture resolution (in case show() was called before prepare_textures)
             if self._active_text is not None and self._active_texture is None:
                 self._active_texture = self._texture_cache.get(self._active_text)
                 if self._active_texture is None:
-                    # Should not happen if prepare_textures was called
                     logger.error(f"OSD texture not found for '{self._active_text}'")
 
             texture = self._active_texture
@@ -215,12 +261,13 @@ class OSDManager:
     # ----------------------------------------------------------------------
     # Public API
     # ----------------------------------------------------------------------
+
     def show(self, text: str, duration: float = 1.5) -> None:
         """
-        Request an OSD message to be displayed (thread-safe).
+        Request an OSD message to be displayed (thread‑safe).
 
         Args:
-            text: The message to show (must be one of the pre-rendered strings).
+            text: The message to show (must be one of the pre‑rendered strings).
             duration: How long to display the message in seconds.
         """
         with self._lock:
@@ -263,7 +310,7 @@ class OSDManager:
         cb_data = struct.pack("iiii", x, y, w, h)
         self._blender.cb.upload(cb_data)
 
-        # Get or create compute pipeline
+        # Get or create compute pipeline for this overlay texture
         if tex not in self._compute_cache:
             self._compute_cache[tex] = Compute(
                 self._blender.shader,
@@ -279,9 +326,15 @@ class OSDManager:
         groups_y = (h + 15) // 16
         compute.dispatch(groups_x, groups_y, 1)
 
-    def clear_cache(self) -> None:
-        """Clear cached compute pipelines (call on swapchain resize)."""
+    def clear_compute_cache(self) -> None:
+        """
+        Clear cached compute pipelines (call on swapchain resize).
+
+        The screen texture changes when the swapchain is recreated, so cached
+        pipelines that reference the old screen texture become invalid.
+        """
         self._compute_cache.clear()
+        logger.debug("OSD compute cache cleared")
 
     def shutdown(self) -> None:
         """Clean up background executor."""

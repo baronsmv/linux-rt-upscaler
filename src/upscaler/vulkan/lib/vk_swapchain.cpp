@@ -420,7 +420,7 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkBeginCommandBuffer(cmd, &begin_info);
 
-    // Barrier 1: swapchain image → TRANSFER_DST_OPTIMAL
+    // Barrier 1: swapchain image -> TRANSFER_DST_OPTIMAL
     VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -434,7 +434,7 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
                          VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
                          0, nullptr, 0, nullptr, 1, &barrier);
 
-    // Memory barrier: compute writes → transfer reads
+    // Memory barrier: compute writes -> transfer reads
     VkMemoryBarrier mem_barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
     mem_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     mem_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -442,7 +442,7 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
                          VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
                          1, &mem_barrier, 0, nullptr, 0, nullptr);
 
-    // Barrier 2: source texture → TRANSFER_SRC_OPTIMAL
+    // Barrier 2: source texture -> TRANSFER_SRC_OPTIMAL
     VkImageMemoryBarrier src_barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
     src_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     src_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -470,7 +470,7 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
                    self->images[image_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                    1, &copy_region);
 
-    // Barrier 3: source texture back → GENERAL
+    // Barrier 3: source texture back -> GENERAL
     src_barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
     src_barrier.dstAccessMask = 0;  // No need for explicit access; layout change only
     src_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -480,7 +480,7 @@ PyObject* vk_Swapchain_present(vk_Swapchain* self, PyObject* args) {
                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                          0, 0, nullptr, 0, nullptr, 1, &src_barrier);
 
-    // Barrier 4: swapchain image → PRESENT_SRC_KHR
+    // Barrier 4: swapchain image -> PRESENT_SRC_KHR
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = 0;
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;

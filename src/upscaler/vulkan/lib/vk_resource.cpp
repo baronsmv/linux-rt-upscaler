@@ -303,7 +303,7 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
         return nullptr;
     }
 
-    // Execute copy: image → device buffer → staging buffer
+    // Execute copy: image -> device buffer -> staging buffer
     bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
         // Transition texture to transfer source
         vk_cmd_transition_for_copy_src(cmd, self->image, 0, 1);
@@ -461,7 +461,7 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
         }
         else /* !src_is_buf && !dst_is_buf */ {
             VkImageMemoryBarrier barriers[2] = {};
-            // Source image: GENERAL → TRANSFER_SRC_OPTIMAL
+            // Source image: GENERAL -> TRANSFER_SRC_OPTIMAL
             barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             barriers[0].image = self->image;
             barriers[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -472,7 +472,7 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
             barriers[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barriers[0].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-            // Destination image: GENERAL → TRANSFER_DST_OPTIMAL
+            // Destination image: GENERAL -> TRANSFER_DST_OPTIMAL
             barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             barriers[1].image = dst->image;
             barriers[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
