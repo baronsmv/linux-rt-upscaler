@@ -1,12 +1,6 @@
-"""HLSL shaders and CuNNy implementation."""
+"""HLSL/SPIR-V shaders modules."""
 
-from .lanczos_scaler import LanczosScaler
-from .overlay_blender import OverlayBlender
-from .srcnn import SRCNN, dispatch_groups
+from .lanczos2 import LanczosScaler
+from .overlay_blend import OverlayBlender
 
-__all__ = [
-    "LanczosScaler",
-    "OverlayBlender",
-    "SRCNN",
-    "dispatch_groups",
-]
+__all__ = ["LanczosScaler", "OverlayBlender"]

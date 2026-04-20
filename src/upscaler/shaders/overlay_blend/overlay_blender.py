@@ -3,14 +3,13 @@ import os
 import struct
 from typing import Dict, Optional
 
-from ..vulkan import Buffer, Compute, Sampler, Texture2D, SAMPLER_FILTER_POINT
+from ...vulkan import Buffer, Compute, Sampler, Texture2D, SAMPLER_FILTER_POINT
 
 logger = logging.getLogger(__name__)
 
 CB_SIZE = struct.calcsize("iiii")  # x, y, width, height
 
-SHADERS_DIR = os.path.dirname(__file__)
-DEFAULT_SHADER_PATH = os.path.join(SHADERS_DIR, "overlay_blend.spv")
+DEFAULT_SHADER_PATH = os.path.join(os.path.dirname(__file__), "overlay_blend.spv")
 
 
 class OverlayBlender:
