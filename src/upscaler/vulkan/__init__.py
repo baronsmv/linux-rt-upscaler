@@ -356,10 +356,18 @@ class Device:
         heap_offset: int,
         slices: int,
         sparse: bool,
+        force_array_view: bool,
     ):
         """Internal method used by Texture2D.__init__."""
         return self._handle.create_texture2d(
-            width, height, format, heap_handle, heap_offset, slices, sparse
+            width,
+            height,
+            format,
+            heap_handle,
+            heap_offset,
+            slices,
+            sparse,
+            force_array_view,
         )
 
     def create_sampler(
@@ -650,6 +658,7 @@ class Texture2D(Resource):
         heap_offset: int = 0,
         slices: int = 1,
         sparse: bool = False,
+        force_array_view: bool = False,
         device: Optional[Device] = None,
     ) -> None:
         """
@@ -664,6 +673,7 @@ class Texture2D(Resource):
             slices: Number of array slices.
             sparse: Create as a sparse resource.
             device: Optional device (uses current if None).
+            force_array_view: Force the wrapper to create array views
         """
         dev = device or get_current_device()
         handle = dev.create_texture2d(
@@ -674,6 +684,7 @@ class Texture2D(Resource):
             heap_offset,
             slices,
             sparse,
+            force_array_view,
         )
         self._handle = handle
 

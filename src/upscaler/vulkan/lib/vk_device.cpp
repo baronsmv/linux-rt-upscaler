@@ -311,7 +311,7 @@ PyObject *vk_Device_create_heap(vk_Device *self, PyObject *args) {
    ------------------------------------------------------------------------- */
 static VkImage create_vk_image(VkDevice device, VkImageType type, VkFormat format,
                                uint32_t width, uint32_t height, uint32_t depth,
-                               uint32_t slices, bool sparse) {
+                               uint32_t slices, bool sparse, bool force_array_view) {
     VkImageCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     info.imageType = type;
     info.format = format;
@@ -491,9 +491,11 @@ PyObject *vk_Device_create_texture2d(vk_Device *self, PyObject *args) {
     uint64_t heap_offset = 0;
     uint32_t slices = 1;
     PyObject *py_sparse = nullptr;
+    int force_array = 0;
 
-    if (!PyArg_ParseTuple(args, "IIi|OKIO", &width, &height, &format,
-                          &py_heap, &heap_offset, &slices, &py_sparse))
+    if (!PyArg_ParseTuple(args, "IIi|OKIOp", &width, &height, &format,
+                          &py_heap, &heap_offset, &slices, &py_sparse,
+                          &force_array))
         return nullptr;
 
     if (width == 0 || height == 0 || slices == 0) {
@@ -533,7 +535,7 @@ PyObject *vk_Device_create_texture2d(vk_Device *self, PyObject *args) {
     res->heap_type = 0; // textures always device-local
 
     res->image = create_vk_image(dev->device, VK_IMAGE_TYPE_2D, vk_format,
-                                 width, height, 1, slices, sparse);
+                             width, height, 1, slices, sparse, force_array);
     if (res->image == VK_NULL_HANDLE) {
         Py_DECREF(res);
         PyErr_SetString(vk_Texture2DError, "Failed to create image");
@@ -605,7 +607,8 @@ PyObject *vk_Device_create_texture2d(vk_Device *self, PyObject *args) {
     // Create image view
     VkImageViewCreateInfo vinfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
     vinfo.image = res->image;
-    vinfo.viewType = slices > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D;
+    vinfo.viewType = (slices > 1 || force_array) ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
+                                                 : VK_IMAGE_VIEW_TYPE_2D;
     vinfo.format = vk_format;
     vinfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     vinfo.subresourceRange.levelCount = 1;

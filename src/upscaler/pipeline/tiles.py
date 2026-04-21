@@ -131,14 +131,24 @@ class OffsetTileProcessor(TileProcessor):
     def _create_stages(self) -> None:
         """Create SRCNN instances for each upscaling stage."""
         # Stage 1 input: single 2D texture (reused per tile)
-        input_tex1 = Texture2D(self.tile_size, self.tile_size)
+        input_tex1 = Texture2D(
+            self.tile_size, self.tile_size, slices=1, force_array_view=True
+        )
 
         # Stage 1 output (intermediate) – 2D texture sized for 2x tile
-        inter_tex = Texture2D(self.tile_out_w_first, self.tile_out_h_first)
+        inter_tex = Texture2D(
+            self.tile_out_w_first,
+            self.tile_out_h_first,
+            slices=1,
+            force_array_view=True,
+        )
         outputs_1 = {"output": inter_tex}
         for i in range(self.factory.config.num_textures):
             outputs_1[f"t{i}"] = Texture2D(
-                self.tile_out_w_first, self.tile_out_h_first, slices=1
+                self.tile_out_w_first,
+                self.tile_out_h_first,
+                slices=1,
+                force_array_view=True,
             )
 
         srcnn_1 = SRCNN(
@@ -162,7 +172,10 @@ class OffsetTileProcessor(TileProcessor):
             outputs_2 = {"output": self.output_texture}
             for i in range(self.factory.config.num_textures):
                 outputs_2[f"t{i}"] = Texture2D(
-                    self.tile_out_w_final, self.tile_out_h_final, slices=1
+                    self.tile_out_w_final,
+                    self.tile_out_h_final,
+                    slices=1,
+                    force_array_view=True,
                 )
 
             srcnn_2 = SRCNN(
