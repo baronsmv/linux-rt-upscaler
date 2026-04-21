@@ -302,7 +302,8 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
 
 int capture_grab(CaptureContext *ctx, unsigned char *output_data) {
   OutputRect dummy;
-  int result = capture_grab_damage(ctx, output_data, &dummy, 0);
+  size_t required = (size_t)ctx->width * ctx->height * 4;
+  int result = capture_grab_damage(ctx, output_data, required, &dummy, 0);
   return (result > 0) ? 0 : (result == 0) ? 1 : -1;
 }
 
