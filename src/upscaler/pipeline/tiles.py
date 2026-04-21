@@ -122,7 +122,7 @@ class OffsetTileProcessor(TileProcessor):
             double_upscale,
             tile_size,
             variant="_offset",
-            push_constant_size=28,
+            push_constant_size=36,  # 9 × 4 bytes
         )
         self.full_input_tex = Texture2D(crop_width, crop_height)
         full_size = crop_width * crop_height * 4
@@ -216,16 +216,18 @@ class OffsetTileProcessor(TileProcessor):
         final_shader = self.factory.config.shaders[final_pass_index]
 
         # Dedicated constant buffer: input = intermediate texture size, output = tile output size
+        full_out_w = self.crop_width * 2
+        full_out_h = self.crop_height * 2
         cb_data = struct.pack(
             "IIIIffff",
-            self.tile_out_w_first,  # in_width (for T0/T1 sampling)
+            self.tile_out_w_first,  # in_width (for T0/T1)
             self.tile_out_h_first,  # in_height
-            self.tile_out_w_final,  # out_width
-            self.tile_out_h_final,  # out_height
+            full_out_w,  # out_width (full output)
+            full_out_h,  # out_height (full output)
             1.0 / self.tile_out_w_first,  # in_dx
             1.0 / self.tile_out_h_first,  # in_dy
-            1.0 / self.tile_out_w_final,  # out_dx
-            1.0 / self.tile_out_h_final,  # out_dy
+            1.0 / full_out_w,  # out_dx
+            1.0 / full_out_h,  # out_dy
         )
         final_cb = Buffer(len(cb_data))
         final_cb.upload(cb_data)
@@ -295,15 +297,19 @@ class OffsetTileProcessor(TileProcessor):
             src_y = ty * self.tile_size
             dst_x = tx * self.tile_out_w_final
             dst_y = ty * self.tile_out_h_final
+            full_out_w = self.crop_width * 2
+            full_out_h = self.crop_height * 2
             push_data = struct.pack(
-                "IIIIIII",
-                0,
+                "IIIIIIIII",
+                0,  # inputLayer
                 src_x,
-                src_y,
+                src_y,  # srcOffset
                 dst_x,
-                dst_y,
+                dst_y,  # dstOffset
                 self.crop_width,
-                self.crop_height,
+                self.crop_height,  # crop dims
+                full_out_w,
+                full_out_h,  # full output dims
             )
             tile_batch.append((dst_x, dst_y, push_data, data))
 
