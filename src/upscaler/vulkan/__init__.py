@@ -900,6 +900,22 @@ class Compute:
             timestamps=timestamps,
         )
 
+    def execute_tile_batch(
+        self,
+        tiles: List[
+            Tuple[int, int, int, bytes]
+        ],  # (dst_x, dst_y, push_data, tile_data)
+        input_tex: Texture2D,
+        staging: Buffer,
+        tile_size: int,
+        groups_x: int,
+        groups_y: int,
+    ):
+        """Upload tiles and dispatch all in one command buffer."""
+        self._handle.execute_tile_batch(
+            tiles, input_tex._handle, staging._handle, tile_size, groups_x, groups_y
+        )
+
     def __repr__(self) -> str:
         return "<Compute>"
 

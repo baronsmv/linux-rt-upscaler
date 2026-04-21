@@ -211,34 +211,35 @@ class OffsetTileProcessor(TileProcessor):
         self.input_tex = self.stages[0].input
 
     def process_tiles(self, dirty_tiles: List[Tuple[int, int, bytes]]) -> None:
-        """
-        Process dirty tiles (no cache).
-
-        Args:
-            dirty_tiles: List of (tile_x, tile_y, data_bytes).
-        """
         if not dirty_tiles:
             return
 
+        tile_data_size = self.tile_size * self.tile_size * 4
+        total_staging = len(dirty_tiles) * tile_data_size
+
+        # Ensure staging buffer is large enough
+        if self.staging.size < total_staging:
+            self.staging = Buffer(total_staging, heap_type=HEAP_UPLOAD)
+
+        # Prepare tile tuples for the batch
         tile_batch = []
         for tx, ty, data in dirty_tiles:
-            # Upload tile data to input texture (layer 0)
-            self.staging.upload(data)
-            self.staging.copy_to(
-                self.input_tex,
-                width=self.tile_size,
-                height=self.tile_size,
-            )
-
             dst_x = tx * self.tile_out_w_final
             dst_y = ty * self.tile_out_h_final
             push_data = struct.pack("III", 0, dst_x, dst_y)
-            print(f"Tile ({tx},{ty}) -> dstOffset ({dst_x},{dst_y})")
-            tile_batch.append((tx, ty, 0, push_data))
+            tile_batch.append((dst_x, dst_y, push_data, data))
 
-        dispatches = self._build_dispatch_sequence(tile_batch)
-        if dispatches:
-            self.stages[0].pipelines[0].dispatch_sequence(sequence=dispatches)
+        groups_x, groups_y = self.groups_per_stage[
+            0
+        ]  # For the first pipeline (offset mode uses first stage's pipelines)
+        self.stages[0].pipelines[0].execute_tile_batch(
+            tile_batch,
+            self.input_tex,
+            self.staging,
+            self.tile_size,
+            groups_x,
+            groups_y,
+        )
 
 
 class CachedTileProcessor(TileProcessor):

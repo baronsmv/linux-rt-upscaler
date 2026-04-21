@@ -530,6 +530,229 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
 }
 
 /* ----------------------------------------------------------------------------
+   execute_tile_batch - efficient batched tile processing
+   ------------------------------------------------------------------------- */
+/**
+ * Execute a batch of tiles: upload pixel data to staging, copy to input texture,
+ * and dispatch compute passes, all in one command buffer.
+ *
+ * Args (positional):
+ *     tiles (list): List of tuples (dst_x, dst_y, push_data, tile_bytes).
+ *     input_tex (vk.Resource): The input texture (2D array with 1 slice).
+ *     staging (vk.Resource): A buffer large enough to hold all tile data.
+ *     tile_size (int): Width/height of a tile in pixels.
+ *
+ * Returns:
+ *     None
+ */
+PyObject* vk_Compute_execute_tile_batch(vk_Compute* self, PyObject* args) {
+    PyObject* tiles_list;
+    PyObject* input_tex_obj;
+    PyObject* staging_obj;
+    uint32_t tile_size;
+
+    if (!PyArg_ParseTuple(args, "O!O!O!I",
+                          &PyList_Type, &tiles_list,
+                          &vk_Resource_Type, &input_tex_obj,
+                          &vk_Resource_Type, &staging_obj,
+                          &tile_size)) {
+        return nullptr;
+    }
+
+    vk_Resource* input_tex = reinterpret_cast<vk_Resource*>(input_tex_obj);
+    vk_Resource* staging = reinterpret_cast<vk_Resource*>(staging_obj);
+    vk_Device* dev = self->py_device;
+
+    // Validate resources
+    if (!input_tex->image) {
+        PyErr_SetString(PyExc_TypeError, "input_tex must be an image");
+        return nullptr;
+    }
+    if (!staging->buffer || staging->heap_type != 1) { // 1 = HEAP_UPLOAD
+        PyErr_SetString(PyExc_TypeError, "staging must be an upload buffer");
+        return nullptr;
+    }
+    if (input_tex->slices != 1) {
+        PyErr_SetString(PyExc_ValueError, "input_tex must have exactly 1 slice");
+        return nullptr;
+    }
+
+    Py_ssize_t num_tiles = PyList_Size(tiles_list);
+    if (num_tiles == 0) {
+        Py_RETURN_NONE;
+    }
+
+    const VkDeviceSize tile_data_size = tile_size * tile_size * 4;
+    VkDeviceSize total_staging_needed = num_tiles * tile_data_size;
+
+    if (staging->size < total_staging_needed) {
+        PyErr_Format(PyExc_ValueError,
+                     "Staging buffer too small: need %llu bytes, have %llu",
+                     total_staging_needed, staging->size);
+        return nullptr;
+    }
+
+    // -------------------------------------------------------------------------
+    // 1. Map staging buffer and copy all tile data
+    // -------------------------------------------------------------------------
+    void* mapped = vk_map_memory(dev, staging->memory, staging->heap_offset, total_staging_needed);
+    if (!mapped) {
+        return nullptr; // error already set
+    }
+
+    // Store tile parameters for later dispatch recording
+    struct TileInfo {
+        uint32_t dst_x;
+        uint32_t dst_y;
+        PyObject* push_data_obj;  // borrowed reference
+        VkDeviceSize staging_offset;
+    };
+    std::vector<TileInfo> tiles;
+    tiles.reserve(num_tiles);
+
+    uint8_t* dst_ptr = static_cast<uint8_t*>(mapped);
+    VkDeviceSize current_offset = 0;
+
+    for (Py_ssize_t i = 0; i < num_tiles; ++i) {
+        PyObject* tuple = PyList_GetItem(tiles_list, i);
+        if (!PyTuple_Check(tuple) || PyTuple_Size(tuple) != 4) {
+            vkUnmapMemory(dev->device, staging->memory);
+            PyErr_Format(PyExc_TypeError, "Tile %zd must be a 4-tuple (dst_x, dst_y, push_data, bytes)", i);
+            return nullptr;
+        }
+
+        uint32_t dst_x, dst_y;
+        PyObject* push_obj;
+        PyObject* bytes_obj;
+
+        if (!PyArg_ParseTuple(tuple, "IIOO", &dst_x, &dst_y, &push_obj, &bytes_obj)) {
+            vkUnmapMemory(dev->device, staging->memory);
+            return nullptr;
+        }
+
+        if (!PyBytes_Check(bytes_obj)) {
+            vkUnmapMemory(dev->device, staging->memory);
+            PyErr_Format(PyExc_TypeError, "Tile %zd data must be bytes", i);
+            return nullptr;
+        }
+
+        char* data_ptr = PyBytes_AsString(bytes_obj);
+        Py_ssize_t data_len = PyBytes_Size(bytes_obj);
+        if (data_len != (Py_ssize_t)tile_data_size) {
+            vkUnmapMemory(dev->device, staging->memory);
+            PyErr_Format(PyExc_ValueError,
+                         "Tile %zd data size %zd, expected %llu",
+                         i, data_len, tile_data_size);
+            return nullptr;
+        }
+
+        memcpy(dst_ptr + current_offset, data_ptr, tile_data_size);
+
+        TileInfo info;
+        info.dst_x = dst_x;
+        info.dst_y = dst_y;
+        info.push_data_obj = push_obj;
+        info.staging_offset = current_offset;
+
+        tiles.push_back(info);
+        current_offset += tile_data_size;
+    }
+
+    vkUnmapMemory(dev->device, staging->memory);
+
+    // -------------------------------------------------------------------------
+    // 2. Record command buffer with copies and dispatches
+    // -------------------------------------------------------------------------
+    VkCommandBuffer cmd = vk_allocate_temp_cmd(dev);
+    if (!cmd) {
+        return nullptr;
+    }
+
+    VkCommandBufferBeginInfo begin_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmd, &begin_info);
+
+    // Transition input texture to TRANSFER_DST_OPTIMAL
+    vk_cmd_transition_for_copy_dst(cmd, input_tex->image, 0, 1);
+
+    // Copy each tile from staging to input texture
+    for (const auto& tile : tiles) {
+        VkBufferImageCopy region = {};
+        region.bufferOffset = tile.staging_offset;
+        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel = 0;
+        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.layerCount = 1;
+        region.imageOffset = { 0, 0, 0 };
+        region.imageExtent = { tile_size, tile_size, 1 };
+
+        vkCmdCopyBufferToImage(cmd, staging->buffer, input_tex->image,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    }
+
+    // Transition input texture to GENERAL for compute shader access
+    vk_cmd_transition_for_compute(cmd, input_tex->image, 0, 1);
+
+    // Dispatch compute passes for each tile
+    for (const auto& tile : tiles) {
+        // Bind pipeline and descriptor set
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, self->pipeline);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                self->pipeline_layout, 0, 1, &self->descriptor_set, 0, nullptr);
+
+        // Push constants (if any)
+        if (tile.push_data_obj != Py_None) {
+            Py_buffer push_view;
+            if (PyObject_GetBuffer(tile.push_data_obj, &push_view, PyBUF_SIMPLE) < 0) {
+                vkEndCommandBuffer(cmd);
+                vk_free_temp_cmd(dev, cmd);
+                return nullptr;
+            }
+            if (push_view.len > 0) {
+                vkCmdPushConstants(cmd, self->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT,
+                                   0, static_cast<uint32_t>(push_view.len), push_view.buf);
+            }
+            PyBuffer_Release(&push_view);
+        }
+    }
+
+    vkEndCommandBuffer(cmd);
+
+    // Submit and wait
+    VkFence fence = vk_create_fence(dev);
+    if (!fence) {
+        vk_free_temp_cmd(dev, cmd);
+        return nullptr;
+    }
+
+    VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submit.commandBufferCount = 1;
+    submit.pCommandBuffers = &cmd;
+
+    VkResult res = vkQueueSubmit(dev->queue, 1, &submit, fence);
+    if (res != VK_SUCCESS) {
+        vkDestroyFence(dev->device, fence, nullptr);
+        vk_free_temp_cmd(dev, cmd);
+        PyErr_Format(PyExc_RuntimeError, "Queue submit failed (error %d)", res);
+        return nullptr;
+    }
+
+    Py_BEGIN_ALLOW_THREADS
+    res = vkWaitForFences(dev->device, 1, &fence, VK_TRUE, UINT64_MAX);
+    Py_END_ALLOW_THREADS
+
+    vkDestroyFence(dev->device, fence, nullptr);
+    vk_free_temp_cmd(dev, cmd);
+
+    if (res != VK_SUCCESS) {
+        PyErr_Format(PyExc_RuntimeError, "Fence wait failed (error %d)", res);
+        return nullptr;
+    }
+
+    Py_RETURN_NONE;
+}
+
+/* ----------------------------------------------------------------------------
    Compute type definition
    ------------------------------------------------------------------------- */
 static PyMethodDef vk_Compute_methods[] = {
@@ -538,6 +761,8 @@ static PyMethodDef vk_Compute_methods[] = {
     {"dispatch_sequence", (PyCFunction)vk_Compute_dispatch_sequence,
      METH_VARARGS | METH_KEYWORDS,
      "Execute a sequence of dispatches with optional copy and present."},
+    {"execute_tile_batch", (PyCFunction)vk_Compute_execute_tile_batch,
+     METH_VARARGS, "Efficient batched tile processing."},
     {nullptr, nullptr, 0, nullptr}
 };
 
