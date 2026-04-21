@@ -902,22 +902,37 @@ class Compute:
 
     def execute_tile_batch(
         self,
-        tiles: List[
-            Tuple[int, int, int, bytes]
-        ],  # (dst_x, dst_y, push_data, tile_data)
+        tiles: List[Tuple[int, int, bytes, bytes]],
         input_tex: Texture2D,
         staging: Buffer,
         tile_size: int,
         groups_x: int,
         groups_y: int,
-    ):
-        """Upload tiles and dispatch all in one command buffer."""
-        self._handle.execute_tile_batch(
-            tiles, input_tex._handle, staging._handle, tile_size, groups_x, groups_y
-        )
+        pipelines: List["Compute"],
+    ) -> None:
+        """
+        Process a batch of tiles efficiently.
 
-    def __repr__(self) -> str:
-        return "<Compute>"
+        All uploads and compute dispatches are recorded into a single command
+        buffer, submitted once, and waited for completion.
+
+        Args:
+            tiles: List of (dst_x, dst_y, push_data, tile_bytes).
+            input_tex: Input texture (2D array, 1 slice).
+            staging: Upload buffer large enough for all tile data.
+            tile_size: Width/height of a tile in pixels.
+            groups_x, groups_y: Compute workgroup counts for each dispatch.
+            pipelines: List of Compute pipelines (passes) to execute per tile.
+        """
+        self._handle.execute_tile_batch(
+            tiles,
+            input_tex._handle,
+            staging._handle,
+            tile_size,
+            groups_x,
+            groups_y,
+            [p._handle for p in pipelines],
+        )
 
 
 # ----------------------------------------------------------------------

@@ -13,44 +13,6 @@
 #include <functional>
 
 /* ----------------------------------------------------------------------------
-   RAII wrapper for Python buffer objects
-   ------------------------------------------------------------------------- */
-struct PyBufferGuard {
-    Py_buffer view;
-    bool owned = false;
-
-    PyBufferGuard() = default;
-    ~PyBufferGuard() { if (owned) PyBuffer_Release(&view); }
-
-    // Disable copy
-    PyBufferGuard(const PyBufferGuard&) = delete;
-    PyBufferGuard& operator=(const PyBufferGuard&) = delete;
-
-    // Enable move
-    PyBufferGuard(PyBufferGuard&& other) noexcept
-        : view(other.view), owned(other.owned) {
-        other.owned = false;
-    }
-    PyBufferGuard& operator=(PyBufferGuard&& other) noexcept {
-        if (this != &other) {
-            if (owned) PyBuffer_Release(&view);
-            view = other.view;
-            owned = other.owned;
-            other.owned = false;
-        }
-        return *this;
-    }
-
-    bool acquire(PyObject *obj, int flags = PyBUF_SIMPLE) {
-        if (PyObject_GetBuffer(obj, &view, flags) < 0) return false;
-        owned = true;
-        return true;
-    }
-
-    void release() { if (owned) { PyBuffer_Release(&view); owned = false; } }
-};
-
-/* ----------------------------------------------------------------------------
    Resource deallocator
    ------------------------------------------------------------------------- */
 void vk_Resource_dealloc(vk_Resource *self) {

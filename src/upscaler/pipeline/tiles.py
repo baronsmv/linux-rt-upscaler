@@ -217,7 +217,7 @@ class OffsetTileProcessor(TileProcessor):
         tile_data_size = self.tile_size * self.tile_size * 4
         total_staging = len(dirty_tiles) * tile_data_size
 
-        # Ensure staging buffer is large enough
+        # Ensure staging buffer is large enough (reallocate if needed)
         if self.staging.size < total_staging:
             self.staging = Buffer(total_staging, heap_type=HEAP_UPLOAD)
 
@@ -229,16 +229,18 @@ class OffsetTileProcessor(TileProcessor):
             push_data = struct.pack("III", 0, dst_x, dst_y)
             tile_batch.append((dst_x, dst_y, push_data, data))
 
-        groups_x, groups_y = self.groups_per_stage[
-            0
-        ]  # For the first pipeline (offset mode uses first stage's pipelines)
-        self.stages[0].pipelines[0].execute_tile_batch(
+        groups_x, groups_y = self.groups_per_stage[0]  # same for all passes
+        pipelines = self.stages[0].pipelines  # list of Compute objects for all passes
+
+        # Use the first pipeline as the entry point for the batch executor
+        pipelines[0].execute_tile_batch(
             tile_batch,
             self.input_tex,
             self.staging,
             self.tile_size,
             groups_x,
             groups_y,
+            pipelines,
         )
 
 
