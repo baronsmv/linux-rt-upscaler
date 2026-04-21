@@ -51,15 +51,15 @@ float2 GetOutputPt() { return float2(out_dx, out_dy); }
 uint2 GetInputSize() { return uint2(in_width, in_height); }
 uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
-#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)
+#define O(t, x, y) t.SampleLevel(SP, float3(pos + float2(x, y) * pt, tileParams.inputLayer), 0)
 #define V4 min16float4
 #define M4 min16float4x4
 #define V3 min16float3
 #define M3x4 min16float3x4
 
-Texture2D<float4> INPUT : register(t0);
-Texture2D<float4> T0 : register(t1);
-Texture2D<float4> T1 : register(t2);
+Texture2DArray<float4> INPUT : register(t0);
+Texture2DArray<float4> T0 : register(t1);
+Texture2DArray<float4> T1 : register(t2);
 
 [[vk::image_format("rgba8")]] RWTexture2DArray<float4> OUTPUT : register(u0);
 
@@ -130,12 +130,12 @@ void main(uint3 id : SV_DispatchThreadID)
     float2 fpos = (float2(gxy) + 0.5) * opt;
     float3 yuv;
 
-    yuv = mul(RY, INPUT.SampleLevel(SL, fpos + float2(0.0, 0.0) * opt, 0).rgb);
+    yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 0.0) * opt, tileParams.inputLayer), 0).rgb);
     OUTPUT[uint3(gxy + int2(0, 0), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.x), yuv.yz)), 1.0);
-    yuv = mul(RY, INPUT.SampleLevel(SL, fpos + float2(1.0, 0.0) * opt, 0).rgb);
+    yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 0.0) * opt, tileParams.inputLayer), 0).rgb);
     OUTPUT[uint3(gxy + int2(1, 0), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.y), yuv.yz)), 1.0);
-    yuv = mul(RY, INPUT.SampleLevel(SL, fpos + float2(0.0, 1.0) * opt, 0).rgb);
+    yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 1.0) * opt, tileParams.inputLayer), 0).rgb);
     OUTPUT[uint3(gxy + int2(0, 1), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.z), yuv.yz)), 1.0);
-    yuv = mul(RY, INPUT.SampleLevel(SL, fpos + float2(1.0, 1.0) * opt, 0).rgb);
+    yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 1.0) * opt, tileParams.inputLayer), 0).rgb);
     OUTPUT[uint3(gxy + int2(1, 1), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.w), yuv.yz)), 1.0);
 }

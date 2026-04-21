@@ -243,7 +243,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
 """
         # For tile/offset modes with array inputs, we need the layer argument.
-        if (per_tile or offset_write) and not is_final:
+        if per_tile or offset_write:
             header += "#define O(t, x, y) t.SampleLevel(SP, float3(pos + float2(x, y) * pt, tileParams.inputLayer), 0)"
         else:
             header += "#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)"
@@ -332,6 +332,11 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
                     for line in core_lines
                 ]
 
+        if (per_tile or offset_write) and is_final:
+            pattern = r"INPUT\.SampleLevel\(SL,\s*(.+?),\s*0\)"
+            replacement = r"INPUT.SampleLevel(SL, float3(\1, tileParams.inputLayer), 0)"
+            core_lines = [re.sub(pattern, replacement, line) for line in core_lines]
+
         # Build entry point
         entry = self._build_entry(is_final)
 
@@ -398,9 +403,8 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         # Input textures: for tile/offset modes, use arrays for intermediate passes.
         # The first pass in offset mode reads from a 2D tile; but we treat it as an array
         # with one slice for consistency (the shader uses tileParams.inputLayer = 0).
-        use_input_array = (per_tile or offset_write) and not is_final
         for idx, tex in enumerate(in_textures):
-            suffix = "Array" if use_input_array else ""
+            suffix = "Array" if (per_tile or offset_write) else ""
             lines.append(f"Texture2D{suffix}<float4> {tex} : register(t{idx});")
         if in_textures and out_textures:
             lines.append("")

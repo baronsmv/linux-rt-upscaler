@@ -12,8 +12,11 @@ def dispatch_groups(
 ) -> Tuple[int, int]:
     """Calculate compute dispatch groups for a given pass."""
     if last_pass:
-        return (width * 2 + 15) // 16, (height * 2 + 15) // 16
-    return (width + 7) // 8, (height + 7) // 8
+        # 16 output pixels per workgroup (8×8 threads × 2×2 pixels each)
+        return (width + 15) // 16, (height + 15) // 16
+    else:
+        # 8 output pixels per workgroup (8×8 threads × 1×1 pixel each)
+        return (width + 7) // 8, (height + 7) // 8
 
 
 class SRCNN:

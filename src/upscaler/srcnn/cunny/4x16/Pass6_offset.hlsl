@@ -51,17 +51,17 @@ float2 GetOutputPt() { return float2(out_dx, out_dy); }
 uint2 GetInputSize() { return uint2(in_width, in_height); }
 uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
-#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)
+#define O(t, x, y) t.SampleLevel(SP, float3(pos + float2(x, y) * pt, tileParams.inputLayer), 0)
 #define V4 min16float4
 #define M4 min16float4x4
 #define V3 min16float3
 #define M3x4 min16float3x4
 
-Texture2D<float4> INPUT : register(t0);
-Texture2D<float4> T0 : register(t1);
-Texture2D<float4> T1 : register(t2);
-Texture2D<float4> T2 : register(t3);
-Texture2D<float4> T3 : register(t4);
+Texture2DArray<float4> INPUT : register(t0);
+Texture2DArray<float4> T0 : register(t1);
+Texture2DArray<float4> T1 : register(t2);
+Texture2DArray<float4> T2 : register(t3);
+Texture2DArray<float4> T3 : register(t4);
 
 [[vk::image_format("rgba8")]] RWTexture2D<float4> OUTPUT : register(u0);
 
@@ -244,8 +244,8 @@ void main(uint3 id : SV_DispatchThreadID)
     float2 opt = float2(GetOutputPt());
     float2 fpos = (float2(gxy) + 0.5) * opt;
 
-    OUTPUT[gxy + int2(0, 0) + tileParams.dstOffset] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(0.0, 0.0) * opt, 0).rgb + float3(r0.x, r1.x, r2.x)), 1.0);
-    OUTPUT[gxy + int2(1, 0) + tileParams.dstOffset] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(1.0, 0.0) * opt, 0).rgb + float3(r0.y, r1.y, r2.y)), 1.0);
-    OUTPUT[gxy + int2(0, 1) + tileParams.dstOffset] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(0.0, 1.0) * opt, 0).rgb + float3(r0.z, r1.z, r2.z)), 1.0);
-    OUTPUT[gxy + int2(1, 1) + tileParams.dstOffset] = float4(saturate(INPUT.SampleLevel(SL, fpos + float2(1.0, 1.0) * opt, 0).rgb + float3(r0.w, r1.w, r2.w)), 1.0);
+    OUTPUT[gxy + int2(0, 0) + tileParams.dstOffset] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 0.0) * opt, tileParams.inputLayer), 0).rgb + float3(r0.x, r1.x, r2.x)), 1.0);
+    OUTPUT[gxy + int2(1, 0) + tileParams.dstOffset] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 0.0) * opt, tileParams.inputLayer), 0).rgb + float3(r0.y, r1.y, r2.y)), 1.0);
+    OUTPUT[gxy + int2(0, 1) + tileParams.dstOffset] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 1.0) * opt, tileParams.inputLayer), 0).rgb + float3(r0.z, r1.z, r2.z)), 1.0);
+    OUTPUT[gxy + int2(1, 1) + tileParams.dstOffset] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 1.0) * opt, tileParams.inputLayer), 0).rgb + float3(r0.w, r1.w, r2.w)), 1.0);
 }

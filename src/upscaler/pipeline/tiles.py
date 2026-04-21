@@ -186,11 +186,9 @@ class OffsetTileProcessor(TileProcessor):
                 output_textures=outputs_2,
                 push_constant_size=self.factory.config.push_constant_size,
             )
-            self.stages.append(srcnn_2)
-            self.groups_per_stage.append(
-                dispatch_groups(
-                    self.tile_out_w_final, self.tile_out_h_final, last_pass=False
-                )
+            # Final pass of second stage writes 2x2 per thread
+            self.groups_per_stage[-1] = dispatch_groups(
+                self.tile_out_w_final, self.tile_out_h_final, last_pass=True
             )
         else:
             # For 2x only, stage 1 writes directly to final output
@@ -203,6 +201,10 @@ class OffsetTileProcessor(TileProcessor):
                 input_texture=input_tex1,
                 output_textures=outputs_1,
                 push_constant_size=self.factory.config.push_constant_size,
+            )
+            # Final pass of first stage now writes 2x2 per thread
+            self.groups_per_stage[0] = dispatch_groups(
+                self.tile_out_w_final, self.tile_out_h_final, last_pass=True
             )
 
         # Store input texture reference for uploads
@@ -231,6 +233,7 @@ class OffsetTileProcessor(TileProcessor):
             dst_x = tx * self.tile_out_w_final
             dst_y = ty * self.tile_out_h_final
             push_data = struct.pack("III", 0, dst_x, dst_y)
+            print(f"Tile ({tx},{ty}) -> dstOffset ({dst_x},{dst_y})")
             tile_batch.append((tx, ty, 0, push_data))
 
         dispatches = self._build_dispatch_sequence(tile_batch)
@@ -337,14 +340,14 @@ class CachedTileProcessor(TileProcessor):
                 push_constant_size=self.factory.config.push_constant_size,
             )
             self.stages.append(srnn2)
-            self.groups_per_stage.append(
-                dispatch_groups(
-                    self.tile_out_w_final, self.tile_out_h_final, last_pass=False
-                )
+            self.groups_per_stage[-1] = dispatch_groups(
+                self.tile_out_w_final, self.tile_out_h_final, last_pass=True
             )
         else:
-            # 2x only: stage 1 output is the final atlas
-            pass
+            # For 2x only, the first stage's final pass writes 2x2 per thread
+            self.groups_per_stage[0] = dispatch_groups(
+                self.tile_out_w_final, self.tile_out_h_final, last_pass=True
+            )
 
         self.input_atlas = input_atlas
 

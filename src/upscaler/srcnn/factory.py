@@ -44,6 +44,30 @@ class PipelineFactory:
             width, height, input_texture, output_textures, push_size
         )
         # Use pipelines and cbs in SRCNN wrapper.
+
+    TODO: Re-evaluate pipeline caching if performance becomes an issue:
+
+    Previously, a `_pipeline_cache` was used to cache `Compute` objects keyed by
+    (width, height, pass_idx, push_size). This caused stale descriptor sets when
+    the underlying textures (e.g., output atlases or intermediate textures) were
+    recreated (e.g., after crop resize, model switch, or tile cache resize).
+    The cached `Compute` held descriptor sets referencing destroyed Vulkan images,
+    resulting in silent write failures (black screen in tile modes).
+
+    Removing the cache fixes the issue because `create_stage` is called only:
+      - At upscaler initialization.
+      - When the upscaler is recreated due to crop/window changes or model switch.
+
+    These events are infrequent (user-initiated or window resizes), so the cost
+    of pipeline creation (a few milliseconds) is acceptable. The `Compute` objects
+    returned by `create_stage` are reused for all per‑frame dispatches.
+
+    If in the future the architecture changes such that `create_stage` is called
+    per frame or per tile, a proper caching mechanism with invalidation should be
+    implemented. That would involve:
+      - Storing the cache here.
+      - Providing a `clear_pipeline_cache()` method.
+      - Calling it whenever any texture bound to the pipelines is recreated.
     """
 
     def __init__(self, config: ModelConfig):
@@ -68,10 +92,6 @@ class PipelineFactory:
         # Cache for descriptor set layouts.
         # Key: (push_constant_size, bindless_flag, texture_type_tuple)
         self._dsl_cache: Dict[Tuple, Any] = {}
-
-        # Cache for pipelines (per pass, because dimensions may vary).
-        # Key: (width, height, pass_index, push_size)
-        self._pipeline_cache: Dict[Tuple, Compute] = {}
 
         # Cache for constant buffers (per pass and dimensions).
         # Key: (width, height, pass_index)
@@ -138,12 +158,6 @@ class PipelineFactory:
             cb = self._create_or_get_constant_buffer(width, height, pass_idx)
             cbs.append(cb)
 
-            # Build pipeline key and check cache
-            pipe_key = (width, height, pass_idx, push_constant_size)
-            if pipe_key in self._pipeline_cache:
-                pipelines.append(self._pipeline_cache[pipe_key])
-                continue
-
             # Resolve SRV/UAV lists
             srv_names, uav_names = self.config.srv_uav[pass_idx]
 
@@ -176,7 +190,6 @@ class PipelineFactory:
                 samplers=sampler_list,
                 push_size=push_constant_size,
             )
-            self._pipeline_cache[pipe_key] = pipe
             pipelines.append(pipe)
 
         return pipelines, cbs
