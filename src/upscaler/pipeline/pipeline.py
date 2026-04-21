@@ -233,7 +233,6 @@ class Pipeline:
     # ----------------------------------------------------------------------
     # Frame processing
     # ----------------------------------------------------------------------
-
     def _process_one_frame(self) -> None:
         """Capture, upscale, and present a single frame."""
         # 1. Grab frame

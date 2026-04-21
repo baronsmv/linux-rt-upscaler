@@ -48,6 +48,7 @@ struct TileParams {
     uint cropHeight;
     uint fullOutWidth;
     uint fullOutHeight;
+    uint2 validOffset;
 };
 [[vk::push_constant]] TileParams tileParams;
 
@@ -79,7 +80,8 @@ void main(uint3 id : SV_DispatchThreadID)
 {
     float2 pt = float2(1.0 / in_width, 1.0 / in_height);
     float2 full_opt = float2(1.0 / tileParams.fullOutWidth, 1.0 / tileParams.fullOutHeight);
-    uint2 gxy = id.xy * 2;
+    uint2 interior_id = id.xy + tileParams.validOffset;
+    uint2 gxy = interior_id * 2;
     float2 pos = ((gxy >> 1) + 0.5) * pt;
     uint2 globalOutXY = gxy + tileParams.dstOffset;
 

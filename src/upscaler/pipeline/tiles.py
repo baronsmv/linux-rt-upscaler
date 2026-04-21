@@ -393,7 +393,7 @@ class OffsetTileProcessor(TileProcessor):
         tiles_x = (crop_width + tile_size - 1) // tile_size
         tiles_y = (crop_height + tile_size - 1) // tile_size
 
-        # Find which tile grid cells intersect any damage rectangle.
+        # Find dirty tile grid cells.
         dirty_tiles = set()
         for rx, ry, rw, rh, _ in rects:
             tx0 = rx // tile_size
@@ -409,36 +409,35 @@ class OffsetTileProcessor(TileProcessor):
         result = []
 
         for tx, ty in dirty_tiles:
-            # Nominal tile position in crop coordinates.
+            # Nominal tile top-left in crop coordinates.
             tile_x0 = tx * tile_size
             tile_y0 = ty * tile_size
 
             # Expanded region (before clamping).
             exp_x0 = tile_x0 - margin
             exp_y0 = tile_y0 - margin
-            exp_x1 = exp_x0 + expanded_size
-            exp_y1 = exp_y0 + expanded_size
 
             # Clamp to crop bounds.
-            cx0 = max(0, exp_x0)
-            cy0 = max(0, exp_y0)
-            cx1 = min(crop_width, exp_x1)
-            cy1 = min(crop_height, exp_y1)
+            src_x0 = max(0, exp_x0)
+            src_y0 = max(0, exp_y0)
+            src_x1 = min(crop_width, exp_x0 + expanded_size)
+            src_y1 = min(crop_height, exp_y0 + expanded_size)
 
-            # Compute offset of the valid interior region within the expanded tile.
-            valid_x = margin - (exp_x0 - cx0)
-            valid_y = margin - (exp_y0 - cy0)
+            # Destination offsets within the expanded tile buffer.
+            dst_x0 = src_x0 - exp_x0
+            dst_y0 = src_y0 - exp_y0
+            copy_w = src_x1 - src_x0
+            copy_h = src_y1 - src_y0
 
-            # Build the expanded tile buffer (padded with zeros where out of bounds).
+            valid_x = margin - (exp_x0 - src_x0)
+            valid_y = margin - (exp_y0 - src_y0)
+
             data = bytearray(expanded_bytes)
-            for row in range(cy0, cy1):
-                src_start = row * stride + cx0 * 4
-                # Destination row inside the expanded tile buffer.
-                dst_row = row - exp_y0 if exp_y0 < 0 else row - cy0 + valid_y
-                dst_start = dst_row * expanded_size * 4 + (cx0 - exp_x0) * 4
-                copy_len = (cx1 - cx0) * 4
-                data[dst_start : dst_start + copy_len] = frame[
-                    src_start : src_start + copy_len
+            for row in range(copy_h):
+                src_start = (src_y0 + row) * stride + src_x0 * 4
+                dst_start = ((dst_y0 + row) * expanded_size + dst_x0) * 4
+                data[dst_start : dst_start + copy_w * 4] = frame[
+                    src_start : src_start + copy_w * 4
                 ]
 
             result.append((tx, ty, bytes(data), valid_x, valid_y))
@@ -461,8 +460,8 @@ class OffsetTileProcessor(TileProcessor):
         if not dirty_tiles:
             return
 
-        tile_data_size = self.expanded_tile_size * self.expanded_tile_size * 4
-        total_staging = len(dirty_tiles) * tile_data_size
+        expected_data_size = self.expanded_tile_size * self.expanded_tile_size * 4
+        total_staging = len(dirty_tiles) * expected_data_size
 
         # Ensure staging buffer is large enough.
         if self.staging.size < total_staging:
@@ -472,14 +471,22 @@ class OffsetTileProcessor(TileProcessor):
         full_out_h = self.crop_height * 2
         tile_batch = []
 
-        for tx, ty, data, valid_x, valid_y in dirty_tiles:
-            # Source offset for sampling the residual texture.
+        for idx, (tx, ty, data, valid_x, valid_y) in enumerate(dirty_tiles):
+            # Guarantee data length matches expected size.
+            if len(data) != expected_data_size:
+                logger.warning(
+                    f"Tile ({tx},{ty}) data size {len(data)} != expected {expected_data_size}. "
+                    f"Padding/truncating."
+                )
+                if len(data) < expected_data_size:
+                    data += b"\x00" * (expected_data_size - len(data))
+                else:
+                    data = data[:expected_data_size]
+
             src_x = tx * self.tile_size
             src_y = ty * self.tile_size
-
-            # Destination offset in the final output texture.
-            dst_x = tx * self.tile_out_w_final
-            dst_y = ty * self.tile_out_h_final
+            dst_x = tx * self.tile_size * (4 if self.double_upscale else 2)
+            dst_y = ty * self.tile_size * (4 if self.double_upscale else 2)
 
             push_data = struct.pack(
                 "IIIIIIIIIII",
