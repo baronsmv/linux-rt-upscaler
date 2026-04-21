@@ -102,9 +102,22 @@ CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
 }
 
 int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
-                        OutputRect *rects, int max_rects) {
+                        size_t output_size, OutputRect *rects,
+                        int max_rects) {
   if (!ctx || !ctx->dpy)
     return -1;
+
+  // Buffer size clamping
+  size_t required = (size_t)ctx->width * ctx->height * 4;
+  if (output_size < required) {
+    // Buffer too small – clamp height to fit
+    int max_h = (int)(output_size / (ctx->width * 4));
+    if (max_h < ctx->height) {
+      ctx->height = max_h;
+      if (ctx->debug)
+        fprintf(stderr, "[capture] Buffer too small, clamped height to %d\n", max_h);
+    }
+  }
 
   /* Clamp capture dimensions to current window size */
   XWindowAttributes attrs;

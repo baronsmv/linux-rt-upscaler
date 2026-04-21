@@ -79,12 +79,13 @@ CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
  * @param ctx         Capture context.
  * @param output_data Pre-allocated buffer (width*height*4 bytes) to hold BGRA
  * data.
+ * @param output_size Buffer size to clamp the written data.
  * @param rects       Array to receive output rectangles.
  * @param max_rects   Maximum number of rectangles to return.
  * @return Number of rectangles written, -1 on error.
  */
 int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
-                        OutputRect *rects, int max_rects);
+                        size_t output_size, OutputRect *rects, int max_rects);
 
 /**
  * Simplified capture – returns 0 on success, 1 if no change, -1 on error.

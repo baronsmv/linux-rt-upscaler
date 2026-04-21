@@ -33,6 +33,7 @@ _lib.capture_create.restype = ctypes.c_void_p
 _lib.capture_grab_damage.argtypes = [
     ctypes.c_void_p,  # CaptureContext *
     ctypes.POINTER(ctypes.c_ubyte),  # output buffer
+    ctypes.c_size_t,  # output_size
     ctypes.POINTER(DamageRect),  # rects array
     ctypes.c_int,  # max_rects
 ]
@@ -90,7 +91,11 @@ class FrameGrabber:
     def grab(self) -> Tuple[memoryview, bool, List[Tuple[int, int, int, int, int]]]:
         ctypes.memset(self._rects_buffer, 0, ctypes.sizeof(self._rects_buffer))
         num_rects = _lib.capture_grab_damage(
-            self._ctx, self.buffer, self._rects_buffer, _MAX_DAMAGE_RECTS
+            self._ctx,
+            self.buffer,
+            len(self.buffer),
+            self._rects_buffer,
+            _MAX_DAMAGE_RECTS,
         )
         if num_rects == -1:
             raise RuntimeError("capture failed")
