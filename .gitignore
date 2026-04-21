@@ -149,3 +149,9 @@ Thumbs.db
 
 # Local configuration
 config.yaml
+
+# Dummy C files
+**/dummy.c
+
+# uv lock files
+**/uv.lock
