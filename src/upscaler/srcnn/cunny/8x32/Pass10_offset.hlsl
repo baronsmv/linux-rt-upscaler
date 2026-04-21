@@ -42,6 +42,7 @@ cbuffer Constants : register(b0) {
 
 struct TileParams {
     uint inputLayer;
+    uint2 srcOffset;
     uint2 dstOffset;
 };
 [[vk::push_constant]] TileParams tileParams;

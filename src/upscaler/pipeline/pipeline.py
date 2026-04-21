@@ -278,7 +278,7 @@ class Pipeline:
                         rects, frame
                     )
 
-                self.upscaler_mgr.process_tile_frame(dirty_tiles)
+                self.upscaler_mgr.process_tile_frame(dirty_tiles, rects, frame)
                 src_tex = self.upscaler_mgr.get_output_texture()
             else:
                 # Fallback to full-frame processing for this frame

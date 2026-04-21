@@ -355,16 +355,13 @@ class UpscalerManager:
 
         return result
 
-    def process_tile_frame(self, dirty_tiles: List) -> None:
-        """
-        Process a batch of dirty tiles (delegates to the tile processor).
-
-        Args:
-            dirty_tiles: List as returned by `extract_dirty_tiles` or
-                `extract_dirty_tiles_with_hash`.
-        """
+    def process_tile_frame(
+        self, dirty_tiles: List, rects: List, frame_data: memoryview
+    ) -> None:
         if self.mode not in ("offset", "cache"):
             raise RuntimeError("process_tile_frame called in non-tile mode")
+        if self.mode == "offset":
+            self.tile_processor.upload_full_frame(frame_data, rects)
         self.tile_processor.process_tiles(dirty_tiles)
 
     def should_use_tile_mode(self, num_dirty: int) -> bool:

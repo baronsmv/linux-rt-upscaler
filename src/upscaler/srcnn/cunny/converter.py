@@ -225,6 +225,7 @@ class HlslGenerator:
             if offset_write:
                 header += """struct TileParams {
     uint inputLayer;
+    uint2 srcOffset;
     uint2 dstOffset;
 };
 """
@@ -315,31 +316,35 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
                 # Final pass writes to 2D texture with offset
                 core_lines = [
                     re.sub(
-                        r"OUTPUT\[(.*?)\]",
-                        r"OUTPUT[\1 + tileParams.dstOffset]",
-                        line,
+                        r"OUTPUT\[(.*?)\]", r"OUTPUT[\1 + tileParams.dstOffset]", line
                     )
                     for line in core_lines
                 ]
             else:
                 # Intermediate passes write to array slice 0 (hardcoded, since we reuse a single slice)
                 core_lines = [
-                    re.sub(
-                        r"(T\d+)\[(\w+)\]",
-                        r"\1[uint3(\2, 0)]",
-                        line,
-                    )
+                    re.sub(r"(T\d+)\[(\w+)\]", r"\1[uint3(\2, 0)]", line)
                     for line in core_lines
                 ]
 
+        # Patch INPUT.SampleLevel for array textures
         if (per_tile or offset_write) and is_final:
             pattern = r"INPUT\.SampleLevel\(SL,\s*(.+?),\s*0\)"
             replacement = r"INPUT.SampleLevel(SL, float3(\1, tileParams.inputLayer), 0)"
             core_lines = [re.sub(pattern, replacement, line) for line in core_lines]
 
-        # Build entry point
-        entry = self._build_entry(is_final)
+        # Patch pos calculation for offset_write final pass
+        if offset_write and is_final:
+            core_lines = [
+                re.sub(
+                    r"float2 pos = \(\(gxy >> 1\) \+ 0\.5\) \* pt;",
+                    "uint2 inputXY = tileParams.srcOffset + id.xy;\n    float2 pos = (float2(inputXY) + 0.5) * pt;",
+                    line,
+                )
+                for line in core_lines
+            ]
 
+        entry = self._build_entry(is_final)
         separator = f"// {"=" * 77}"
 
         # Assemble everything

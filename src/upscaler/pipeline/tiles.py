@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple
 
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
-from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD
+from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD, Compute
 
 logger = logging.getLogger(__name__)
 
@@ -122,10 +122,11 @@ class OffsetTileProcessor(TileProcessor):
             double_upscale,
             tile_size,
             variant="_offset",
-            push_constant_size=12,  # uint inputLayer + uint2 dstOffset
+            push_constant_size=28,
         )
-
-        # Create SRCNN stages for offset mode
+        self.full_input_tex = Texture2D(crop_width, crop_height)
+        full_size = crop_width * crop_height * 4
+        self.full_staging = Buffer(full_size, heap_type=HEAP_UPLOAD)
         self._create_stages()
 
     def _create_stages(self) -> None:
@@ -210,10 +211,76 @@ class OffsetTileProcessor(TileProcessor):
         # Store input texture reference for uploads
         self.input_tex = self.stages[0].input
 
+        # Final pass pipeline with correct SRV bindings and constant buffer
+        final_pass_index = self.factory.config.passes - 1
+        final_shader = self.factory.config.shaders[final_pass_index]
+
+        # Dedicated constant buffer: input = intermediate texture size, output = tile output size
+        cb_data = struct.pack(
+            "IIIIffff",
+            self.tile_out_w_first,  # in_width (for T0/T1 sampling)
+            self.tile_out_h_first,  # in_height
+            self.tile_out_w_final,  # out_width
+            self.tile_out_h_final,  # out_height
+            1.0 / self.tile_out_w_first,  # in_dx
+            1.0 / self.tile_out_h_first,  # in_dy
+            1.0 / self.tile_out_w_final,  # out_dx
+            1.0 / self.tile_out_h_final,  # out_dy
+        )
+        final_cb = Buffer(len(cb_data))
+        final_cb.upload(cb_data)
+
+        # SRV list: [full_input_tex] + intermediate textures (T0, T1, ...)
+        srv_list = [self.full_input_tex]
+        inter_stage = self.stages[-1] if self.double_upscale else self.stages[0]
+        for i in range(self.factory.config.num_textures):
+            tex = inter_stage.outputs[f"t{i}"]
+            srv_list.append(tex)
+
+        # UAV list: final output texture
+        uav_list = [self.output_texture]
+
+        # Samplers for the final pass
+        sampler_list = []
+        for sampler_type in self.factory.config.samplers[final_pass_index]:
+            sampler_list.append(self.factory._get_sampler(sampler_type))
+
+        self.final_pipeline = Compute(
+            final_shader,
+            cbv=[final_cb],
+            srv=srv_list,
+            uav=uav_list,
+            samplers=sampler_list,
+            push_size=self.factory.config.push_constant_size,
+        )
+
+    def upload_full_frame(
+        self, frame: memoryview, rects: List[Tuple[int, int, int, int, int]]
+    ) -> None:
+        """
+        Upload only the damaged regions of the full captured frame to the residual texture.
+        """
+        if not rects:
+            return
+
+        uploads = []
+        stride = self.crop_width * 4
+        for rx, ry, rw, rh, _ in rects:
+            rect_data = bytearray(rw * rh * 4)
+            for row in range(rh):
+                src_start = (ry + row) * stride + rx * 4
+                dst_start = row * rw * 4
+                rect_data[dst_start : dst_start + rw * 4] = frame[
+                    src_start : src_start + rw * 4
+                ]
+            uploads.append((bytes(rect_data), rx, ry, rw, rh))
+        self.full_input_tex.upload_subresources(uploads)
+
     def process_tiles(self, dirty_tiles: List[Tuple[int, int, bytes]]) -> None:
         if not dirty_tiles:
             return
 
+        # Prepare tile batch (existing code)
         tile_data_size = self.tile_size * self.tile_size * 4
         total_staging = len(dirty_tiles) * tile_data_size
 
@@ -224,15 +291,35 @@ class OffsetTileProcessor(TileProcessor):
         # Prepare tile tuples for the batch
         tile_batch = []
         for tx, ty, data in dirty_tiles:
+            src_x = tx * self.tile_size
+            src_y = ty * self.tile_size
             dst_x = tx * self.tile_out_w_final
             dst_y = ty * self.tile_out_h_final
-            push_data = struct.pack("III", 0, dst_x, dst_y)
+            push_data = struct.pack(
+                "IIIIIII",
+                0,
+                src_x,
+                src_y,
+                dst_x,
+                dst_y,
+                self.crop_width,
+                self.crop_height,
+            )
             tile_batch.append((dst_x, dst_y, push_data, data))
 
-        groups_x, groups_y = self.groups_per_stage[0]  # same for all passes
-        pipelines = self.stages[0].pipelines  # list of Compute objects for all passes
+        groups_x, groups_y = self.groups_per_stage[0]
 
-        # Use the first pipeline as the entry point for the batch executor
+        # Build the correct pipeline list, replacing the original final pass
+        if self.double_upscale:
+            pipelines = (
+                self.stages[0].pipelines
+                + self.stages[1].pipelines[:-1]
+                + [self.final_pipeline]
+            )
+        else:
+            pipelines = self.stages[0].pipelines[:-1] + [self.final_pipeline]
+
+        # Execute all tiles in one batch
         pipelines[0].execute_tile_batch(
             tile_batch,
             self.input_tex,
