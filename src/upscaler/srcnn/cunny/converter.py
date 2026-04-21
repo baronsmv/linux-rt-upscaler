@@ -12,7 +12,7 @@ Features:
 - Outputs to a folder named after the shader (without extension) at the same level.
 - Adds "name": "shader_name" to model.json.
 - Easy configuration via a Config dataclass.
-- Supports tile‑aware (cache) and offset‑write (no cache) variants.
+- Supports tile-aware (cache) and offset-write (no cache) variants.
 """
 
 import argparse
@@ -38,8 +38,8 @@ class Config:
     input_texture_prefix: str = "T"
     special_input: str = "INPUT"
     special_output: str = "OUTPUT"
-    tile_aware: bool = False  # generate tile‑aware (atlas) variant
-    offset_write: bool = False  # generate offset‑write (no cache) variant
+    tile_aware: bool = False  # generate tile-aware (atlas) variant
+    offset_write: bool = False  # generate offset-write (no cache) variant
 
 
 @dataclass
@@ -130,7 +130,7 @@ class ShaderParser:
 
     @staticmethod
     def _extract_in_out(pre_lines: List[str]) -> Tuple[List[str], List[str]]:
-        """Extract //!IN and //!OUT lists from the pre‑pass lines."""
+        """Extract //!IN and //!OUT lists from the pre-pass lines."""
         in_tex, out_tex = [], []
         for line in pre_lines:
             if line.startswith("//!IN"):
@@ -728,13 +728,13 @@ def main() -> None:
         "-t",
         "--tile-aware",
         action="store_true",
-        help="Generate tile‑aware (cache) shader variant",
+        help="Generate tile-aware (cache) shader variant",
     )
     parser.add_argument(
         "-o",
         "--offset-write",
         action="store_true",
-        help="Generate offset‑write (no cache) shader variant",
+        help="Generate offset-write (no cache) shader variant",
     )
     args = parser.parse_args()
 

@@ -22,7 +22,7 @@ class OverlayBlender:
     overlay texture to minimise driver overhead.
 
     Attributes:
-        shader (bytes): SPIR‑V bytecode of the blend shader.
+        shader (bytes): SPIR-V bytecode of the blend shader.
         cb (Buffer): Constant buffer containing overlay position and size.
         sampler (Sampler): Point sampler used for texture reads.
     """
@@ -32,7 +32,7 @@ class OverlayBlender:
         Initialize the overlay blender.
 
         Args:
-            shader_path: Path to the compiled SPIR‑V shader.
+            shader_path: Path to the compiled SPIR-V shader.
         """
         self._shader_path = shader_path
         self.shader: Optional[bytes] = None
@@ -47,7 +47,7 @@ class OverlayBlender:
         self._create_resources()
 
     def _load_shader(self) -> None:
-        """Load SPIR‑V shader binary from disk."""
+        """Load SPIR-V shader binary from disk."""
         with open(self._shader_path, "rb") as f:
             self.shader = f.read()
         logger.debug(f"Loaded overlay blend shader from {self._shader_path}")
@@ -70,7 +70,7 @@ class OverlayBlender:
         reference the old texture.
 
         Args:
-            tex: The screen‑sized texture to blend onto.
+            tex: The screen-sized texture to blend onto.
         """
         if tex is self._screen_tex:
             return
@@ -93,7 +93,7 @@ class OverlayBlender:
 
         Args:
             overlay_tex: The overlay texture to blend (RGBA, premultiplied alpha).
-            x, y: Top‑left position on the screen texture.
+            x, y: Top-left position on the screen texture.
             width, height: Dimensions of the overlay texture.
         """
         if self._screen_tex is None:

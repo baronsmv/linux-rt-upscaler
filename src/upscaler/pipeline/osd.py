@@ -18,7 +18,7 @@ class TextRenderer:
     Renders text to PIL images with a consistent visual style.
 
     Images are cached to avoid repeated rendering. The style uses white text,
-    a dark shadow, and a semi‑transparent rounded rectangle background.
+    a dark shadow, and a semi-transparent rounded rectangle background.
     """
 
     def __init__(
@@ -31,7 +31,7 @@ class TextRenderer:
         Initialize the text renderer.
 
         Args:
-            texts: List of all possible message strings to pre‑render.
+            texts: List of all possible message strings to pre-render.
             screen_height: Used to scale the font size (4% of screen height).
             font_path: Path to a TrueType font. If None, tries DejaVuSans.
         """
@@ -113,11 +113,11 @@ class TextRenderer:
 
 class OSDManager:
     """
-    Manages on‑screen display messages.
+    Manages on-screen display messages.
 
-    Texts are pre‑rendered on the CPU in a background thread, then uploaded to
+    Texts are pre-rendered on the CPU in a background thread, then uploaded to
     GPU textures on the pipeline thread. Active messages expire after a duration.
-    Thread‑safe for showing messages from any thread.
+    Thread-safe for showing messages from any thread.
 
     Example:
         osd = OSDManager(("Hello", "World"), 1920, 1080)
@@ -140,7 +140,7 @@ class OSDManager:
         Initialize the OSD manager.
 
         Args:
-            texts: All possible OSD message strings (pre‑rendered in background).
+            texts: All possible OSD message strings (pre-rendered in background).
             screen_width, screen_height: Dimensions of the screen (for centering).
             blender: Optional OverlayBlender instance. If None, a default one is created.
         """
@@ -174,7 +174,7 @@ class OSDManager:
         Render all texts to PIL images (runs in background thread).
 
         Args:
-            texts: Tuple of message strings to pre‑render.
+            texts: Tuple of message strings to pre-render.
         """
         renderer = TextRenderer(list(texts), screen_height=self._screen_height)
         for text in texts:
@@ -190,7 +190,7 @@ class OSDManager:
 
     def prepare_textures(self) -> None:
         """
-        Upload all pre‑rendered images to GPU textures.
+        Upload all pre-rendered images to GPU textures.
 
         Must be called from the pipeline thread after Vulkan device is ready.
         Blocks until background rendering is complete.
@@ -264,10 +264,10 @@ class OSDManager:
 
     def show(self, text: str, duration: float = 1.5) -> None:
         """
-        Request an OSD message to be displayed (thread‑safe).
+        Request an OSD message to be displayed (thread-safe).
 
         Args:
-            text: The message to show (must be one of the pre‑rendered strings).
+            text: The message to show (must be one of the pre-rendered strings).
             duration: How long to display the message in seconds.
         """
         with self._lock:

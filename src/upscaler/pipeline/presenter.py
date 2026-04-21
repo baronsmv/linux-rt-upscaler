@@ -16,7 +16,7 @@ class Presenter:
     """
     Handles final scaling (Lanczos), OSD overlay, and swapchain presentation.
 
-    The presenter maintains a screen‑sized texture that serves as the render
+    The presenter maintains a screen-sized texture that serves as the render
     target. It uses a LanczosScaler to scale the upscaled source into the
     appropriate destination rectangle, then optionally blends an OSD message
     on top.

@@ -60,7 +60,7 @@ class PipelineFactory:
 
     These events are infrequent (user-initiated or window resizes), so the cost
     of pipeline creation (a few milliseconds) is acceptable. The `Compute` objects
-    returned by `create_stage` are reused for all per‑frame dispatches.
+    returned by `create_stage` are reused for all per-frame dispatches.
 
     If in the future the architecture changes such that `create_stage` is called
     per frame or per tile, a proper caching mechanism with invalidation should be

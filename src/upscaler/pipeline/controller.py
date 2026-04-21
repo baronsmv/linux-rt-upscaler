@@ -16,13 +16,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Duration (in seconds) for on‑screen display messages.
+# Duration (in seconds) for on-screen display messages.
 OSD_DURATION = 1.5
 
 
 class PipelineController:
     """
-    Handles external commands for the Pipeline in a thread‑safe manner.
+    Handles external commands for the Pipeline in a thread-safe manner.
 
     Commands are queued and processed in the pipeline thread via
     `process_requests()`. This ensures that Vulkan operations and state
@@ -54,7 +54,7 @@ class PipelineController:
         self._available_models = available_models
         self._available_geometries = available_geometries
 
-        # Thread‑safe request queues
+        # Thread-safe request queues
         self._model_switch_queue: Queue[bool] = Queue()  # True = next, False = previous
         self._geometry_switch_queue: Queue[bool] = Queue()
         self._screenshot_requested = False

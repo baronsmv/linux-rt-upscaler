@@ -28,13 +28,6 @@ class UpscalerManager:
         output (Texture2D): The final upscaled texture (full frame).
         staging (Buffer): Staging buffer for full-frame uploads (full mode only).
         input (Texture2D): Input texture for full-frame mode.
-
-    Modes:
-        "full":   Full-frame upscaling (entire image processed each frame).
-        "offset": Tile-based upscaling without caching; dirty tiles are
-                  processed individually and written directly to the output texture.
-        "cache":  Tile-based upscaling with an LRU cache; tiles are reused
-                  across frames when their content hasn't changed.
     """
 
     def __init__(
@@ -44,9 +37,10 @@ class UpscalerManager:
         model_name: str,
         double_upscale: bool,
         tile_size: int,
+        tile_context_margin: int,
         cache_capacity: int,
         cache_threshold: float,
-        mode: str = "full",  # "full", "offset", "cache"
+        mode: str = "full",
     ) -> None:
         """
         Initialize the upscaler manager.
@@ -56,14 +50,16 @@ class UpscalerManager:
             crop_height: Height of the captured crop area (pixels).
             model_name: Name of the CuNNy model subdirectory (e.g., "fast").
             double_upscale: If True, perform 4x upscaling (two 2x stages).
-            tile_size: Input tile size for tile-based modes (ignored in full mode).
-            cache_capacity: Maximum number of tiles stored in the cache.
+            tile_size: Nominal input tile size for tile-based modes.
+            tile_context_margin: Extra border pixels for convolution context.
+            cache_capacity: Maximum number of tiles stored in cache mode.
             cache_threshold: Fraction of total tiles above which full-frame is used.
             mode: Processing mode. Must be one of "full", "offset", "cache".
         """
         self.crop_width = crop_width
         self.crop_height = crop_height
         self.tile_size = tile_size
+        self.tile_context_margin = tile_context_margin
         self.double_upscale = double_upscale
 
         if mode not in ("full", "offset", "cache"):
@@ -97,14 +93,11 @@ class UpscalerManager:
     # ----------------------------------------------------------------------
     # Initialization helpers
     # ----------------------------------------------------------------------
-
     def _init_full_mode(self, model_name: str) -> None:
         """Set up full-frame upscaling (one or two SRCNN stages)."""
-        # Create shared pipeline factory for the model (full-frame variant)
         config = load_cunny_model(model_name, variant="")
         factory = PipelineFactory(config)
 
-        # Stage 1 (always 2x)
         in_w, in_h = self.crop_width, self.crop_height
         out_w_first = in_w * 2
         out_h_first = in_h * 2
@@ -129,7 +122,6 @@ class UpscalerManager:
         self.full_groups.append(dispatch_groups(in_w, in_h, last_pass=False))
 
         if self.double_upscale:
-            # Stage 2 (another 2x, total 4x)
             out_w_final = out_w_first * 2
             out_h_final = out_h_first * 2
             self.output = Texture2D(out_w_final, out_h_final)
@@ -151,10 +143,8 @@ class UpscalerManager:
                 dispatch_groups(out_w_first, out_h_first, last_pass=False)
             )
         else:
-            # 2x only: stage 1 writes directly to final output
             self.output = inter_tex
             outputs1["output"] = self.output
-            # Recreate SRCNN with updated output binding
             self.full_stages[0] = SRCNN(
                 factory=factory,
                 width=in_w,
@@ -172,6 +162,7 @@ class UpscalerManager:
             model_name=model_name,
             double_upscale=self.double_upscale,
             tile_size=self.tile_size,
+            tile_context_margin=self.tile_context_margin,
         )
         self.output = self.tile_processor.output_texture
 
@@ -193,14 +184,11 @@ class UpscalerManager:
     # ----------------------------------------------------------------------
     # Full-frame mode API
     # ----------------------------------------------------------------------
-
     def upload_full_frame(
         self,
         frame: memoryview,
         rects: List[Tuple[int, int, int, int, int]],
         use_damage_tracking: bool,
-        crop_width: int,
-        crop_height: int,
         margin: int,
     ) -> None:
         """
@@ -210,24 +198,25 @@ class UpscalerManager:
             frame: Raw BGRA pixel data for the entire crop area.
             rects: Damage rectangles from FrameGrabber (x, y, w, h, hash).
             use_damage_tracking: If True, upload only the expanded damage regions.
-            crop_width, crop_height: Dimensions of the crop area (should match self).
-            margin: Number of pixels to expand each damage rectangle for context.
+            margin: Number of pixels to expand each damage rectangle.
         """
         if self.mode != "full":
             raise RuntimeError("upload_full_frame called in non-full mode")
 
         if use_damage_tracking and rects:
-            upload_list = []
-            stride = crop_width * 4
-            for ex, ey, ew, eh in self._expand_damage_rects(
-                rects, crop_width, crop_height, margin
-            ):
-                sub_data = bytearray()
-                for row in range(ey, ey + eh):
-                    start = row * stride + ex * 4
-                    sub_data.extend(frame[start : start + ew * 4])
-                upload_list.append((bytes(sub_data), ex, ey, ew, eh))
-            self.input.upload_subresources(upload_list)
+            expanded = self._expand_damage_rects(rects, margin)
+            uploads = []
+            stride = self.crop_width * 4
+            for ex, ey, ew, eh in expanded:
+                sub_data = bytearray(ew * eh * 4)
+                for row in range(eh):
+                    src_start = (ey + row) * stride + ex * 4
+                    dst_start = row * ew * 4
+                    sub_data[dst_start : dst_start + ew * 4] = frame[
+                        src_start : src_start + ew * 4
+                    ]
+                uploads.append((bytes(sub_data), ex, ey, ew, eh))
+            self.input.upload_subresources(uploads)
         else:
             self.staging.upload(frame)
             self.staging.copy_to(self.input)
@@ -243,74 +232,40 @@ class UpscalerManager:
     # ----------------------------------------------------------------------
     # Tile mode API
     # ----------------------------------------------------------------------
-
     def extract_dirty_tiles(
-        self, rects: List[Tuple[int, int, int, int, int]], frame: bytes
-    ) -> List[Tuple[int, int, bytes]]:
+        self, rects: List[Tuple[int, int, int, int, int]], frame: memoryview
+    ) -> List[Tuple[int, int, bytes, int, int]]:
         """
-        Convert damage rectangles to tile data (without hash).
+        Convert damage rectangles to expanded tile data with margin.
 
-        Used by offset-tile mode where caching is not required.
-
-        Args:
-            rects: Damage rectangles (x, y, w, h, hash).
-            frame: Raw BGRA pixel data for the entire crop area.
+        Delegates to the static method of OffsetTileProcessor.
 
         Returns:
-            List of (tile_x, tile_y, data_bytes) for each dirty tile.
+            List of (tile_x, tile_y, data_bytes, valid_x, valid_y).
         """
-        stride = self.crop_width * 4
-        tile_w = self.tile_size
-        tile_h = self.tile_size
-        tiles_x = (self.crop_width + tile_w - 1) // tile_w
-        tiles_y = (self.crop_height + tile_h - 1) // tile_h
-
-        dirty_tile_coords = set()
-        for rx, ry, rw, rh, _ in rects:
-            start_tx = rx // tile_w
-            start_ty = ry // tile_h
-            end_tx = (rx + rw + tile_w - 1) // tile_w
-            end_ty = (ry + rh + tile_h - 1) // tile_h
-            for ty in range(start_ty, min(end_ty, tiles_y)):
-                for tx in range(start_tx, min(end_tx, tiles_x)):
-                    dirty_tile_coords.add((tx, ty))
-
-        result = []
-        full_tile_bytes = tile_w * tile_h * 4
-        for tx, ty in dirty_tile_coords:
-            x = tx * tile_w
-            y = ty * tile_h
-            w = min(tile_w, self.crop_width - x)
-            h = min(tile_h, self.crop_height - y)
-
-            data = bytearray(full_tile_bytes)
-            for row in range(h):
-                src_start = (y + row) * stride + x * 4
-                dst_start = row * tile_w * 4
-                data[dst_start : dst_start + w * 4] = frame[
-                    src_start : src_start + w * 4
-                ]
-
-            result.append((tx, ty, bytes(data)))
-
-        return result
+        return OffsetTileProcessor.extract_expanded_tiles(
+            frame=frame,
+            rects=rects,
+            crop_width=self.crop_width,
+            crop_height=self.crop_height,
+            tile_size=self.tile_size,
+            margin=self.tile_context_margin,
+        )
 
     def extract_dirty_tiles_with_hash(
-        self, rects: List[Tuple[int, int, int, int, int]], frame: bytes
+        self, rects: List[Tuple[int, int, int, int, int]], frame: memoryview
     ) -> List[Tuple[int, int, int, bytes]]:
         """
         Convert damage rectangles to tile data with content hash.
 
-        Used by cache mode. The hash is computed only on the valid pixels
-        (excluding zero-padding at the right/bottom edges) to match the
-        C library's hash.
+        Used by cache mode. The hash is computed on the valid pixels only.
 
         Args:
             rects: Damage rectangles (x, y, w, h, hash).
             frame: Raw BGRA pixel data for the entire crop area.
 
         Returns:
-            List of (tile_x, tile_y, hash, data_bytes) for each dirty tile.
+            List of (tile_x, tile_y, hash, data_bytes).
         """
         stride = self.crop_width * 4
         tile_w = self.tile_size
@@ -318,31 +273,29 @@ class UpscalerManager:
         tiles_x = (self.crop_width + tile_w - 1) // tile_w
         tiles_y = (self.crop_height + tile_h - 1) // tile_h
 
-        dirty_tile_coords = set()
+        dirty_tiles = set()
         for rx, ry, rw, rh, _ in rects:
-            start_tx = rx // tile_w
-            start_ty = ry // tile_h
-            end_tx = (rx + rw + tile_w - 1) // tile_w
-            end_ty = (ry + rh + tile_h - 1) // tile_h
-            for ty in range(start_ty, min(end_ty, tiles_y)):
-                for tx in range(start_tx, min(end_tx, tiles_x)):
-                    dirty_tile_coords.add((tx, ty))
+            tx0 = rx // tile_w
+            ty0 = ry // tile_h
+            tx1 = (rx + rw + tile_w - 1) // tile_w
+            ty1 = (ry + rh + tile_h - 1) // tile_h
+            for ty in range(ty0, min(ty1, tiles_y)):
+                for tx in range(tx0, min(tx1, tiles_x)):
+                    dirty_tiles.add((tx, ty))
 
         result = []
-        for tx, ty in dirty_tile_coords:
+        for tx, ty in dirty_tiles:
             x = tx * tile_w
             y = ty * tile_h
             w = min(tile_w, self.crop_width - x)
             h = min(tile_h, self.crop_height - y)
 
-            # Build valid data for hashing (no padding)
             valid_data = bytearray()
             for row in range(h):
                 src_start = (y + row) * stride + x * 4
                 valid_data.extend(frame[src_start : src_start + w * 4])
             tile_hash = xxhash.xxh64(valid_data).intdigest()
 
-            # Build full padded tile for upload
             full_data = bytearray(tile_w * tile_h * 4)
             for row in range(h):
                 src_start = (y + row) * stride + x * 4
@@ -356,12 +309,30 @@ class UpscalerManager:
         return result
 
     def process_tile_frame(
-        self, dirty_tiles: List, rects: List, frame_data: memoryview
+        self,
+        dirty_tiles: Union[
+            List[Tuple[int, int, bytes, int, int]],  # offset mode
+            List[Tuple[int, int, int, bytes]],  # cache mode
+        ],
+        rects: List[Tuple[int, int, int, int, int]],
+        frame_data: memoryview,
     ) -> None:
+        """
+        Process a frame using the active tile processor.
+
+        Args:
+            dirty_tiles: Pre-extracted tile data (format depends on mode).
+            rects: Original damage rectangles (needed by offset mode for
+                uploading the residual texture).
+            frame_data: Full captured frame (used by offset mode residual upload).
+        """
         if self.mode not in ("offset", "cache"):
             raise RuntimeError("process_tile_frame called in non-tile mode")
+
         if self.mode == "offset":
+            # Upload expanded damage regions to the residual texture.
             self.tile_processor.upload_full_frame(frame_data, rects)
+
         self.tile_processor.process_tiles(dirty_tiles)
 
     def should_use_tile_mode(self, num_dirty: int) -> bool:
@@ -387,33 +358,21 @@ class UpscalerManager:
     # ----------------------------------------------------------------------
     # Output
     # ----------------------------------------------------------------------
-
     def get_output_texture(self) -> Texture2D:
-        """
-        Return the final upscaled texture.
-
-        Returns:
-            Texture2D containing the fully upscaled image.
-        """
+        """Return the final upscaled texture."""
         return self.output
 
     # ----------------------------------------------------------------------
     # Internal utilities
     # ----------------------------------------------------------------------
-
-    @staticmethod
     def _expand_damage_rects(
-        rects: List[Tuple[int, int, int, int, int]],
-        crop_width: int,
-        crop_height: int,
-        margin: int,
+        self, rects: List[Tuple[int, int, int, int, int]], margin: int
     ) -> List[Tuple[int, int, int, int]]:
         """
         Expand damage rectangles by a margin, clamped to crop bounds.
 
         Args:
             rects: Original damage rectangles (x, y, w, h, hash).
-            crop_width, crop_height: Crop area dimensions.
             margin: Number of pixels to expand on each side.
 
         Returns:
@@ -423,8 +382,8 @@ class UpscalerManager:
         for rx, ry, rw, rh, _ in rects:
             ex0 = max(0, rx - margin)
             ey0 = max(0, ry - margin)
-            ex1 = min(crop_width, rx + rw + margin)
-            ey1 = min(crop_height, ry + rh + margin)
+            ex1 = min(self.crop_width, rx + rw + margin)
+            ey1 = min(self.crop_height, ry + rh + margin)
             if ex1 > ex0 and ey1 > ey0:
                 expanded.append((ex0, ey0, ex1 - ex0, ey1 - ey0))
         return expanded

@@ -54,7 +54,7 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObjec
  *
  * All uploads and dispatches are recorded into a single command buffer,
  * submitted once, and waited for completion. This minimizes driver overhead
- * and avoids per‑tile CPU‑GPU stalls.
+ * and avoids per-tile CPU-GPU stalls.
  *
  * Args (positional):
  *     tiles (list): List of tuples (dst_x, dst_y, push_data, tile_bytes).

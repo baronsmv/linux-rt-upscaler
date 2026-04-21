@@ -9,12 +9,16 @@ from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD, Compute
 logger = logging.getLogger(__name__)
 
 
+# ----------------------------------------------------------------------
+#  TileProcessor – abstract base class
+# ----------------------------------------------------------------------
 class TileProcessor(ABC):
     """
     Abstract base for tile-based upscaling strategies.
 
-    Subclasses must implement `process_tiles` to handle dirty tiles
-    and populate `self.output_texture`.
+    Subclasses must implement `process_tiles` to handle dirty tiles and
+    populate `self.output_texture`. The base class provides common
+    initialization and helper methods.
     """
 
     def __init__(
@@ -26,50 +30,58 @@ class TileProcessor(ABC):
         tile_size: int,
         variant: str,
         push_constant_size: int,
+        tile_context_margin: int = 0,
     ):
         """
-        Common initialization for tile processors.
+        Common initialisation for tile processors.
 
         Args:
             crop_width, crop_height: Dimensions of the captured crop area.
             model_name: Name of the CuNNy model subdirectory.
             double_upscale: If True, perform 4x upscaling (two 2x stages).
-            tile_size: Input tile size in pixels.
+            tile_size: Nominal tile size (input to the network) in pixels.
             variant: Shader variant suffix ("_offset" or "_tile").
             push_constant_size: Size of push constant block (bytes).
+            tile_context_margin: Extra border pixels added around each tile
+                to provide context for convolution layers.
         """
         self.crop_width = crop_width
         self.crop_height = crop_height
         self.tile_size = tile_size
+        self.margin = tile_context_margin
         self.double_upscale = double_upscale
 
-        # Tile output dimensions after first and final stage
-        self.tile_out_w_first = tile_size * 2
-        self.tile_out_h_first = tile_size * 2
+        # The actual input tile size after adding the margin.
+        self.expanded_tile_size = tile_size + 2 * self.margin
+
+        # Output dimensions for each stage (after upscaling).
+        self.tile_out_w_first = self.expanded_tile_size * 2
+        self.tile_out_h_first = self.expanded_tile_size * 2
         if double_upscale:
-            self.tile_out_w_final = tile_size * 4
-            self.tile_out_h_final = tile_size * 4
+            self.tile_out_w_final = self.expanded_tile_size * 4
+            self.tile_out_h_final = self.expanded_tile_size * 4
         else:
             self.tile_out_w_final = self.tile_out_w_first
             self.tile_out_h_final = self.tile_out_h_first
 
-        # Final output texture (full frame)
+        # Final output texture (full frame, upscaled).
         out_w = crop_width * (4 if double_upscale else 2)
         out_h = crop_height * (4 if double_upscale else 2)
         self.output_texture = Texture2D(out_w, out_h)
 
-        # Shared pipeline factory for all SRCNN stages
+        # Shared pipeline factory for all SRCNN stages.
         config = load_cunny_model(model_name, variant=variant)
         config.push_constant_size = push_constant_size
         self.factory = PipelineFactory(config)
 
-        # Staging buffer for uploading tile data (reused)
-        self.staging = Buffer(tile_size * tile_size * 4, heap_type=HEAP_UPLOAD)
+        # Staging buffer for uploading tile data (reused).
+        self.staging = Buffer(
+            self.expanded_tile_size * self.expanded_tile_size * 4,
+            heap_type=HEAP_UPLOAD,
+        )
 
-        # Subclasses should populate self.stages (list of SRCNN instances)
+        # Subclasses populate these.
         self.stages: List[SRCNN] = []
-
-        # Pre-computed dispatch groups for each stage
         self.groups_per_stage: List[Tuple[int, int]] = []
 
     @abstractmethod
@@ -79,7 +91,7 @@ class TileProcessor(ABC):
 
     def _build_dispatch_sequence(
         self, tile_batch: List[Tuple[int, int, int, Optional[bytes]]]
-    ) -> List[Tuple]:
+    ) -> List[Tuple[Compute, int, int, int, bytes]]:
         """
         Build a list of dispatches for a batch of tiles.
 
@@ -91,7 +103,7 @@ class TileProcessor(ABC):
             for `dispatch_sequence`.
         """
         dispatches = []
-        for tx, ty, layer, push_data in tile_batch:
+        for _, _, _, push_data in tile_batch:
             for stage_idx, srnn in enumerate(self.stages):
                 groups_x, groups_y = self.groups_per_stage[stage_idx]
                 for pipe in srnn.pipelines:
@@ -99,12 +111,16 @@ class TileProcessor(ABC):
         return dispatches
 
 
+# ----------------------------------------------------------------------
+#  OffsetTileProcessor – no cache, direct writes with dstOffset
+# ----------------------------------------------------------------------
 class OffsetTileProcessor(TileProcessor):
     """
     Tile processing without caching.
 
-    Dirty tiles are uploaded to a single-layer input texture and compute
-    shaders write directly to the final output texture with a `dstOffset`.
+    Dirty tiles are expanded by a context margin, uploaded to a single-layer
+    input texture, and processed by the SRCNN stages. The final pass writes
+    only the interior valid region directly into the full output texture.
     """
 
     def __init__(
@@ -114,6 +130,7 @@ class OffsetTileProcessor(TileProcessor):
         model_name: str,
         double_upscale: bool,
         tile_size: int,
+        tile_context_margin: int = 0,
     ):
         super().__init__(
             crop_width,
@@ -122,21 +139,37 @@ class OffsetTileProcessor(TileProcessor):
             double_upscale,
             tile_size,
             variant="_offset",
-            push_constant_size=36,  # 9 × 4 bytes
+            push_constant_size=52,  # 13 uints (updated for validOffset)
+            tile_context_margin=tile_context_margin,
         )
+
+        # Texture holding the full captured frame (with damage regions uploaded).
         self.full_input_tex = Texture2D(crop_width, crop_height)
         full_size = crop_width * crop_height * 4
         self.full_staging = Buffer(full_size, heap_type=HEAP_UPLOAD)
+
         self._create_stages()
 
+    # ------------------------------------------------------------------
+    #  Stage construction
+    # ------------------------------------------------------------------
     def _create_stages(self) -> None:
-        """Create SRCNN instances for each upscaling stage."""
-        # Stage 1 input: single 2D texture (reused per tile)
+        """
+        Create SRCNN instances for each upscaling stage.
+
+        The input and intermediate textures are sized according to the
+        expanded tile size (including margin). The final output texture is
+        the full-frame 2D image.
+        """
+        # Stage 1 input: a single 2D texture sized for the expanded tile.
         input_tex1 = Texture2D(
-            self.tile_size, self.tile_size, slices=1, force_array_view=True
+            self.expanded_tile_size,
+            self.expanded_tile_size,
+            slices=1,
+            force_array_view=True,
         )
 
-        # Stage 1 output (intermediate) – 2D texture sized for 2x tile
+        # Stage 1 outputs (intermediate features).
         inter_tex = Texture2D(
             self.tile_out_w_first,
             self.tile_out_h_first,
@@ -154,8 +187,8 @@ class OffsetTileProcessor(TileProcessor):
 
         srcnn_1 = SRCNN(
             factory=self.factory,
-            width=self.tile_size,
-            height=self.tile_size,
+            width=self.expanded_tile_size,
+            height=self.expanded_tile_size,
             input_texture=input_tex1,
             output_textures=outputs_1,
             push_constant_size=self.factory.config.push_constant_size,
@@ -168,7 +201,7 @@ class OffsetTileProcessor(TileProcessor):
         )
 
         if self.double_upscale:
-            # Stage 2 input = Stage 1 output
+            # Stage 2 input = Stage 1 output.
             input_tex_2 = inter_tex
             outputs_2 = {"output": self.output_texture}
             for i in range(self.factory.config.num_textures):
@@ -187,43 +220,45 @@ class OffsetTileProcessor(TileProcessor):
                 output_textures=outputs_2,
                 push_constant_size=self.factory.config.push_constant_size,
             )
-            # Final pass of second stage writes 2x2 per thread
+            # Final pass writes 2x2 pixels per thread.
             self.groups_per_stage[-1] = dispatch_groups(
                 self.tile_out_w_final, self.tile_out_h_final, last_pass=True
             )
+            self.stages.append(srcnn_2)
         else:
-            # For 2x only, stage 1 writes directly to final output
+            # For 2x only, stage 1 writes directly to final output.
             outputs_1["output"] = self.output_texture
-            # Recreate SRCNN with updated output textures
             self.stages[0] = SRCNN(
                 factory=self.factory,
-                width=self.tile_size,
-                height=self.tile_size,
+                width=self.expanded_tile_size,
+                height=self.expanded_tile_size,
                 input_texture=input_tex1,
                 output_textures=outputs_1,
                 push_constant_size=self.factory.config.push_constant_size,
             )
-            # Final pass of first stage now writes 2x2 per thread
             self.groups_per_stage[0] = dispatch_groups(
                 self.tile_out_w_final, self.tile_out_h_final, last_pass=True
             )
 
-        # Store input texture reference for uploads
+        # Keep a reference to the input texture for uploads.
         self.input_tex = self.stages[0].input
 
-        # Final pass pipeline with correct SRV bindings and constant buffer
+        # ------------------------------------------------------------------
+        #  Final pass pipeline (customised for offset writes)
+        # ------------------------------------------------------------------
         final_pass_index = self.factory.config.passes - 1
         final_shader = self.factory.config.shaders[final_pass_index]
 
-        # Dedicated constant buffer: input = intermediate texture size, output = tile output size
+        # Constant buffer for the final pass: describes the intermediate
+        # feature map dimensions and the full output size.
         full_out_w = self.crop_width * 2
         full_out_h = self.crop_height * 2
         cb_data = struct.pack(
             "IIIIffff",
-            self.tile_out_w_first,  # in_width (for T0/T1)
+            self.tile_out_w_first,  # in_width (T0/T1)
             self.tile_out_h_first,  # in_height
             full_out_w,  # out_width (full output)
-            full_out_h,  # out_height (full output)
+            full_out_h,  # out_height
             1.0 / self.tile_out_w_first,  # in_dx
             1.0 / self.tile_out_h_first,  # in_dy
             1.0 / full_out_w,  # out_dx
@@ -236,16 +271,16 @@ class OffsetTileProcessor(TileProcessor):
         srv_list = [self.full_input_tex]
         inter_stage = self.stages[-1] if self.double_upscale else self.stages[0]
         for i in range(self.factory.config.num_textures):
-            tex = inter_stage.outputs[f"t{i}"]
-            srv_list.append(tex)
+            srv_list.append(inter_stage.outputs[f"t{i}"])
 
         # UAV list: final output texture
         uav_list = [self.output_texture]
 
-        # Samplers for the final pass
-        sampler_list = []
-        for sampler_type in self.factory.config.samplers[final_pass_index]:
-            sampler_list.append(self.factory._get_sampler(sampler_type))
+        # Samplers for the final pass.
+        sampler_list = [
+            self.factory._get_sampler(t)
+            for t in self.factory.config.samplers[final_pass_index]
+        ]
 
         self.final_pipeline = Compute(
             final_shader,
@@ -256,66 +291,215 @@ class OffsetTileProcessor(TileProcessor):
             push_size=self.factory.config.push_constant_size,
         )
 
+    # ------------------------------------------------------------------
+    #  Damage region expansion (for residual texture)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _expand_damage_rects(
+        rects: List[Tuple[int, int, int, int, int]],
+        crop_width: int,
+        crop_height: int,
+        margin: int,
+    ) -> List[Tuple[int, int, int, int]]:
+        """
+        Expand damage rectangles by a given margin, clamped to crop bounds.
+
+        Args:
+            rects: Damage rectangles as (x, y, w, h, hash).
+            crop_width, crop_height: Dimensions of the full crop area.
+            margin: Pixels to add on each side.
+
+        Returns:
+            List of expanded rectangles as (x, y, w, h).
+        """
+        expanded = []
+        for rx, ry, rw, rh, _ in rects:
+            ex0 = max(0, rx - margin)
+            ey0 = max(0, ry - margin)
+            ex1 = min(crop_width, rx + rw + margin)
+            ey1 = min(crop_height, ry + rh + margin)
+            if ex1 > ex0 and ey1 > ey0:
+                expanded.append((ex0, ey0, ex1 - ex0, ey1 - ey0))
+        return expanded
+
     def upload_full_frame(
-        self, frame: memoryview, rects: List[Tuple[int, int, int, int, int]]
+        self,
+        frame: memoryview,
+        rects: List[Tuple[int, int, int, int, int]],
     ) -> None:
         """
-        Upload only the damaged regions of the full captured frame to the residual texture.
+        Upload expanded damage regions to the residual texture.
+
+        This texture provides the network with the surrounding context
+        needed for the final pass.
         """
         if not rects:
             return
 
+        expanded_rects = self._expand_damage_rects(
+            rects, self.crop_width, self.crop_height, self.margin
+        )
         uploads = []
         stride = self.crop_width * 4
-        for rx, ry, rw, rh, _ in rects:
-            rect_data = bytearray(rw * rh * 4)
-            for row in range(rh):
-                src_start = (ry + row) * stride + rx * 4
-                dst_start = row * rw * 4
-                rect_data[dst_start : dst_start + rw * 4] = frame[
-                    src_start : src_start + rw * 4
+
+        for ex, ey, ew, eh in expanded_rects:
+            rect_data = bytearray(ew * eh * 4)
+            for row in range(eh):
+                src_start = (ey + row) * stride + ex * 4
+                dst_start = row * ew * 4
+                rect_data[dst_start : dst_start + ew * 4] = frame[
+                    src_start : src_start + ew * 4
                 ]
-            uploads.append((bytes(rect_data), rx, ry, rw, rh))
+            uploads.append((bytes(rect_data), ex, ey, ew, eh))
+
         self.full_input_tex.upload_subresources(uploads)
 
-    def process_tiles(self, dirty_tiles: List[Tuple[int, int, bytes]]) -> None:
+    # ------------------------------------------------------------------
+    #  Tile extraction (expanded, with valid region offsets)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def extract_expanded_tiles(
+        frame: memoryview,
+        rects: List[Tuple[int, int, int, int, int]],
+        crop_width: int,
+        crop_height: int,
+        tile_size: int,
+        margin: int,
+    ) -> List[Tuple[int, int, bytes, int, int]]:
+        """
+        Extract expanded tiles for all dirty tile positions.
+
+        For each tile in the grid that overlaps any damage rectangle,
+        extract a region of size `(tile_size + 2*margin)²` (clamped to
+        crop bounds). Return the raw pixel data together with the valid
+        output offset (valid_x, valid_y) indicating where the interior
+        `tile_size x tile_size` region begins within the expanded tile.
+
+        Args:
+            frame: Raw BGRA pixel data for the entire crop area.
+            rects: Damage rectangles from FrameGrabber.
+            crop_width, crop_height: Dimensions of the crop area.
+            tile_size: Nominal tile size (interior region).
+            margin: Context margin to add on each side.
+
+        Returns:
+            List of tuples:
+                (tile_x, tile_y, data_bytes, valid_x, valid_y)
+            where valid_x and valid_y are the offset inside the expanded tile
+            where the valid output region starts (usually margin, except at
+            image boundaries where the expansion was clamped).
+        """
+        stride = crop_width * 4
+        tiles_x = (crop_width + tile_size - 1) // tile_size
+        tiles_y = (crop_height + tile_size - 1) // tile_size
+
+        # Find which tile grid cells intersect any damage rectangle.
+        dirty_tiles = set()
+        for rx, ry, rw, rh, _ in rects:
+            tx0 = rx // tile_size
+            ty0 = ry // tile_size
+            tx1 = (rx + rw + tile_size - 1) // tile_size
+            ty1 = (ry + rh + tile_size - 1) // tile_size
+            for ty in range(ty0, min(ty1, tiles_y)):
+                for tx in range(tx0, min(tx1, tiles_x)):
+                    dirty_tiles.add((tx, ty))
+
+        expanded_size = tile_size + 2 * margin
+        expanded_bytes = expanded_size * expanded_size * 4
+        result = []
+
+        for tx, ty in dirty_tiles:
+            # Nominal tile position in crop coordinates.
+            tile_x0 = tx * tile_size
+            tile_y0 = ty * tile_size
+
+            # Expanded region (before clamping).
+            exp_x0 = tile_x0 - margin
+            exp_y0 = tile_y0 - margin
+            exp_x1 = exp_x0 + expanded_size
+            exp_y1 = exp_y0 + expanded_size
+
+            # Clamp to crop bounds.
+            cx0 = max(0, exp_x0)
+            cy0 = max(0, exp_y0)
+            cx1 = min(crop_width, exp_x1)
+            cy1 = min(crop_height, exp_y1)
+
+            # Compute offset of the valid interior region within the expanded tile.
+            valid_x = margin - (exp_x0 - cx0)
+            valid_y = margin - (exp_y0 - cy0)
+
+            # Build the expanded tile buffer (padded with zeros where out of bounds).
+            data = bytearray(expanded_bytes)
+            for row in range(cy0, cy1):
+                src_start = row * stride + cx0 * 4
+                # Destination row inside the expanded tile buffer.
+                dst_row = row - exp_y0 if exp_y0 < 0 else row - cy0 + valid_y
+                dst_start = dst_row * expanded_size * 4 + (cx0 - exp_x0) * 4
+                copy_len = (cx1 - cx0) * 4
+                data[dst_start : dst_start + copy_len] = frame[
+                    src_start : src_start + copy_len
+                ]
+
+            result.append((tx, ty, bytes(data), valid_x, valid_y))
+
+        return result
+
+    # ------------------------------------------------------------------
+    #  Tile processing (main entry point)
+    # ------------------------------------------------------------------
+    def process_tiles(
+        self, dirty_tiles: List[Tuple[int, int, bytes, int, int]]
+    ) -> None:
+        """
+        Process a batch of expanded dirty tiles.
+
+        Args:
+            dirty_tiles: List of (tile_x, tile_y, data_bytes, valid_x, valid_y)
+                as returned by `extract_expanded_tiles`.
+        """
         if not dirty_tiles:
             return
 
-        # Prepare tile batch (existing code)
-        tile_data_size = self.tile_size * self.tile_size * 4
+        tile_data_size = self.expanded_tile_size * self.expanded_tile_size * 4
         total_staging = len(dirty_tiles) * tile_data_size
 
-        # Ensure staging buffer is large enough (reallocate if needed)
+        # Ensure staging buffer is large enough.
         if self.staging.size < total_staging:
             self.staging = Buffer(total_staging, heap_type=HEAP_UPLOAD)
 
-        # Prepare tile tuples for the batch
+        full_out_w = self.crop_width * 2
+        full_out_h = self.crop_height * 2
         tile_batch = []
-        for tx, ty, data in dirty_tiles:
+
+        for tx, ty, data, valid_x, valid_y in dirty_tiles:
+            # Source offset for sampling the residual texture.
             src_x = tx * self.tile_size
             src_y = ty * self.tile_size
+
+            # Destination offset in the final output texture.
             dst_x = tx * self.tile_out_w_final
             dst_y = ty * self.tile_out_h_final
-            full_out_w = self.crop_width * 2
-            full_out_h = self.crop_height * 2
+
             push_data = struct.pack(
-                "IIIIIIIII",
-                0,  # inputLayer
+                "IIIIIIIIIII",
+                0,  # inputLayer (unused in offset mode)
                 src_x,
-                src_y,  # srcOffset
+                src_y,  # srcOffset for residual texture sampling
                 dst_x,
-                dst_y,  # dstOffset
+                dst_y,  # dstOffset for final output placement
                 self.crop_width,
-                self.crop_height,  # crop dims
+                self.crop_height,
                 full_out_w,
-                full_out_h,  # full output dims
+                full_out_h,
+                valid_x,
+                valid_y,  # offset of valid region within tile output
             )
             tile_batch.append((dst_x, dst_y, push_data, data))
 
         groups_x, groups_y = self.groups_per_stage[0]
 
-        # Build the correct pipeline list, replacing the original final pass
+        # Replace the original final pass with our custom pipeline.
         if self.double_upscale:
             pipelines = (
                 self.stages[0].pipelines
@@ -325,18 +509,21 @@ class OffsetTileProcessor(TileProcessor):
         else:
             pipelines = self.stages[0].pipelines[:-1] + [self.final_pipeline]
 
-        # Execute all tiles in one batch
+        # Execute all tiles in one command buffer.
         pipelines[0].execute_tile_batch(
             tile_batch,
             self.input_tex,
             self.staging,
-            self.tile_size,
+            self.expanded_tile_size,
             groups_x,
             groups_y,
             pipelines,
         )
 
 
+# ----------------------------------------------------------------------
+#  CachedTileProcessor – LRU cache (margin not yet implemented)
+# ----------------------------------------------------------------------
 class CachedTileProcessor(TileProcessor):
     """
     Tile processing with an LRU cache.
@@ -344,6 +531,8 @@ class CachedTileProcessor(TileProcessor):
     Uses an atlas of layers to store input/output tiles. Tiles are uploaded
     and computed only on cache misses. All tiles (hits + misses) are copied
     from the output atlas to the final 2D texture.
+
+    Note: Margin support for cached mode is not yet implemented.
     """
 
     def __init__(
@@ -355,7 +544,9 @@ class CachedTileProcessor(TileProcessor):
         tile_size: int,
         cache_capacity: int,
         cache_threshold: float,
+        tile_context_margin: int = 0,  # ignored for now
     ):
+        # Cached mode currently ignores margin; pass 0 to base.
         super().__init__(
             crop_width,
             crop_height,
@@ -363,7 +554,8 @@ class CachedTileProcessor(TileProcessor):
             double_upscale,
             tile_size,
             variant="_tile",
-            push_constant_size=8,  # uint inputLayer + uint outputLayer
+            push_constant_size=8,  # inputLayer + outputLayer
+            tile_context_margin=0,
         )
 
         self.cache_capacity = cache_capacity
@@ -379,17 +571,17 @@ class CachedTileProcessor(TileProcessor):
 
         self._create_stages()
 
-        # Output atlas reference for final copy
+        # Reference to the output atlas for final copy.
         self.final_atlas = self.stages[-1].outputs["output"]
 
     def _create_stages(self) -> None:
         """Create SRCNN stages with texture atlases."""
-        # Input atlas shared across stages
+        # Input atlas shared across stages.
         input_atlas = Texture2D(
             self.tile_size, self.tile_size, slices=self.cache_capacity
         )
 
-        # Stage 1
+        # Stage 1.
         inter_atlas = Texture2D(
             self.tile_out_w_first, self.tile_out_h_first, slices=self.cache_capacity
         )
@@ -415,7 +607,7 @@ class CachedTileProcessor(TileProcessor):
         )
 
         if self.double_upscale:
-            # Stage 2
+            # Stage 2.
             output_atlas = Texture2D(
                 self.tile_out_w_final, self.tile_out_h_final, slices=self.cache_capacity
             )
@@ -440,7 +632,6 @@ class CachedTileProcessor(TileProcessor):
                 self.tile_out_w_final, self.tile_out_h_final, last_pass=True
             )
         else:
-            # For 2x only, the first stage's final pass writes 2x2 per thread
             self.groups_per_stage[0] = dispatch_groups(
                 self.tile_out_w_final, self.tile_out_h_final, last_pass=True
             )
@@ -448,11 +639,13 @@ class CachedTileProcessor(TileProcessor):
         self.input_atlas = input_atlas
 
     def total_tiles(self) -> int:
+        """Total number of tile grid cells in the crop area."""
         tiles_x = (self.crop_width + self.tile_size - 1) // self.tile_size
         tiles_y = (self.crop_height + self.tile_size - 1) // self.tile_size
         return tiles_x * tiles_y
 
     def should_use_tile_mode(self, num_dirty: int) -> bool:
+        """Return True if the number of dirty tiles is below the threshold."""
         threshold = int(self.total_tiles() * self.cache_threshold)
         return num_dirty <= threshold
 
@@ -466,7 +659,6 @@ class CachedTileProcessor(TileProcessor):
         if not dirty_tiles:
             return
 
-        # Separate cache hits and misses
         misses = []
         hits = []
         for tx, ty, tile_hash, data in dirty_tiles:
@@ -476,24 +668,24 @@ class CachedTileProcessor(TileProcessor):
             else:
                 misses.append((tx, ty, layer, data))
 
-        # Upload misses to input atlas
-        upload_list = []
-        for tx, ty, layer, data in misses:
-            upload_list.append((data, 0, 0, self.tile_size, self.tile_size, layer))
+        # Upload misses to the input atlas.
+        upload_list = [
+            (data, 0, 0, self.tile_size, self.tile_size, layer)
+            for _, _, layer, data in misses
+        ]
         if upload_list:
             self.input_atlas.upload_subresources(upload_list)
 
-        # Build dispatches for misses
-        tile_batch = []
-        for tx, ty, layer, _ in misses:
-            push_data = struct.pack("II", layer, layer)
-            tile_batch.append((tx, ty, layer, push_data))
-
+        # Build dispatches for misses.
+        tile_batch = [
+            (tx, ty, layer, struct.pack("II", layer, layer))
+            for tx, ty, layer, _ in misses
+        ]
         dispatches = self._build_dispatch_sequence(tile_batch)
         if dispatches:
             self.stages[0].pipelines[0].dispatch_sequence(sequence=dispatches)
 
-        # Copy all tiles (hits + misses) from final atlas to output texture
+        # Copy all tiles (hits + misses) from final atlas to output texture.
         all_tiles = hits + [(tx, ty, layer) for tx, ty, layer, _ in misses]
         for tx, ty, layer in all_tiles:
             dst_x = tx * self.tile_out_w_final

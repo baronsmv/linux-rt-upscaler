@@ -50,9 +50,9 @@ scale_factor: null
 #   - "fit"      : letterboxed, preserve aspect ratio (default)
 #   - "stretch"  : fill the window, ignore aspect ratio
 #   - "cover"    : fill the window, crop if necessary
-#   - "1920x1080": fit inside 1920×1080
-#   - "1920x1080!": stretch to exactly 1920×1080
-#   - "1920x1080^": cover a 1920×1080 area (crop)
+#   - "1920x1080": fit inside 1920x1080
+#   - "1920x1080!": stretch to exactly 1920x1080
+#   - "1920x1080^": cover a 1920x1080 area (crop)
 #   - "50%"      : fit to 50% of the monitor
 #   - "50%!"     : stretch to 50% of the monitor
 #   - "1920x"    : fixed width 1920, height proportional (fit)
