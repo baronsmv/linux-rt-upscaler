@@ -262,10 +262,8 @@ class OffsetTileProcessor(TileProcessor):
                 push_constant_size=self.factory.config.push_constant_size,
             )
             self.stages.append(srcnn_2)
-            nominal_out_w_final = self.tile_size * 4
-            nominal_out_h_final = self.tile_size * 4
             self.groups_per_stage[-1] = dispatch_groups(
-                nominal_out_w_final, nominal_out_h_final, last_pass=True
+                self.tile_out_w_final, self.tile_out_h_final, last_pass=True
             )
         else:
             # For 2x only, stage 1 writes directly to final output (2D)
@@ -278,10 +276,8 @@ class OffsetTileProcessor(TileProcessor):
                 output_textures=outputs_1,
                 push_constant_size=self.factory.config.push_constant_size,
             )
-            nominal_out_w_final = self.tile_size * 2
-            nominal_out_h_final = self.tile_size * 2
             self.groups_per_stage[0] = dispatch_groups(
-                nominal_out_w_final, nominal_out_h_final, last_pass=True
+                self.tile_out_w_first, self.tile_out_h_first, last_pass=True
             )
 
         # Keep a reference to the input texture for uploads.
