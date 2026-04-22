@@ -233,10 +233,10 @@ class OffsetTileProcessor(TileProcessor):
             push_constant_size=self.factory.config.push_constant_size,
         )
         self.stages.append(srcnn_1)
+        nominal_out_w_first = self.tile_size * 2
+        nominal_out_h_first = self.tile_size * 2
         self.groups_per_stage.append(
-            dispatch_groups(
-                self.tile_out_w_first, self.tile_out_h_first, last_pass=False
-            )
+            dispatch_groups(nominal_out_w_first, nominal_out_h_first, last_pass=False)
         )
 
         if self.double_upscale:
@@ -259,11 +259,12 @@ class OffsetTileProcessor(TileProcessor):
                 output_textures=outputs_2,
                 push_constant_size=self.factory.config.push_constant_size,
             )
-            # Final pass writes 2x2 pixels per thread.
-            self.groups_per_stage[-1] = dispatch_groups(
-                self.tile_out_w_final, self.tile_out_h_final, last_pass=True
-            )
             self.stages.append(srcnn_2)
+            nominal_out_w_final = self.tile_size * 4
+            nominal_out_h_final = self.tile_size * 4
+            self.groups_per_stage[-1] = dispatch_groups(
+                nominal_out_w_final, nominal_out_h_final, last_pass=True
+            )
         else:
             # For 2x only, stage 1 writes directly to final output (2D)
             outputs_1["output"] = self.output_texture
@@ -275,8 +276,10 @@ class OffsetTileProcessor(TileProcessor):
                 output_textures=outputs_1,
                 push_constant_size=self.factory.config.push_constant_size,
             )
+            nominal_out_w_final = self.tile_size * 2
+            nominal_out_h_final = self.tile_size * 2
             self.groups_per_stage[0] = dispatch_groups(
-                self.tile_out_w_final, self.tile_out_h_final, last_pass=True
+                nominal_out_w_final, nominal_out_h_final, last_pass=True
             )
 
         # Keep a reference to the input texture for uploads.
@@ -495,7 +498,7 @@ class OffsetTileProcessor(TileProcessor):
                     src_start : src_start + copy_w * 4
                 ]
 
-            result.append((tx, ty, bytes(data), margin, margin))
+            result.append((tx, ty, bytes(data), dst_x0, dst_y0))
 
         return result
 

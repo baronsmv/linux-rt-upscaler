@@ -9,10 +9,10 @@ from PIL import Image
 from PySide6.QtCore import Q_ARG, QMetaObject, Qt
 
 from ..config import OUTPUT_GEOMETRIES, UPSCALING_MODELS
+from ..vulkan import Texture2D
 
 if TYPE_CHECKING:
     from .pipeline import Pipeline
-    from ..vulkan import Texture2D
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +205,7 @@ class PipelineController:
 
     @staticmethod
     def _download_and_save(
-        texture: "Texture2D", width: int, height: int, pipeline: "Pipeline"
+        texture: Texture2D, width: int, height: int, pipeline: "Pipeline"
     ) -> None:
         """
         Download texture data from GPU and save as PNG.
