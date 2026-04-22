@@ -176,9 +176,9 @@ void main(uint3 id : SV_DispatchThreadID)
 
     r0 = max(r0, 0.0);
 
-    T0[uint3(gxy, 0)] = r0;
+    T0[uint3(gxy, tileParams.inputLayer)] = r0;
 
     r1 = max(r1, 0.0);
 
-    T1[uint3(gxy, 0)] = r1;
+    T1[uint3(gxy, tileParams.inputLayer)] = r1;
 }

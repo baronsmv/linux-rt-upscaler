@@ -570,20 +570,24 @@ class OffsetTileProcessor(TileProcessor):
             dst_x = tx * self.tile_size * (4 if self.double_upscale else 2)
             dst_y = ty * self.tile_size * (4 if self.double_upscale else 2)
 
-            # Push constant includes the layer index as `inputLayer`.
+            # Scale the input‑pixel offsets to output‑pixel space
+            scale = 4 if self.double_upscale else 2
+            valid_x_out = valid_x * scale
+            valid_y_out = valid_y * scale
+
             push_data = struct.pack(
                 "IIIIIIIIIII",
-                layer_idx,  # inputLayer – used for all array accesses
+                layer_idx,  # inputLayer
                 src_x,
-                src_y,  # srcOffset for residual texture sampling
+                src_y,  # srcOffset
                 dst_x,
-                dst_y,  # dstOffset for final output placement
+                dst_y,  # dstOffset
                 self.crop_width,
                 self.crop_height,
                 full_out_w,
                 full_out_h,
-                valid_x,
-                valid_y,  # offset of valid region within tile output
+                valid_x_out,
+                valid_y_out,  # validOffset in output pixels
             )
             tile_batch.append((tx, ty, layer_idx, push_data))
 
