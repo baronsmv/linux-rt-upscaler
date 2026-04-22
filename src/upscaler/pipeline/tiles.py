@@ -190,16 +190,8 @@ class OffsetTileProcessor(TileProcessor):
     #  Stage construction
     # ------------------------------------------------------------------
     def _create_stages(self) -> None:
-        """
-        Create SRCNN instances for each upscaling stage.
-
-        The input and intermediate textures are sized according to the
-        expanded tile size (including margin). They are created as
-        texture arrays with `max_layers` slices to support concurrent
-        tile processing. The final output texture is the full‑frame 2D image.
-        """
         # ------------------------------------------------------------------
-        # Stage 1 input: a texture array sized for the expanded tile.
+        # Stage 1 input: texture array sized for the expanded tile.
         # ------------------------------------------------------------------
         input_tex1 = Texture2D(
             self.expanded_tile_size,
@@ -212,16 +204,16 @@ class OffsetTileProcessor(TileProcessor):
         # Stage 1 outputs (intermediate feature maps) – all arrays.
         # ------------------------------------------------------------------
         inter_tex = Texture2D(
-            self.tile_out_w_first,
-            self.tile_out_h_first,
+            self.expanded_tile_size,
+            self.expanded_tile_size,
             slices=self.max_layers,
             force_array_view=True,
         )
         outputs_1 = {"output": inter_tex}
         for i in range(self.factory.config.num_textures):
             outputs_1[f"t{i}"] = Texture2D(
-                self.tile_out_w_first,
-                self.tile_out_h_first,
+                self.expanded_tile_size,
+                self.expanded_tile_size,
                 slices=self.max_layers,
                 force_array_view=True,
             )
@@ -235,39 +227,86 @@ class OffsetTileProcessor(TileProcessor):
             push_constant_size=self.factory.config.push_constant_size,
         )
         self.stages.append(srcnn_1)
-        nominal_out_w_first = self.tile_out_w_first
-        nominal_out_h_first = self.tile_out_h_first
         self.groups_per_stage.append(
-            dispatch_groups(nominal_out_w_first, nominal_out_h_first, last_pass=False)
+            dispatch_groups(
+                self.expanded_tile_size, self.expanded_tile_size, last_pass=False
+            )
         )
 
         if self.double_upscale:
             # Stage 2 input = Stage 1 output array.
             input_tex_2 = inter_tex
-            outputs_2 = {"output": self.output_texture}  # final output is 2D
+            # Stage 2 outputs (feature maps) also same size as input.
+            inter_tex2 = Texture2D(
+                self.expanded_tile_size,
+                self.expanded_tile_size,
+                slices=self.max_layers,
+                force_array_view=True,
+            )
+            outputs_2 = {"output": inter_tex2}
             for i in range(self.factory.config.num_textures):
                 outputs_2[f"t{i}"] = Texture2D(
-                    self.tile_out_w_final,
-                    self.tile_out_h_final,
+                    self.expanded_tile_size,
+                    self.expanded_tile_size,
                     slices=self.max_layers,
                     force_array_view=True,
                 )
 
             srcnn_2 = SRCNN(
                 factory=self.factory,
-                width=self.tile_out_w_first,
-                height=self.tile_out_h_first,
+                width=self.expanded_tile_size,
+                height=self.expanded_tile_size,
                 input_texture=input_tex_2,
                 output_textures=outputs_2,
                 push_constant_size=self.factory.config.push_constant_size,
             )
             self.stages.append(srcnn_2)
-            self.groups_per_stage[-1] = dispatch_groups(
-                self.tile_out_w_final, self.tile_out_h_final, last_pass=True
+            self.groups_per_stage.append(
+                dispatch_groups(
+                    self.expanded_tile_size, self.expanded_tile_size, last_pass=False
+                )
+            )
+
+            # Output texture for final pass: size expanded_tile_size * 2 (intermediate array)
+            final_out_array = Texture2D(
+                self.expanded_tile_size * 2,
+                self.expanded_tile_size * 2,
+                slices=self.max_layers,
+                force_array_view=True,
+            )
+            outputs_final = {"output": final_out_array}
+            for i in range(self.factory.config.num_textures):
+                outputs_final[f"t{i}"] = Texture2D(
+                    self.expanded_tile_size * 2,
+                    self.expanded_tile_size * 2,
+                    slices=self.max_layers,
+                    force_array_view=True,
+                )
+            srcnn_final = SRCNN(
+                factory=self.factory,
+                width=self.expanded_tile_size,
+                height=self.expanded_tile_size,
+                input_texture=inter_tex2,
+                output_textures=outputs_final,
+                push_constant_size=self.factory.config.push_constant_size,
+            )
+            self.stages.append(srcnn_final)
+            self.groups_per_stage.append(
+                dispatch_groups(
+                    self.expanded_tile_size * 2,
+                    self.expanded_tile_size * 2,
+                    last_pass=True,
+                )
             )
         else:
-            # For 2x only, stage 1 writes directly to final output (2D)
-            outputs_1["output"] = self.output_texture
+            # For 2x only, stage 1 writes to final output array.
+            final_out_array = Texture2D(
+                self.expanded_tile_size * 2,
+                self.expanded_tile_size * 2,
+                slices=self.max_layers,
+                force_array_view=True,
+            )
+            outputs_1["output"] = final_out_array
             self.stages[0] = SRCNN(
                 factory=self.factory,
                 width=self.expanded_tile_size,
@@ -277,7 +316,7 @@ class OffsetTileProcessor(TileProcessor):
                 push_constant_size=self.factory.config.push_constant_size,
             )
             self.groups_per_stage[0] = dispatch_groups(
-                self.tile_out_w_first, self.tile_out_h_first, last_pass=True
+                self.expanded_tile_size * 2, self.expanded_tile_size * 2, last_pass=True
             )
 
         # Keep a reference to the input texture for uploads.
@@ -289,32 +328,31 @@ class OffsetTileProcessor(TileProcessor):
         final_pass_index = self.factory.config.passes - 1
         final_shader = self.factory.config.shaders[final_pass_index]
 
-        # Constant buffer for the final pass: describes the intermediate
-        # feature map dimensions and the full output size.
+        # Constant buffer for the final pass: uses expanded_tile_size for in_width/in_height
         scale = 4 if self.double_upscale else 2
         full_out_w = self.crop_width * scale
         full_out_h = self.crop_height * scale
         cb_data = struct.pack(
             "IIIIffff",
-            self.tile_out_w_first,  # in_width  (for T0/T1 sampling)
-            self.tile_out_h_first,  # in_height
+            self.expanded_tile_size,  # in_width  (feature map size)
+            self.expanded_tile_size,  # in_height
             full_out_w,  # out_width
             full_out_h,  # out_height
-            1.0 / self.tile_out_w_first,  # in_dx
-            1.0 / self.tile_out_h_first,  # in_dy
+            1.0 / self.expanded_tile_size,  # in_dx
+            1.0 / self.expanded_tile_size,  # in_dy
             1.0 / full_out_w,  # out_dx
             1.0 / full_out_h,  # out_dy
         )
         final_cb = Buffer(len(cb_data))
         final_cb.upload(cb_data)
 
-        # SRV list: [full_input_tex] + intermediate textures (T0, T1, ...)
+        # SRV list: [full_input_tex] + intermediate textures from the last pre-final stage
         srv_list = [self.full_input_tex]
-        inter_stage = self.stages[-1] if self.double_upscale else self.stages[0]
+        pre_final_stage = self.stages[-2] if self.double_upscale else self.stages[0]
         for i in range(self.factory.config.num_textures):
-            srv_list.append(inter_stage.outputs[f"t{i}"])
+            srv_list.append(pre_final_stage.outputs[f"t{i}"])
 
-        # UAV list: final output texture
+        # UAV list: final output texture (2D)
         uav_list = [self.output_texture]
 
         # Samplers for the final pass.
