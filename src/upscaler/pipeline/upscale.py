@@ -63,6 +63,7 @@ class UpscalerManager:
         self.tile_context_margin = tile_context_margin
         self.double_upscale = double_upscale
         self.max_tiles_per_batch = max_tiles_per_batch
+        self._first_tile_frame = True
 
         if mode not in ("full", "offset", "cache"):
             raise ValueError(f"Unknown mode: {mode}")
@@ -77,6 +78,7 @@ class UpscalerManager:
         self.output: Optional[Texture2D] = None
         self.full_stages: List[SRCNN] = []
         self.full_groups: List[Tuple[int, int]] = []
+        self._first_tile_frame = True
 
         self._init_full_mode(model_name)  # always create full-frame pipeline
 
@@ -173,6 +175,7 @@ class UpscalerManager:
         )
         # Use tile processor's output texture as final output.
         self.output = self.tile_processor.output_texture
+        self._rebind_full_frame_output()
 
     def _init_cache_mode(
         self, model_name: str, cache_capacity: int, cache_threshold: float
@@ -188,6 +191,7 @@ class UpscalerManager:
             cache_threshold=cache_threshold,
         )
         self.output = self.tile_processor.output_texture
+        self._rebind_full_frame_output()
 
     # ----------------------------------------------------------------------
     # Full-frame mode API
@@ -318,6 +322,43 @@ class UpscalerManager:
 
         return result
 
+    def _rebind_full_frame_output(self) -> None:
+        """
+        Rebind the output texture for the full‑frame SRCNN stage(s) to match
+        the current `self.output` (which may have been replaced by a tile processor).
+        This recreates only the affected SRCNN stage; other resources remain cached.
+        """
+        if not self.full_stages:
+            return
+
+        # Determine which stage holds the final output UAV
+        if self.double_upscale:
+            stage_idx = -1
+        else:
+            stage_idx = 0
+
+        old_stage = self.full_stages[stage_idx]
+        factory = old_stage.factory  # Shared PipelineFactory
+
+        # Update the output dict to point to the new output texture
+        new_outputs = dict(old_stage.outputs)
+        new_outputs["output"] = self.output
+
+        # Create a new SRCNN stage with the same inputs and updated outputs
+        new_stage = SRCNN(
+            factory=factory,
+            width=old_stage.width,
+            height=old_stage.height,
+            input_texture=old_stage.input,
+            output_textures=new_outputs,
+            push_constant_size=old_stage.push_constant_size,
+        )
+
+        # Replace the old stage
+        self.full_stages[stage_idx] = new_stage
+
+        logger.debug("Full‑frame output texture rebound to current active output")
+
     def process_tile_frame(
         self,
         dirty_tiles: Union[
@@ -340,7 +381,20 @@ class UpscalerManager:
         if self.mode not in ("offset", "cache"):
             raise RuntimeError("process_tile_frame called in non-tile mode")
 
-        # For offset mode, fall back to full-frame if too many tiles
+        # First tile‑mode frame: initialise the output with a full capture
+        if self._first_tile_frame:
+            logger.debug("First tile frame – performing initial full capture")
+            self.upload_full_frame(
+                frame=frame_data,
+                rects=rects,
+                use_damage_tracking=False,  # upload whole frame
+                margin=self.tile_context_margin,
+            )
+            self.process_full_frame()
+            self._first_tile_frame = False
+            return
+
+        # Offset mode specific: residual texture upload and fallback
         if self.mode == "offset":
             if len(dirty_tiles) > self.max_tiles_per_batch:
                 logger.debug(
@@ -359,7 +413,7 @@ class UpscalerManager:
             # Upload expanded damage regions to the residual texture.
             self.tile_processor.upload_full_frame(frame_data, rects)
 
-        # Process tiles using the tile processor
+        # Process tiles using the tile processor (offset or cache)
         self.tile_processor.process_tiles(dirty_tiles)
 
     def should_use_tile_mode(self, num_dirty: int) -> bool:

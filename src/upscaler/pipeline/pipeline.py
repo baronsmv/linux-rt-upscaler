@@ -124,7 +124,7 @@ class Pipeline:
             cache_capacity=config.cache_capacity,
             cache_threshold=config.cache_threshold,
             mode=config.mode,
-            max_tiles_per_batch=getattr(config, "max_tiles_per_batch", 16),
+            max_tiles_per_batch=config.max_tiles_per_batch,
         )
 
         # Window tracker for handle/size changes
@@ -199,7 +199,7 @@ class Pipeline:
             cache_capacity=self.config.cache_capacity,
             cache_threshold=self.config.cache_threshold,
             mode=self.config.mode,
-            max_tiles_per_batch=getattr(self.config, "max_tiles_per_batch", 16),
+            max_tiles_per_batch=self.config.max_tiles_per_batch,
         )
         # Update presenter's source texture to the new output
         self.presenter.set_source_texture(self.upscaler_mgr.get_output_texture())

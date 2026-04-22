@@ -194,7 +194,7 @@ class OffsetTileProcessor(TileProcessor):
         The input and intermediate textures are sized according to the
         expanded tile size (including margin). They are created as
         texture arrays with `max_layers` slices to support concurrent
-        tile processing. The final output texture is the full-frame 2D image.
+        tile processing. The final output texture is the full‑frame 2D image.
         """
         # ------------------------------------------------------------------
         # Stage 1 input: a texture array sized for the expanded tile.
@@ -265,7 +265,7 @@ class OffsetTileProcessor(TileProcessor):
             )
             self.stages.append(srcnn_2)
         else:
-            # For 2x only, stage 1 writes directly to final output (2D).
+            # For 2x only, stage 1 writes directly to final output (2D)
             outputs_1["output"] = self.output_texture
             self.stages[0] = SRCNN(
                 factory=self.factory,
@@ -329,6 +329,12 @@ class OffsetTileProcessor(TileProcessor):
             samplers=sampler_list,
             push_size=self.factory.config.push_constant_size,
         )
+
+        # Replace the original final pass pipeline with our custom one.
+        if self.double_upscale:
+            self.stages[-1].pipelines[-1] = self.final_pipeline
+        else:
+            self.stages[0].pipelines[-1] = self.final_pipeline
 
     def _get_pipelines_for_batch(self) -> List[Compute]:
         """
@@ -529,15 +535,12 @@ class OffsetTileProcessor(TileProcessor):
         full_out_h = self.crop_height * 2
 
         uploads = []
-        tile_batch = []
+        tile_batch = []  # (tx, ty, layer, push_data)
 
         for layer_idx, (tx, ty, data, valid_x, valid_y) in enumerate(batch):
             # Guarantee data length matches expected size.
             if len(data) != expected_data_size:
-                logger.warning(
-                    f"Tile ({tx},{ty}) data size {len(data)} != expected {expected_data_size}. "
-                    "Padding/truncating."
-                )
+                logger.warning(f"Tile ({tx},{ty}) size mismatch, adjusting.")
                 if len(data) < expected_data_size:
                     data += b"\x00" * (expected_data_size - len(data))
                 else:
@@ -576,24 +579,15 @@ class OffsetTileProcessor(TileProcessor):
                 valid_x,
                 valid_y,  # offset of valid region within tile output
             )
-            tile_batch.append((dst_x, dst_y, push_data, data))
+            tile_batch.append((tx, ty, layer_idx, push_data))
 
         # Upload all tiles to their respective layers.
         self.input_tex.upload_subresources(uploads)
 
-        groups_x, groups_y = self.groups_per_stage[0]
-        pipelines = self._get_pipelines_for_batch()
-
-        # Execute all tiles in one command buffer.
-        pipelines[0].execute_tile_batch(
-            tile_batch,
-            self.input_tex,
-            self.staging,
-            self.expanded_tile_size,
-            groups_x,
-            groups_y,
-            pipelines,
-        )
+        # Build and execute dispatch sequence
+        dispatches = self._build_dispatch_sequence(tile_batch)
+        if dispatches:
+            self.stages[0].pipelines[0].dispatch_sequence(sequence=dispatches)
 
 
 # ----------------------------------------------------------------------
