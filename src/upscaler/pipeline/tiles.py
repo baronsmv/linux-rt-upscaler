@@ -665,7 +665,7 @@ class OffsetTileProcessor(TileProcessor):
             actual_out_h = min(self.tile_size * scale, full_out_h - dst_y)
 
             push_data = struct.pack(
-                "IIIIIIIIIIIII",  # 13 uints
+                "IIIIIIIIIIIIII",  # 14 uints
                 layer_idx,
                 src_x,
                 src_y,
@@ -679,6 +679,7 @@ class OffsetTileProcessor(TileProcessor):
                 valid_block_y,
                 actual_out_w,
                 actual_out_h,
+                self.margin,
             )
             tile_batch.append((tx, ty, layer_idx, push_data))
 
