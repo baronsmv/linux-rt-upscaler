@@ -124,6 +124,7 @@ class Pipeline:
             cache_capacity=config.cache_capacity,
             cache_threshold=config.cache_threshold,
             mode=config.mode,
+            max_tiles_per_batch=getattr(config, "max_tiles_per_batch", 16),
         )
 
         # Window tracker for handle/size changes
@@ -198,6 +199,7 @@ class Pipeline:
             cache_capacity=self.config.cache_capacity,
             cache_threshold=self.config.cache_threshold,
             mode=self.config.mode,
+            max_tiles_per_batch=getattr(self.config, "max_tiles_per_batch", 16),
         )
         # Update presenter's source texture to the new output
         self.presenter.set_source_texture(self.upscaler_mgr.get_output_texture())
@@ -262,16 +264,13 @@ class Pipeline:
                 frame=frame,
                 rects=rects,
                 use_damage_tracking=self.config.use_damage_tracking,
-                crop_width=self.crop_width,
-                crop_height=self.crop_height,
                 margin=self.config.tile_context_margin,
             )
             self.upscaler_mgr.process_full_frame()
             src_tex = self.upscaler_mgr.get_output_texture()
         else:
             # Tile mode (offset or cache)
-            num_dirty = len(rects)
-            if self.upscaler_mgr.should_use_tile_mode(num_dirty):
+            if self.upscaler_mgr.should_use_tile_mode(len(rects)):
                 if self.upscaler_mgr.mode == "offset":
                     dirty_tiles = self.upscaler_mgr.extract_dirty_tiles(rects, frame)
                 else:  # cache
@@ -284,9 +283,14 @@ class Pipeline:
             else:
                 # Fallback to full-frame processing for this frame
                 logger.debug("Tile threshold exceeded; using full-frame for this frame")
-                # TODO: Implement full-frame fallback
-                logger.warning("Fallback to full-frame not implemented; skipping frame")
-                return
+                self.upscaler_mgr.upload_full_frame(
+                    frame=frame,
+                    rects=rects,
+                    use_damage_tracking=self.config.use_damage_tracking,
+                    margin=self.config.tile_context_margin,
+                )
+                self.upscaler_mgr.process_full_frame()
+                src_tex = self.upscaler_mgr.get_output_texture()
 
         # 4. Present
         self.presenter.set_source_texture(src_tex)

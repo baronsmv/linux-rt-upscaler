@@ -92,6 +92,7 @@ class Config:
     # Tiles
     tile_size: int = 64
     tile_context_margin: int = 8
+    max_tiles_per_batch: int = 32
 
     # Cache
     mode: str = "offset"

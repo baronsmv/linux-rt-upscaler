@@ -14,20 +14,19 @@ class UpscalerManager:
     """
     Manages SRCNN upscaling in full-frame, offset-tile, or cached-tile mode.
 
-    The manager is responsible for:
-        - Creating and configuring the SRCNN stages (1 for 2x, 2 for 4x).
-        - Handling frame uploads (full or partial damage regions).
-        - Dispatching compute work.
-        - Providing the final upscaled texture.
-
-    Tile-based modes delegate to `TileProcessor` subclasses, which are
-    instantiated with the shared pipeline factory.
+    The manager always creates full-frame resources (input texture, staging,
+    SRCNN stages) to allow seamless fallback when tile mode cannot handle a
+    frame efficiently (e.g., too many dirty tiles). Tile-based modes
+    additionally create a `TileProcessor` instance.
 
     Attributes:
         mode (str): The active processing mode ("full", "offset", "cache").
         output (Texture2D): The final upscaled texture (full frame).
-        staging (Buffer): Staging buffer for full-frame uploads (full mode only).
+        staging (Buffer): Staging buffer for full-frame uploads.
         input (Texture2D): Input texture for full-frame mode.
+        full_stages (List[SRCNN]): SRCNN stages for full-frame processing.
+        full_groups (List[Tuple[int, int]]): Dispatch groups for full-frame.
+        tile_processor (Optional): Tile processor for offset/cache modes.
     """
 
     def __init__(
@@ -41,6 +40,7 @@ class UpscalerManager:
         cache_capacity: int,
         cache_threshold: float,
         mode: str = "full",
+        max_tiles_per_batch: int = 16,
     ) -> None:
         """
         Initialize the upscaler manager.
@@ -55,35 +55,41 @@ class UpscalerManager:
             cache_capacity: Maximum number of tiles stored in cache mode.
             cache_threshold: Fraction of total tiles above which full-frame is used.
             mode: Processing mode. Must be one of "full", "offset", "cache".
+            max_tiles_per_batch: Maximum concurrent tiles in offset mode.
         """
         self.crop_width = crop_width
         self.crop_height = crop_height
         self.tile_size = tile_size
         self.tile_context_margin = tile_context_margin
         self.double_upscale = double_upscale
+        self.max_tiles_per_batch = max_tiles_per_batch
 
         if mode not in ("full", "offset", "cache"):
             raise ValueError(f"Unknown mode: {mode}")
 
         self.mode = mode
 
-        # Full-frame specific resources (populated in _init_full_mode)
+        # ------------------------------------------------------------------
+        # Full-frame resources (always created)
+        # ------------------------------------------------------------------
         self.staging: Optional[Buffer] = None
         self.input: Optional[Texture2D] = None
         self.output: Optional[Texture2D] = None
         self.full_stages: List[SRCNN] = []
         self.full_groups: List[Tuple[int, int]] = []
 
-        # Tile processor instance (for offset/cache modes)
+        self._init_full_mode(model_name)  # always create full-frame pipeline
+
+        # ------------------------------------------------------------------
+        # Tile processor (for offset/cache modes)
+        # ------------------------------------------------------------------
         self.tile_processor: Optional[
             Union[OffsetTileProcessor, CachedTileProcessor]
         ] = None
 
-        if mode == "full":
-            self._init_full_mode(model_name)
-        elif mode == "offset":
+        if mode == "offset":
             self._init_offset_mode(model_name)
-        else:  # mode == "cache"
+        elif mode == "cache":
             self._init_cache_mode(model_name, cache_capacity, cache_threshold)
 
         logger.info(
@@ -163,7 +169,9 @@ class UpscalerManager:
             double_upscale=self.double_upscale,
             tile_size=self.tile_size,
             tile_context_margin=self.tile_context_margin,
+            max_layers=self.max_tiles_per_batch,
         )
+        # Use tile processor's output texture as final output.
         self.output = self.tile_processor.output_texture
 
     def _init_cache_mode(
@@ -194,15 +202,15 @@ class UpscalerManager:
         """
         Upload full-frame (or partial damage regions) to the input texture.
 
+        This method works regardless of the current `mode` – it always uses
+        the full-frame resources created at initialization.
+
         Args:
             frame: Raw BGRA pixel data for the entire crop area.
             rects: Damage rectangles from FrameGrabber (x, y, w, h, hash).
             use_damage_tracking: If True, upload only the expanded damage regions.
             margin: Number of pixels to expand each damage rectangle.
         """
-        if self.mode != "full":
-            raise RuntimeError("upload_full_frame called in non-full mode")
-
         if use_damage_tracking and rects:
             expanded = self._expand_damage_rects(rects, margin)
             uploads = []
@@ -222,10 +230,12 @@ class UpscalerManager:
             self.staging.copy_to(self.input)
 
     def process_full_frame(self) -> None:
-        """Execute the compute dispatches for the full frame."""
-        if self.mode != "full":
-            raise RuntimeError("process_full_frame called in non-full mode")
+        """
+        Execute the compute dispatches for the full frame.
 
+        This method works regardless of the current `mode` – it uses the
+        full-frame SRCNN stages.
+        """
         for srnn, (gx, gy) in zip(self.full_stages, self.full_groups):
             srnn.dispatch(gx, gy, 1)
 
@@ -318,7 +328,8 @@ class UpscalerManager:
         frame_data: memoryview,
     ) -> None:
         """
-        Process a frame using the active tile processor.
+        Process a frame using the active tile processor, with fallback to
+        full-frame if the number of dirty tiles exceeds the batch limit.
 
         Args:
             dirty_tiles: Pre-extracted tile data (format depends on mode).
@@ -329,19 +340,36 @@ class UpscalerManager:
         if self.mode not in ("offset", "cache"):
             raise RuntimeError("process_tile_frame called in non-tile mode")
 
+        # For offset mode, fall back to full-frame if too many tiles
         if self.mode == "offset":
+            if len(dirty_tiles) > self.max_tiles_per_batch:
+                logger.debug(
+                    f"Too many dirty tiles ({len(dirty_tiles)} > {self.max_tiles_per_batch}), "
+                    "falling back to full-frame for this frame"
+                )
+                self.upload_full_frame(
+                    frame=frame_data,
+                    rects=rects,
+                    use_damage_tracking=True,
+                    margin=self.tile_context_margin,
+                )
+                self.process_full_frame()
+                return
+
             # Upload expanded damage regions to the residual texture.
             self.tile_processor.upload_full_frame(frame_data, rects)
 
+        # Process tiles using the tile processor
         self.tile_processor.process_tiles(dirty_tiles)
 
     def should_use_tile_mode(self, num_dirty: int) -> bool:
         """
         Determine whether to use tile mode for the current frame.
 
-        For offset mode, always returns True if there is damage.
-        For cache mode, returns True if the number of dirty tiles is below
-        the threshold fraction of total tiles.
+        For offset mode: returns True if there is damage and the number of
+            dirty tiles does not exceed `max_tiles_per_batch`.
+        For cache mode: returns True if the number of dirty tiles is below
+            the threshold fraction of total tiles.
 
         Args:
             num_dirty: Number of dirty rectangles reported by FrameGrabber.
@@ -350,6 +378,8 @@ class UpscalerManager:
             True if tile processing should be used, False otherwise.
         """
         if self.mode == "offset":
+            # Tile count is unknown at this stage (we only have rectangle count).
+            # We'll rely on the fallback inside process_tile_frame.
             return num_dirty > 0
         elif self.mode == "cache":
             return self.tile_processor.should_use_tile_mode(num_dirty)
