@@ -235,8 +235,8 @@ class OffsetTileProcessor(TileProcessor):
             push_constant_size=self.factory.config.push_constant_size,
         )
         self.stages.append(srcnn_1)
-        nominal_out_w_first = self.tile_size * 2
-        nominal_out_h_first = self.tile_size * 2
+        nominal_out_w_first = self.tile_out_w_first
+        nominal_out_h_first = self.tile_out_h_first
         self.groups_per_stage.append(
             dispatch_groups(nominal_out_w_first, nominal_out_h_first, last_pass=False)
         )
