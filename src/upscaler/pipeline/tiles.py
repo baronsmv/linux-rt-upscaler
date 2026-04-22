@@ -295,8 +295,9 @@ class OffsetTileProcessor(TileProcessor):
 
         # Constant buffer for the final pass: describes the intermediate
         # feature map dimensions and the full output size.
-        full_out_w = self.crop_width * 2
-        full_out_h = self.crop_height * 2
+        scale = 4 if self.double_upscale else 2
+        full_out_w = self.crop_width * scale
+        full_out_h = self.crop_height * scale
         cb_data = struct.pack(
             "IIIIffff",
             self.tile_out_w_first,  # in_width  (for T0/T1 sampling)
