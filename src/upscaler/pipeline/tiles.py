@@ -178,7 +178,9 @@ class OffsetTileProcessor(TileProcessor):
         )
 
         # Texture holding the full captured frame (with damage regions uploaded).
-        self.full_input_tex = Texture2D(crop_width, crop_height)
+        self.full_input_tex = Texture2D(
+            crop_width, crop_height, slices=self.max_layers, force_array_view=True
+        )
         full_size = crop_width * crop_height * 4
         self.full_staging = Buffer(full_size, heap_type=HEAP_UPLOAD)
 
@@ -297,9 +299,9 @@ class OffsetTileProcessor(TileProcessor):
         full_out_h = self.crop_height * 2
         cb_data = struct.pack(
             "IIIIffff",
-            self.tile_out_w_first,  # in_width (T0/T1)
+            self.tile_out_w_first,  # in_width  (for T0/T1 sampling)
             self.tile_out_h_first,  # in_height
-            full_out_w,  # out_width (full output)
+            full_out_w,  # out_width
             full_out_h,  # out_height
             1.0 / self.tile_out_w_first,  # in_dx
             1.0 / self.tile_out_h_first,  # in_dy
@@ -411,8 +413,9 @@ class OffsetTileProcessor(TileProcessor):
                 rect_data[dst_start : dst_start + ew * 4] = frame[
                     src_start : src_start + ew * 4
                 ]
-            uploads.append((bytes(rect_data), ex, ey, ew, eh))
-
+            # Upload to every layer (0 .. max_layers-1)
+            for layer in range(self.max_layers):
+                uploads.append((bytes(rect_data), ex, ey, ew, eh, layer))
         self.full_input_tex.upload_subresources(uploads)
 
     # ------------------------------------------------------------------
