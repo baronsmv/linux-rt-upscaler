@@ -91,7 +91,7 @@ class Config:
 
     # Tiles
     tile_size: int = 64
-    tile_context_margin: int = 8
+    tile_context_margin: int = 16
     max_tiles_per_batch: int = 16
 
     # Cache

@@ -481,7 +481,7 @@ class OffsetTileProcessor(TileProcessor):
             exp_x0 = tile_x0 - margin
             exp_y0 = tile_y0 - margin
 
-            # Clamp to crop bounds.
+            # Clamp source region to crop bounds
             src_x0 = max(0, exp_x0)
             src_y0 = max(0, exp_y0)
             src_x1 = min(crop_width, exp_x0 + expanded_size)
@@ -494,12 +494,63 @@ class OffsetTileProcessor(TileProcessor):
             copy_h = src_y1 - src_y0
 
             data = bytearray(expanded_bytes)
+
+            # Copy valid region
             for row in range(copy_h):
                 src_start = (src_y0 + row) * stride + src_x0 * 4
                 dst_start = ((dst_y0 + row) * expanded_size + dst_x0) * 4
                 data[dst_start : dst_start + copy_w * 4] = frame[
                     src_start : src_start + copy_w * 4
                 ]
+
+            # Edge clamping for out-of-bounds areas
+            # For each side (top, bottom, left, right) that is outside crop,
+            # replicate the nearest row/column of pixels.
+            # Top padding
+            if exp_y0 < 0:
+                # First valid row is at dst_y0
+                first_valid_row = dst_y0
+                for y in range(first_valid_row):
+                    src_y = 0  # top edge of crop
+                    src_start = src_y * stride + src_x0 * 4
+                    dst_start = y * expanded_size * 4 + dst_x0 * 4
+                    data[dst_start : dst_start + copy_w * 4] = frame[
+                        src_start : src_start + copy_w * 4
+                    ]
+            # Bottom padding
+            if exp_y0 + expanded_size > crop_height:
+                last_valid_y = crop_height - 1
+                last_valid_row = dst_y0 + copy_h - 1
+                for y in range(last_valid_row + 1, expanded_size):
+                    src_start = last_valid_y * stride + src_x0 * 4
+                    dst_start = y * expanded_size * 4 + dst_x0 * 4
+                    data[dst_start : dst_start + copy_w * 4] = frame[
+                        src_start : src_start + copy_w * 4
+                    ]
+            # Left padding
+            if exp_x0 < 0:
+                for y in range(expanded_size):
+                    dst_start = y * expanded_size * 4 + 0
+                    # replicate first column of the valid region
+                    src_col = src_x0
+                    src_start = (
+                        min(max(exp_y0 + y, 0), crop_height - 1)
+                    ) * stride + src_col * 4
+                    for x in range(dst_x0):
+                        data[dst_start + x * 4 : dst_start + x * 4 + 4] = frame[
+                            src_start : src_start + 4
+                        ]
+            # Right padding
+            if exp_x0 + expanded_size > crop_width:
+                for y in range(expanded_size):
+                    dst_start = y * expanded_size * 4 + (dst_x0 + copy_w) * 4
+                    src_col = crop_width - 1
+                    src_y = min(max(exp_y0 + y, 0), crop_height - 1)
+                    src_start = src_y * stride + src_col * 4
+                    for x in range(expanded_size - (dst_x0 + copy_w)):
+                        data[dst_start + x * 4 : dst_start + x * 4 + 4] = frame[
+                            src_start : src_start + 4
+                        ]
 
             result.append((tx, ty, bytes(data), dst_x0, dst_y0))
 
