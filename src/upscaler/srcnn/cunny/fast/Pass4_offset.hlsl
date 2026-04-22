@@ -49,6 +49,7 @@ struct TileParams {
     uint fullOutWidth;
     uint fullOutHeight;
     uint2 validOffset;
+    uint2 tileOutExtent;
 };
 [[vk::push_constant]] TileParams tileParams;
 
@@ -84,6 +85,7 @@ void main(uint3 id : SV_DispatchThreadID)
     uint2 gxy = interior_id * 2;
     float2 pos = ((gxy >> 1) + 0.5) * pt;
     uint2 globalOutXY = gxy + tileParams.dstOffset;
+    uint2 maxOut = tileParams.dstOffset + tileParams.tileOutExtent;
 
     V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
     V4 r0 = 0.0;
@@ -140,11 +142,15 @@ void main(uint3 id : SV_DispatchThreadID)
     float3 yuv;
 
     yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 0.0) * full_opt, tileParams.inputLayer), 0).rgb);
-    OUTPUT[globalOutXY + int2(0,0)] = float4(mul(YR, float3(saturate(yuv.r + r0.x), yuv.yz)), 1.0);
+    if (globalOutXY.x < maxOut.x && globalOutXY.y < maxOut.y)
+        OUTPUT[globalOutXY + int2(0,0)] = float4(mul(YR, float3(saturate(yuv.r + r0.x), yuv.yz)), 1.0);
     yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 0.0) * full_opt, tileParams.inputLayer), 0).rgb);
-    OUTPUT[globalOutXY + int2(1, 0)] = float4(mul(YR, float3(saturate(yuv.r + r0.y), yuv.yz)), 1.0);
+    if (globalOutXY.x + 1 < maxOut.x && globalOutXY.y < maxOut.y)
+        OUTPUT[globalOutXY + int2(1, 0)] = float4(mul(YR, float3(saturate(yuv.r + r0.y), yuv.yz)), 1.0);
     yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 1.0) * full_opt, tileParams.inputLayer), 0).rgb);
-    OUTPUT[globalOutXY + int2(0, 1)] = float4(mul(YR, float3(saturate(yuv.r + r0.z), yuv.yz)), 1.0);
+    if (globalOutXY.x < maxOut.x && globalOutXY.y +1 < maxOut.y)
+        OUTPUT[globalOutXY + int2(0, 1)] = float4(mul(YR, float3(saturate(yuv.r + r0.z), yuv.yz)), 1.0);
     yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 1.0) * full_opt, tileParams.inputLayer), 0).rgb);
-    OUTPUT[globalOutXY + int2(1, 1)] = float4(mul(YR, float3(saturate(yuv.r + r0.w), yuv.yz)), 1.0);
+    if (globalOutXY.x + 1 < maxOut.x && globalOutXY.y + 1 < maxOut.y)
+        OUTPUT[globalOutXY + int2(1, 1)] = float4(mul(YR, float3(saturate(yuv.r + r0.w), yuv.yz)), 1.0);
 }

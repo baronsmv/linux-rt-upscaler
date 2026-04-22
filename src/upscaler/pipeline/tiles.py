@@ -172,7 +172,7 @@ class OffsetTileProcessor(TileProcessor):
             double_upscale,
             tile_size,
             variant="_offset",
-            push_constant_size=52,  # 13 uints (updated for validOffset)
+            push_constant_size=60,  # 15 uints
             tile_context_margin=tile_context_margin,
             max_layers=max_layers,
         )
@@ -624,22 +624,27 @@ class OffsetTileProcessor(TileProcessor):
 
             # Scale the input‑pixel offsets to output‑pixel space
             scale = 4 if self.double_upscale else 2
-            valid_x_out = valid_x * scale
-            valid_y_out = valid_y * scale
+            valid_block_x = (valid_x * scale) // 2
+            valid_block_y = (valid_y * scale) // 2
+
+            actual_out_w = min(self.tile_size * scale, full_out_w - dst_x)
+            actual_out_h = min(self.tile_size * scale, full_out_h - dst_y)
 
             push_data = struct.pack(
-                "IIIIIIIIIII",
-                layer_idx,  # inputLayer
+                "IIIIIIIIIIIII",  # 13 uints
+                layer_idx,
                 src_x,
-                src_y,  # srcOffset
+                src_y,
                 dst_x,
-                dst_y,  # dstOffset
+                dst_y,
                 self.crop_width,
                 self.crop_height,
                 full_out_w,
                 full_out_h,
-                valid_x_out,
-                valid_y_out,  # validOffset in output pixels
+                valid_block_x,
+                valid_block_y,
+                actual_out_w,
+                actual_out_h,
             )
             tile_batch.append((tx, ty, layer_idx, push_data))
 
