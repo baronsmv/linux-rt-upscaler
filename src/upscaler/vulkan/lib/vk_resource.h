@@ -1,6 +1,7 @@
 /**
  * @file vk_resource.h
- * @brief Vulkan resource methods: upload, download, copy, and batch texture upload.
+ * @brief Vulkan resource methods: upload, download, copy, and batch texture
+ * upload.
  */
 
 #ifndef VK_RESOURCE_H

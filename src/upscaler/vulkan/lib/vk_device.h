@@ -113,7 +113,8 @@ PyObject *vk_Device_create_sampler(vk_Device *self, PyObject *args);
  * Returns:
  *     vk.Compute object.
  */
-PyObject *vk_Device_create_compute(vk_Device *self, PyObject *args, PyObject *kwds);
+PyObject *vk_Device_create_compute(vk_Device *self, PyObject *args,
+                                   PyObject *kwds);
 
 /* ----------------------------------------------------------------------------
    Python method: create_swapchain

@@ -18,27 +18,27 @@
  * @param fmt    printf-style format string for the error message.
  * @param ...    arguments for the format string.
  */
-#define VK_CHECK_OR_RETURN_NULL(expr, errObj, fmt, ...)                         \
-    do {                                                                        \
-        VkResult _res = (expr);                                                 \
-        if (_res != VK_SUCCESS) {                                               \
-            PyErr_Format(errObj, fmt " (VkResult %d)", ##__VA_ARGS__, _res);    \
-            return nullptr;                                                     \
-        }                                                                       \
-    } while (0)
+#define VK_CHECK_OR_RETURN_NULL(expr, errObj, fmt, ...)                        \
+  do {                                                                         \
+    VkResult _res = (expr);                                                    \
+    if (_res != VK_SUCCESS) {                                                  \
+      PyErr_Format(errObj, fmt " (VkResult %d)", ##__VA_ARGS__, _res);         \
+      return nullptr;                                                          \
+    }                                                                          \
+  } while (0)
 
 /**
  * Check a Vulkan result. If not VK_SUCCESS, set a Python exception with a
  * formatted message and return false. For internal functions returning bool.
  */
-#define VK_CHECK_OR_RETURN_FALSE(expr, errObj, fmt, ...)                        \
-    do {                                                                        \
-        VkResult _res = (expr);                                                 \
-        if (_res != VK_SUCCESS) {                                               \
-            PyErr_Format(errObj, fmt " (VkResult %d)", ##__VA_ARGS__, _res);    \
-            return false;                                                       \
-        }                                                                       \
-    } while (0)
+#define VK_CHECK_OR_RETURN_FALSE(expr, errObj, fmt, ...)                       \
+  do {                                                                         \
+    VkResult _res = (expr);                                                    \
+    if (_res != VK_SUCCESS) {                                                  \
+      PyErr_Format(errObj, fmt " (VkResult %d)", ##__VA_ARGS__, _res);         \
+      return false;                                                            \
+    }                                                                          \
+  } while (0)
 
 /* ----------------------------------------------------------------------------
    Memory type and queue submission helpers
@@ -48,8 +48,7 @@ uint32_t vk_find_memory_type_index(VkPhysicalDeviceMemoryProperties *props,
                                    VkMemoryPropertyFlags flags);
 
 VkResult vk_execute_command_buffer(vk_Device *dev, VkCommandBuffer cmd,
-                                   VkFence fence,
-                                   uint32_t wait_semaphore_count,
+                                   VkFence fence, uint32_t wait_semaphore_count,
                                    VkSemaphore *wait_semaphores,
                                    VkPipelineStageFlags *wait_stages,
                                    uint32_t signal_semaphore_count,
@@ -57,10 +56,11 @@ VkResult vk_execute_command_buffer(vk_Device *dev, VkCommandBuffer cmd,
 
 void vk_image_barrier(VkCommandBuffer cmd, VkImage image,
                       VkImageLayout old_layout, VkImageLayout new_layout,
-                      VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
-                      VkAccessFlags src_access, VkAccessFlags dst_access,
-                      uint32_t base_mip, uint32_t mip_count,
-                      uint32_t base_layer, uint32_t layer_count);
+                      VkPipelineStageFlags src_stage,
+                      VkPipelineStageFlags dst_stage, VkAccessFlags src_access,
+                      VkAccessFlags dst_access, uint32_t base_mip,
+                      uint32_t mip_count, uint32_t base_layer,
+                      uint32_t layer_count);
 
 bool vk_staging_buffer_acquire(vk_Device *dev, VkDeviceSize size,
                                VkBuffer *out_buffer, VkDeviceMemory *out_memory,
@@ -86,8 +86,8 @@ void vk_free_temp_cmd(vk_Device *dev, VkCommandBuffer cmd);
  * command buffer. Returns true on success, false on failure (Python exception
  * set).
  */
-bool vk_execute_one_time_commands(vk_Device *dev,
-                                  const std::function<void(VkCommandBuffer)>& record_func);
+bool vk_execute_one_time_commands(
+    vk_Device *dev, const std::function<void(VkCommandBuffer)> &record_func);
 
 /* ----------------------------------------------------------------------------
    Fence and queue submission
@@ -99,7 +99,8 @@ VkFence vk_create_fence(vk_Device *dev, VkFenceCreateFlags flags = 0);
  * Submit a command buffer to the device queue and wait for the fence.
  * The GIL is released during the wait. Returns VK_SUCCESS or an error code.
  */
-VkResult vk_queue_submit_and_wait(vk_Device *dev, VkCommandBuffer cmd, VkFence fence);
+VkResult vk_queue_submit_and_wait(vk_Device *dev, VkCommandBuffer cmd,
+                                  VkFence fence);
 
 /* ----------------------------------------------------------------------------
    Memory mapping (with Python error handling)
@@ -109,45 +110,55 @@ VkResult vk_queue_submit_and_wait(vk_Device *dev, VkCommandBuffer cmd, VkFence f
  * Map a device memory region. On failure, sets a Python exception and returns
  * nullptr. The caller must unmap with vkUnmapMemory.
  */
-void *vk_map_memory(vk_Device *dev, VkDeviceMemory memory,
-                    VkDeviceSize offset, VkDeviceSize size);
+void *vk_map_memory(vk_Device *dev, VkDeviceMemory memory, VkDeviceSize offset,
+                    VkDeviceSize size);
 
 /* ----------------------------------------------------------------------------
    RAII wrapper for Python buffer objects
    ------------------------------------------------------------------------- */
 struct PyBufferGuard {
-    Py_buffer view;
-    bool owned = false;
+  Py_buffer view;
+  bool owned = false;
 
-    PyBufferGuard() = default;
-    ~PyBufferGuard() { if (owned) PyBuffer_Release(&view); }
+  PyBufferGuard() = default;
+  ~PyBufferGuard() {
+    if (owned)
+      PyBuffer_Release(&view);
+  }
 
-    // Disable copy
-    PyBufferGuard(const PyBufferGuard&) = delete;
-    PyBufferGuard& operator=(const PyBufferGuard&) = delete;
+  // Disable copy
+  PyBufferGuard(const PyBufferGuard &) = delete;
+  PyBufferGuard &operator=(const PyBufferGuard &) = delete;
 
-    // Enable move
-    PyBufferGuard(PyBufferGuard&& other) noexcept
-        : view(other.view), owned(other.owned) {
-        other.owned = false;
+  // Enable move
+  PyBufferGuard(PyBufferGuard &&other) noexcept
+      : view(other.view), owned(other.owned) {
+    other.owned = false;
+  }
+  PyBufferGuard &operator=(PyBufferGuard &&other) noexcept {
+    if (this != &other) {
+      if (owned)
+        PyBuffer_Release(&view);
+      view = other.view;
+      owned = other.owned;
+      other.owned = false;
     }
-    PyBufferGuard& operator=(PyBufferGuard&& other) noexcept {
-        if (this != &other) {
-            if (owned) PyBuffer_Release(&view);
-            view = other.view;
-            owned = other.owned;
-            other.owned = false;
-        }
-        return *this;
-    }
+    return *this;
+  }
 
-    bool acquire(PyObject *obj, int flags = PyBUF_SIMPLE) {
-        if (PyObject_GetBuffer(obj, &view, flags) < 0) return false;
-        owned = true;
-        return true;
-    }
+  bool acquire(PyObject *obj, int flags = PyBUF_SIMPLE) {
+    if (PyObject_GetBuffer(obj, &view, flags) < 0)
+      return false;
+    owned = true;
+    return true;
+  }
 
-    void release() { if (owned) { PyBuffer_Release(&view); owned = false; } }
+  void release() {
+    if (owned) {
+      PyBuffer_Release(&view);
+      owned = false;
+    }
+  }
 };
 
 /* ----------------------------------------------------------------------------
@@ -160,26 +171,26 @@ struct PyBufferGuard {
  */
 class ScopedStagingBuffer {
 public:
-    ScopedStagingBuffer(vk_Device *dev, VkDeviceSize size);
-    ~ScopedStagingBuffer();
+  ScopedStagingBuffer(vk_Device *dev, VkDeviceSize size);
+  ~ScopedStagingBuffer();
 
-    // Disable copy
-    ScopedStagingBuffer(const ScopedStagingBuffer&) = delete;
-    ScopedStagingBuffer& operator=(const ScopedStagingBuffer&) = delete;
+  // Disable copy
+  ScopedStagingBuffer(const ScopedStagingBuffer &) = delete;
+  ScopedStagingBuffer &operator=(const ScopedStagingBuffer &) = delete;
 
-    // Returns true if acquisition succeeded.
-    bool valid() const { return m_valid; }
+  // Returns true if acquisition succeeded.
+  bool valid() const { return m_valid; }
 
-    VkBuffer buffer() const { return m_buffer; }
-    void *mapped() const { return m_mapped; }
+  VkBuffer buffer() const { return m_buffer; }
+  void *mapped() const { return m_mapped; }
 
 private:
-    vk_Device *m_dev;
-    VkBuffer m_buffer = VK_NULL_HANDLE;
-    VkDeviceMemory m_memory = VK_NULL_HANDLE;
-    void *m_mapped = nullptr;
-    bool m_used_pool = false;
-    bool m_valid = false;
+  vk_Device *m_dev;
+  VkBuffer m_buffer = VK_NULL_HANDLE;
+  VkDeviceMemory m_memory = VK_NULL_HANDLE;
+  void *m_mapped = nullptr;
+  bool m_used_pool = false;
+  bool m_valid = false;
 };
 
 /* ----------------------------------------------------------------------------
@@ -190,19 +201,22 @@ private:
  * Transition an image to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
  */
 void vk_cmd_transition_for_copy_dst(VkCommandBuffer cmd, VkImage image,
-                                    uint32_t base_layer = 0, uint32_t layer_count = 1);
+                                    uint32_t base_layer = 0,
+                                    uint32_t layer_count = 1);
 
 /**
  * Transition an image to VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL.
  */
 void vk_cmd_transition_for_copy_src(VkCommandBuffer cmd, VkImage image,
-                                    uint32_t base_layer = 0, uint32_t layer_count = 1);
+                                    uint32_t base_layer = 0,
+                                    uint32_t layer_count = 1);
 
 /**
  * Transition an image to VK_IMAGE_LAYOUT_GENERAL for compute shader access.
  */
 void vk_cmd_transition_for_compute(VkCommandBuffer cmd, VkImage image,
-                                   uint32_t base_layer = 0, uint32_t layer_count = 1);
+                                   uint32_t base_layer = 0,
+                                   uint32_t layer_count = 1);
 
 /**
  * Transition an image to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR.
@@ -225,13 +239,12 @@ void vk_cmd_transition_for_present(VkCommandBuffer cmd, VkImage image);
  * @param out_layout      Output descriptor set layout.
  * @return true on success, false with Python exception set.
  */
-bool vk_create_compute_descriptor_set_layout(vk_Device *dev,
-                                             const std::vector<vk_Resource *> &cbv,
-                                             const std::vector<vk_Resource *> &srv,
-                                             const std::vector<vk_Resource *> &uav,
-                                             const std::vector<vk_Sampler *> &samplers,
-                                             uint32_t bindless,
-                                             VkDescriptorSetLayout *out_layout);
+bool vk_create_compute_descriptor_set_layout(
+    vk_Device *dev, const std::vector<vk_Resource *> &cbv,
+    const std::vector<vk_Resource *> &srv,
+    const std::vector<vk_Resource *> &uav,
+    const std::vector<vk_Sampler *> &samplers, uint32_t bindless,
+    VkDescriptorSetLayout *out_layout);
 
 /**
  * Allocate a descriptor pool and descriptor set, then write the descriptors.
@@ -247,14 +260,12 @@ bool vk_create_compute_descriptor_set_layout(vk_Device *dev,
  * @param out_set         Output descriptor set.
  * @return true on success, false with Python exception set.
  */
-bool vk_allocate_and_write_descriptor_set(vk_Device *dev,
-                                          const std::vector<vk_Resource *> &cbv,
-                                          const std::vector<vk_Resource *> &srv,
-                                          const std::vector<vk_Resource *> &uav,
-                                          const std::vector<vk_Sampler *> &samplers,
-                                          uint32_t bindless,
-                                          VkDescriptorSetLayout layout,
-                                          VkDescriptorPool *out_pool,
-                                          VkDescriptorSet *out_set);
+bool vk_allocate_and_write_descriptor_set(
+    vk_Device *dev, const std::vector<vk_Resource *> &cbv,
+    const std::vector<vk_Resource *> &srv,
+    const std::vector<vk_Resource *> &uav,
+    const std::vector<vk_Sampler *> &samplers, uint32_t bindless,
+    VkDescriptorSetLayout layout, VkDescriptorPool *out_pool,
+    VkDescriptorSet *out_set);
 
 #endif /* VK_UTILS_H */

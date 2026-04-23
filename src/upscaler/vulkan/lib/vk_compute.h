@@ -31,7 +31,8 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args);
    Python method: dispatch_sequence
    ------------------------------------------------------------------------- */
 /**
- * Execute a sequence of compute dispatches with optional pre-copy and presentation.
+ * Execute a sequence of compute dispatches with optional pre-copy and
+ * presentation.
  *
  * Args (keyword arguments):
  *     sequence (list): list of 5-tuples (compute, x, y, z, push_data).
@@ -44,6 +45,7 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args);
  * Returns:
  *     If timestamps enabled, returns (None, timestamps_list). Else None.
  */
-PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObject *kwds);
+PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args,
+                                       PyObject *kwds);
 
 #endif /* VK_COMPUTE_H */
