@@ -44,6 +44,7 @@ struct TileParams {
     uint inputLayer;
     uint2 srcOffset;
     uint2 dstOffset;
+    uint margin;
     uint cropWidth;
     uint cropHeight;
     uint fullOutWidth;
@@ -83,7 +84,9 @@ void main(uint3 id : SV_DispatchThreadID)
     float2 full_opt = float2(1.0 / tileParams.fullOutWidth, 1.0 / tileParams.fullOutHeight);
     uint2 interior_id = id.xy + tileParams.validOffset;
     uint2 gxy = interior_id * 2;
-    float2 pos = ((gxy >> 1) + 0.5) * pt;
+    float2 feature_pt = float2(1.0 / in_width, 1.0 / in_height);
+    float2 feature_coord = float2(tileParams.margin, tileParams.margin) + float2(interior_id);
+    float2 pos = (feature_coord + 0.5) * feature_pt;
     uint2 globalOutXY = gxy + tileParams.dstOffset;
     uint2 maxOut = tileParams.dstOffset + tileParams.tileOutExtent;
 

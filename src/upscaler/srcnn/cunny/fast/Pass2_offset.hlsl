@@ -45,6 +45,12 @@ struct TileParams {
     uint2 srcOffset;
     uint2 dstOffset;
     uint margin;
+    uint cropWidth;
+    uint cropHeight;
+    uint fullOutWidth;
+    uint fullOutHeight;
+    uint2 validOffset;
+    uint2 tileOutExtent;
 };
 [[vk::push_constant]] TileParams tileParams;
 
@@ -79,7 +85,7 @@ void main(uint3 id : SV_DispatchThreadID)
 {
     float2 pt = float2(GetInputPt());
     uint2 gxy = id.xy;
-    float2 pos = (gxy + 0.5 + float(tileParams.margin)) * pt;
+    float2 pos = (gxy + 0.5) * pt;
 
     V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
     V4 r0 = 0.0, r1 = 0.0, r2 = 0.0;
