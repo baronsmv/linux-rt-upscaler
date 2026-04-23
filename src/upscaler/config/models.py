@@ -90,7 +90,7 @@ class Config:
     use_damage_tracking: bool = True
 
     # Processing mode
-    mode: str = "offset"
+    mode: str = "tile"
 
     # Tiles
     tile_size: int = 64  # Recommended: between 32 and 128, ideally 64-96

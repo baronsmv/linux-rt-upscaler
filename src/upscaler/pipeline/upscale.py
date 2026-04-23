@@ -1,10 +1,8 @@
 import logging
 from typing import List, Optional, Tuple, Union
 
-import xxhash
-
-from .tiles import OffsetTileProcessor, CachedTileProcessor
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
+from ..tile import CachedTileProcessor, TileProcessor
 from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD
 
 logger = logging.getLogger(__name__)
@@ -12,22 +10,32 @@ logger = logging.getLogger(__name__)
 
 class UpscalerManager:
     """
-    Manages SRCNN upscaling in full-frame, offset-tile, or cached-tile mode.
+    Manages SRCNN upscaling in full-frame, tile, or cached-tile mode.
 
-    The manager always creates full-frame resources (input texture, staging,
-    SRCNN stages) to allow seamless fallback when tile mode cannot handle a
-    frame efficiently (e.g., too many dirty tiles). Tile-based modes
-    additionally create a `TileProcessor` instance.
+    The manager always creates full-frame resources (input texture, staging
+    buffer, and SRCNN stages) to enable seamless fallback when tile mode cannot
+    handle a frame efficiently (e.g., too many dirty tiles). In tile-based
+    modes, it also instantiates a `TileProcessor` or `CachedTileProcessor`
+    and delegates the actual tile processing to it.
 
     Attributes:
-        mode (str): The active processing mode ("full", "offset", "cache").
-        output (Texture2D): The final upscaled texture (full frame).
+        crop_width (int): Width of the captured crop area in pixels.
+        crop_height (int): Height of the captured crop area in pixels.
+        tile_size (int): Nominal input tile size for tile-based modes.
+        tile_context_margin (int): Extra border pixels for convolution context.
+        double_upscale (bool): If True, perform 4x upscaling (two 2x stages).
+        max_tiles_per_batch (int): Maximum concurrent tiles in tile mode.
+        mode (str): Active processing mode ("full", "tile", "cache").
+        output (Texture2D): Final upscaled texture (full frame).
         staging (Buffer): Staging buffer for full-frame uploads.
         input (Texture2D): Input texture for full-frame mode.
         full_stages (List[SRCNN]): SRCNN stages for full-frame processing.
         full_groups (List[Tuple[int, int]]): Dispatch groups for full-frame.
-        tile_processor (Optional): Tile processor for offset/cache modes.
+        tile_processor (Optional): Tile processor for tile/cache modes.
     """
+
+    # Supported processing modes.
+    VALID_MODES = ("full", "tile", "cache")
 
     def __init__(
         self,
@@ -54,55 +62,62 @@ class UpscalerManager:
             tile_context_margin: Extra border pixels for convolution context.
             cache_capacity: Maximum number of tiles stored in cache mode.
             cache_threshold: Fraction of total tiles above which full-frame is used.
-            mode: Processing mode. Must be one of "full", "offset", "cache".
-            max_tiles_per_batch: Maximum concurrent tiles in offset mode.
+            mode: Processing mode. Must be one of "full", "tile", "cache".
+            max_tiles_per_batch: Maximum concurrent tiles in tile mode.
+
+        Raises:
+            ValueError: If an invalid mode is provided.
         """
+        if mode not in self.VALID_MODES:
+            raise ValueError(f"Unknown mode '{mode}'. Valid modes: {self.VALID_MODES}")
+
         self.crop_width = crop_width
         self.crop_height = crop_height
         self.tile_size = tile_size
         self.tile_context_margin = tile_context_margin
         self.double_upscale = double_upscale
         self.max_tiles_per_batch = max_tiles_per_batch
-        self._first_tile_frame = True
-
-        if mode not in ("full", "offset", "cache"):
-            raise ValueError(f"Unknown mode: {mode}")
-
         self.mode = mode
 
-        # ------------------------------------------------------------------
-        # Full-frame resources (always created)
-        # ------------------------------------------------------------------
+        # Internal state.
+        self._first_tile_frame = True
+
+        # Full-frame resources (always created – used for fallback and first tile frame).
         self.staging: Optional[Buffer] = None
         self.input: Optional[Texture2D] = None
         self.output: Optional[Texture2D] = None
         self.full_stages: List[SRCNN] = []
         self.full_groups: List[Tuple[int, int]] = []
-        self._first_tile_frame = True
 
-        self._init_full_mode(model_name)  # always create full-frame pipeline
+        # Create full-frame pipeline.
+        self._init_full_mode(model_name)
 
-        # ------------------------------------------------------------------
-        # Tile processor (for offset/cache modes)
-        # ------------------------------------------------------------------
-        self.tile_processor: Optional[
-            Union[OffsetTileProcessor, CachedTileProcessor]
-        ] = None
+        # Tile processor (only for tile-based modes).
+        self.tile_processor: Optional[Union[TileProcessor, CachedTileProcessor]] = None
 
-        if mode == "offset":
-            self._init_offset_mode(model_name)
+        if mode == "tile":
+            self._init_tile_mode(model_name)
         elif mode == "cache":
             self._init_cache_mode(model_name, cache_capacity, cache_threshold)
 
         logger.info(
-            f"UpscalerManager initialized: mode={mode}, crop={crop_width}x{crop_height}"
+            f"UpscalerManager initialized: mode={mode}, "
+            f"crop={crop_width}x{crop_height}, tile_size={tile_size}, "
+            f"margin={tile_context_margin}"
         )
 
     # ----------------------------------------------------------------------
     # Initialization helpers
     # ----------------------------------------------------------------------
     def _init_full_mode(self, model_name: str) -> None:
-        """Set up full-frame upscaling (one or two SRCNN stages)."""
+        """
+        Set up full-frame upscaling (one or two SRCNN stages).
+
+        This method creates the input texture, staging buffer, and all
+        intermediate/output textures required for a full-frame upscale.
+        The resulting stages are stored in `self.full_stages` and can be
+        used directly or as a fallback.
+        """
         config = load_cunny_model(model_name, variant="")
         factory = PipelineFactory(config)
 
@@ -110,9 +125,11 @@ class UpscalerManager:
         out_w_first = in_w * 2
         out_h_first = in_h * 2
 
+        # Input texture and staging buffer
         self.input = Texture2D(in_w, in_h)
         self.staging = Buffer(self.input.size, heap_type=HEAP_UPLOAD)
 
+        # Intermediate texture for the first stage output
         inter_tex = Texture2D(out_w_first, out_h_first)
         outputs1 = {"output": inter_tex}
         for i in range(config.num_textures):
@@ -130,6 +147,7 @@ class UpscalerManager:
         self.full_groups.append(dispatch_groups(in_w, in_h, last_pass=False))
 
         if self.double_upscale:
+            # Second stage for 4x upscaling
             out_w_final = out_w_first * 2
             out_h_final = out_h_first * 2
             self.output = Texture2D(out_w_final, out_h_final)
@@ -151,6 +169,7 @@ class UpscalerManager:
                 dispatch_groups(out_w_first, out_h_first, last_pass=False)
             )
         else:
+            # Single stage 2x upscaling
             self.output = inter_tex
             outputs1["output"] = self.output
             self.full_stages[0] = SRCNN(
@@ -162,9 +181,9 @@ class UpscalerManager:
                 push_constant_size=0,
             )
 
-    def _init_offset_mode(self, model_name: str) -> None:
-        """Set up offset-tile mode (no cache)."""
-        self.tile_processor = OffsetTileProcessor(
+    def _init_tile_mode(self, model_name: str) -> None:
+        """Instantiate the tile (non-cached) tile processor."""
+        self.tile_processor = TileProcessor(
             crop_width=self.crop_width,
             crop_height=self.crop_height,
             model_name=model_name,
@@ -173,14 +192,13 @@ class UpscalerManager:
             tile_context_margin=self.tile_context_margin,
             max_layers=self.max_tiles_per_batch,
         )
-        # Use tile processor's output texture as final output.
         self.output = self.tile_processor.output_texture
         self._rebind_full_frame_output()
 
     def _init_cache_mode(
         self, model_name: str, cache_capacity: int, cache_threshold: float
     ) -> None:
-        """Set up cached-tile mode."""
+        """Instantiate the cached tile processor."""
         self.tile_processor = CachedTileProcessor(
             crop_width=self.crop_width,
             crop_height=self.crop_height,
@@ -189,154 +207,25 @@ class UpscalerManager:
             tile_size=self.tile_size,
             cache_capacity=cache_capacity,
             cache_threshold=cache_threshold,
+            tile_context_margin=self.tile_context_margin,
         )
         self.output = self.tile_processor.output_texture
         self._rebind_full_frame_output()
 
-    # ----------------------------------------------------------------------
-    # Full-frame mode API
-    # ----------------------------------------------------------------------
-    def upload_full_frame(
-        self,
-        frame: memoryview,
-        rects: List[Tuple[int, int, int, int, int]],
-        use_damage_tracking: bool,
-        margin: int,
-    ) -> None:
-        """
-        Upload full-frame (or partial damage regions) to the input texture.
-
-        This method works regardless of the current `mode` – it always uses
-        the full-frame resources created at initialization.
-
-        Args:
-            frame: Raw BGRA pixel data for the entire crop area.
-            rects: Damage rectangles from FrameGrabber (x, y, w, h, hash).
-            use_damage_tracking: If True, upload only the expanded damage regions.
-            margin: Number of pixels to expand each damage rectangle.
-        """
-        if use_damage_tracking and rects:
-            expanded = self._expand_damage_rects(rects, margin)
-            uploads = []
-            stride = self.crop_width * 4
-            for ex, ey, ew, eh in expanded:
-                sub_data = bytearray(ew * eh * 4)
-                for row in range(eh):
-                    src_start = (ey + row) * stride + ex * 4
-                    dst_start = row * ew * 4
-                    sub_data[dst_start : dst_start + ew * 4] = frame[
-                        src_start : src_start + ew * 4
-                    ]
-                uploads.append((bytes(sub_data), ex, ey, ew, eh))
-            self.input.upload_subresources(uploads)
-        else:
-            self.staging.upload(frame)
-            self.staging.copy_to(self.input)
-
-    def process_full_frame(self) -> None:
-        """
-        Execute the compute dispatches for the full frame.
-
-        This method works regardless of the current `mode` – it uses the
-        full-frame SRCNN stages.
-        """
-        for srnn, (gx, gy) in zip(self.full_stages, self.full_groups):
-            srnn.dispatch(gx, gy, 1)
-
-    # ----------------------------------------------------------------------
-    # Tile mode API
-    # ----------------------------------------------------------------------
-    def extract_dirty_tiles(
-        self, rects: List[Tuple[int, int, int, int, int]], frame: memoryview
-    ) -> List[Tuple[int, int, bytes, int, int]]:
-        """
-        Convert damage rectangles to expanded tile data with margin.
-
-        Delegates to the static method of OffsetTileProcessor.
-
-        Returns:
-            List of (tile_x, tile_y, data_bytes, valid_x, valid_y).
-        """
-        return OffsetTileProcessor.extract_expanded_tiles(
-            frame=frame,
-            rects=rects,
-            crop_width=self.crop_width,
-            crop_height=self.crop_height,
-            tile_size=self.tile_size,
-            margin=self.tile_context_margin,
-        )
-
-    def extract_dirty_tiles_with_hash(
-        self, rects: List[Tuple[int, int, int, int, int]], frame: memoryview
-    ) -> List[Tuple[int, int, int, bytes]]:
-        """
-        Convert damage rectangles to tile data with content hash.
-
-        Used by cache mode. The hash is computed on the valid pixels only.
-
-        Args:
-            rects: Damage rectangles (x, y, w, h, hash).
-            frame: Raw BGRA pixel data for the entire crop area.
-
-        Returns:
-            List of (tile_x, tile_y, hash, data_bytes).
-        """
-        stride = self.crop_width * 4
-        tile_w = self.tile_size
-        tile_h = self.tile_size
-        tiles_x = (self.crop_width + tile_w - 1) // tile_w
-        tiles_y = (self.crop_height + tile_h - 1) // tile_h
-
-        dirty_tiles = set()
-        for rx, ry, rw, rh, _ in rects:
-            tx0 = rx // tile_w
-            ty0 = ry // tile_h
-            tx1 = (rx + rw + tile_w - 1) // tile_w
-            ty1 = (ry + rh + tile_h - 1) // tile_h
-            for ty in range(ty0, min(ty1, tiles_y)):
-                for tx in range(tx0, min(tx1, tiles_x)):
-                    dirty_tiles.add((tx, ty))
-
-        result = []
-        for tx, ty in dirty_tiles:
-            x = tx * tile_w
-            y = ty * tile_h
-            w = min(tile_w, self.crop_width - x)
-            h = min(tile_h, self.crop_height - y)
-
-            valid_data = bytearray()
-            for row in range(h):
-                src_start = (y + row) * stride + x * 4
-                valid_data.extend(frame[src_start : src_start + w * 4])
-            tile_hash = xxhash.xxh64(valid_data).intdigest()
-
-            full_data = bytearray(tile_w * tile_h * 4)
-            for row in range(h):
-                src_start = (y + row) * stride + x * 4
-                dst_start = row * tile_w * 4
-                full_data[dst_start : dst_start + w * 4] = frame[
-                    src_start : src_start + w * 4
-                ]
-
-            result.append((tx, ty, tile_hash, bytes(full_data)))
-
-        return result
-
     def _rebind_full_frame_output(self) -> None:
         """
-        Rebind the output texture for the full‑frame SRCNN stage(s) to match
-        the current `self.output` (which may have been replaced by a tile processor).
-        This recreates only the affected SRCNN stage; other resources remain cached.
+        Update the full-frame SRCNN stages to use the current `self.output`.
+
+        When a tile processor replaces the output texture (e.g., with its own
+        full-frame texture), the full-frame fallback pipeline must be updated
+        to write to that same texture. This method recreates the final SRCNN
+        stage(s) with the new output UAV.
         """
         if not self.full_stages:
             return
 
         # Determine which stage holds the final output UAV
-        if self.double_upscale:
-            stage_idx = -1
-        else:
-            stage_idx = 0
-
+        stage_idx = -1 if self.double_upscale else 0
         old_stage = self.full_stages[stage_idx]
         factory = old_stage.factory  # Shared PipelineFactory
 
@@ -356,50 +245,125 @@ class UpscalerManager:
 
         # Replace the old stage
         self.full_stages[stage_idx] = new_stage
+        logger.debug("Full-frame output texture rebound to current active output")
 
-        logger.debug("Full‑frame output texture rebound to current active output")
+    # ----------------------------------------------------------------------
+    # Full-frame processing API (used for fallback and first tile frame)
+    # ----------------------------------------------------------------------
+    def upload_full_frame(
+        self,
+        frame: memoryview,
+        rects: List[Tuple[int, int, int, int, int]],
+        use_damage_tracking: bool,
+        margin: int,
+    ) -> None:
+        """
+        Upload full-frame (or partial damage regions) to the input texture.
 
+        This method always uses the full-frame resources created at
+        initialization. It supports either uploading the entire frame or
+        only the expanded damage regions.
+
+        Args:
+            frame: Raw BGRA pixel data for the entire crop area.
+            rects: Damage rectangles from FrameGrabber (x, y, w, h, hash).
+            use_damage_tracking: If True, upload only the expanded damage regions.
+            margin: Number of pixels to expand each damage rectangle.
+        """
+        if use_damage_tracking and rects:
+            # Expand damage rectangles and upload only those regions
+            expanded = TileProcessor.expand_damage_rects(
+                rects, self.crop_width, self.crop_height, margin
+            )
+            uploads = []
+            stride = self.crop_width * 4
+            for ex, ey, ew, eh in expanded:
+                sub_data = bytearray(ew * eh * 4)
+                for row in range(eh):
+                    src_start = (ey + row) * stride + ex * 4
+                    dst_start = row * ew * 4
+                    sub_data[dst_start : dst_start + ew * 4] = frame[
+                        src_start : src_start + ew * 4
+                    ]
+                uploads.append((bytes(sub_data), ex, ey, ew, eh))
+            self.input.upload_subresources(uploads)
+        else:
+            # Upload the entire frame
+            self.staging.upload(frame)
+            self.staging.copy_to(self.input)
+
+    def process_full_frame(self) -> None:
+        """
+        Execute the compute dispatches for the full frame.
+
+        This method uses the full-frame SRCNN stages created at initialization.
+        It is used as a fallback when tile mode cannot handle the frame
+        efficiently, and also for the first tile frame to prime the output.
+        """
+        for srnn, (gx, gy) in zip(self.full_stages, self.full_groups):
+            srnn.dispatch(gx, gy, 1)
+
+    # ----------------------------------------------------------------------
+    # Tile mode entry point
+    # ----------------------------------------------------------------------
     def process_tile_frame(
         self,
         dirty_tiles: Union[
-            List[Tuple[int, int, bytes, int, int]],  # offset mode
+            List[Tuple[int, int, bytes, int, int]],  # tile mode
             List[Tuple[int, int, int, bytes]],  # cache mode
         ],
         rects: List[Tuple[int, int, int, int, int]],
         frame_data: memoryview,
     ) -> None:
         """
-        Process a frame using the active tile processor, with fallback to
-        full-frame if the number of dirty tiles exceeds the batch limit.
+        Process a frame using the active tile processor.
+
+        This method implements the following logic:
+
+        - On the very first tile frame, a full capture is performed to
+          initialize the output texture. Subsequent frames only update
+          dirty tiles.
+        - In tile mode, if the number of dirty tiles exceeds
+          `max_tiles_per_batch`, the frame is processed using the full-frame
+          fallback instead.
+        - In tile mode, the residual texture (`full_input_tex`) is updated
+          with the expanded damage regions before tile processing.
+        - The actual tile processing is delegated to `self.tile_processor`.
 
         Args:
-            dirty_tiles: Pre-extracted tile data (format depends on mode).
-            rects: Original damage rectangles (needed by offset mode for
+            dirty_tiles: Pre-extracted tile data. Format depends on mode:
+                - tile mode: (tile_x, tile_y, data_bytes, valid_x, valid_y)
+                - cache mode:  (tile_x, tile_y, hash, data_bytes)
+            rects: Original damage rectangles (used by tile mode for
                 uploading the residual texture).
-            frame_data: Full captured frame (used by offset mode residual upload).
+            frame_data: Full captured frame (used by tile mode for residual
+                texture uploads).
+
+        Raises:
+            RuntimeError: If called when not in a tile-based mode.
         """
-        if self.mode not in ("offset", "cache"):
+        if self.mode not in ("tile", "cache"):
             raise RuntimeError("process_tile_frame called in non-tile mode")
 
-        # First tile‑mode frame: initialise the output with a full capture
+        # First tile frame: prime the output with a full capture.
         if self._first_tile_frame:
             logger.debug("First tile frame – performing initial full capture")
             self.upload_full_frame(
                 frame=frame_data,
                 rects=rects,
-                use_damage_tracking=False,  # upload whole frame
+                use_damage_tracking=False,  # Upload whole frame.
                 margin=self.tile_context_margin,
             )
             self.process_full_frame()
             self._first_tile_frame = False
             return
 
-        # Offset mode specific: residual texture upload and fallback
-        if self.mode == "offset":
+        # Direct mode specific: fallback if too many tiles, and residual upload.
+        if self.mode == "tile":
             if len(dirty_tiles) > self.max_tiles_per_batch:
                 logger.debug(
-                    f"Too many dirty tiles ({len(dirty_tiles)} > {self.max_tiles_per_batch}), "
-                    "falling back to full-frame for this frame"
+                    f"Too many dirty tiles ({len(dirty_tiles)} > "
+                    f"{self.max_tiles_per_batch}), falling back to full-frame"
                 )
                 self.upload_full_frame(
                     frame=frame_data,
@@ -410,64 +374,39 @@ class UpscalerManager:
                 self.process_full_frame()
                 return
 
-            # Upload expanded damage regions to the residual texture.
+            # Update the residual texture with expanded damage regions.
+            # This provides the network with the surrounding context.
             self.tile_processor.upload_full_frame(frame_data, rects)
 
-        # Process tiles using the tile processor (offset or cache)
+        # Delegate tile processing to the tile processor.
         self.tile_processor.process_tiles(dirty_tiles)
 
-    def should_use_tile_mode(self, num_dirty: int) -> bool:
+    def should_use_tile_mode(self, num_dirty_rects: int) -> bool:
         """
-        Determine whether to use tile mode for the current frame.
+        Determine whether tile mode should be used for the current frame.
 
-        For offset mode: returns True if there is damage and the number of
-            dirty tiles does not exceed `max_tiles_per_batch`.
-        For cache mode: returns True if the number of dirty tiles is below
-            the threshold fraction of total tiles.
+        - In tile mode: tile mode is used whenever there is any damage
+          (the fallback inside `process_tile_frame` will handle excessive
+          tiles).
+        - In cache mode: tile mode is used only if the number of dirty tiles
+          is below the configured threshold (as determined by the cached
+          processor).
 
         Args:
-            num_dirty: Number of dirty rectangles reported by FrameGrabber.
+            num_dirty_rects: Number of damage rectangles reported by the grabber.
 
         Returns:
-            True if tile processing should be used, False otherwise.
+            True if tile processing should be attempted, False otherwise.
         """
-        if self.mode == "offset":
-            # Tile count is unknown at this stage (we only have rectangle count).
-            # We'll rely on the fallback inside process_tile_frame.
-            return num_dirty > 0
+        if self.mode == "tile":
+            return num_dirty_rects > 0
         elif self.mode == "cache":
-            return self.tile_processor.should_use_tile_mode(num_dirty)
+            return self.tile_processor.should_use_tile_mode(num_dirty_rects)
         return False
 
     # ----------------------------------------------------------------------
-    # Output
+    # Output access
     # ----------------------------------------------------------------------
     def get_output_texture(self) -> Texture2D:
         """Return the final upscaled texture."""
         return self.output
-
-    # ----------------------------------------------------------------------
-    # Internal utilities
-    # ----------------------------------------------------------------------
-    def _expand_damage_rects(
-        self, rects: List[Tuple[int, int, int, int, int]], margin: int
-    ) -> List[Tuple[int, int, int, int]]:
-        """
-        Expand damage rectangles by a margin, clamped to crop bounds.
-
-        Args:
-            rects: Original damage rectangles (x, y, w, h, hash).
-            margin: Number of pixels to expand on each side.
-
-        Returns:
-            List of expanded rectangles (x, y, width, height).
-        """
-        expanded = []
-        for rx, ry, rw, rh, _ in rects:
-            ex0 = max(0, rx - margin)
-            ey0 = max(0, ry - margin)
-            ex1 = min(self.crop_width, rx + rw + margin)
-            ey1 = min(self.crop_height, ry + rh + margin)
-            if ex1 > ex0 and ey1 > ey0:
-                expanded.append((ex0, ey0, ex1 - ex0, ey1 - ey0))
-        return expanded

@@ -15,6 +15,7 @@ from .upscale import UpscalerManager
 from ..capture import FrameGrabber
 from ..config import Config, OverlayMode
 from ..overlay import OverlayWindow
+from ..tile import TileProcessor, CachedTileProcessor
 from ..utils import parse_output_geometry
 from ..vulkan import configure_device, device_wait_idle
 from ..window import WindowInfo, WindowTracker
@@ -25,10 +26,12 @@ logger = logging.getLogger(__name__)
 class PauseReason(Enum):
     """Reasons why the pipeline may be paused."""
 
-    NONE = auto()
-    USER = auto()  # Manually paused via hotkey
-    MINIMIZED = auto()  # Target window minimized
-    FOCUS_LOST = auto()  # Target window lost focus (if pause_on_focus_loss set)
+    NONE = auto()  # Pipeline is running normally.
+    USER = auto()  # Manually paused via hotkey (overlay hidden).
+    MINIMIZED = auto()  # Target window is minimized.
+    FOCUS_LOST = (
+        auto()
+    )  # Target window lost focus (only when pause_on_focus_loss is set).
 
 
 class Pipeline:
@@ -37,7 +40,10 @@ class Pipeline:
 
     The pipeline captures a target X11 window, upscales it using the
     configured model and mode, scales the result to the overlay size via
-    Lanczos, and presents via Vulkan swapchain.
+    Lanczos, and presents via a Vulkan swapchain.
+
+    All heavy work is performed on a dedicated background thread to keep
+    the Qt UI responsive.
 
     Attributes:
         config (Config): Global configuration.
@@ -63,7 +69,7 @@ class Pipeline:
         self._win_info = win_info
         self.overlay = overlay
 
-        # Crop and dimension attributes
+        # Crop parameters – remain constant during a session.
         self._crop_left = config.crop_left
         self._crop_top = config.crop_top
         self._crop_right = config.crop_right
@@ -75,15 +81,15 @@ class Pipeline:
         self._screen_width = overlay.width()
         self._screen_height = overlay.height()
 
-        # Controller for external commands
+        # Controller for external commands (hotkeys).
         self.controller = PipelineController(self)
         self.controller.set_initial_model_index(config.model)
         self.controller.set_initial_geometry_index(config.output_geometry)
 
-        # Vulkan device setup
+        # Vulkan device configuration.
         configure_device(config.vulkan_buffer_pool_size)
 
-        # Swapchain manager
+        # Swapchain manager – handles Vulkan surface and present.
         self._swapchain_manager = SwapchainManager(
             overlay.xid,
             self._screen_width,
@@ -91,7 +97,7 @@ class Pipeline:
             present_mode=config.vulkan_present_mode,
         )
 
-        # On-screen display manager
+        # On-screen display manager.
         osd_texts = tuple(
             [f"Model: {m}" for m in self.controller._available_models]
             + [f"Geometry: {g}" for g in self.controller._available_geometries]
@@ -99,7 +105,7 @@ class Pipeline:
         )
         self.osd = OSDManager(osd_texts, self._screen_width, self._screen_height)
 
-        # Presenter (Lanczos + OSD + swapchain)
+        # Presenter – Lanczos scaling, OSD blending, and swapchain presentation.
         self.presenter = Presenter(
             screen_width=self._screen_width,
             screen_height=self._screen_height,
@@ -113,7 +119,7 @@ class Pipeline:
             swapchain_manager=self._swapchain_manager,
         )
 
-        # Upscaler manager (full-frame or tile-based)
+        # Upscaler manager – orchestrates full-frame or tile-based upscaling.
         self.upscaler_mgr = UpscalerManager(
             crop_width=self.crop_width,
             crop_height=self.crop_height,
@@ -127,40 +133,39 @@ class Pipeline:
             max_tiles_per_batch=config.max_tiles_per_batch,
         )
 
-        # Window tracker for handle/size changes
+        # Window tracker monitors the target window for size/state changes.
         self._window_tracker = WindowTracker(
             win_info.handle, win_info.width, win_info.height
         )
 
-        # Mouse mapping rectangle (updated per frame)
+        # Mouse mapping rectangle – updated each frame.
         overlay.scaling_rect = [0, 0, 0, 0]
 
-        # Threading control
+        # Threading control.
         self._running = False
         self._pause_reason = PauseReason.NONE
         self._thread: Optional[threading.Thread] = None
         self._stopped_event = threading.Event()
 
-        # Queues for cross-thread communication
+        # Cross-thread communication queues.
         self._switch_queue: Queue[Optional[WindowInfo]] = Queue()
         self.osd_queue: Queue[Tuple[str, float]] = Queue()
 
-        # Frame grabber (created in thread)
+        # Frame grabber – created on the pipeline thread.
         self._grabber: Optional[FrameGrabber] = None
 
-        # Performance counters
+        # Performance counters.
         self._frame_count = 0
         self._last_fps_log = time.time()
         self._last_frame_time = time.time()
 
-        # Prepare OSD textures
+        # Prepare OSD textures (must be done after Vulkan device is ready).
         device_wait_idle()
         self.osd.prepare_textures()
 
     # ----------------------------------------------------------------------
-    # Public API
+    # Public API – lifecycle and external requests
     # ----------------------------------------------------------------------
-
     def start(self) -> None:
         """Start the pipeline thread."""
         logger.info("Starting pipeline thread")
@@ -177,16 +182,22 @@ class Pipeline:
         if self._grabber:
             self._grabber.close()
         self._window_tracker.close()
-        self._swapchain_manager = None
+        self._swapchain_manager.close()
 
     def request_switch(self, new_win_info: WindowInfo) -> None:
-        """Request a switch to a new target window (thread-safe)."""
+        """
+        Request a switch to a new target window (thread-safe).
+
+        Args:
+            new_win_info: Information about the new window to capture.
+        """
         self._switch_queue.put(new_win_info)
 
     def recreate_upscaler(self) -> None:
         """
         Recreate the upscaler manager (e.g., after model change or crop resize).
-        This must be called from the pipeline thread.
+
+        This method **must** be called from the pipeline thread.
         """
         logger.info("Recreating upscaler manager")
         self.upscaler_mgr = UpscalerManager(
@@ -201,7 +212,7 @@ class Pipeline:
             mode=self.config.mode,
             max_tiles_per_batch=self.config.max_tiles_per_batch,
         )
-        # Update presenter's source texture to the new output
+        # Update presenter's source texture to the new output.
         self.presenter.set_source_texture(self.upscaler_mgr.get_output_texture())
 
     def clear_frame_queue(self) -> None:
@@ -211,9 +222,9 @@ class Pipeline:
     # ----------------------------------------------------------------------
     # Pause state management
     # ----------------------------------------------------------------------
-
     @property
     def user_paused(self) -> bool:
+        """True if the pipeline was manually paused by the user."""
         return self._pause_reason == PauseReason.USER
 
     @user_paused.setter
@@ -224,7 +235,7 @@ class Pipeline:
             self._set_pause_reason(PauseReason.NONE)
 
     def _set_pause_reason(self, reason: PauseReason) -> None:
-        """Update pause reason and show/hide overlay accordingly."""
+        """Update the pause reason and show/hide the overlay accordingly."""
         old_reason = self._pause_reason
         self._pause_reason = reason
         if old_reason == PauseReason.NONE and reason != PauseReason.NONE:
@@ -233,11 +244,11 @@ class Pipeline:
             self.overlay.show()
 
     # ----------------------------------------------------------------------
-    # Frame processing
+    # Frame processing – core of the pipeline
     # ----------------------------------------------------------------------
     def _process_one_frame(self) -> None:
         """Capture, upscale, and present a single frame."""
-        # 1. Grab frame
+        # 1. Grab the current frame from the target window.
         try:
             frame, is_dirty, rects = self._grabber.grab()
         except RuntimeError as e:
@@ -247,18 +258,18 @@ class Pipeline:
         if not self._running:
             return
 
-        # 2. OSD and overlay opacity
+        # 2. Update OSD and overlay opacity.
         osd_tex, needs_redraw = self.osd.update()
         if needs_redraw:
             is_dirty = True
         self.overlay.update_opacity()
 
         if not is_dirty and osd_tex is None:
-            # Nothing changed; just present the previous frame
+            # Nothing changed; just present the previous frame.
             self.presenter.present()
             return
 
-        # 3. Upscale based on mode
+        # 3. Upscale based on the active mode.
         if self.upscaler_mgr.mode == "full":
             self.upscaler_mgr.upload_full_frame(
                 frame=frame,
@@ -269,19 +280,33 @@ class Pipeline:
             self.upscaler_mgr.process_full_frame()
             src_tex = self.upscaler_mgr.get_output_texture()
         else:
-            # Tile mode (offset or cache)
+            # Tile-based mode ("tile" or "cache").
             if self.upscaler_mgr.should_use_tile_mode(len(rects)):
-                if self.upscaler_mgr.mode == "offset":
-                    dirty_tiles = self.upscaler_mgr.extract_dirty_tiles(rects, frame)
-                else:  # cache
-                    dirty_tiles = self.upscaler_mgr.extract_dirty_tiles_with_hash(
-                        rects, frame
+                if self.upscaler_mgr.mode == "tile":
+                    # Tile mode: extract expanded tiles with valid offsets.
+                    dirty_tiles = TileProcessor.extract_expanded_tiles(
+                        frame=frame,
+                        rects=rects,
+                        crop_width=self.crop_width,
+                        crop_height=self.crop_height,
+                        tile_size=self.config.tile_size,
+                        margin=self.config.tile_context_margin,
+                    )
+                else:  # cache mode
+                    # Cache mode: extract tiles and compute content hash.
+                    dirty_tiles = CachedTileProcessor.extract_dirty_tiles_with_hash(
+                        frame=frame,
+                        rects=rects,
+                        crop_width=self.crop_width,
+                        crop_height=self.crop_height,
+                        tile_size=self.config.tile_size,
+                        margin=self.config.tile_context_margin,
                     )
 
                 self.upscaler_mgr.process_tile_frame(dirty_tiles, rects, frame)
                 src_tex = self.upscaler_mgr.get_output_texture()
             else:
-                # Fallback to full-frame processing for this frame
+                # Too many dirty tiles – fall back to full-frame processing.
                 logger.debug("Tile threshold exceeded; using full-frame for this frame")
                 self.upscaler_mgr.upload_full_frame(
                     frame=frame,
@@ -292,24 +317,23 @@ class Pipeline:
                 self.upscaler_mgr.process_full_frame()
                 src_tex = self.upscaler_mgr.get_output_texture()
 
-        # 4. Present
+        # 4. Present the final image.
         self.presenter.set_source_texture(src_tex)
         self.presenter.update_lanczos_constants(src_tex.width, src_tex.height)
         self.presenter.present()
 
-        # 5. Update mouse mapping
+        # 5. Update the mouse mapping rectangle for event forwarding.
         self.overlay.scaling_rect = self.presenter.get_scaling_rect(self._scale_factor)
 
-        # 6. Check swapchain recreation
+        # 6. Check if the swapchain needs recreation (e.g., overlay resized).
         if self._swapchain_manager.needs_recreation():
             if self._swapchain_manager.is_out_of_date():
                 logger.info("Swapchain out-of-date, recreating")
                 self._recreate_swapchain()
 
     # ----------------------------------------------------------------------
-    # Window change handling
+    # Window change handling (size, handle, or crop)
     # ----------------------------------------------------------------------
-
     def _handle_window_change(self) -> None:
         """Recreate resources when the target window changes size or handle."""
         logger.info("Handling window change")
@@ -362,7 +386,7 @@ class Pipeline:
             self.update_content_dimensions()
         else:
             self._swapchain_manager.recreate(new_w, new_h)
-        self.osd.clear_cache()
+        self.osd.clear_compute_cache()  # Screen texture changed.
 
     def _create_grabber(self) -> None:
         """Create (or recreate) the FrameGrabber for the current target window."""
@@ -378,9 +402,8 @@ class Pipeline:
         )
 
     # ----------------------------------------------------------------------
-    # Target window switching
+    # Target window switching (focus follow)
     # ----------------------------------------------------------------------
-
     def _switch_target(self, new_win_info: WindowInfo) -> None:
         """Switch the pipeline to a new target window."""
         logger.info(f"Switching to window: {new_win_info.title}")
@@ -401,27 +424,26 @@ class Pipeline:
         self.overlay.set_target_size(new_win_info.width, new_win_info.height)
 
     # ----------------------------------------------------------------------
-    # Main loop
+    # Main loop (runs in dedicated thread)
     # ----------------------------------------------------------------------
-
     def _run(self) -> None:
-        """Main pipeline loop (runs in dedicated thread)."""
+        """Main pipeline loop."""
         logger.info("Pipeline thread started")
         self._create_grabber()
 
         while self._running:
             try:
-                # Process window switch requests
+                # Process any pending window switch requests.
                 self._process_switch_requests()
 
-                # Check window aliveness
+                # If not following focus, check that the target window is still alive.
                 if not self.config.follow_focus:
                     self._window_tracker.check_alive()
                     if not self._window_tracker.alive:
                         logger.info("Target window closed – exiting")
                         break
 
-                # Update window state and handle pause conditions
+                # Update window state (size, minimized, focus) and handle pauses.
                 changed = self._window_tracker.update()
                 if self._update_pause_state():
                     time.sleep(0.1)
@@ -434,17 +456,17 @@ class Pipeline:
                     time.sleep(0.1)
                     continue
 
-                # Process frame
+                # Process one frame.
                 self._process_one_frame()
                 self._frame_count += 1
 
-                # Handle controller requests (model/geometry switches)
+                # Handle controller requests (model/geometry switches, screenshots).
                 self.controller.process_requests()
 
-                # Show pending OSD messages
+                # Show any pending OSD messages.
                 self._process_osd_requests()
 
-                # Periodic FPS logging
+                # Periodic FPS logging.
                 self._log_fps()
 
             except Exception as e:
@@ -468,14 +490,14 @@ class Pipeline:
 
     def _update_pause_state(self) -> bool:
         """Update pause reason based on window state. Returns True if paused."""
-        # Minimized pause
+        # Pause when minimized.
         if self._window_tracker.minimized:
             self._set_pause_reason(PauseReason.MINIMIZED)
             return True
         elif self._pause_reason == PauseReason.MINIMIZED:
             self._set_pause_reason(PauseReason.NONE)
 
-        # Focus loss pause
+        # Pause when focus is lost (only for bypass-WM overlay modes).
         bypass_wm = self.config.overlay_mode in (
             OverlayMode.ALWAYS_ON_TOP.value,
             OverlayMode.ALWAYS_ON_TOP_TRANSPARENT.value,

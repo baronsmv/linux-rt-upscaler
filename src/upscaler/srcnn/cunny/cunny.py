@@ -1,72 +1,114 @@
 import json
-import os
-from typing import List, Tuple
+import logging
+from pathlib import Path
+from typing import Dict, List, Tuple
 
 from ..models import ModelConfig
+
+logger = logging.getLogger(__name__)
+
+# Simple in-memory cache for loaded models to avoid repeated file reads
+_MODEL_CACHE: Dict[Tuple[str, str], ModelConfig] = {}
 
 
 def load_cunny_model(model_name: str, variant: str = "") -> ModelConfig:
     """
-    Load a CuNNy model and return a ModelConfig.
+    Load a CuNNy model configuration and SPIR-V shaders.
 
     CuNNy models are stored in subdirectories under `srcnn/cunny/`. Each
-    directory contains a `model.json` file and pre-compiled SPIR-V shaders
-    named `PassN.spv` (or `PassN_tile.spv`, `PassN_offset.spv` for variants).
+    directory contains:
+        - `model.json` : Descriptor binding layout and number of passes/textures.
+        - `PassN.spv`  : Full-frame shader binaries.
+        - `PassN_tile.spv`   : Tile mode shader binaries.
 
     Args:
-        model_name: Name of the subdirectory (e.g., "fast", "4x12").
-        variant: Shader variant suffix (e.g., "", "_tile", "_offset").
+        model_name: Subdirectory name (e.g., "fast", "4x12").
+        variant:    Shader variant suffix. Must be one of:
+                        ""         for full-frame mode,
+                        "_tile"    for tile mode.
 
     Returns:
-        ModelConfig populated with shaders and binding information.
+        ModelConfig populated with shader bytecode and binding information.
 
     Raises:
-        FileNotFoundError: If the model directory or required SPIR-V files are missing.
-        json.JSONDecodeError: If model.json is malformed.
+        FileNotFoundError: If the model directory or a required SPIR-V file is missing.
+        ValueError: If model.json is malformed or missing required fields.
+        json.JSONDecodeError: If model.json is not valid JSON.
     """
-    # Locate the model directory
-    model_dir = os.path.join(os.path.dirname(__file__), model_name)
-    if not os.path.isdir(model_dir):
+    cache_key = (model_name, variant)
+    if cache_key in _MODEL_CACHE:
+        logger.debug(f"Returning cached model config for {model_name!r} ({variant!r})")
+        return _MODEL_CACHE[cache_key]
+
+    # Resolve model directory relative to this file
+    base_dir = Path(__file__).parent
+    model_dir = base_dir / model_name
+    if not model_dir.is_dir():
         raise FileNotFoundError(f"Model directory not found: {model_dir}")
 
     # Load model.json
-    config_path = os.path.join(model_dir, "model.json")
-    with open(config_path, "r") as f:
-        cfg = json.load(f)
+    config_path = model_dir / "model.json"
+    try:
+        with config_path.open("r", encoding="utf-8") as f:
+            cfg = json.load(f)
+    except json.JSONDecodeError as e:
+        raise json.JSONDecodeError(
+            f"Invalid JSON in {config_path}: {e.msg}", e.doc, e.pos
+        ) from e
 
-    # Validate required fields
-    required = ["passes", "num_textures", "srv_uav", "samplers"]
-    for key in required:
-        if key not in cfg:
-            raise ValueError(f"Missing required field '{key}' in model.json")
+    # Validate required top-level keys
+    required_keys = ["passes", "num_textures", "srv_uav", "samplers"]
+    missing = [k for k in required_keys if k not in cfg]
+    if missing:
+        raise ValueError(f"model.json missing required keys: {missing}")
 
-    # Load SPIR-V shaders
-    shaders = []
-    for i in range(cfg["passes"]):
-        spv_path = os.path.join(model_dir, f"Pass{i+1}{variant}.spv")
-        if not os.path.exists(spv_path):
-            raise FileNotFoundError(f"Shader not found: {spv_path}")
-        with open(spv_path, "rb") as f:
+    passes = cfg["passes"]
+    num_textures = cfg["num_textures"]
+    srv_uav_raw = cfg["srv_uav"]
+    samplers_raw = cfg["samplers"]
+
+    # Basic validation of srv_uav structure
+    if not isinstance(srv_uav_raw, list) or len(srv_uav_raw) != passes:
+        raise ValueError(f"srv_uav must be a list of length {passes}")
+    for i, entry in enumerate(srv_uav_raw):
+        if not isinstance(entry, list) or len(entry) != 2:
+            raise ValueError(f"srv_uav[{i}] must be a pair [srv_list, uav_list]")
+
+    # Basic validation of samplers structure
+    if not isinstance(samplers_raw, list) or len(samplers_raw) != passes:
+        raise ValueError(f"samplers must be a list of length {passes}")
+
+    # Load SPIR-V shader binaries
+    shaders: List[bytes] = []
+    for pass_idx in range(1, passes + 1):
+        shader_path = model_dir / f"Pass{pass_idx}{variant}.spv"
+        if not shader_path.is_file():
+            raise FileNotFoundError(f"Shader not found: {shader_path}")
+        with shader_path.open("rb") as f:
             shaders.append(f.read())
+        logger.debug(f"Loaded shader: {shader_path}")
 
-    # Convert srv_uav from model.json format to our expected format.
-    # model.json uses lists of strings, already matching our tuple.
-    srv_uav: List[Tuple[List[str], List[str]]] = []
-    for item in cfg["srv_uav"]:
-        if not isinstance(item, list) or len(item) != 2:
-            raise ValueError("srv_uav must be a list of [srv_list, uav_list] pairs")
-        srv_uav.append((item[0], item[1]))
+    # Convert srv_uav to the format expected by ModelConfig
+    srv_uav: List[Tuple[List[str], List[str]]] = [
+        (entry[0], entry[1]) for entry in srv_uav_raw
+    ]
 
-    # Determine output names. By default, any UAV named "output" is the final output.
-    output_names = ["output"]  # CuNNy convention
+    # CuNNy convention: the final output is always named "output"
+    output_names = ["output"]
 
-    return ModelConfig(
-        passes=cfg["passes"],
-        num_textures=cfg["num_textures"],
+    config = ModelConfig(
+        passes=passes,
+        num_textures=num_textures,
         srv_uav=srv_uav,
-        samplers=cfg["samplers"],
+        samplers=samplers_raw,
         shaders=shaders,
         entry_point="main",
-        push_constant_size=0,  # Will be set by caller if needed
+        push_constant_size=0,
         output_names=output_names,
     )
+
+    _MODEL_CACHE[cache_key] = config
+    logger.info(
+        f"Loaded model {model_name!r} (variant={variant!r}) with {passes} passes"
+    )
+    return config
