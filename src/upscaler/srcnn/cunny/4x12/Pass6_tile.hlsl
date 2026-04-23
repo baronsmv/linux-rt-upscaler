@@ -42,6 +42,15 @@ cbuffer Constants : register(b0) {
 
 struct TileParams {
     uint inputLayer;
+    uint2 srcOffset;
+    uint2 dstOffset;
+    uint margin;
+    uint cropWidth;
+    uint cropHeight;
+    uint fullOutWidth;
+    uint fullOutHeight;
+    uint2 validOffset;
+    uint2 tileOutExtent;
     uint outputLayer;
 };
 [[vk::push_constant]] TileParams tileParams;
@@ -74,9 +83,15 @@ SamplerState SL : register(s1);
 [numthreads(8,8,1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
-    float2 pt = float2(GetInputPt());
-    uint2 gxy = id.xy * 2;
-    float2 pos = ((gxy >> 1) + 0.5) * pt;
+    float2 pt = float2(1.0 / in_width, 1.0 / in_height);
+    float2 full_opt = float2(1.0 / tileParams.fullOutWidth, 1.0 / tileParams.fullOutHeight);
+    uint2 interior_id = id.xy + tileParams.validOffset;
+    uint2 gxy = interior_id * 2;
+    float2 feature_pt = float2(1.0 / in_width, 1.0 / in_height);
+    float2 feature_coord = float2(tileParams.margin, tileParams.margin) + float2(interior_id);
+    float2 pos = (feature_coord + 0.5) * feature_pt;
+    uint2 globalOutXY = gxy + tileParams.dstOffset;
+    uint2 maxOut = tileParams.dstOffset + tileParams.tileOutExtent;
 
     V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
     V4 r0 = 0.0, r1 = 0.0, r2 = 0.0;
@@ -201,10 +216,14 @@ void main(uint3 id : SV_DispatchThreadID)
     r2 += mul(s0_2_2, M4(-1.046e-03, 7.980e-03, -3.126e-02, 5.707e-02, 2.107e-03, -1.326e-02, -1.569e-02, 8.278e-02, -2.450e-03, -2.378e-03, -2.741e-03, -4.382e-02, -4.875e-03, 3.715e-03, -9.835e-03, 1.275e-01));
 
     float2 opt = float2(GetOutputPt());
-    float2 fpos = (float2(gxy) + 0.5) * opt;
+    float2 fpos = (float2(globalOutXY) + 0.5) * full_opt;
 
-    OUTPUT[uint3(gxy + int2(0, 0), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 0.0) * opt, tileParams.inputLayer), 0).rgb + float3(r0.x, r1.x, r2.x)), 1.0);
-    OUTPUT[uint3(gxy + int2(1, 0), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 0.0) * opt, tileParams.inputLayer), 0).rgb + float3(r0.y, r1.y, r2.y)), 1.0);
-    OUTPUT[uint3(gxy + int2(0, 1), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 1.0) * opt, tileParams.inputLayer), 0).rgb + float3(r0.z, r1.z, r2.z)), 1.0);
-    OUTPUT[uint3(gxy + int2(1, 1), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 1.0) * opt, tileParams.inputLayer), 0).rgb + float3(r0.w, r1.w, r2.w)), 1.0);
+    if (globalOutXY.x < maxOut.x && globalOutXY.y < maxOut.y)
+        OUTPUT[uint3(globalOutXY + int2(0, 0), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 0.0) * full_opt, tileParams.inputLayer), 0).rgb + float3(r0.x, r1.x, r2.x)), 1.0);
+    if (globalOutXY.x + 1 < maxOut.x && globalOutXY.y < maxOut.y)
+        OUTPUT[uint3(globalOutXY + int2(1, 0), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 0.0) * full_opt, tileParams.inputLayer), 0).rgb + float3(r0.y, r1.y, r2.y)), 1.0);
+    if (globalOutXY.x < maxOut.x && globalOutXY.y + 1 < maxOut.y)
+        OUTPUT[uint3(globalOutXY + int2(0, 1), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 1.0) * full_opt, tileParams.inputLayer), 0).rgb + float3(r0.z, r1.z, r2.z)), 1.0);
+    if (globalOutXY.x + 1 < maxOut.x && globalOutXY.y + 1 < maxOut.y)
+        OUTPUT[uint3(globalOutXY + int2(1, 1), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 1.0) * full_opt, tileParams.inputLayer), 0).rgb + float3(r0.w, r1.w, r2.w)), 1.0);
 }

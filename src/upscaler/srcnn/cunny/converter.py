@@ -38,8 +38,7 @@ class Config:
     input_texture_prefix: str = "T"
     special_input: str = "INPUT"
     special_output: str = "OUTPUT"
-    tile_aware: bool = False  # generate tile-aware (atlas) variant
-    offset_write: bool = False  # generate offset-write (no cache) variant
+    tile: bool = False  # generate tile‑mode shader
 
 
 @dataclass
@@ -208,7 +207,7 @@ class HlslGenerator:
         self.model_name = model_name
 
     @staticmethod
-    def common_header(is_final: bool, per_tile: bool, offset_write: bool) -> str:
+    def common_header(tile: bool) -> str:
         header = """cbuffer Constants : register(b0) {
     uint in_width;
     uint in_height;
@@ -221,21 +220,23 @@ class HlslGenerator:
 };
 
 """
-        if per_tile or offset_write:
-            if offset_write:
-                header += """struct TileParams {
+        if tile:
+            header += """struct TileParams {
     uint inputLayer;
     uint2 srcOffset;
     uint2 dstOffset;
-};
-"""
-            else:
-                header += """struct TileParams {
-    uint inputLayer;
+    uint margin;
+    uint cropWidth;
+    uint cropHeight;
+    uint fullOutWidth;
+    uint fullOutHeight;
+    uint2 validOffset;
+    uint2 tileOutExtent;
     uint outputLayer;
 };
+[[vk::push_constant]] TileParams tileParams;
+
 """
-            header += "[[vk::push_constant]] TileParams tileParams;\n\n"
 
         header += """float2 GetInputPt() { return float2(in_dx, in_dy); }
 float2 GetOutputPt() { return float2(out_dx, out_dy); }
@@ -243,8 +244,7 @@ uint2 GetInputSize() { return uint2(in_width, in_height); }
 uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
 """
-        # For tile/offset modes with array inputs, we need the layer argument.
-        if per_tile or offset_write:
+        if tile:
             header += "#define O(t, x, y) t.SampleLevel(SP, float3(pos + float2(x, y) * pt, tileParams.inputLayer), 0)"
         else:
             header += "#define O(t, x, y) t.SampleLevel(SP, pos + float2(x, y) * pt, 0)"
@@ -266,12 +266,11 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         pre_lines = pass_info.pre_lines
         body = pass_info.body
         is_final = self.config.special_output in out_textures
-        per_tile = self.config.tile_aware
-        offset_write = self.config.offset_write
+        tile = self.config.tile
 
         # Texture declarations with registers
         tex_decl_lines = self._build_texture_declarations(
-            in_textures, out_textures, is_final, per_tile, offset_write
+            in_textures, out_textures, tile
         )
 
         # Sampler declarations
@@ -291,60 +290,83 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
             core_lines = self._reformat_body(core_lines)
 
         # Apply tile/offset specific rewrites
-        if per_tile:
+        if tile:
             if is_final:
+                # --- Final pass: convert to tile‑mode with bounds checks ---
+
+                # 1. Replace fpos calculation to use full_opt
                 core_lines = [
                     re.sub(
-                        r"OUTPUT\[(.*?)\]",
-                        r"OUTPUT[uint3(\1, tileParams.outputLayer)]",
+                        r"float2 fpos = \(float2\(gxy\) \+ 0\.5\) \* opt;",
+                        "float2 fpos = (float2(globalOutXY) + 0.5) * full_opt;",
                         line,
                     )
                     for line in core_lines
                 ]
+
+                # 2. Wrap each OUTPUT assignment with bounds check,
+                #    change gxy -> globalOutXY, and add uint3 + outputLayer.
+                new_core = []
+                for line in core_lines:
+                    # Match original: OUTPUT[gxy + int2(X, Y)] = ...;
+                    m = re.match(
+                        r"(\s*)OUTPUT\[gxy\s*\+\s*int2\((\d+),\s*(\d+)\)\]\s*=\s*(.+);",
+                        line,
+                    )
+                    if m:
+                        indent, off_x, off_y, rhs = m.groups()
+                        cond_x = (
+                            f"globalOutXY.x + {off_x} < maxOut.x"
+                            if off_x != "0"
+                            else "globalOutXY.x < maxOut.x"
+                        )
+                        cond_y = (
+                            f"globalOutXY.y + {off_y} < maxOut.y"
+                            if off_y != "0"
+                            else "globalOutXY.y < maxOut.y"
+                        )
+                        cond = f"{cond_x} && {cond_y}"
+                        new_core.append(f"{indent}if ({cond})")
+                        new_core.append(
+                            f"{indent}    OUTPUT[uint3(globalOutXY + int2({off_x}, {off_y}), tileParams.outputLayer)] = {rhs};"
+                        )
+                    else:
+                        new_core.append(line)
+                core_lines = new_core
+
+                # 3. Convert INPUT.SampleLevel to array texture:
+                #    - change * opt to * full_opt
+                #    - wrap coordinate in float3(..., tileParams.inputLayer)
+                core_lines = [
+                    re.sub(
+                        r"INPUT\.SampleLevel\(SL,\s*(fpos\s*\+\s*float2\([^)]+\))\s*\*\s*opt\s*,\s*0\)",
+                        r"INPUT.SampleLevel(SL, float3(\1 * full_opt, tileParams.inputLayer), 0)",
+                        line,
+                    )
+                    for line in core_lines
+                ]
+                # Also catch cases where opt was already replaced
+                core_lines = [
+                    re.sub(
+                        r"INPUT\.SampleLevel\(SL,\s*(fpos\s*\+\s*float2\([^)]+\)\s*\*\s*full_opt)\s*,\s*0\)",
+                        r"INPUT.SampleLevel(SL, float3(\1, tileParams.inputLayer), 0)",
+                        line,
+                    )
+                    for line in core_lines
+                ]
+
             else:
+                # --- Intermediate passes: write to inputLayer (not outputLayer) ---
                 core_lines = [
                     re.sub(
                         r"(T\d+)\[(\w+)\]",
-                        r"\1[uint3(\2, tileParams.outputLayer)]",
+                        r"\1[uint3(\2, tileParams.inputLayer)]",
                         line,
                     )
                     for line in core_lines
                 ]
-        elif offset_write:
-            # Offset mode: final output writes to 2D texture with offset
-            if is_final:
-                # Final pass writes to 2D texture with offset
-                core_lines = [
-                    re.sub(
-                        r"OUTPUT\[(.*?)\]", r"OUTPUT[\1 + tileParams.dstOffset]", line
-                    )
-                    for line in core_lines
-                ]
-            else:
-                # Intermediate passes write to array slice 0 (hardcoded, since we reuse a single slice)
-                core_lines = [
-                    re.sub(r"(T\d+)\[(\w+)\]", r"\1[uint3(\2, 0)]", line)
-                    for line in core_lines
-                ]
 
-        # Patch INPUT.SampleLevel for array textures
-        if (per_tile or offset_write) and is_final:
-            pattern = r"INPUT\.SampleLevel\(SL,\s*(.+?),\s*0\)"
-            replacement = r"INPUT.SampleLevel(SL, float3(\1, tileParams.inputLayer), 0)"
-            core_lines = [re.sub(pattern, replacement, line) for line in core_lines]
-
-        # Patch pos calculation for offset_write final pass
-        if offset_write and is_final:
-            core_lines = [
-                re.sub(
-                    r"float2 pos = \(\(gxy >> 1\) \+ 0\.5\) \* pt;",
-                    "uint2 inputXY = tileParams.srcOffset + id.xy;\n    float2 pos = (float2(inputXY) + 0.5) * pt;",
-                    line,
-                )
-                for line in core_lines
-            ]
-
-        entry = self._build_entry(is_final)
+        entry = self._build_entry(is_final, tile)
         separator = f"// {"=" * 77}"
 
         # Assemble everything
@@ -369,9 +391,10 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
             for lic_line in original_license.strip().splitlines():
                 lines.append(f"// {lic_line}")
             lines.extend(["//", separator, ""])
+
         lines.extend(
             [
-                self.common_header(is_final, per_tile, offset_write).strip(),
+                self.common_header(tile).strip(),
                 "",
                 *tex_decl_lines,
                 "",
@@ -399,31 +422,70 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         self,
         in_textures: List[str],
         out_textures: List[str],
-        is_final: bool,
-        per_tile: bool,
-        offset_write: bool,
+        tile: bool,
     ) -> List[str]:
         """Return SRV and UAV declaration lines with registers."""
         lines = []
-        # Input textures: for tile/offset modes, use arrays for intermediate passes.
-        # The first pass in offset mode reads from a 2D tile; but we treat it as an array
-        # with one slice for consistency (the shader uses tileParams.inputLayer = 0).
+        suffix = "Array" if tile else ""
+        # Input textures: for tile modes, use arrays for all passes
         for idx, tex in enumerate(in_textures):
-            suffix = "Array" if (per_tile or offset_write) else ""
             lines.append(f"Texture2D{suffix}<float4> {tex} : register(t{idx});")
         if in_textures and out_textures:
             lines.append("")
         # Output textures
         for idx, tex in enumerate(out_textures):
-            if offset_write and tex == self.config.special_output:
-                # Final output is 2D for offset mode
-                suffix = ""
-            else:
-                suffix = "Array" if (per_tile or offset_write) else ""
+            # In tile mode, output is always an array (even for final pass)
+            suffix = "Array" if tile else ""
             lines.append(
                 f'[[vk::image_format("rgba8")]] RWTexture2D{suffix}<float4> {tex} : register(u{idx});'
             )
         return lines
+
+    def _build_entry(self, is_final: bool, tile: bool) -> str:
+        nt = self.config.num_threads
+        if is_final:
+            # Final pass: 2x2 output pixels per thread
+            if tile:
+                # Tile mode final pass uses interior_id + validOffset to compute coordinates
+                return f"""[numthreads({nt[0]},{nt[1]},{nt[2]})]
+void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
+{{
+    float2 pt = float2(1.0 / in_width, 1.0 / in_height);
+    float2 full_opt = float2(1.0 / tileParams.fullOutWidth, 1.0 / tileParams.fullOutHeight);
+    uint2 interior_id = id.xy + tileParams.validOffset;
+    uint2 gxy = interior_id * 2;
+    float2 feature_pt = float2(1.0 / in_width, 1.0 / in_height);
+    float2 feature_coord = float2(tileParams.margin, tileParams.margin) + float2(interior_id);
+    float2 pos = (feature_coord + 0.5) * feature_pt;
+    uint2 globalOutXY = gxy + tileParams.dstOffset;
+    uint2 maxOut = tileParams.dstOffset + tileParams.tileOutExtent;
+"""
+            else:
+                return f"""[numthreads({nt[0]},{nt[1]},{nt[2]})]
+void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
+{{
+    float2 pt = float2(GetInputPt());
+    uint2 gxy = id.xy * 2;
+    float2 pos = ((gxy >> 1) + 0.5) * pt;
+"""
+        else:
+            # Intermediate passes: 1x1 output per thread
+            if tile:
+                return f"""[numthreads({nt[0]},{nt[1]},{nt[2]})]
+void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
+{{
+    float2 pt = float2(GetInputPt());
+    uint2 gxy = id.xy;
+    float2 pos = (gxy + 0.5) * pt;
+"""
+            else:
+                return f"""[numthreads({nt[0]},{nt[1]},{nt[2]})]
+void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
+{{
+    float2 pt = float2(GetInputPt());
+    uint2 gxy = id.xy;
+    float2 pos = (gxy + 0.5) * pt;
+"""
 
     def _extract_core_lines(self, body: str) -> List[str]:
         """
@@ -685,25 +747,6 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         # Convert blocks back to lines with blank lines between blocks
         return self._blocks_to_lines(blocks)
 
-    def _build_entry(self, is_final: bool) -> str:
-        nt = self.config.num_threads
-        if is_final:
-            return f"""[numthreads({nt[0]},{nt[1]},{nt[2]})]
-void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
-{{
-    float2 pt = float2(GetInputPt());
-    uint2 gxy = id.xy * 2;
-    float2 pos = ((gxy >> 1) + 0.5) * pt;
-"""
-        else:
-            return f"""[numthreads({nt[0]},{nt[1]},{nt[2]})]
-void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
-{{
-    float2 pt = float2(GetInputPt());
-    uint2 gxy = id.xy;
-    float2 pos = (gxy + 0.5) * pt;
-"""
-
 
 def extract_license(content: str, start: int = 2) -> str:
     lines = content.splitlines()[start:]  # Ignore title
@@ -721,20 +764,14 @@ def extract_license(content: str, start: int = 2) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Convert Magpie CuNNy shader to Compushady format."
+        description="Convert Magpie CuNNy shader to Vulkan compute shader format."
     )
     parser.add_argument("shader_path", help="Path to the original .hlsl shader file")
     parser.add_argument(
         "-t",
-        "--tile-aware",
+        "--tile",
         action="store_true",
-        help="Generate tile-aware (cache) shader variant",
-    )
-    parser.add_argument(
-        "-o",
-        "--offset-write",
-        action="store_true",
-        help="Generate offset-write (no cache) shader variant",
+        help="Generate tile‑mode shader (compatible with both direct and cached tile processors)",
     )
     args = parser.parse_args()
 
@@ -753,7 +790,7 @@ def main() -> None:
         return
 
     # Configuration
-    config = Config(tile_aware=args.tile_aware, offset_write=args.offset_write)
+    config = Config(tile=args.tile)
 
     # Build model.json data
     sampler_map = {s.name: s.filter_type for s in parser.samplers}
@@ -782,12 +819,7 @@ def main() -> None:
     hlsl_gen = HlslGenerator(config, model_name=shader_basename)
     sampler_order = [s.name for s in parser.samplers]
 
-    if config.tile_aware:
-        suffix = "_tile"
-    elif config.offset_write:
-        suffix = "_offset"
-    else:
-        suffix = ""
+    suffix = "_tile" if config.tile else ""
 
     for pinfo in parser.passes:
         hlsl = hlsl_gen.generate(

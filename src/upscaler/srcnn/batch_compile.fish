@@ -30,7 +30,6 @@ for model in $models
     end
 
     "$cnn_dir/converter.py" "$original_model.hlsl"
-    "$cnn_dir/converter.py" -o "$original_model.hlsl"
     "$cnn_dir/converter.py" -t "$original_model.hlsl"
 
     mv "$original_model" "$model_dir"

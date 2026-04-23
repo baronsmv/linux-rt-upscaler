@@ -42,6 +42,15 @@ cbuffer Constants : register(b0) {
 
 struct TileParams {
     uint inputLayer;
+    uint2 srcOffset;
+    uint2 dstOffset;
+    uint margin;
+    uint cropWidth;
+    uint cropHeight;
+    uint fullOutWidth;
+    uint fullOutHeight;
+    uint2 validOffset;
+    uint2 tileOutExtent;
     uint outputLayer;
 };
 [[vk::push_constant]] TileParams tileParams;
@@ -775,33 +784,33 @@ void main(uint3 id : SV_DispatchThreadID)
 
     r0 = max(r0, 0.0);
 
-    T8[uint3(gxy, tileParams.outputLayer)] = r0;
+    T8[uint3(gxy, tileParams.inputLayer)] = r0;
 
     r1 = max(r1, 0.0);
 
-    T9[uint3(gxy, tileParams.outputLayer)] = r1;
+    T9[uint3(gxy, tileParams.inputLayer)] = r1;
 
     r2 = max(r2, 0.0);
 
-    T10[uint3(gxy, tileParams.outputLayer)] = r2;
+    T10[uint3(gxy, tileParams.inputLayer)] = r2;
 
     r3 = max(r3, 0.0);
 
-    T11[uint3(gxy, tileParams.outputLayer)] = r3;
+    T11[uint3(gxy, tileParams.inputLayer)] = r3;
 
     r4 = max(r4, 0.0);
 
-    T12[uint3(gxy, tileParams.outputLayer)] = r4;
+    T12[uint3(gxy, tileParams.inputLayer)] = r4;
 
     r5 = max(r5, 0.0);
 
-    T13[uint3(gxy, tileParams.outputLayer)] = r5;
+    T13[uint3(gxy, tileParams.inputLayer)] = r5;
 
     r6 = max(r6, 0.0);
 
-    T14[uint3(gxy, tileParams.outputLayer)] = r6;
+    T14[uint3(gxy, tileParams.inputLayer)] = r6;
 
     r7 = max(r7, 0.0);
 
-    T15[uint3(gxy, tileParams.outputLayer)] = r7;
+    T15[uint3(gxy, tileParams.inputLayer)] = r7;
 }

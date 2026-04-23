@@ -42,6 +42,15 @@ cbuffer Constants : register(b0) {
 
 struct TileParams {
     uint inputLayer;
+    uint2 srcOffset;
+    uint2 dstOffset;
+    uint margin;
+    uint cropWidth;
+    uint cropHeight;
+    uint fullOutWidth;
+    uint fullOutHeight;
+    uint2 validOffset;
+    uint2 tileOutExtent;
     uint outputLayer;
 };
 [[vk::push_constant]] TileParams tileParams;
@@ -112,11 +121,11 @@ void main(uint3 id : SV_DispatchThreadID)
 
     r0 = max(r0, 0.0);
 
-    T0[uint3(gxy, tileParams.outputLayer)] = r0;
+    T0[uint3(gxy, tileParams.inputLayer)] = r0;
 
     r1 += V4(-1.634e-03, 6.261e-03, 7.272e-03, 1.764e-03);
 
     r1 = max(r1, 0.0);
 
-    T1[uint3(gxy, tileParams.outputLayer)] = r1;
+    T1[uint3(gxy, tileParams.inputLayer)] = r1;
 }
