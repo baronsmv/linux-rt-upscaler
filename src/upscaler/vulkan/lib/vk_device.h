@@ -44,7 +44,7 @@ PyObject *vk_Device_create_heap(vk_Device *self, PyObject *args);
  * Create a buffer resource.
  *
  * Args:
- *     heap_type (int): memory placement (0 = DEFAULT, 1 = UPLOAD, 2 = READBACK).
+ *     heap_type (int): memory placement (0=DEFAULT; 1=UPLOAD, 2=READBACK).
  *     size (int): buffer size in bytes.
  *     stride (int): element stride (used for formatted buffers).
  *     format (int): pixel format constant (e.g., R32G32B32A32_FLOAT) or 0.
