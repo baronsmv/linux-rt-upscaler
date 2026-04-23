@@ -51,6 +51,7 @@ struct TileParams {
     uint fullOutHeight;
     uint2 validOffset;
     uint2 tileOutExtent;
+    uint outputLayer;
 };
 [[vk::push_constant]] TileParams tileParams;
 

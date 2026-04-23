@@ -51,6 +51,7 @@ struct TileParams {
     uint fullOutHeight;
     uint2 validOffset;
     uint2 tileOutExtent;
+    uint outputLayer;
 };
 [[vk::push_constant]] TileParams tileParams;
 
@@ -69,7 +70,7 @@ Texture2DArray<float4> INPUT : register(t0);
 Texture2DArray<float4> T0 : register(t1);
 Texture2DArray<float4> T1 : register(t2);
 
-[[vk::image_format("rgba8")]] RWTexture2D<float4> OUTPUT : register(u0);
+[[vk::image_format("rgba8")]] RWTexture2DArray<float4> OUTPUT : register(u0);
 
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);
@@ -146,14 +147,17 @@ void main(uint3 id : SV_DispatchThreadID)
 
     yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 0.0) * full_opt, tileParams.inputLayer), 0).rgb);
     if (globalOutXY.x < maxOut.x && globalOutXY.y < maxOut.y)
-        OUTPUT[globalOutXY + int2(0,0)] = float4(mul(YR, float3(saturate(yuv.r + r0.x), yuv.yz)), 1.0);
+        OUTPUT[uint3(globalOutXY + int2(0,0), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.x), yuv.yz)), 1.0);
+
     yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 0.0) * full_opt, tileParams.inputLayer), 0).rgb);
     if (globalOutXY.x + 1 < maxOut.x && globalOutXY.y < maxOut.y)
-        OUTPUT[globalOutXY + int2(1, 0)] = float4(mul(YR, float3(saturate(yuv.r + r0.y), yuv.yz)), 1.0);
+        OUTPUT[uint3(globalOutXY + int2(1, 0), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.y), yuv.yz)), 1.0);
+
     yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 1.0) * full_opt, tileParams.inputLayer), 0).rgb);
-    if (globalOutXY.x < maxOut.x && globalOutXY.y +1 < maxOut.y)
-        OUTPUT[globalOutXY + int2(0, 1)] = float4(mul(YR, float3(saturate(yuv.r + r0.z), yuv.yz)), 1.0);
+    if (globalOutXY.x < maxOut.x && globalOutXY.y + 1 < maxOut.y)
+        OUTPUT[uint3(globalOutXY + int2(0, 1), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.z), yuv.yz)), 1.0);
+
     yuv = mul(RY, INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 1.0) * full_opt, tileParams.inputLayer), 0).rgb);
     if (globalOutXY.x + 1 < maxOut.x && globalOutXY.y + 1 < maxOut.y)
-        OUTPUT[globalOutXY + int2(1, 1)] = float4(mul(YR, float3(saturate(yuv.r + r0.w), yuv.yz)), 1.0);
+        OUTPUT[uint3(globalOutXY + int2(1, 1), tileParams.outputLayer)] = float4(mul(YR, float3(saturate(yuv.r + r0.w), yuv.yz)), 1.0);
 }
