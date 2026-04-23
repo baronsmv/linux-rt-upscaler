@@ -658,8 +658,8 @@ class OffsetTileProcessor(TileProcessor):
 
             # Scale the input‑pixel offsets to output‑pixel space
             scale = 4 if self.double_upscale else 2
-            valid_block_x = (valid_x * scale) // 2
-            valid_block_y = (valid_y * scale) // 2
+            valid_block_x = valid_x * scale
+            valid_block_y = valid_y * scale
 
             actual_out_w = min(self.tile_size * scale, full_out_w - dst_x)
             actual_out_h = min(self.tile_size * scale, full_out_h - dst_y)

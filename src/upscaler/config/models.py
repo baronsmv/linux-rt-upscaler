@@ -89,13 +89,15 @@ class Config:
     vulkan_buffer_pool_size: int = 8
     use_damage_tracking: bool = True
 
+    # Processing mode
+    mode: str = "offset"
+
     # Tiles
-    tile_size: int = 64
-    tile_context_margin: int = 16
-    max_tiles_per_batch: int = 16
+    tile_size: int = 64  # Recommended: between 32 and 128, ideally 64-96
+    tile_context_margin: int = 16  # Recommended: between 4 and 20, ideally 16
+    max_tiles_per_batch: int = 16  # Recommended: between 8 and 32, ideally 16
 
     # Cache
-    mode: str = "offset"
     cache_capacity: int = 2048
     cache_threshold: float = 0.3
 
