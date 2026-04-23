@@ -46,28 +46,4 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args);
  */
 PyObject *vk_Compute_dispatch_sequence(vk_Compute *self, PyObject *args, PyObject *kwds);
 
-/* ----------------------------------------------------------------------------
-   Python method: execute_tile_batch
-   ------------------------------------------------------------------------- */
-/**
- * Process a batch of tiles using a series of compute pipelines.
- *
- * All uploads and dispatches are recorded into a single command buffer,
- * submitted once, and waited for completion. This minimizes driver overhead
- * and avoids per-tile CPU-GPU stalls.
- *
- * Args (positional):
- *     tiles (list): List of tuples (dst_x, dst_y, push_data, tile_bytes).
- *     input_tex (vk.Resource): Input texture (2D array, 1 slice).
- *     staging (vk.Resource): Upload buffer large enough for all tile data.
- *     tile_size (int): Width/height of a tile in pixels.
- *     groups_x (int): Number of workgroups in X for each dispatch.
- *     groups_y (int): Number of workgroups in Y for each dispatch.
- *     pipelines (list): List of vk.Compute objects (the passes to execute).
- *
- * Returns:
- *     None
- */
- PyObject* vk_Compute_execute_tile_batch(vk_Compute* self, PyObject* args);
-
 #endif /* VK_COMPUTE_H */

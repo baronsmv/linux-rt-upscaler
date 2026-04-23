@@ -38,7 +38,7 @@ class Config:
     input_texture_prefix: str = "T"
     special_input: str = "INPUT"
     special_output: str = "OUTPUT"
-    tile: bool = False  # generate tile‑mode shader
+    tile: bool = False  # generate tile-mode shader
 
 
 @dataclass
@@ -292,7 +292,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         # Apply tile/offset specific rewrites
         if tile:
             if is_final:
-                # --- Final pass: convert to tile‑mode with bounds checks ---
+                # --- Final pass: convert to tile-mode with bounds checks ---
 
                 # 1. Replace fpos calculation to use full_opt
                 core_lines = [
@@ -771,7 +771,7 @@ def main() -> None:
         "-t",
         "--tile",
         action="store_true",
-        help="Generate tile‑mode shader (compatible with both direct and cached tile processors)",
+        help="Generate tile-mode shader (compatible with both direct and cached tile processors)",
     )
     args = parser.parse_args()
 
