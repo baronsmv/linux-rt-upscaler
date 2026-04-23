@@ -88,7 +88,7 @@ class PipelineController:
             next_model: If True, switch to the next model in the list.
                 If False, switch to the previous model.
         """
-        self._model_switch_queue.put(next_model)
+        self._model_switch_queue.put(not next_model)  # Models are inverted
 
     def switch_geometry(self) -> None:
         """Request a geometry mode cycle (next mode)."""
