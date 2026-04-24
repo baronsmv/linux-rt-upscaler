@@ -17,7 +17,7 @@ from ..config import Config, OverlayMode
 from ..overlay import OverlayWindow
 from ..tile import TileProcessor, CachedTileProcessor
 from ..utils import parse_output_geometry
-from ..vulkan import configure_device, device_wait_idle
+from ..vulkan import configure_device
 from ..window import WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
@@ -160,7 +160,6 @@ class Pipeline:
         self._last_frame_time = time.time()
 
         # Prepare OSD textures (must be done after Vulkan device is ready).
-        device_wait_idle()
         self.osd.prepare_textures()
 
     # ----------------------------------------------------------------------
@@ -248,6 +247,11 @@ class Pipeline:
     # ----------------------------------------------------------------------
     def _process_one_frame(self) -> None:
         """Capture, upscale, and present a single frame."""
+        # Ensure the GPU has finished the previous frame's presentation
+        # This prevents write‑after‑read hazards on shared resources
+        if not self._swapchain_manager.wait_for_last_present():
+            logger.warning("Frame fence wait timed out – possible GPU hang?")
+
         # 1. Grab the current frame from the target window.
         try:
             frame, is_dirty, rects = self._grabber.grab()

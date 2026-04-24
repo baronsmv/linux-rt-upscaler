@@ -6,7 +6,7 @@ from typing import Optional
 import xcffib
 from xcffib import ffi
 
-from ..vulkan import Swapchain, Texture2D
+from ..vulkan import Swapchain, Texture2D, get_current_device
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +121,27 @@ class SwapchainManager:
                 self._swapchain = None
 
             self._create_swapchain()
+
+    def wait_for_last_present(self, timeout_ns: int = 1_000_000_000) -> bool:
+        """
+        Wait for the fence from the most recent present() call to be signalled.
+
+        This must be called **before** the CPU starts writing to any GPU
+        resource that is reused across frames (e.g., staging buffers,
+        input textures).  It guarantees that the GPU has finished all work
+        related to the previous frame, including the final image copy for
+        presentation.
+
+        Returns:
+            True if the fence was signalled, False on timeout.
+        """
+        if self._swapchain is None:
+            return True
+        fence = self._swapchain.get_last_fence()
+        if fence is None:
+            return True  # first frame, nothing to wait for
+        dev = get_current_device()
+        return dev.wait_for_fences([fence], wait_all=True, timeout_ns=timeout_ns)
 
     def needs_recreation(self) -> bool:
         """Return True if the swapchain is invalid and needs recreation."""

@@ -315,6 +315,25 @@ class Device:
         """Block until all GPU work finishes."""
         self._handle.wait_idle()
 
+    def wait_for_fences(
+        self,
+        fences: List[int],
+        wait_all: bool = True,
+        timeout_ns: int = 1_000_000_000,  # 1 second
+    ) -> bool:
+        """
+        Wait until one or all fences are signalled.
+
+        Args:
+            fences: List of native fence handles (integers).
+            wait_all: If True, wait for all; if False, wait for any.
+            timeout_ns: Timeout in nanoseconds (default 1 s).
+
+        Returns:
+            True if the fences were signalled, False on timeout.
+        """
+        return self._handle.wait_for_fences(fences, wait_all, timeout_ns)
+
     def get_debug_messages(self) -> List[str]:
         """Retrieve and clear Vulkan validation messages."""
         return self._handle.get_debug_messages()
@@ -978,6 +997,13 @@ class Swapchain:
             wait_for_fence: If True, block until presentation completes.
         """
         self._handle.present(texture._handle, x, y, wait_for_fence)
+
+    def get_last_fence(self) -> Optional[int]:
+        """Return the native handle (int) of the fence used in the last present, or None."""
+        result = self._handle.get_last_fence()
+        if result is None:
+            return None
+        return int(result)
 
     def is_suboptimal(self) -> bool:
         """Return True if the swapchain is suboptimal."""

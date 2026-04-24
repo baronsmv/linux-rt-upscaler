@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple, Union
 
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
 from ..tile import CachedTileProcessor, TileProcessor
-from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD, device_wait_idle
+from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD
 
 logger = logging.getLogger(__name__)
 
@@ -355,7 +355,6 @@ class UpscalerManager:
                 margin=self.tile_context_margin,
             )
             self.process_full_frame()
-            device_wait_idle()
             self._first_tile_frame = False
             return
 
@@ -373,7 +372,6 @@ class UpscalerManager:
                     margin=self.tile_context_margin,
                 )
                 self.process_full_frame()
-                device_wait_idle()
                 return
 
             # Update the residual texture with expanded damage regions.
