@@ -109,7 +109,7 @@ class Config:
 
     # Tile and cache modes
     tile_context_margin: int = 16
-    max_tile_layers: int = 16
+    max_tile_layers: int = 8
 
     # Cache mode
     cache_capacity: int = 512

@@ -113,14 +113,15 @@ Modes:
            Excellent for repetitive UI changes.
 
 For more customization, see ADVANCED PROCESSING OPTIONS.
+
 """,
     )
     upscaling_group.add_argument(
         "--lanczos-blur",
         type=float,
         default=DEFAULT_CONFIG.lanczos_blur,
-        help="""Sharpness of the Lanczos scaling. 1.0 = standard, 
-<1 sharper, >1 softer.  Default: %(default)s""",
+        help="""Sharpness of the Lanczos scaling.
+1.0 = standard, <1 sharper, >1 softer.  Default: %(default)s""",
     )
 
     # ----------------------------------------------------------------------
@@ -235,10 +236,9 @@ Modes:
         help="""Horizontal offset from centered position (pixels, positive
 moves right, negative moves left)
 
-Note: To pass negative values, use either --offset-x=-1
-(with an equals sign) or --offset-x "-1" (with quotes).
-The form --offset-x -1 will be misinterpreted because the
-shell treats -1 as a separate option.
+Note: To pass negative values, use --offset-x=-1 (with an
+equals sign). The form --offset-x -1 will be misinterpreted
+because the shell treats -1 as a separate option.
     """,
     )
     overlay_group.add_argument(
@@ -281,8 +281,7 @@ Default: %(default)s""",
         type=str,
         default=DEFAULT_CONFIG.screenshot_filename,
         help="""Template for screenshot file names. Supports
-{{timestamp}}, {{model}}, {{geometry}}, {{mode}}, and
-standard Python format specifiers.
+{timestamp}, {model} and standard Python format specifiers.
 Default: %(default)s""",
     )
     screenshot_group.add_argument(
@@ -344,8 +343,7 @@ Modes:
 texture updates. Larger values reduce allocation overhead
 during frequent small changes, but use a small amount of
 additional VRAM.
-Default: %(default)s
-    """,
+Default: %(default)s""",
     )
     vulkan_group.add_argument(
         "--frame-timeout-ns",
@@ -370,9 +368,9 @@ Increase if you see timeout warnings. Default: %(default)s""",
         "--tile-size",
         type=int,
         default=DEFAULT_CONFIG.tile_size,
-        help="""Tile size (in pixels) for tile/cache modes and internal
-damage detection (full mode if damage tracking is enabled).
-Smaller values give finer granularity but increase overhead.
+        help="""Tile size (in pixels).
+Smaller values give finer granularity at tracking changes
+but increase CPU overhead.
 Recommended: 32-128, default %(default)s.""",
     )
     processing_group.add_argument(
@@ -382,7 +380,7 @@ Recommended: 32-128, default %(default)s.""",
         help="""Extra border pixels around each tile to provide convolution
 context. Larger margins improve quality at tile boundaries
 but increase processing cost.
-Recommended: 4-20, default %(default)s.""",
+Recommended: 8-24, default %(default)s.""",
     )
     processing_group.add_argument(
         "--max-tile-layers",
@@ -390,8 +388,8 @@ Recommended: 4-20, default %(default)s.""",
         default=DEFAULT_CONFIG.max_tile_layers,
         help="""Maximum number of concurrent tile layers (batch size) in
 tile mode. Higher values allow more tiles per batch but
-use more VRAM.
-Recommended: 8-32, default %(default)s.""",
+use more VRAM and may slow processing on dynamic content.
+Recommended: 8-16, default %(default)s.""",
     )
     processing_group.add_argument(
         "--area-threshold",
