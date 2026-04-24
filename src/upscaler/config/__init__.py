@@ -5,6 +5,7 @@ from .models import (
     Config,
     OverlayMode,
     OUTPUT_GEOMETRIES,
+    PROCESSING_MODES,
     UPSCALING_MODELS,
 )
 from .setup import setup_config
@@ -15,5 +16,6 @@ __all__ = [
     "OverlayMode",
     "setup_config",
     "OUTPUT_GEOMETRIES",
+    "PROCESSING_MODES",
     "UPSCALING_MODELS",
 ]

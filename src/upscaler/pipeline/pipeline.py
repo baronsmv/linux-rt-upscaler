@@ -121,16 +121,7 @@ class Pipeline:
 
         # Upscaler manager - orchestrates full-frame or tile-based upscaling.
         self.upscaler_mgr = UpscalerManager(
-            crop_width=self.crop_width,
-            crop_height=self.crop_height,
-            model_name=config.model,
-            double_upscale=config.double_upscale,
-            tile_size=config.tile_size,
-            tile_context_margin=config.tile_context_margin,
-            cache_capacity=config.cache_capacity,
-            cache_threshold=config.cache_threshold,
-            mode=config.mode,
-            max_tiles_per_batch=config.max_tiles_per_batch,
+            config=self.config, crop_width=self.crop_width, crop_height=self.crop_height
         )
 
         # Window tracker monitors the target window for size/state changes.
@@ -200,16 +191,7 @@ class Pipeline:
         """
         logger.info("Recreating upscaler manager")
         self.upscaler_mgr = UpscalerManager(
-            crop_width=self.crop_width,
-            crop_height=self.crop_height,
-            model_name=self.config.model,
-            double_upscale=self.config.double_upscale,
-            tile_size=self.config.tile_size,
-            tile_context_margin=self.config.tile_context_margin,
-            cache_capacity=self.config.cache_capacity,
-            cache_threshold=self.config.cache_threshold,
-            mode=self.config.mode,
-            max_tiles_per_batch=self.config.max_tiles_per_batch,
+            config=self.config, crop_width=self.crop_width, crop_height=self.crop_height
         )
         # Update presenter's source texture to the new output.
         self.presenter.set_source_texture(self.upscaler_mgr.get_output_texture())
@@ -248,9 +230,9 @@ class Pipeline:
     def _process_one_frame(self) -> None:
         """Capture, upscale, and present a single frame."""
         # Ensure the GPU has finished the previous frame's presentation
-        # This prevents write‑after‑read hazards on shared resources
+        # This prevents write-after-read hazards on shared resources
         if not self._swapchain_manager.wait_for_last_present():
-            logger.warning("Frame fence wait timed out – possible GPU hang?")
+            logger.warning("Frame fence wait timed out - possible GPU hang?")
 
         # 1. Grab the current frame from the target window.
         try:

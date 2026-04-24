@@ -3,6 +3,7 @@ import struct
 from typing import List, Optional, Tuple
 
 from .utils import expand_damage_rects, extract_expanded_tiles
+from ..config import Config
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
 from ..vulkan import Buffer, Compute, Texture2D, HEAP_UPLOAD
 
@@ -40,47 +41,42 @@ class TileProcessor:
 
     def __init__(
         self,
+        config: Config,
         crop_width: int,
         crop_height: int,
-        model_name: str,
-        double_upscale: bool,
-        tile_size: int,
-        tile_context_margin: int = 0,
-        max_layers: int = 16,
     ) -> None:
         """
         Initialize the direct tile processor.
 
         Args:
+            config: Global configuration object (may be updated at runtime).
             crop_width: Width of the captured crop area in pixels.
             crop_height: Height of the captured crop area in pixels.
-            model_name: Name of the CuNNy model subdirectory (e.g., "fast").
-            double_upscale: If True, perform 4x upscaling (two 2x stages).
-            tile_size: Nominal input tile size (without margin).
-            tile_context_margin: Extra border pixels for convolution context.
-            max_layers: Maximum number of concurrent tiles per batch.
 
         Raises:
             ValueError: If crop dimensions are non-positive.
             FileNotFoundError: If model files are missing.
         """
-        if crop_width <= 0 or crop_height <= 0:
-            raise ValueError(f"Invalid crop dimensions: {crop_width}x{crop_height}")
-        if tile_size <= 0:
-            raise ValueError(f"Invalid tile size: {tile_size}")
-        if max_layers <= 0:
-            raise ValueError(f"Invalid max_layers: {max_layers}")
-
+        self.config = config
         self.crop_width = crop_width
         self.crop_height = crop_height
-        self.tile_size = tile_size
-        self.margin = tile_context_margin
-        self.double_upscale = double_upscale
-        self.max_layers = max_layers
+        self.model_name = config.model
+        self.double_upscale = config.double_upscale
+        self.tile_size = config.tile_size
+        self.margin = config.tile_context_margin
+        self.area_threshold = config.area_threshold
+        self.max_layers = config.max_tile_layers
 
-        self.expanded_tile_size = tile_size + 2 * self.margin
+        if crop_width <= 0 or crop_height <= 0:
+            raise ValueError(f"Invalid crop dimensions: {crop_width}x{crop_height}")
+        if self.tile_size <= 0:
+            raise ValueError(f"Invalid tile size: {self.tile_size}")
+        if self.max_layers <= 0:
+            raise ValueError(f"Invalid max_layers: {self.max_layers}")
 
-        scale = 4 if double_upscale else 2
+        self.expanded_tile_size = self.tile_size + 2 * self.margin
+
+        scale = 4 if self.double_upscale else 2
         self.tile_out_w_final = self.expanded_tile_size * scale
         self.tile_out_h_final = self.expanded_tile_size * scale
 
@@ -90,9 +86,9 @@ class TileProcessor:
         self.output_texture = Texture2D(out_w, out_h, slices=1, force_array_view=True)
 
         # Load model configuration and create pipeline factory
-        config = load_cunny_model(model_name, variant="_tile")
-        config.push_constant_size = self._get_push_constant_size()
-        self.factory = PipelineFactory(config)
+        model_config = load_cunny_model(self.model_name, variant="_tile")
+        model_config.push_constant_size = self._get_push_constant_size()
+        self.factory = PipelineFactory(model_config)
 
         # Staging buffer for uploading tile data (reused across frames)
         self.staging = Buffer(
@@ -121,7 +117,8 @@ class TileProcessor:
 
         logger.info(
             f"TileProcessor initialized: crop={crop_width}x{crop_height}, "
-            f"tile={tile_size}, margin={self.margin}, max_layers={max_layers}"
+            f"tile={self.tile_size}, margin={self.margin}, "
+            f"max_layers={self.max_layers}"
         )
 
     # --------------------------------------------------------------------------

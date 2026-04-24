@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional, Tuple, Union
 
+from ..config import Config, PROCESSING_MODES
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
 from ..tile import CachedTileProcessor, TileProcessor
 from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD
@@ -18,98 +19,66 @@ class UpscalerManager:
     modes, it also instantiates a `TileProcessor` or `CachedTileProcessor`
     and delegates the actual tile processing to it.
 
-    Attributes:
-        crop_width (int): Width of the captured crop area in pixels.
-        crop_height (int): Height of the captured crop area in pixels.
-        tile_size (int): Nominal input tile size for tile-based modes.
-        tile_context_margin (int): Extra border pixels for convolution context.
-        double_upscale (bool): If True, perform 4x upscaling (two 2x stages).
-        max_tiles_per_batch (int): Maximum concurrent tiles in tile mode.
-        mode (str): Active processing mode ("full", "tile", "cache").
-        output (Texture2D): Final upscaled texture (full frame).
-        staging (Buffer): Staging buffer for full-frame uploads.
-        input (Texture2D): Input texture for full-frame mode.
-        full_stages (List[SRCNN]): SRCNN stages for full-frame processing.
-        full_groups (List[Tuple[int, int]]): Dispatch groups for full-frame.
-        tile_processor (Optional): Tile processor for tile/cache modes.
+    All configuration values are read directly from the `Config` object
+    stored in `self.config`.  This means that changes to the config (e.g.
+    `area_threshold`, `model`) are picked up immediately for subsequent
+    frames, while structural changes (tile size, upscaling model) require
+    a pipeline recreation (already handled by `Pipeline.recreate_upscaler()`).
     """
 
-    # Supported processing modes.
-    VALID_MODES = ("full", "tile", "cache")
-
-    def __init__(
-        self,
-        crop_width: int,
-        crop_height: int,
-        model_name: str,
-        double_upscale: bool,
-        tile_size: int,
-        tile_context_margin: int,
-        cache_capacity: int,
-        cache_threshold: float,
-        mode: str = "full",
-        max_tiles_per_batch: int = 16,
-    ) -> None:
+    def __init__(self, config: Config, crop_width: int, crop_height: int) -> None:
         """
         Initialize the upscaler manager.
 
         Args:
-            crop_width: Width of the captured crop area (pixels).
+            config:      Global configuration object (may be updated at runtime).
+            crop_width:  Width of the captured crop area (pixels).
             crop_height: Height of the captured crop area (pixels).
-            model_name: Name of the CuNNy model subdirectory (e.g., "fast").
-            double_upscale: If True, perform 4x upscaling (two 2x stages).
-            tile_size: Nominal input tile size for tile-based modes.
-            tile_context_margin: Extra border pixels for convolution context.
-            cache_capacity: Maximum number of tiles stored in cache mode.
-            cache_threshold: Fraction of total tiles above which full-frame is used.
-            mode: Processing mode. Must be one of "full", "tile", "cache".
-            max_tiles_per_batch: Maximum concurrent tiles in tile mode.
 
         Raises:
-            ValueError: If an invalid mode is provided.
+            ValueError: If the configured mode is invalid.
         """
-        if mode not in self.VALID_MODES:
-            raise ValueError(f"Unknown mode '{mode}'. Valid modes: {self.VALID_MODES}")
+        if config.processing_mode not in PROCESSING_MODES:
+            raise ValueError(
+                f"Unknown mode '{config.processing_mode}'. Valid modes: {PROCESSING_MODES}"
+            )
 
+        self.config = config
         self.crop_width = crop_width
         self.crop_height = crop_height
-        self.tile_size = tile_size
-        self.tile_context_margin = tile_context_margin
-        self.double_upscale = double_upscale
-        self.max_tiles_per_batch = max_tiles_per_batch
-        self.mode = mode
+        self.mode = config.processing_mode
 
-        # Internal state.
+        # Internal state
         self._first_tile_frame = True
 
-        # Full-frame resources (always created - used for fallback and first tile frame).
+        # Full-frame resources (always created - used for fallback and first tile frame)
         self.staging: Optional[Buffer] = None
         self.input: Optional[Texture2D] = None
         self.output: Optional[Texture2D] = None
         self.full_stages: List[SRCNN] = []
         self.full_groups: List[Tuple[int, int]] = []
 
-        # Create full-frame pipeline.
-        self._init_full_mode(model_name)
+        # Create full-frame pipeline
+        self._init_full_mode()
 
         # Tile processor (only for tile-based modes).
         self.tile_processor: Optional[Union[TileProcessor, CachedTileProcessor]] = None
-
-        if mode == "tile":
-            self._init_tile_mode(model_name)
-        elif mode == "cache":
-            self._init_cache_mode(model_name, cache_capacity, cache_threshold)
+        if self.mode == "tile":
+            self._init_tile_mode()
+        elif self.mode == "cache":
+            self._init_cache_mode()
 
         logger.info(
-            f"UpscalerManager initialized: mode={mode}, "
-            f"crop={crop_width}x{crop_height}, tile_size={tile_size}, "
-            f"margin={tile_context_margin}"
+            f"UpscalerManager initialized: mode={self.mode}, "
+            f"crop={crop_width}x{crop_height}, "
+            f"tile_size={self.config.tile_size}, "
+            f"margin={self.config.tile_context_margin}"
         )
 
     # ----------------------------------------------------------------------
     # Initialization helpers
     # ----------------------------------------------------------------------
-    def _init_full_mode(self, model_name: str) -> None:
+    def _init_full_mode(self) -> None:
         """
         Set up full-frame upscaling (one or two SRCNN stages).
 
@@ -118,8 +87,8 @@ class UpscalerManager:
         The resulting stages are stored in `self.full_stages` and can be
         used directly or as a fallback.
         """
-        config = load_cunny_model(model_name, variant="")
-        factory = PipelineFactory(config)
+        model_config = load_cunny_model(self.config.model, variant="")
+        factory = PipelineFactory(model_config)
 
         in_w, in_h = self.crop_width, self.crop_height
         out_w_first = in_w * 2
@@ -132,7 +101,7 @@ class UpscalerManager:
         # Intermediate texture for the first stage output
         inter_tex = Texture2D(out_w_first, out_h_first)
         outputs1 = {"output": inter_tex}
-        for i in range(config.num_textures):
+        for i in range(model_config.num_textures):
             outputs1[f"t{i}"] = Texture2D(in_w, in_h)
 
         srnn1 = SRCNN(
@@ -146,14 +115,14 @@ class UpscalerManager:
         self.full_stages.append(srnn1)
         self.full_groups.append(dispatch_groups(in_w, in_h, last_pass=False))
 
-        if self.double_upscale:
+        if self.config.double_upscale:
             # Second stage for 4x upscaling
             out_w_final = out_w_first * 2
             out_h_final = out_h_first * 2
             self.output = Texture2D(out_w_final, out_h_final)
 
             outputs2 = {"output": self.output}
-            for i in range(config.num_textures):
+            for i in range(model_config.num_textures):
                 outputs2[f"t{i}"] = Texture2D(out_w_first, out_h_first)
 
             srnn2 = SRCNN(
@@ -181,33 +150,22 @@ class UpscalerManager:
                 push_constant_size=0,
             )
 
-    def _init_tile_mode(self, model_name: str) -> None:
+    def _init_tile_mode(self) -> None:
         """Instantiate the tile (non-cached) tile processor."""
         self.tile_processor = TileProcessor(
+            config=self.config,
             crop_width=self.crop_width,
             crop_height=self.crop_height,
-            model_name=model_name,
-            double_upscale=self.double_upscale,
-            tile_size=self.tile_size,
-            tile_context_margin=self.tile_context_margin,
-            max_layers=self.max_tiles_per_batch,
         )
         self.output = self.tile_processor.output_texture
         self._rebind_full_frame_output()
 
-    def _init_cache_mode(
-        self, model_name: str, cache_capacity: int, cache_threshold: float
-    ) -> None:
+    def _init_cache_mode(self) -> None:
         """Instantiate the cached tile processor."""
         self.tile_processor = CachedTileProcessor(
+            config=self.config,
             crop_width=self.crop_width,
             crop_height=self.crop_height,
-            model_name=model_name,
-            double_upscale=self.double_upscale,
-            tile_size=self.tile_size,
-            cache_capacity=cache_capacity,
-            cache_threshold=cache_threshold,
-            tile_context_margin=self.tile_context_margin,
         )
         self.output = self.tile_processor.output_texture
         self._rebind_full_frame_output()
@@ -225,7 +183,7 @@ class UpscalerManager:
             return
 
         # Determine which stage holds the final output UAV
-        stage_idx = -1 if self.double_upscale else 0
+        stage_idx = -1 if self.config.double_upscale else 0
         old_stage = self.full_stages[stage_idx]
         factory = old_stage.factory  # Shared PipelineFactory
 
@@ -275,22 +233,29 @@ class UpscalerManager:
             expanded = TileProcessor.expand_damage_rects(
                 rects, self.crop_width, self.crop_height, margin
             )
-            uploads = []
-            stride = self.crop_width * 4
-            for ex, ey, ew, eh in expanded:
-                sub_data = bytearray(ew * eh * 4)
-                for row in range(eh):
-                    src_start = (ey + row) * stride + ex * 4
-                    dst_start = row * ew * 4
-                    sub_data[dst_start : dst_start + ew * 4] = frame[
-                        src_start : src_start + ew * 4
-                    ]
-                uploads.append((bytes(sub_data), ex, ey, ew, eh))
-            self.input.upload_subresources(uploads)
-        else:
-            # Upload the entire frame
-            self.staging.upload(frame)
-            self.staging.copy_to(self.input)
+            total_area = sum(w * h for _, _, w, h in expanded)
+            frame_area = self.crop_width * self.crop_height
+            threshold_area = self.config.area_threshold * frame_area
+
+            if total_area <= threshold_area:
+                # Partial upload - only the expanded dirty rectangles
+                uploads = []
+                stride = self.crop_width * 4
+                for ex, ey, ew, eh in expanded:
+                    sub_data = bytearray(ew * eh * 4)
+                    for row in range(eh):
+                        src_start = (ey + row) * stride + ex * 4
+                        dst_start = row * ew * 4
+                        sub_data[dst_start : dst_start + ew * 4] = frame[
+                            src_start : src_start + ew * 4
+                        ]
+                    uploads.append((bytes(sub_data), ex, ey, ew, eh))
+                self.input.upload_subresources(uploads)
+                return
+
+        # Full upload (either no damage tracking, no rects, or threshold exceeded)
+        self.staging.upload(frame)
+        self.staging.copy_to(self.input)
 
     def process_full_frame(self) -> None:
         """
@@ -324,7 +289,7 @@ class UpscalerManager:
           initialize the output texture. Subsequent frames only update
           dirty tiles.
         - In tile mode, if the number of dirty tiles exceeds
-          `max_tiles_per_batch`, the frame is processed using the full-frame
+          `max_tile_layers`, the frame is processed using the full-frame
           fallback instead.
         - In tile mode, the residual texture (`full_input_tex`) is updated
           with the expanded damage regions before tile processing.
@@ -351,25 +316,25 @@ class UpscalerManager:
             self.upload_full_frame(
                 frame=frame_data,
                 rects=rects,
-                use_damage_tracking=False,  # Upload whole frame.
-                margin=self.tile_context_margin,
+                use_damage_tracking=False,  #  Upload whole frame
+                margin=self.config.tile_context_margin,
             )
             self.process_full_frame()
             self._first_tile_frame = False
             return
 
-        # Direct mode specific: fallback if too many tiles, and residual upload.
+        # Direct mode specific: fallback if too many tiles, and residual upload
         if self.mode == "tile":
-            if len(dirty_tiles) > self.max_tiles_per_batch:
+            # Fallback check: too many dirty tiles
+            if len(dirty_tiles) > self.config.max_tile_layers:
                 logger.debug(
-                    f"Too many dirty tiles ({len(dirty_tiles)} > "
-                    f"{self.max_tiles_per_batch}), falling back to full-frame"
+                    f"Too many dirty tiles ({len(dirty_tiles)}) - falling back to full-frame"
                 )
                 self.upload_full_frame(
                     frame=frame_data,
                     rects=rects,
                     use_damage_tracking=False,
-                    margin=self.tile_context_margin,
+                    margin=self.config.tile_context_margin,
                 )
                 self.process_full_frame()
                 return

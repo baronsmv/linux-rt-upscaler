@@ -5,6 +5,7 @@ from typing import List, Tuple, Dict
 from .atlas import TileAtlasManager
 from .tile import TileProcessor
 from .utils import compute_tile_hash, extract_expanded_tiles
+from ..config import Config
 from ..vulkan import Texture2D, Buffer, Compute
 
 logger = logging.getLogger(__name__)
@@ -41,14 +42,9 @@ class CachedTileProcessor(TileProcessor):
 
     def __init__(
         self,
+        config: Config,
         crop_width: int,
         crop_height: int,
-        model_name: str,
-        double_upscale: bool,
-        tile_size: int,
-        cache_capacity: int,
-        cache_threshold: float,
-        tile_context_margin: int = 0,
     ) -> None:
         """
         Initialize the cached tile processor.
@@ -65,21 +61,16 @@ class CachedTileProcessor(TileProcessor):
         """
         # The base class uses max_layers = cache_capacity (atlas slices)
         super().__init__(
+            config=config,
             crop_width=crop_width,
             crop_height=crop_height,
-            model_name=model_name,
-            double_upscale=double_upscale,
-            tile_size=tile_size,
-            tile_context_margin=tile_context_margin,
-            max_layers=cache_capacity,
         )
 
-        self.cache_capacity = cache_capacity
-        self.cache_threshold = cache_threshold
+        self.cache_capacity = config.cache_capacity
 
         # Manager for LRU cache and layer allocation
         self.atlas_manager = TileAtlasManager(
-            capacity=cache_capacity,
+            capacity=self.cache_capacity,
             tile_width=self.tile_out_w_final,
             tile_height=self.tile_out_h_final,
         )

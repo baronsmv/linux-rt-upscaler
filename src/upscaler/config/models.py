@@ -17,7 +17,7 @@ UPSCALING_MODELS = (
     "veryfast",
 )
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
-
+PROCESSING_MODES = ("full", "tile", "cache")
 
 DEFAULT_HOTKEYS = {
     "toggle_scaling": "Alt+Shift+S",
@@ -55,6 +55,8 @@ class Config:
 
     # Overlay
     overlay_mode: str = OverlayMode.ALWAYS_ON_TOP.value
+    overlay_opacity_min: float = 0.2
+    overlay_opacity_max: float = 1.0
 
     # Display
     monitor: str = "primary"
@@ -63,6 +65,7 @@ class Config:
     # Upscaling
     model: str = "fast"
     double_upscale: bool = False
+    lanczos_blur: float = 1.0
 
     # Output geometry
     output_geometry: str = "fit"
@@ -76,6 +79,13 @@ class Config:
 
     # Screenshots
     screenshot_dir: str = os.path.join(user_pictures_dir(), "Screenshots")
+    screenshot_filename: str = "Screenshot_{timestamp:%Y%m%d_%H%M%S}"
+    screenshot_format: str = "png"
+    screenshot_jpeg_quality: int = 95
+
+    # OSD
+    show_osd: bool = True
+    osd_duration: float = 1.5
 
     # Window detection
     target_delay: int = 5
@@ -87,19 +97,22 @@ class Config:
     # Vulkan
     vulkan_present_mode: str = VulkanPresentMode.FIFO.value
     vulkan_buffer_pool_size: int = 8
-    use_damage_tracking: bool = True
+    frame_timeout_ns: int = 1_000_000_000
 
     # Processing mode
-    mode: str = "tile"
-
-    # Tiles
+    processing_mode: str = "full"
     tile_size: int = 64  # Recommended: between 32 and 128, ideally 64-96
-    tile_context_margin: int = 16  # Recommended: between 4 and 20, ideally 16
-    max_tiles_per_batch: int = 16  # Recommended: between 8 and 32, ideally 16
+    area_threshold: float = 0.3
 
-    # Cache
+    # Full mode
+    use_damage_tracking: bool = True
+
+    # Tile and cache modes
+    tile_context_margin: int = 16  # Recommended: between 4 and 20, ideally 16
+    max_tile_layers: int = 16  # Recommended: between 8 and 32, ideally 16
+
+    # Cache mode
     cache_capacity: int = 2048
-    cache_threshold: float = 0.3
 
     # Logging (set via flags, not directly from CLI)
     log_level: str = "WARNING"
