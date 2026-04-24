@@ -86,7 +86,7 @@ when focus changes)""",
         "--model",
         choices=UPSCALING_MODELS,
         default=DEFAULT_CONFIG.model,
-        help=f"""Upscaling model to use (ordered from best to worst quality)
+        help="""Upscaling model to use (ordered from best to worst quality)
 Default: %(default)s""",
     )
     upscaling_group.add_argument(
@@ -100,7 +100,7 @@ screens (4k, 1440p) or low-resolution sources""",
         "--processing-mode",
         choices=PROCESSING_MODES,
         default=DEFAULT_CONFIG.processing_mode,
-        help=f"""How frames are upscaled.
+        help="""How frames are upscaled.
 Default: %(default)s
 
 Modes:
@@ -131,7 +131,7 @@ For more customization, see ADVANCED PROCESSING OPTIONS.
         "--monitor",
         type=str,
         default=DEFAULT_CONFIG.monitor,
-        help=f"""Monitor to cover: 'primary', 'all' (to cover all
+        help="""Monitor to cover: 'primary', 'all' (to cover all
 multi-monitor space), or monitor name/index
 (e.g., 'HDMI-1', 0).
 Default: %(default)s""",
@@ -155,7 +155,7 @@ required when --monitor is set to 'all'.""",
         "-o",
         "--output-geometry",
         default=DEFAULT_CONFIG.output_geometry,
-        help=f"""Specify the output window size and scaling behaviour.
+        help="""Specify the output window size and scaling behaviour.
 Default: %(default)s
 
 Examples:
@@ -186,7 +186,7 @@ Examples:
         "--overlay-mode",
         choices=[e.value for e in OverlayMode],
         default=DEFAULT_CONFIG.overlay_mode,
-        help=f"""Overlay window behaviour.
+        help="""Overlay window behaviour.
 Default: %(default)s
 
 Note: Keyboard events are NOT forwarded, so it's best to
@@ -254,7 +254,7 @@ Note: Same as above.
     overlay_group.add_argument(
         "--background-color",
         default=DEFAULT_CONFIG.background_color,
-        help=f"""Color for letterbox bars (supports transparency).
+        help="""Color for letterbox bars (supports transparency).
 Default: %(default)s
 
 Can be a:
@@ -280,7 +280,7 @@ Default: %(default)s""",
         "--screenshot-filename",
         type=str,
         default=DEFAULT_CONFIG.screenshot_filename,
-        help=f"""Template for screenshot file names. Supports
+        help="""Template for screenshot file names. Supports
 {{timestamp}}, {{model}}, {{geometry}}, {{mode}}, and
 standard Python format specifiers.
 Default: %(default)s""",
@@ -289,13 +289,13 @@ Default: %(default)s""",
         "--screenshot-format",
         choices=["png", "jpg"],
         default=DEFAULT_CONFIG.screenshot_format,
-        help=f"Image format for saved screenshots. Default: %(default)s",
+        help="Image format for saved screenshots. Default: %(default)s",
     )
     screenshot_group.add_argument(
         "--screenshot-jpeg-quality",
         type=int,
         default=DEFAULT_CONFIG.screenshot_jpeg_quality,
-        help=f"JPEG quality (1-100) when using jpg format. Default: %(default)s",
+        help="JPEG quality (1-100) when using jpg format. Default: %(default)s",
     )
 
     # ----------------------------------------------------------------------
@@ -312,7 +312,7 @@ Default: %(default)s""",
         "--osd-duration",
         type=float,
         default=DEFAULT_CONFIG.osd_duration,
-        help=f"How long (seconds) OSD messages stay visible. Default: %(default)s",
+        help="How long (seconds) OSD messages stay visible. Default: %(default)s",
     )
 
     # ----------------------------------------------------------------------
@@ -351,7 +351,7 @@ Default: %(default)s
         "--frame-timeout-ns",
         type=int,
         default=DEFAULT_CONFIG.frame_timeout_ns,
-        help=f"""Nanoseconds to wait for the previous frame's GPU fence.
+        help="""Nanoseconds to wait for the previous frame's GPU fence.
 Increase if you see timeout warnings. Default: %(default)s""",
     )
 
@@ -370,7 +370,7 @@ Increase if you see timeout warnings. Default: %(default)s""",
         "--tile-size",
         type=int,
         default=DEFAULT_CONFIG.tile_size,
-        help=f"""Tile size (in pixels) for tile/cache modes and internal
+        help="""Tile size (in pixels) for tile/cache modes and internal
 damage detection (full mode if damage tracking is enabled).
 Smaller values give finer granularity but increase overhead.
 Recommended: 32-128, default %(default)s.""",
@@ -379,7 +379,7 @@ Recommended: 32-128, default %(default)s.""",
         "--tile-context-margin",
         type=int,
         default=DEFAULT_CONFIG.tile_context_margin,
-        help=f"""Extra border pixels around each tile to provide convolution
+        help="""Extra border pixels around each tile to provide convolution
 context. Larger margins improve quality at tile boundaries
 but increase processing cost.
 Recommended: 4-20, default %(default)s.""",
@@ -388,27 +388,27 @@ Recommended: 4-20, default %(default)s.""",
         "--max-tile-layers",
         type=int,
         default=DEFAULT_CONFIG.max_tile_layers,
-        help=f"""Maximum number of concurrent tile layers (batch size) in
+        help="""Maximum number of concurrent tile layers (batch size) in
 tile mode. Higher values allow more tiles per batch but
 use more VRAM.
 Recommended: 8-32, default %(default)s.""",
     )
     processing_group.add_argument(
-        "--cache-capacity",
-        type=int,
-        default=DEFAULT_CONFIG.cache_capacity,
-        help=f"""Maximum number of tiles stored in LRU cache (cache mode).
-Higher values cache more unique tiles at the cost of VRAM.
-Recommended: 128-1024, default %(default)s.""",
-    )
-    processing_group.add_argument(
         "--area-threshold",
         type=float,
         default=DEFAULT_CONFIG.area_threshold,
-        help=f"""Fraction of the total frame area that, when dirty, triggers
+        help="""Fraction of the total frame area that, when dirty, triggers
 a fallback to full-frame processing.
 0.0 always uses full-frame; 1.0 never falls back.
 Default: %(default)s.""",
+    )
+    processing_group.add_argument(
+        "--cache-capacity",
+        type=int,
+        default=DEFAULT_CONFIG.cache_capacity,
+        help="""Maximum number of tiles stored in LRU cache (cache mode).
+Higher values cache more unique tiles at the cost of VRAM.
+Recommended: 128-1024, default %(default)s.""",
     )
 
     # ----------------------------------------------------------------------
@@ -517,7 +517,7 @@ def apply_overrides(config: Config, overrides: Dict[str, Any]) -> None:
         if key == "hotkeys" and isinstance(value, dict):
             # Merge dictionaries: user overrides take precedence
             config.hotkeys = {**config.hotkeys, **value}
-            logger.debug(f"Applied hotkeys override")
+            logger.debug("Applied hotkeys override")
         else:
             setattr(config, key, value)
             logger.debug(f"Applied configuration override: {key} = {value!r}")
