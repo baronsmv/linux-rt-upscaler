@@ -32,7 +32,7 @@ class CachedTileProcessor(TileProcessor):
 
     Attributes:
         cache_capacity (int): Maximum number of tiles in the cache.
-        cache_threshold (float): Fraction of total tiles above which full-frame
+        area_threshold (float): Fraction of total tiles above which full-frame
                                  fallback is triggered.
         atlas_manager (TileAtlasManager): Manages layer allocation and LRU.
         output_atlas (Texture2D): Array texture storing cached tile outputs.
@@ -218,81 +218,88 @@ class CachedTileProcessor(TileProcessor):
         """
         Return True if the number of dirty rectangles is below the threshold.
 
-        The threshold is a fraction (`cache_threshold`) of the total number of
+        The threshold is a fraction (`area_threshold`) of the total number of
         tiles. This heuristic prevents cache mode from being overwhelmed when
         a large portion of the frame changes.
         """
-        threshold = int(self.total_tiles() * self.cache_threshold)
+        threshold = int(self.total_tiles() * self.area_threshold)
         return num_dirty_rects <= threshold
 
     # --------------------------------------------------------------------------
     #  Override: Main tile processing with caching
     # --------------------------------------------------------------------------
-    def process_tiles(self, dirty_tiles: List[Tuple[int, int, int, bytes]]) -> None:
+    def process_tiles(
+        self, dirty_tiles: List[Tuple[int, int, int, bytes, int, int]]
+    ) -> None:
         """
         Process dirty tiles using the LRU cache.
 
-        This method overrides the base implementation to:
-          1. Separate tiles into cache hits and misses.
-          2. For misses, call the superclass `process_tiles` with the expanded
-             tile data, using the assigned atlas layer.
-          3. For both hits and misses, copy the final tile from the output atlas
-             to the correct position in the full output texture.
-
         Args:
-            dirty_tiles: List of (tile_x, tile_y, hash, data_bytes) as returned
-                by `extract_dirty_tiles_with_hash`.
+            dirty_tiles: List of (tile_x, tile_y, hash, data_bytes, valid_x, valid_y)
         """
         if not dirty_tiles:
             return
 
-        misses: List[Tuple[int, int, int, bytes]] = []  # (tx, ty, layer, data)
-        hits: List[Tuple[int, int, int]] = []  # (tx, ty, layer)
+        misses: List[Tuple[int, int, int, bytes, int, int]] = []
+        hits: List[Tuple[int, int, int]] = []
 
-        # 1. Separate hits and misses, acquire layers from cache
-        for tx, ty, tile_hash, data in dirty_tiles:
+        # 1. Separate hits / misses
+        for tx, ty, tile_hash, data, valid_x, valid_y in dirty_tiles:
             layer, was_cached = self.atlas_manager.acquire_layer(tx, ty, tile_hash)
             if was_cached:
                 hits.append((tx, ty, layer))
             else:
-                misses.append((tx, ty, layer, data))
+                misses.append((tx, ty, layer, data, valid_x, valid_y))
 
-        # 2. Process misses using the base class logic
-        if misses:
-            # Build the miss batch in the format expected by super().process_tiles
-            miss_batch = [
-                (tx, ty, data, self.margin, self.margin)
-                for tx, ty, layer, data in misses
-            ]
-            # Store the layer mapping for _make_push_data
-            self._miss_layer_map = {(tx, ty): layer for tx, ty, layer, _ in misses}
-
-            # Temporarily adjust max_layers to process all misses in one batch
-            original_max = self.max_layers
-            self.max_layers = len(miss_batch)
-            try:
-                super().process_tiles(miss_batch)
-            finally:
-                self.max_layers = original_max
-                self._miss_layer_map.clear()
+        # 2. Process misses in chunks that fit in the atlas
+        chunk_size = self.max_layers  # = cache_capacity after our fix
+        for i in range(0, len(misses), chunk_size):
+            chunk = misses[i : i + chunk_size]
+            self._process_miss_chunk(chunk)
 
         # 3. Copy all tiles (hits + misses) from atlas to output texture
-        all_tiles = hits + [(tx, ty, layer) for tx, ty, layer, _ in misses]
+        all_tiles = hits + [(tx, ty, layer) for tx, ty, layer, *_ in misses]
         scale = 4 if self.double_upscale else 2
+
         for tx, ty, layer in all_tiles:
             dst_x = tx * self.tile_size * scale
             dst_y = ty * self.tile_size * scale
-            copy_w = min(self.tile_out_w_final, self.output_texture.width - dst_x)
-            copy_h = min(self.tile_out_h_final, self.output_texture.height - dst_y)
-            if copy_w > 0 and copy_h > 0:
+
+            # The interior (valid) region dimensions, clamped to output edges
+            actual_w = min(self.tile_size * scale, self.output_texture.width - dst_x)
+            actual_h = min(self.tile_size * scale, self.output_texture.height - dst_y)
+
+            if actual_w > 0 and actual_h > 0:
                 self.output_atlas.copy_to(
                     self.output_texture,
-                    src_slice=layer,
+                    src_slice=layer,  # layer in the atlas
                     dst_x=dst_x,
-                    dst_y=dst_y,
-                    width=copy_w,
-                    height=copy_h,
+                    dst_y=dst_y,  # position in the full output
+                    width=actual_w,
+                    height=actual_h,
                 )
+
+    def _process_miss_chunk(
+        self, chunk: List[Tuple[int, int, int, bytes, int, int]]
+    ) -> None:
+        """Process one chunk of cache misses using the base tile dispatcher."""
+        if not chunk:
+            return
+
+        # Build batch in the format expected by TileProcessor.process_tiles
+        miss_batch = [
+            (tx, ty, data, valid_x, valid_y)
+            for tx, ty, layer, data, valid_x, valid_y in chunk
+        ]
+
+        # Store layer mapping so _make_push_data can find the output layer
+        self._miss_layer_map = {(tx, ty): layer for tx, ty, layer, *_ in chunk}
+
+        # Run the actual tile dispatches
+        super().process_tiles(miss_batch)
+
+        # Clean up (mapping should not persist across chunks)
+        self._miss_layer_map.clear()
 
     # --------------------------------------------------------------------------
     #  Static utility: Extract tiles with content hash
@@ -305,7 +312,7 @@ class CachedTileProcessor(TileProcessor):
         crop_height: int,
         tile_size: int,
         margin: int,
-    ) -> List[Tuple[int, int, int, bytes]]:
+    ) -> List[Tuple[int, int, int, bytes, int, int]]:
         """
         Extract expanded tiles and compute their content hash.
 
@@ -313,7 +320,7 @@ class CachedTileProcessor(TileProcessor):
         and adds an xxHash64 over the interior region.
 
         Returns:
-            List of (tile_x, tile_y, hash, data_bytes).
+            List of (tile_x, tile_y, hash, data_bytes, valid_x, valid_y).
         """
         expanded_tiles = extract_expanded_tiles(
             frame, rects, crop_width, crop_height, tile_size, margin
@@ -322,5 +329,5 @@ class CachedTileProcessor(TileProcessor):
         result = []
         for tx, ty, data, valid_x, valid_y in expanded_tiles:
             h = compute_tile_hash(data, expanded_size, valid_x, valid_y, tile_size)
-            result.append((tx, ty, h, data))
+            result.append((tx, ty, h, data, valid_x, valid_y))
         return result

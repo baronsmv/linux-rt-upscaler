@@ -100,9 +100,9 @@ class Config:
     frame_timeout_ns: int = 1_000_000_000
 
     # Processing mode
-    processing_mode: str = "tile"
+    processing_mode: str = "cache"
     tile_size: int = 64  # Recommended: between 32 and 128, ideally 64-96
-    area_threshold: float = 0.5
+    area_threshold: float = 0.3
 
     # Full mode
     use_damage_tracking: bool = True

@@ -126,7 +126,7 @@ class TileProcessor:
     # --------------------------------------------------------------------------
     def _get_push_constant_size(self) -> int:
         """Return the size of the push constant block in bytes."""
-        return 44  # 11 uints × 4 bytes
+        return 44  # 11 uints x 4 bytes
 
     def _make_push_data(
         self,
@@ -411,7 +411,7 @@ class TileProcessor:
                 uploads.append((bytes(rect_data), ex, ey, ew, eh, 0))
             self.full_input_tex.upload_subresources(uploads)
         else:
-            # Full‑frame upload to layer 0 (once, not per layer)
+            # Full-frame upload to layer 0 (once, not per layer)
             frame_bytes = bytes(frame)
             self.full_input_tex.upload_subresources(
                 [(frame_bytes, 0, 0, self.crop_width, self.crop_height, 0)]

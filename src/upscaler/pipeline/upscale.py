@@ -288,11 +288,10 @@ class UpscalerManager:
         - On the very first tile frame, a full capture is performed to
           initialize the output texture. Subsequent frames only update
           dirty tiles.
-        - In tile mode, if the number of dirty tiles exceeds
-          `max_tile_layers`, the frame is processed using the full-frame
-          fallback instead.
-        - In tile mode, the residual texture (`full_input_tex`) is updated
-          with the expanded damage regions before tile processing.
+        - If the number of dirty tiles exceeds `max_tile_layers`, the
+          frame is processed using the full-frame fallback instead.
+        - The residual texture (`full_input_tex`) is updated with the
+          expanded damage regions before tile processing.
         - The actual tile processing is delegated to `self.tile_processor`.
 
         Args:
@@ -310,7 +309,7 @@ class UpscalerManager:
         if self.mode not in ("tile", "cache"):
             raise RuntimeError("process_tile_frame called in non-tile mode")
 
-        # First tile frame: prime the output with a full capture.
+        # First tile frame: prime the output with a full capture
         if self._first_tile_frame:
             logger.debug("First tile frame - performing initial full capture")
             self.upload_full_frame(
@@ -323,37 +322,38 @@ class UpscalerManager:
             self._first_tile_frame = False
             return
 
-        # Fallback if too many tiles or wide area
-        if self.mode == "tile":
-            expanded = TileProcessor.expand_damage_rects(
-                rects,
-                self.crop_width,
-                self.crop_height,
-                self.config.tile_context_margin,
+        # Compute damage area to decide whether to fall back to full-frame
+        expanded = TileProcessor.expand_damage_rects(
+            rects, self.crop_width, self.crop_height, self.config.tile_context_margin
+        )
+        total_area = sum(w * h for _, _, w, h in expanded)
+        threshold_area = self.config.area_threshold * self.crop_width * self.crop_height
+
+        # Fallback if too many tiles (direct mode) or damage area exceeds threshold
+        max_tiles = (
+            self.config.max_tile_layers
+            if self.mode == "tile"
+            else self.config.cache_capacity
+        )  # use appropriate limit
+        if len(dirty_tiles) > max_tiles or total_area > threshold_area:
+            logger.debug(
+                "Falling back to full‑frame (%d dirty tiles, %.1f%% area)",
+                len(dirty_tiles),
+                100.0 * total_area / (self.crop_width * self.crop_height),
             )
-            total_area = sum(w * h for _, _, w, h in expanded)
-            threshold_area = (
-                self.config.area_threshold * self.crop_width * self.crop_height
+            self.upload_full_frame(
+                frame=frame_data,
+                rects=rects,
+                use_damage_tracking=False,
+                margin=self.config.tile_context_margin,
             )
+            self.process_full_frame()
+            return
 
-            if (
-                len(dirty_tiles) > self.config.max_tile_layers
-                or total_area > threshold_area
-            ):
-                self.upload_full_frame(
-                    frame=frame_data,
-                    rects=rects,
-                    use_damage_tracking=False,
-                    margin=self.config.tile_context_margin,
-                )
-                self.process_full_frame()
-                return
+        # Update the residual texture (always needed before tile processing)
+        self.tile_processor.upload_full_frame(frame_data, rects)
 
-            # Update the residual texture with expanded damage regions.
-            # This provides the network with the surrounding context.
-            self.tile_processor.upload_full_frame(frame_data, rects)
-
-        # Delegate tile processing to the tile processor.
+        # Delegate to the tile processor (handles hits, misses, and copies)
         self.tile_processor.process_tiles(dirty_tiles)
 
     def should_use_tile_mode(self, num_dirty_rects: int) -> bool:
