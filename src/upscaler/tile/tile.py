@@ -98,7 +98,7 @@ class TileProcessor:
 
         # Residual texture: holds the full captured frame (damage regions updated)
         self.full_input_tex = Texture2D(
-            crop_width, crop_height, slices=self.max_layers, force_array_view=True
+            crop_width, crop_height, slices=1, force_array_view=True
         )
         # Staging buffer for uploading to residual texture (rarely used, small)
         self.full_staging = Buffer(crop_width * crop_height * 4, heap_type=HEAP_UPLOAD)
@@ -126,7 +126,7 @@ class TileProcessor:
     # --------------------------------------------------------------------------
     def _get_push_constant_size(self) -> int:
         """Return the size of the push constant block in bytes."""
-        return 60  # 15 uints x 4 bytes
+        return 44  # 11 uints × 4 bytes
 
     def _make_push_data(
         self,
@@ -150,8 +150,6 @@ class TileProcessor:
         Returns:
             Packed bytes (60 bytes) ready for upload.
         """
-        src_x = tx * self.tile_size
-        src_y = ty * self.tile_size
         scale = 4 if self.double_upscale else 2
         dst_x = tx * self.tile_size * scale
         dst_y = ty * self.tile_size * scale
@@ -160,22 +158,18 @@ class TileProcessor:
         valid_block_y = valid_y * scale
 
         return struct.pack(
-            "IIIIIIIIIIIIIII",  # 15 uints
+            "IIIIIIIIIII",  # 11 unsigned ints
             layer_idx,  # inputLayer
-            src_x,
-            src_y,  # srcOffset
             dst_x,
             dst_y,  # dstOffset
             self.margin,  # margin
-            self.crop_width,
-            self.crop_height,  # cropWidth, cropHeight
             full_out_w,
             full_out_h,  # fullOutWidth, fullOutHeight
             valid_block_x,
             valid_block_y,  # validOffset
             actual_out_w,
             actual_out_h,  # tileOutExtent
-            0,  # outputLayer (always 0 for direct)
+            0,  # outputLayer (always 0 for direct mode)
         )
 
     def _finalize_pipeline(self) -> None:
@@ -413,18 +407,15 @@ class TileProcessor:
                     rect_data[dst_start : dst_start + ew * 4] = frame[
                         src_start : src_start + ew * 4
                     ]
-                for layer in range(self.max_layers):
-                    uploads.append((bytes(rect_data), ex, ey, ew, eh, layer))
+                # Upload to layer 0 only
+                uploads.append((bytes(rect_data), ex, ey, ew, eh, 0))
             self.full_input_tex.upload_subresources(uploads)
         else:
-            # Full‑frame upload, once per layer (much faster for large damage)
+            # Full‑frame upload to layer 0 (once, not per layer)
             frame_bytes = bytes(frame)
-            uploads = []
-            for layer in range(self.max_layers):
-                uploads.append(
-                    (frame_bytes, 0, 0, self.crop_width, self.crop_height, layer)
-                )
-            self.full_input_tex.upload_subresources(uploads)
+            self.full_input_tex.upload_subresources(
+                [(frame_bytes, 0, 0, self.crop_width, self.crop_height, 0)]
+            )
 
     def process_tiles(
         self, dirty_tiles: List[Tuple[int, int, bytes, int, int]]

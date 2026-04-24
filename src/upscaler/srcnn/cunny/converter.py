@@ -223,11 +223,8 @@ class HlslGenerator:
         if tile:
             header += """struct TileParams {
     uint inputLayer;
-    uint2 srcOffset;
     uint2 dstOffset;
     uint margin;
-    uint cropWidth;
-    uint cropHeight;
     uint fullOutWidth;
     uint fullOutHeight;
     uint2 validOffset;
@@ -340,7 +337,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
                 core_lines = [
                     re.sub(
                         r"INPUT\.SampleLevel\(SL,\s*(fpos\s*\+\s*float2\([^)]+\))\s*\*\s*opt\s*,\s*0\)",
-                        r"INPUT.SampleLevel(SL, float3(\1 * full_opt, tileParams.inputLayer), 0)",
+                        r"INPUT.SampleLevel(SL, float3(\1 * full_opt, 0), 0)",
                         line,
                     )
                     for line in core_lines

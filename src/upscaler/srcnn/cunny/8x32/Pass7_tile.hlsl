@@ -42,11 +42,8 @@ cbuffer Constants : register(b0) {
 
 struct TileParams {
     uint inputLayer;
-    uint2 srcOffset;
     uint2 dstOffset;
     uint margin;
-    uint cropWidth;
-    uint cropHeight;
     uint fullOutWidth;
     uint fullOutHeight;
     uint2 validOffset;

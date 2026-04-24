@@ -42,11 +42,8 @@ cbuffer Constants : register(b0) {
 
 struct TileParams {
     uint inputLayer;
-    uint2 srcOffset;
     uint2 dstOffset;
     uint margin;
-    uint cropWidth;
-    uint cropHeight;
     uint fullOutWidth;
     uint fullOutHeight;
     uint2 validOffset;
@@ -426,11 +423,11 @@ void main(uint3 id : SV_DispatchThreadID)
     float2 fpos = (float2(globalOutXY) + 0.5) * full_opt;
 
     if (globalOutXY.x < maxOut.x && globalOutXY.y < maxOut.y)
-        OUTPUT[uint3(globalOutXY + int2(0, 0), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 0.0) * full_opt, tileParams.inputLayer), 0).rgb + float3(r0.x, r1.x, r2.x)), 1.0);
+        OUTPUT[uint3(globalOutXY + int2(0, 0), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 0.0) * full_opt, 0), 0).rgb + float3(r0.x, r1.x, r2.x)), 1.0);
     if (globalOutXY.x + 1 < maxOut.x && globalOutXY.y < maxOut.y)
-        OUTPUT[uint3(globalOutXY + int2(1, 0), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 0.0) * full_opt, tileParams.inputLayer), 0).rgb + float3(r0.y, r1.y, r2.y)), 1.0);
+        OUTPUT[uint3(globalOutXY + int2(1, 0), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 0.0) * full_opt, 0), 0).rgb + float3(r0.y, r1.y, r2.y)), 1.0);
     if (globalOutXY.x < maxOut.x && globalOutXY.y + 1 < maxOut.y)
-        OUTPUT[uint3(globalOutXY + int2(0, 1), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 1.0) * full_opt, tileParams.inputLayer), 0).rgb + float3(r0.z, r1.z, r2.z)), 1.0);
+        OUTPUT[uint3(globalOutXY + int2(0, 1), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 1.0) * full_opt, 0), 0).rgb + float3(r0.z, r1.z, r2.z)), 1.0);
     if (globalOutXY.x + 1 < maxOut.x && globalOutXY.y + 1 < maxOut.y)
-        OUTPUT[uint3(globalOutXY + int2(1, 1), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 1.0) * full_opt, tileParams.inputLayer), 0).rgb + float3(r0.w, r1.w, r2.w)), 1.0);
+        OUTPUT[uint3(globalOutXY + int2(1, 1), tileParams.outputLayer)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 1.0) * full_opt, 0), 0).rgb + float3(r0.w, r1.w, r2.w)), 1.0);
 }

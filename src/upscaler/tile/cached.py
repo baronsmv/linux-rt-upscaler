@@ -180,8 +180,6 @@ class CachedTileProcessor(TileProcessor):
         Returns:
             Packed bytes (60 bytes) with `outputLayer` set to the atlas slice.
         """
-        src_x = tx * self.tile_size
-        src_y = ty * self.tile_size
         scale = 4 if self.double_upscale else 2
         dst_x = tx * self.tile_size * scale
         dst_y = ty * self.tile_size * scale
@@ -193,15 +191,11 @@ class CachedTileProcessor(TileProcessor):
         output_layer = self._miss_layer_map.get((tx, ty), layer_idx)
 
         return struct.pack(
-            "IIIIIIIIIIIIIII",
+            "IIIIIIIIIII",  # 11 unsigned ints
             layer_idx,  # inputLayer
-            src_x,
-            src_y,  # srcOffset
             dst_x,
             dst_y,  # dstOffset
             self.margin,  # margin
-            self.crop_width,
-            self.crop_height,  # cropWidth, cropHeight
             full_out_w,
             full_out_h,  # fullOutWidth, fullOutHeight
             valid_block_x,
