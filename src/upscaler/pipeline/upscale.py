@@ -337,7 +337,7 @@ class UpscalerManager:
         )  # use appropriate limit
         if len(dirty_tiles) > max_tiles or total_area > threshold_area:
             logger.debug(
-                "Falling back to full‑frame (%d dirty tiles, %.1f%% area)",
+                "Falling back to full-frame (%d dirty tiles, %.1f%% area)",
                 len(dirty_tiles),
                 100.0 * total_area / (self.crop_width * self.crop_height),
             )
