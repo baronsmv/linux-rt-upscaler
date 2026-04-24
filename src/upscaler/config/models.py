@@ -55,8 +55,8 @@ class Config:
 
     # Overlay
     overlay_mode: str = OverlayMode.ALWAYS_ON_TOP.value
-    overlay_opacity_min: float = 0.2
-    overlay_opacity_max: float = 1.0
+    overlay_opacity_min: float = 0.2  # Not in argparser
+    overlay_opacity_max: float = 1.0  # Not in argparser
 
     # Display
     monitor: str = "primary"
@@ -100,19 +100,19 @@ class Config:
     frame_timeout_ns: int = 1_000_000_000
 
     # Processing mode
-    processing_mode: str = "cache"
-    tile_size: int = 64  # Recommended: between 32 and 128, ideally 64-96
+    processing_mode: str = "tile"
+    tile_size: int = 64
     area_threshold: float = 0.3
 
     # Full mode
     use_damage_tracking: bool = True
 
     # Tile and cache modes
-    tile_context_margin: int = 16  # Recommended: between 4 and 20, ideally 16
-    max_tile_layers: int = 16  # Recommended: between 8 and 32, ideally 16
+    tile_context_margin: int = 16
+    max_tile_layers: int = 16
 
     # Cache mode
-    cache_capacity: int = 256  # Recommended: between 128 and 1024, ideally 256
+    cache_capacity: int = 512
 
     # Logging (set via flags, not directly from CLI)
     log_level: str = "WARNING"

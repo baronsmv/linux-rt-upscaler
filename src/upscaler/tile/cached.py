@@ -17,9 +17,9 @@ class CachedTileProcessor(TileProcessor):
     Tile processor with an LRU cache for tile outputs.
 
     Inherits the whole tile-processing pipeline (stage creation, dispatch,
-    residual upload) from `TileProcessor`.  All CNN passes write directly to
-    the full output texture - exactly like direct mode.  A separate **cache
-    atlas** stores a copy of each processed tile.  On subsequent frames:
+    residual upload) from `TileProcessor`. All CNN passes write directly to
+    the full output texture - exactly like direct mode. A separate **cache
+    atlas** stores a copy of each processed tile. On subsequent frames:
       - Hits:   the tile is copied from the atlas back to the output texture
                 (no CNN pass needed).
       - Misses: the tile is processed normally (via the base class), then a

@@ -5,7 +5,7 @@ from importlib.metadata import version, PackageNotFoundError
 from typing import Tuple, Dict, Optional, Any
 
 from .logging import setup_logging
-from .models import Config, OverlayMode, UPSCALING_MODELS
+from .models import Config, OverlayMode, UPSCALING_MODELS, PROCESSING_MODES
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +95,32 @@ Default: %(default)s""",
         action="store_true",
         help="""Perform two 2x passes (total 4x) for higher resolution
 screens (4k, 1440p) or low-resolution sources""",
+    )
+    upscaling_group.add_argument(
+        "--processing-mode",
+        choices=PROCESSING_MODES,
+        default=DEFAULT_CONFIG.processing_mode,
+        help=f"""How frames are upscaled.
+Default: %(default)s
+
+Modes:
+  full   - Full-frame processing.
+           Best for video / dynamic content.
+  tile   - Tile-based processing.
+           Best for static windows (visual novels, text).
+  cache  - Tile-based with LRU cache.
+           Like tile, but remembers recently-seen tiles.
+           Excellent for repetitive UI changes.
+
+For more customization, see ADVANCED PROCESSING OPTIONS.
+""",
+    )
+    upscaling_group.add_argument(
+        "--lanczos-blur",
+        type=float,
+        default=DEFAULT_CONFIG.lanczos_blur,
+        help="""Sharpness of the Lanczos scaling. 1.0 = standard, 
+<1 sharper, >1 softer.  Default: %(default)s""",
     )
 
     # ----------------------------------------------------------------------
@@ -247,8 +273,46 @@ Note: RGB values must be integers 0-255.""",
         "--screenshot-dir",
         type=str,
         default=DEFAULT_CONFIG.screenshot_dir,
-        help=f"""Directory to save screenshots.
+        help="""Directory to save screenshots."
 Default: %(default)s""",
+    )
+    screenshot_group.add_argument(
+        "--screenshot-filename",
+        type=str,
+        default=DEFAULT_CONFIG.screenshot_filename,
+        help=f"""Template for screenshot file names. Supports
+{{timestamp}}, {{model}}, {{geometry}}, {{mode}}, and
+standard Python format specifiers.
+Default: %(default)s""",
+    )
+    screenshot_group.add_argument(
+        "--screenshot-format",
+        choices=["png", "jpg"],
+        default=DEFAULT_CONFIG.screenshot_format,
+        help=f"Image format for saved screenshots. Default: %(default)s",
+    )
+    screenshot_group.add_argument(
+        "--screenshot-jpeg-quality",
+        type=int,
+        default=DEFAULT_CONFIG.screenshot_jpeg_quality,
+        help=f"JPEG quality (1-100) when using jpg format. Default: %(default)s",
+    )
+
+    # ----------------------------------------------------------------------
+    # OSD section
+    # ----------------------------------------------------------------------
+    osd_group = parser.add_argument_group("OSD OPTIONS")
+    osd_group.add_argument(
+        "--no-osd",
+        action="store_false",
+        dest="show_osd",
+        help="Disable on-screen display messages.",
+    )
+    osd_group.add_argument(
+        "--osd-duration",
+        type=float,
+        default=DEFAULT_CONFIG.osd_duration,
+        help=f"How long (seconds) OSD messages stay visible. Default: %(default)s",
     )
 
     # ----------------------------------------------------------------------
@@ -270,18 +334,81 @@ Modes:
               is displayed. Higher power usage.
   immediate - Lowest latency, no V-Sync. Frames are displayed
               immediately, may cause visible tearing.
-""",
+    """,
     )
     vulkan_group.add_argument(
         "--vulkan-buffer-pool-size",
         type=int,
         default=DEFAULT_CONFIG.vulkan_buffer_pool_size,
-        help=f"""Number of pre-allocated staging buffers for partial
+        help="""Number of pre-allocated staging buffers for partial
 texture updates. Larger values reduce allocation overhead
 during frequent small changes, but use a small amount of
 additional VRAM.
 Default: %(default)s
-""",
+    """,
+    )
+    vulkan_group.add_argument(
+        "--frame-timeout-ns",
+        type=int,
+        default=DEFAULT_CONFIG.frame_timeout_ns,
+        help=f"""Nanoseconds to wait for the previous frame's GPU fence.
+Increase if you see timeout warnings. Default: %(default)s""",
+    )
+
+    # ----------------------------------------------------------------------
+    # Processing section
+    # ----------------------------------------------------------------------
+    processing_group = parser.add_argument_group("ADVANCED PROCESSING OPTIONS")
+    processing_group.add_argument(
+        "--no-damage-tracking",
+        action="store_false",
+        dest="use_damage_tracking",
+        help="""Always upload the entire frame in full frame mode
+(disables partial uploads).""",
+    )
+    processing_group.add_argument(
+        "--tile-size",
+        type=int,
+        default=DEFAULT_CONFIG.tile_size,
+        help=f"""Tile size (in pixels) for tile/cache modes and internal
+damage detection (full mode if damage tracking is enabled).
+Smaller values give finer granularity but increase overhead.
+Recommended: 32-128, default %(default)s.""",
+    )
+    processing_group.add_argument(
+        "--tile-context-margin",
+        type=int,
+        default=DEFAULT_CONFIG.tile_context_margin,
+        help=f"""Extra border pixels around each tile to provide convolution
+context. Larger margins improve quality at tile boundaries
+but increase processing cost.
+Recommended: 4-20, default %(default)s.""",
+    )
+    processing_group.add_argument(
+        "--max-tile-layers",
+        type=int,
+        default=DEFAULT_CONFIG.max_tile_layers,
+        help=f"""Maximum number of concurrent tile layers (batch size) in
+tile mode. Higher values allow more tiles per batch but
+use more VRAM.
+Recommended: 8-32, default %(default)s.""",
+    )
+    processing_group.add_argument(
+        "--cache-capacity",
+        type=int,
+        default=DEFAULT_CONFIG.cache_capacity,
+        help=f"""Maximum number of tiles stored in LRU cache (cache mode).
+Higher values cache more unique tiles at the cost of VRAM.
+Recommended: 128-1024, default %(default)s.""",
+    )
+    processing_group.add_argument(
+        "--area-threshold",
+        type=float,
+        default=DEFAULT_CONFIG.area_threshold,
+        help=f"""Fraction of the total frame area that, when dirty, triggers
+a fallback to full-frame processing.
+0.0 always uses full-frame; 1.0 never falls back.
+Default: %(default)s.""",
     )
 
     # ----------------------------------------------------------------------
