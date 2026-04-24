@@ -323,13 +323,23 @@ class UpscalerManager:
             self._first_tile_frame = False
             return
 
-        # Direct mode specific: fallback if too many tiles, and residual upload
+        # Fallback if too many tiles or wide area
         if self.mode == "tile":
-            # Fallback check: too many dirty tiles
-            if len(dirty_tiles) > self.config.max_tile_layers:
-                logger.debug(
-                    f"Too many dirty tiles ({len(dirty_tiles)}) - falling back to full-frame"
-                )
+            expanded = TileProcessor.expand_damage_rects(
+                rects,
+                self.crop_width,
+                self.crop_height,
+                self.config.tile_context_margin,
+            )
+            total_area = sum(w * h for _, _, w, h in expanded)
+            threshold_area = (
+                self.config.area_threshold * self.crop_width * self.crop_height
+            )
+
+            if (
+                len(dirty_tiles) > self.config.max_tile_layers
+                or total_area > threshold_area
+            ):
                 self.upload_full_frame(
                     frame=frame_data,
                     rects=rects,

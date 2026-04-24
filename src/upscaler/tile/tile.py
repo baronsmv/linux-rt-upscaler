@@ -398,22 +398,33 @@ class TileProcessor:
         if not expanded:
             return
 
-        uploads = []
-        stride = self.crop_width * 4
+        total_area = sum(w * h for _, _, w, h in expanded)
+        threshold_area = self.area_threshold * self.crop_width * self.crop_height
 
-        for ex, ey, ew, eh in expanded:
-            rect_data = bytearray(ew * eh * 4)
-            for row in range(eh):
-                src_start = (ey + row) * stride + ex * 4
-                dst_start = row * ew * 4
-                rect_data[dst_start : dst_start + ew * 4] = frame[
-                    src_start : src_start + ew * 4
-                ]
-            # Upload to every layer so all tiles see the same context
+        if total_area <= threshold_area:
+            uploads = []
+            stride = self.crop_width * 4
+
+            for ex, ey, ew, eh in expanded:
+                rect_data = bytearray(ew * eh * 4)
+                for row in range(eh):
+                    src_start = (ey + row) * stride + ex * 4
+                    dst_start = row * ew * 4
+                    rect_data[dst_start : dst_start + ew * 4] = frame[
+                        src_start : src_start + ew * 4
+                    ]
+                for layer in range(self.max_layers):
+                    uploads.append((bytes(rect_data), ex, ey, ew, eh, layer))
+            self.full_input_tex.upload_subresources(uploads)
+        else:
+            # Full‑frame upload, once per layer (much faster for large damage)
+            frame_bytes = bytes(frame)
+            uploads = []
             for layer in range(self.max_layers):
-                uploads.append((bytes(rect_data), ex, ey, ew, eh, layer))
-
-        self.full_input_tex.upload_subresources(uploads)
+                uploads.append(
+                    (frame_bytes, 0, 0, self.crop_width, self.crop_height, layer)
+                )
+            self.full_input_tex.upload_subresources(uploads)
 
     def process_tiles(
         self, dirty_tiles: List[Tuple[int, int, bytes, int, int]]

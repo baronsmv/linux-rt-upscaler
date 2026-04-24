@@ -102,7 +102,7 @@ class Config:
     # Processing mode
     processing_mode: str = "full"
     tile_size: int = 64  # Recommended: between 32 and 128, ideally 64-96
-    area_threshold: float = 0.3
+    area_threshold: float = 0.5
 
     # Full mode
     use_damage_tracking: bool = True
