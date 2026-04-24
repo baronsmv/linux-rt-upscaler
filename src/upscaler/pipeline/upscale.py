@@ -368,7 +368,7 @@ class UpscalerManager:
                 self.upload_full_frame(
                     frame=frame_data,
                     rects=rects,
-                    use_damage_tracking=True,
+                    use_damage_tracking=False,
                     margin=self.tile_context_margin,
                 )
                 self.process_full_frame()
