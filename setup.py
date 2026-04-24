@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
-import subprocess
 import sys
 from pathlib import Path
 
 from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
 
 
-def get_version_from_pyproject():
+def _get_version_from_pyproject():
     pyproject_path = Path(__file__).parent / "pyproject.toml"
     if not pyproject_path.exists():
         return "0.0.0"
@@ -24,69 +22,17 @@ def get_version_from_pyproject():
         return "0.0.0"
 
 
-class BuildSharedLibs(build_ext):
-    """Compile capture.so (plain C) then continue with Python extensions."""
-
-    def run(self):
-        if getattr(self, "_capture_lib_built", False):
-            super().run()
-            return
-
-        print("=" * 50, file=sys.stderr)
-        print("BuildSharedLibs.run() started", file=sys.stderr)
-
-        project_root = Path(__file__).parent
-
-        # --- capture.so ---
-        capture_dir = project_root / "src" / "upscaler" / "capture"
-        capture_lib_dir = capture_dir / "lib"
-
-        if self.inplace:
-            capture_target_dir = capture_dir
-        else:
-            capture_target_dir = Path(self.build_lib) / "upscaler" / "capture"
-        capture_target_dir.mkdir(parents=True, exist_ok=True)
-
-        capture_src = list(capture_lib_dir.glob("*.c"))
-        if not capture_src:
-            sys.stderr.write(f"No C source files found in {capture_lib_dir}\n")
-            sys.exit(1)
-
-        capture_so = capture_target_dir / "capture.so"
-        capture_cmd = [
-            "gcc",
-            "-shared",
-            "-fPIC",
-            "-O3",
-            "-mtune=generic",
-            f"-I{capture_lib_dir}",
-            *[str(f) for f in capture_src],
-            "-o",
-            str(capture_so),
-            "-lX11",
-            "-lX11-xcb",
-            "-lXext",
-            "-lXdamage",
-            "-lXfixes",
-            "-lxcb",
-            "-lpthread",
-        ]
-
-        print(f"Running: {' '.join(capture_cmd)}", file=sys.stderr)
-        subprocess.check_call(capture_cmd, stdout=sys.stderr, stderr=sys.stderr)
-        print("capture.so compiled successfully.", file=sys.stderr)
-
-        self._capture_lib_built = True
-        super().run()
-
-
-# Vulkan extension
-vulkan_lib_dir = Path("src/upscaler/vulkan/lib")
-vulkan_sources = [str(f) for f in vulkan_lib_dir.glob("*.cpp")]
+capture_extension = Extension(
+    "upscaler.capture.capture",
+    sources=[str(f) for f in (Path("src/upscaler/capture/lib")).glob("*.c")],
+    libraries=["X11", "X11-xcb", "Xext", "Xdamage", "Xfixes", "xcb", "pthread"],
+    extra_compile_args=["-O3", "-mtune=generic"],
+    language="c",
+)
 
 vulkan_extension = Extension(
     "upscaler.vulkan.vulkan",
-    sources=vulkan_sources,
+    sources=[str(f) for f in Path("src/upscaler/vulkan/lib").glob("*.cpp")],
     libraries=["vulkan"],
     extra_compile_args=["-std=c++17", "-O3", "-mtune=generic"],
     language="c++",
@@ -94,7 +40,6 @@ vulkan_extension = Extension(
 
 setup(
     name="linux-rt-upscaler",
-    version=get_version_from_pyproject(),
-    cmdclass={"build_ext": BuildSharedLibs},
-    ext_modules=[vulkan_extension],
+    version=_get_version_from_pyproject(),
+    ext_modules=[capture_extension, vulkan_extension],
 )

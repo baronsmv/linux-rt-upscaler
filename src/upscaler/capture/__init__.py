@@ -1,12 +1,16 @@
 import ctypes
+import importlib.util
 import logging
 import os
 from typing import Any, List, Tuple
 
 logger = logging.getLogger(__name__)
 
-_lib_path = os.path.join(os.path.dirname(__file__), "capture.so")
-_lib = ctypes.CDLL(_lib_path)
+spec = importlib.util.find_spec("upscaler.capture.capture")
+if spec is None or spec.origin is None:
+    raise ImportError("Could not locate _capture shared library")
+
+_lib = ctypes.CDLL(spec.origin)
 
 _MAX_DAMAGE_RECTS = 256
 
