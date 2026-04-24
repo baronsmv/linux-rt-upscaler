@@ -42,7 +42,7 @@ jobs:
           CIBW_TEST_COMMAND: "python -c 'import upscaler.capture'"
           CIBW_BUILD_VERBOSITY: 3
           CIBW_SKIP: "*-musllinux*"
-          # Install runtime dependencies needed for testing (PySide6)
+          # Pre-install PySide6 with uv to avoid build problems with Python 3.14
           CIBW_BEFORE_TEST: "pip install uv && uv pip install PySide6"
         run: python -m cibuildwheel --output-dir wheelhouse
 
