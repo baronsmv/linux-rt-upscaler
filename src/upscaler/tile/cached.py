@@ -1,9 +1,11 @@
 import logging
 from typing import List, Tuple
 
+import xxhash
+
 from .atlas import TileAtlasManager
 from .tile import TileProcessor
-from .utils import compute_tile_hash, extract_expanded_tiles
+from .utils import extract_expanded_tiles
 from ..config import Config
 from ..vulkan import Texture2D
 
@@ -181,9 +183,8 @@ class CachedTileProcessor(TileProcessor):
         expanded_tiles = extract_expanded_tiles(
             frame, rects, crop_width, crop_height, tile_size, margin
         )
-        expanded_size = tile_size + 2 * margin
         result = []
         for tx, ty, data, valid_x, valid_y in expanded_tiles:
-            h = compute_tile_hash(data, expanded_size, valid_x, valid_y, tile_size)
+            h = xxhash.xxh64(data).intdigest()
             result.append((tx, ty, h, data, valid_x, valid_y))
         return result

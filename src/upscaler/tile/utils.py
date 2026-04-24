@@ -1,8 +1,6 @@
 import logging
 from typing import List, Tuple, Set
 
-import xxhash
-
 logger = logging.getLogger(__name__)
 
 
@@ -209,11 +207,8 @@ def extract_expanded_tiles(
                 frame,
                 stride,
                 dst_x0,
-                dst_y0,
-                copy_h,
                 expanded_size,
                 exp_y0,
-                exp_y1,
                 crop_height,
                 src_x0,
             )
@@ -225,12 +220,9 @@ def extract_expanded_tiles(
                 frame,
                 stride,
                 dst_x0,
-                dst_y0,
                 copy_w,
-                copy_h,
                 expanded_size,
                 exp_y0,
-                exp_y1,
                 crop_height,
                 crop_width - 1,
             )
@@ -311,20 +303,16 @@ def _pad_left(
     src: memoryview,
     src_stride: int,
     dst_x: int,
-    dst_y: int,
-    copy_h: int,
     dst_stride: int,
     exp_y0: int,
-    exp_y1: int,
     crop_height: int,
     src_x: int,
 ) -> None:
     """Replicate the leftmost valid column into the left padding area."""
     for y in range(dst_stride):
-        # Compute source Y coordinate (clamped)
         src_y = min(max(exp_y0 + y, 0), crop_height - 1)
         src_start = src_y * src_stride + src_x * 4
-        dst_start = y * dst_stride * 4 + 0
+        dst_start = y * dst_stride * 4
         for x in range(dst_x):
             dst[dst_start + x * 4 : dst_start + x * 4 + 4] = src[
                 src_start : src_start + 4
@@ -336,12 +324,9 @@ def _pad_right(
     src: memoryview,
     src_stride: int,
     dst_x: int,
-    dst_y: int,
     copy_w: int,
-    copy_h: int,
     dst_stride: int,
     exp_y0: int,
-    exp_y1: int,
     crop_height: int,
     src_x: int,
 ) -> None:
@@ -354,64 +339,3 @@ def _pad_right(
             dst[dst_start + x * 4 : dst_start + x * 4 + 4] = src[
                 src_start : src_start + 4
             ]
-
-
-# ------------------------------------------------------------------------------
-#  Content Hashing for Cache Mode
-# ------------------------------------------------------------------------------
-def compute_tile_hash(
-    data: bytes,
-    expanded_size: int,
-    valid_x: int,
-    valid_y: int,
-    tile_size: int,
-) -> int:
-    """
-    Compute an xxHash64 over the interior region of an expanded tile.
-
-    The hash is computed **only** on the `tile_size x tile_size` interior
-    pixels, ignoring the context margin. This ensures that cache keys are
-    invariant to changes in the surrounding context (which are handled by
-    the expanded damage tracking).
-
-    Args:
-        data: Raw BGRA data of the expanded tile (full size).
-        expanded_size: Width/height of the expanded tile in pixels.
-        valid_x: X offset (in pixels) where the interior region starts.
-        valid_y: Y offset where the interior region starts.
-        tile_size: Nominal tile size (interior) in pixels.
-
-    Returns:
-        64-bit integer hash.
-    """
-    interior_start = (valid_y * expanded_size + valid_x) * 4
-    interior_data = data[interior_start : interior_start + tile_size * tile_size * 4]
-    return xxhash.xxh64(interior_data).intdigest()
-
-
-def extract_dirty_tiles_with_hash(
-    frame: memoryview,
-    rects: List[Tuple[int, int, int, int, int]],
-    crop_width: int,
-    crop_height: int,
-    tile_size: int,
-    margin: int,
-) -> List[Tuple[int, int, int, bytes]]:
-    """
-    Extract expanded tiles and compute their content hash.
-
-    Convenience wrapper around `extract_expanded_tiles` that also computes
-    an xxHash64 for each tile's interior region. Used by cache mode.
-
-    Returns:
-        List of (tile_x, tile_y, hash, data_bytes).
-    """
-    expanded_tiles = extract_expanded_tiles(
-        frame, rects, crop_width, crop_height, tile_size, margin
-    )
-    expanded_size = tile_size + 2 * margin
-    result = []
-    for tx, ty, data, valid_x, valid_y in expanded_tiles:
-        h = compute_tile_hash(data, expanded_size, valid_x, valid_y, tile_size)
-        result.append((tx, ty, h, data))
-    return result

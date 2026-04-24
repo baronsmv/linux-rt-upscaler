@@ -112,7 +112,7 @@ class Config:
     max_tile_layers: int = 16  # Recommended: between 8 and 32, ideally 16
 
     # Cache mode
-    cache_capacity: int = 2048
+    cache_capacity: int = 256  # Recommended: between 128 and 1024, ideally 256
 
     # Logging (set via flags, not directly from CLI)
     log_level: str = "WARNING"
