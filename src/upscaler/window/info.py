@@ -1,8 +1,9 @@
 import logging
-import xcffib
-import xcffib.xproto
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
+
+import xcffib
+import xcffib.xproto
 from xcffib.xproto import Window
 
 logger = logging.getLogger(__name__)
@@ -166,7 +167,7 @@ def is_application_window(
         if not is_normal:
             return False
     else:
-        # No type property – check class to exclude XWayland helpers
+        # No type property - check class to exclude XWayland helpers
         win_class = get_window_class(conn, win, atoms)
         if win_class:
             instance, cls = win_class

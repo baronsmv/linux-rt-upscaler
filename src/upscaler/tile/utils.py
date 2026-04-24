@@ -21,7 +21,7 @@ def expand_damage_rects(
     Damage rectangles are reported by the frame grabber as (x, y, w, h, hash).
     To provide sufficient context for convolution layers, we expand each
     rectangle outward by `margin` pixels. The expanded rectangles are merged
-    if they overlap, but this function does **not** perform merging – it simply
+    if they overlap, but this function does **not** perform merging - it simply
     returns the clamped, expanded rectangles. Merging is left to the caller if
     desired.
 

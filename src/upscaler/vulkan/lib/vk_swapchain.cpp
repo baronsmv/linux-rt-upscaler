@@ -2,16 +2,53 @@
  * @file vk_swapchain.cpp
  * @brief Vulkan swapchain creation and presentation management.
  *
- * This file implements the Vulkan swapchain wrapper for Linux using XCB.
- * It provides functions to create and manage a swapchain, handle image
- * acquisition and presentation, and manage synchronization primitives
- * (fences, semaphores). Includes XCB surface creation, format selection,
- * and recreation logic for window resizing and out-of-date events.
+ * This module provides a Python-callable swapchain wrapper built on top of
+ * Vulkan 1.2+ and the XCB window system integration. It manages:
+ *   - Creation of a VkSurfaceKHR from an X11 window (XCB).
+ *   - Swapchain image acquisition, copying a compute-generated texture to the
+ *     swapchain, and presenting it to the display.
+ *   - Per-image synchronisation fences and shared semaphores for queue
+ * operations.
+ *   - Robust recreation of the swapchain when the surface is out of date or
+ * resized.
+ *
+ * Synchronisation design
+ * ----------------------
+ * The swapchain uses a **triple-buffered** (configurable) set of images,
+ * each with its own fence and a dedicated command buffer. Two shared
+ * semaphores
+ * (`image_available`, `render_finished`) coordinate the queue submissions.
+ *
+ * The `present()` method is **non-blocking** by design: it submits the copy
+ * command buffer to the graphics/compute queue and returns immediately.
+ * Full-frame completion is signalled by a per-image fence that becomes
+ * available **after** the presentation engine has finished reading the image.
+ * This fence is exposed via `get_last_fence()` so the application can wait on
+ * it **before** modifying any GPU resources (e.g., staging buffers or textures)
+ * that are reused across frames. Waiting on this fence replaces the need for
+ * a full `vkDeviceWaitIdle()` and provides precise per-frame synchronisation
+ * without unnecessary stalls.
+ *
+ * Lifecycle
+ * ---------
+ *   1. `Device.create_swapchain()` creates the surface, selects formats
+ *      and present mode, then calls `vk_Swapchain_recreate()` for the
+ *      actual swapchain.
+ *   2. `present()` is called once per frame. It acquires the next image,
+ *      records a copy from a source texture into that swapchain image,
+ *      submits the work, and presents.
+ *   3. If the surface is out-of-date (`VK_ERROR_OUT_OF_DATE_KHR` or
+ *      `VK_SUBOPTIMAL_KHR`), the `out_of_date` flag is set and `present()`
+ *      returns `False`. The application then calls `recreate()` (after
+ *      draining the queue) to obtain a new swapchain.
+ *   4. `vk_Swapchain_dealloc` destroys all Vulkan objects when the Python
+ *      object is garbage collected.
  */
 
 // clang-format off
-#include "vk_swapchain.h"
 #include "vk_device.h"
+#include "vk_instance.h"
+#include "vk_swapchain.h"
 #include "vk_utils.h"
 #include <algorithm>
 #include <cstring>
@@ -21,9 +58,19 @@
 
 extern PyObject *vk_SwapchainError;
 
-// -----------------------------------------------------------------------------
-// XCB Surface Creation
-// -----------------------------------------------------------------------------
+// =============================================================================
+// Static helper functions (file-local)
+// =============================================================================
+
+/**
+ * Creates an XCB surface for a given instance, display and window.
+ *
+ * @param instance      Vulkan instance.
+ * @param display_ptr   Pointer to an xcb_connection_t.
+ * @param window_ptr    Pointer to an xcb_window_t (cast to void* for storage).
+ * @param out_surface   On success, receives the created VkSurfaceKHR.
+ * @return VK_SUCCESS on success, or a negative error code.
+ */
 static VkResult create_xcb_surface(VkInstance instance, void *display_ptr,
                                    void *window_ptr,
                                    VkSurfaceKHR *out_surface) {
@@ -41,9 +88,14 @@ static VkResult create_xcb_surface(VkInstance instance, void *display_ptr,
   return func(instance, &surface_info, nullptr, out_surface);
 }
 
-// -----------------------------------------------------------------------------
-// Image Count Selection
-// -----------------------------------------------------------------------------
+/**
+ * Chooses a suitable number of swapchain images, respecting the surface's
+ * supported minimum and maximum counts.
+ *
+ * @param caps    Surface capabilities.
+ * @param desired Preferred image count (e.g., 3).
+ * @return The clamped number of images to request.
+ */
 static uint32_t choose_image_count(const VkSurfaceCapabilitiesKHR &caps,
                                    uint32_t desired) {
   uint32_t count = desired;
@@ -54,9 +106,15 @@ static uint32_t choose_image_count(const VkSurfaceCapabilitiesKHR &caps,
   return count;
 }
 
-// -----------------------------------------------------------------------------
-// Present Mode Selection (FIFO default)
-// -----------------------------------------------------------------------------
+/**
+ * Selects the VkPresentModeKHR matching a human-readable string.
+ * Falls back to VK_PRESENT_MODE_FIFO_KHR if the desired mode is unavailable.
+ *
+ * @param phys      Physical device handle.
+ * @param surface   Surface to query.
+ * @param mode_str  "fifo", "mailbox", "immediate", or nullptr (fifo assumed).
+ * @return The selected present mode.
+ */
 static VkPresentModeKHR choose_present_mode(VkPhysicalDevice phys,
                                             VkSurfaceKHR surface,
                                             const char *mode_str) {
@@ -66,13 +124,13 @@ static VkPresentModeKHR choose_present_mode(VkPhysicalDevice phys,
   vkGetPhysicalDeviceSurfacePresentModesKHR(phys, surface, &count,
                                             modes.data());
 
-  VkPresentModeKHR desired;
-  if (mode_str && strcmp(mode_str, "immediate") == 0)
-    desired = VK_PRESENT_MODE_IMMEDIATE_KHR;
-  else if (mode_str && strcmp(mode_str, "mailbox") == 0)
-    desired = VK_PRESENT_MODE_MAILBOX_KHR;
-  else
-    desired = VK_PRESENT_MODE_FIFO_KHR;
+  VkPresentModeKHR desired = VK_PRESENT_MODE_FIFO_KHR; // default
+  if (mode_str) {
+    if (strcmp(mode_str, "immediate") == 0)
+      desired = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    else if (strcmp(mode_str, "mailbox") == 0)
+      desired = VK_PRESENT_MODE_MAILBOX_KHR;
+  }
 
   for (auto m : modes)
     if (m == desired)
@@ -80,12 +138,19 @@ static VkPresentModeKHR choose_present_mode(VkPhysicalDevice phys,
   return VK_PRESENT_MODE_FIFO_KHR; // mandatory fallback
 }
 
-// -----------------------------------------------------------------------------
-// Surface Format Selection (prefer SRGB)
-// -----------------------------------------------------------------------------
+/**
+ * Selects a VkSurfaceFormatKHR. Prefers sRGB if available, or a format
+ * explicitly requested by the `requested_format` numeric constant (see
+ * `vk_format_map`).
+ *
+ * @param formats           List of supported surface formats.
+ * @param requested_format  A pixel format constant (e.g., B8G8R8A8_UNORM).
+ * @return The selected format.
+ */
 static VkSurfaceFormatKHR
 choose_surface_format(const std::vector<VkSurfaceFormatKHR> &formats,
                       int requested_format) {
+  // If the caller asked for a specific format, try to find it.
   if (requested_format > 0) {
     auto it = vk_format_map.find(requested_format);
     if (it != vk_format_map.end()) {
@@ -96,16 +161,24 @@ choose_surface_format(const std::vector<VkSurfaceFormatKHR> &formats,
           return fmt;
     }
   }
+  // Prefer BGRA sRGB.
   for (const auto &fmt : formats)
     if (fmt.format == VK_FORMAT_B8G8R8A8_SRGB &&
         fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
       return fmt;
+  // Fall back to the first available format.
   return formats[0];
 }
 
-// -----------------------------------------------------------------------------
-// Image View Creation
-// -----------------------------------------------------------------------------
+/**
+ * Creates an array of VkImageViews, one for each swapchain image.
+ *
+ * @param device     Logical device.
+ * @param format     Image format.
+ * @param images     Vector of swapchain images.
+ * @param out_views  Output vector to receive the views.
+ * @return true on success, false with Python exception set.
+ */
 static bool create_image_views(VkDevice device, VkFormat format,
                                const std::vector<VkImage> &images,
                                std::vector<VkImageView> &out_views) {
@@ -121,6 +194,7 @@ static bool create_image_views(VkDevice device, VkFormat format,
     view_info.image = images[i];
     if (vkCreateImageView(device, &view_info, nullptr, &out_views[i]) !=
         VK_SUCCESS) {
+      // Clean up already created views.
       for (size_t j = 0; j < i; ++j)
         vkDestroyImageView(device, out_views[j], nullptr);
       return false;
@@ -129,20 +203,36 @@ static bool create_image_views(VkDevice device, VkFormat format,
   return true;
 }
 
-// -----------------------------------------------------------------------------
-// Recreate Swapchain (allocates per-image fences, shared semaphores)
-// -----------------------------------------------------------------------------
+// =============================================================================
+// Internal lifecycle management
+// =============================================================================
+
+/**
+ * (Re)allocates all per-image resources (fences, command buffers) and the
+ * swapchain itself. The caller **must** ensure that the device queue is idle
+ * (vkDeviceWaitIdle) before calling this function if the swapchain is being
+ * recreated - otherwise in-flight submissions may touch destroyed objects.
+ *
+ * Resets the `last_present_fence` to VK_NULL_HANDLE, because after recreation
+ * any previously stored fence becomes invalid.
+ *
+ * @param self   Swapchain wrapper object.
+ * @param width  Desired width (0 = use surface capabilities).
+ * @param height Desired height (0 = use surface capabilities).
+ * @return true on success, false with Python exception set.
+ */
 bool vk_Swapchain_recreate(vk_Swapchain *self, uint32_t width,
                            uint32_t height) {
   vk_Device *dev = self->py_device;
   VkDevice device = dev->device;
   VkPhysicalDevice phys = dev->physical_device;
 
-  // Query surface capabilities
+  // ---------------------------------------------------------------
+  // 1. Query surface capabilities and determine image extent
+  // ---------------------------------------------------------------
   VkSurfaceCapabilitiesKHR caps;
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys, self->surface, &caps);
 
-  // Determine extent
   if (width == 0 || height == 0) {
     if (caps.currentExtent.width != UINT32_MAX) {
       self->image_extent = caps.currentExtent;
@@ -159,15 +249,26 @@ bool vk_Swapchain_recreate(vk_Swapchain *self, uint32_t width,
     self->image_extent.height = height;
   }
 
+  // ---------------------------------------------------------------
+  // 2. Wait for device idle, then tear down old resources
+  // ---------------------------------------------------------------
   vkDeviceWaitIdle(device);
 
-  // Destroy old per-image resources
+  // Per-image fences
   if (self->fences) {
     for (uint32_t i = 0; i < self->image_count; ++i)
       vkDestroyFence(device, self->fences[i], nullptr);
     PyMem_Free(self->fences);
     self->fences = nullptr;
   }
+  // Persistent command buffers
+  if (self->command_buffers) {
+    vkFreeCommandBuffers(device, self->py_device->command_pool,
+                         self->image_count, self->command_buffers);
+    PyMem_Free(self->command_buffers);
+    self->command_buffers = nullptr;
+  }
+  // Semaphores
   if (self->image_available_semaphore) {
     vkDestroySemaphore(device, self->image_available_semaphore, nullptr);
     self->image_available_semaphore = VK_NULL_HANDLE;
@@ -176,11 +277,24 @@ bool vk_Swapchain_recreate(vk_Swapchain *self, uint32_t width,
     vkDestroySemaphore(device, self->render_finished_semaphore, nullptr);
     self->render_finished_semaphore = VK_NULL_HANDLE;
   }
+  // Image views
   for (auto view : self->image_views)
     vkDestroyImageView(device, view, nullptr);
   self->image_views.clear();
 
-  // Create new swapchain
+  // ---------------------------------------------------------------
+  // 3. Create new swapchain
+  // ---------------------------------------------------------------
+  VkCompositeAlphaFlagBitsKHR compositeAlpha =
+      VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  if (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+    compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  else if (caps.supportedCompositeAlpha &
+           VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR)
+    compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+  else if (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR)
+    compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+
   VkSwapchainCreateInfoKHR swap_info = {
       VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
   swap_info.surface = self->surface;
@@ -193,21 +307,10 @@ bool vk_Swapchain_recreate(vk_Swapchain *self, uint32_t width,
       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
   swap_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   swap_info.preTransform = caps.currentTransform;
-  VkCompositeAlphaFlagBitsKHR compositeAlpha =
-      VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-  if (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) {
-    compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-  } else if (caps.supportedCompositeAlpha &
-             VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR) {
-    compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
-  } else if (caps.supportedCompositeAlpha &
-             VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) {
-    compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
-  }
   swap_info.compositeAlpha = compositeAlpha;
   swap_info.presentMode = self->present_mode;
   swap_info.clipped = VK_TRUE;
-  swap_info.oldSwapchain = self->swapchain;
+  swap_info.oldSwapchain = self->swapchain; // facilitates reuse of old images
 
   VkResult res =
       vkCreateSwapchainKHR(device, &swap_info, nullptr, &self->swapchain);
@@ -216,17 +319,19 @@ bool vk_Swapchain_recreate(vk_Swapchain *self, uint32_t width,
                  res);
     return false;
   }
+  // Destroy the old swapchain now that the new one is alive.
   if (swap_info.oldSwapchain != VK_NULL_HANDLE)
     vkDestroySwapchainKHR(device, swap_info.oldSwapchain, nullptr);
 
-  // Retrieve images
+  // ---------------------------------------------------------------
+  // 4. Retrieve the new images and create views
+  // ---------------------------------------------------------------
   uint32_t count;
   vkGetSwapchainImagesKHR(device, self->swapchain, &count, nullptr);
   self->images.resize(count);
   vkGetSwapchainImagesKHR(device, self->swapchain, &count, self->images.data());
   self->image_count = count;
 
-  // Create image views
   if (!create_image_views(device, self->format, self->images,
                           self->image_views)) {
     PyErr_SetString(vk_SwapchainError,
@@ -234,7 +339,9 @@ bool vk_Swapchain_recreate(vk_Swapchain *self, uint32_t width,
     return false;
   }
 
-  // Create shared semaphores
+  // ---------------------------------------------------------------
+  // 5. Create synchronisation primitives
+  // ---------------------------------------------------------------
   VkSemaphoreCreateInfo sem_info = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
   if (vkCreateSemaphore(device, &sem_info, nullptr,
                         &self->image_available_semaphore) != VK_SUCCESS ||
@@ -244,8 +351,12 @@ bool vk_Swapchain_recreate(vk_Swapchain *self, uint32_t width,
     return false;
   }
 
-  // Create per-image fences (signaled initially)
+  // Per-image fences, initially signalled so the first acquire does not wait.
   self->fences = (VkFence *)PyMem_Malloc(sizeof(VkFence) * self->image_count);
+  if (!self->fences) {
+    PyErr_NoMemory();
+    return false;
+  }
   VkFenceCreateInfo fence_info = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
   fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
   for (uint32_t i = 0; i < self->image_count; ++i) {
@@ -260,10 +371,13 @@ bool vk_Swapchain_recreate(vk_Swapchain *self, uint32_t width,
     }
   }
 
-  // Allocate per-image command buffers (persistent, avoids per-frame allocation
-  // jitter)
+  // Per-image command buffers (persistent, avoids per-frame allocation jitter).
   self->command_buffers = (VkCommandBuffer *)PyMem_Malloc(
       sizeof(VkCommandBuffer) * self->image_count);
+  if (!self->command_buffers) {
+    PyErr_NoMemory();
+    return false;
+  }
   VkCommandBufferAllocateInfo alloc_info = {
       VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
   alloc_info.commandPool = dev->command_pool;
@@ -281,15 +395,36 @@ bool vk_Swapchain_recreate(vk_Swapchain *self, uint32_t width,
     return false;
   }
 
+  // Clear stale state flags; the new swapchain is pristine.
   self->suboptimal = false;
   self->out_of_date = false;
   self->framebuffer_resized = false;
+
+  // Any previously held fence handle is now invalid.
+  self->last_present_fence = VK_NULL_HANDLE;
+
   return true;
 }
 
-// -----------------------------------------------------------------------------
-// Device::create_swapchain Implementation
-// -----------------------------------------------------------------------------
+// =============================================================================
+// Python-facing method implementations
+// =============================================================================
+
+/**
+ * Creates a swapchain from a Python tuple representing the native window
+ * handle. This is the workhorse called by `Device.create_swapchain`.
+ *
+ * Args (Python):
+ *   window_tuple: (display_ptr: int, window_ptr: int) for XCB.
+ *   format:       pixel format constant (e.g., B8G8R8A8_UNORM).
+ *   num_buffers:  desired number of swapchain images (default 3).
+ *   width:        desired width (0 = derive from surface).
+ *   height:       desired height (0 = derive from surface).
+ *   present_mode: "fifo" (default), "mailbox", or "immediate".
+ *
+ * Returns:
+ *   A new `vk.Swapchain` object, or NULL with a Python exception.
+ */
 PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
   PyObject *window_tuple;
   int format;
@@ -307,6 +442,7 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
   if (!dev)
     return nullptr;
 
+  // Validate the window tuple: must contain exactly two integer-like objects.
   if (PyTuple_Size(window_tuple) != 2) {
     PyErr_SetString(PyExc_ValueError,
                     "window_handle must be (display_ptr, window_ptr)");
@@ -317,6 +453,7 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
   if (PyErr_Occurred())
     return nullptr;
 
+  // Create the XCB surface.
   VkSurfaceKHR surface;
   VkResult res =
       create_xcb_surface(vk_instance, display_ptr, window_ptr, &surface);
@@ -326,6 +463,7 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
     return nullptr;
   }
 
+  // Verify that the queue family supports presentation.
   VkBool32 supports_present;
   vkGetPhysicalDeviceSurfaceSupportKHR(dev->physical_device,
                                        dev->queue_family_index, surface,
@@ -337,6 +475,7 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
     return nullptr;
   }
 
+  // Select surface format and present mode.
   uint32_t fmt_count;
   vkGetPhysicalDeviceSurfaceFormatsKHR(dev->physical_device, surface,
                                        &fmt_count, nullptr);
@@ -348,6 +487,7 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
   VkPresentModeKHR present_mode =
       choose_present_mode(dev->physical_device, surface, present_mode_str);
 
+  // Allocate the Python wrapper object.
   vk_Swapchain *sw = PyObject_New(vk_Swapchain, &vk_Swapchain_Type);
   if (!sw) {
     vkDestroySurfaceKHR(vk_instance, surface, nullptr);
@@ -362,10 +502,13 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
   sw->desired_image_count = num_buffers;
   sw->present_mode = present_mode;
   sw->vsync = (present_mode == VK_PRESENT_MODE_FIFO_KHR);
+  // The following are set by vk_Swapchain_recreate.
   sw->swapchain = VK_NULL_HANDLE;
   sw->fences = nullptr;
+  sw->command_buffers = nullptr;
   sw->image_available_semaphore = VK_NULL_HANDLE;
   sw->render_finished_semaphore = VK_NULL_HANDLE;
+  sw->last_present_fence = VK_NULL_HANDLE;
 
   if (!vk_Swapchain_recreate(sw, width, height)) {
     vkDestroySurfaceKHR(vk_instance, surface, nullptr);
@@ -376,9 +519,10 @@ PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args) {
   return reinterpret_cast<PyObject *>(sw);
 }
 
-// -----------------------------------------------------------------------------
-// Deallocation
-// -----------------------------------------------------------------------------
+/**
+ * Destroys all Vulkan resources held by a swapchain object.
+ * The queue is first idled to guarantee that no submissions are in flight.
+ */
 void vk_Swapchain_dealloc(vk_Swapchain *self) {
   if (self->py_device) {
     VkDevice device = self->py_device->device;
@@ -410,16 +554,41 @@ void vk_Swapchain_dealloc(vk_Swapchain *self) {
   Py_TYPE(self)->tp_free(reinterpret_cast<PyObject *>(self));
 }
 
-// -----------------------------------------------------------------------------
-// Present (per-image fences + temporary command buffers)
-// -----------------------------------------------------------------------------
+/**
+ * Presents a texture to the window.
+ *
+ *  1. Acquires the next available swapchain image (blocking indefinitely if
+ *     necessary).
+ *  2. Waits on the per-image fence (from the previous use of that image) and
+ *     resets it for the new submission.
+ *  3. Records a command buffer that:
+ *       - Transitions the swapchain image to TRANSFER_DST_OPTIMAL.
+ *       - Inserts a memory barrier for compute writes -> transfer reads.
+ *       - Transitions the source texture to TRANSFER_SRC_OPTIMAL.
+ *       - Copies the source texture into the swapchain image.
+ *       - Transitions the source texture back to GENERAL and the swapchain
+ *         image to PRESENT_SRC_KHR.
+ *  4. Submits the command buffer to the queue, signalling the per-image fence
+ *     and the `render_finished` semaphore.
+ *  5. Presents the image.
+ *
+ * The `wait_for_fence` parameter (from the Python caller) is ignored; the
+ * caller is expected to use `get_last_fence()` for frame-level synchronisation.
+ *
+ * @param self        Swapchain object.
+ * @param args        Python arguments: (texture, x, y, wait_for_fence)
+ * @return Py_True if the image was successfully presented,
+ *         Py_False if the swapchain is out of date,
+ *         NULL on error (with exception set).
+ */
 PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
   PyObject *texture_obj;
   int x = 0, y = 0;
-  int wait_for_fence = 1;
+  int wait_for_fence = 1; // ignored - see comment above
   if (!PyArg_ParseTuple(args, "O|iip", &texture_obj, &x, &y, &wait_for_fence))
     return nullptr;
 
+  // Type checks
   if (!PyObject_TypeCheck(texture_obj, &vk_Resource_Type)) {
     PyErr_SetString(PyExc_TypeError, "texture must be a Resource");
     return nullptr;
@@ -442,7 +611,7 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
   vk_Device *dev = self->py_device;
   VkResult res;
 
-  // Acquire next image
+  // --- Acquire next image index ---
   uint32_t image_index;
   res = vkAcquireNextImageKHR(dev->device, self->swapchain, UINT64_MAX,
                               self->image_available_semaphore, VK_NULL_HANDLE,
@@ -456,35 +625,35 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
     return nullptr;
   }
 
-  // Wait for the fence associated with THIS image
+  // --- Wait for and reset the per-image fence ---
   vkWaitForFences(dev->device, 1, &self->fences[image_index], VK_TRUE,
                   UINT64_MAX);
   vkResetFences(dev->device, 1, &self->fences[image_index]);
 
-  // Use persistent command buffer for this image
+  // --- Record the command buffer ---
   VkCommandBuffer cmd = self->command_buffers[image_index];
-  vkResetCommandBuffer(cmd, 0); // Reset before recording
+  vkResetCommandBuffer(cmd, 0);
 
   VkCommandBufferBeginInfo begin_info = {
       VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
   begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
   vkBeginCommandBuffer(cmd, &begin_info);
 
-  // Barrier 1: swapchain image -> TRANSFER_DST_OPTIMAL
-  VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-  barrier.srcAccessMask = 0;
-  barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  barrier.image = self->images[image_index];
-  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  barrier.subresourceRange.levelCount = 1;
-  barrier.subresourceRange.layerCount = 1;
+  // Barrier 1: swapchain image undefined -> TRANSFER_DST_OPTIMAL
+  VkImageMemoryBarrier dst_barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+  dst_barrier.srcAccessMask = 0;
+  dst_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  dst_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  dst_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  dst_barrier.image = self->images[image_index];
+  dst_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  dst_barrier.subresourceRange.levelCount = 1;
+  dst_barrier.subresourceRange.layerCount = 1;
   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                        VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
-                       nullptr, 1, &barrier);
+                       nullptr, 1, &dst_barrier);
 
-  // Memory barrier: compute writes -> transfer reads
+  // Memory barrier: ensure compute writes are visible to the transfer.
   VkMemoryBarrier mem_barrier = {VK_STRUCTURE_TYPE_MEMORY_BARRIER};
   mem_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
   mem_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -492,7 +661,7 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
                        VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &mem_barrier, 0,
                        nullptr, 0, nullptr);
 
-  // Barrier 2: source texture -> TRANSFER_SRC_OPTIMAL
+  // Barrier 2: source texture GENERAL -> TRANSFER_SRC_OPTIMAL
   VkImageMemoryBarrier src_barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
   src_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
   src_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -506,7 +675,7 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
                        VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
                        nullptr, 1, &src_barrier);
 
-  // Copy
+  // Copy the entire texture into the swapchain image.
   VkImageCopy copy_region = {};
   copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   copy_region.srcSubresource.layerCount = 1;
@@ -520,28 +689,30 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
                  self->images[image_index],
                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
-  // Barrier 3: source texture back -> GENERAL
+  // Barrier 3: source texture back to GENERAL.
   src_barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-  src_barrier.dstAccessMask =
-      0; // No need for explicit access; layout change only
+  src_barrier.dstAccessMask = 0; // layout transition only
   src_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
   src_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0,
                        nullptr, 1, &src_barrier);
 
-  // Barrier 4: swapchain image -> PRESENT_SRC_KHR
-  barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  barrier.dstAccessMask = 0;
-  barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  // Barrier 4: swapchain image TRANSFER_DST_OPTIMAL -> PRESENT_SRC_KHR
+  dst_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  dst_barrier.dstAccessMask = 0;
+  dst_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  dst_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0,
-                       nullptr, 1, &barrier);
+                       nullptr, 1, &dst_barrier);
 
-  vkEndCommandBuffer(cmd);
+  if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
+    PyErr_SetString(vk_SwapchainError, "Failed to end command buffer");
+    return nullptr;
+  }
 
-  // Submit
+  // --- Submit to queue ---
   VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
   VkSubmitInfo submit = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
   submit.waitSemaphoreCount = 1;
@@ -558,7 +729,12 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
     return nullptr;
   }
 
-  // Present
+  // The fence will signal when the presentation engine has finished reading
+  // the image. The application may wait on this fence to know when all
+  // frame-related GPU work is complete.
+  self->last_present_fence = self->fences[image_index];
+
+  // --- Present ---
   VkPresentInfoKHR present_info = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
   present_info.waitSemaphoreCount = 1;
   present_info.pWaitSemaphores = &self->render_finished_semaphore;
@@ -567,7 +743,6 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
   present_info.pImageIndices = &image_index;
 
   res = vkQueuePresentKHR(dev->queue, &present_info);
-
   if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR ||
       self->framebuffer_resized) {
     self->out_of_date = true;
@@ -581,23 +756,48 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
 }
 
 // -----------------------------------------------------------------------------
-// Status Queries
+// Frame-level synchronisation helper
 // -----------------------------------------------------------------------------
+
+/**
+ * Returns the native VkFence handle of the fence that was signalled by the
+ * most recent `present()` call. This fence can be waited on to ensure that
+ * **all** GPU work for the corresponding frame has completed, including the
+ * presentation engine's read of the swapchain image.
+ *
+ * The returned handle is an integer (the raw pointer) and may be passed to
+ * `Device.wait_for_fences()`. On the first frame (or immediately after
+ * recreation), `None` is returned because no present has yet occurred.
+ *
+ * @return A Python int (fence handle) or None.
+ */
+PyObject *vk_Swapchain_get_last_fence(vk_Swapchain *self, PyObject *ignored) {
+  if (self->last_present_fence == VK_NULL_HANDLE) {
+    Py_RETURN_NONE;
+  }
+  return PyLong_FromVoidPtr((void *)self->last_present_fence);
+}
+
+// -----------------------------------------------------------------------------
+// Status query methods
+// -----------------------------------------------------------------------------
+
 PyObject *vk_Swapchain_is_suboptimal(vk_Swapchain *self, PyObject *ignored) {
-  if (self->suboptimal)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+  return PyBool_FromLong(self->suboptimal);
 }
+
 PyObject *vk_Swapchain_is_out_of_date(vk_Swapchain *self, PyObject *ignored) {
-  if (self->out_of_date)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+  return PyBool_FromLong(self->out_of_date);
 }
+
 PyObject *vk_Swapchain_needs_recreation(vk_Swapchain *self, PyObject *ignored) {
-  if (self->out_of_date || self->suboptimal)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+  return PyBool_FromLong(self->out_of_date || self->suboptimal);
 }
+
+/**
+ * Public recreation entry point, callable from Python.
+ * Passes width/height (0 = keep current) to vk_Swapchain_recreate().
+ */
 PyObject *vk_Swapchain_recreate_method(vk_Swapchain *self, PyObject *args) {
   int width = 0, height = 0;
   if (!PyArg_ParseTuple(args, "|ii", &width, &height))
@@ -608,27 +808,52 @@ PyObject *vk_Swapchain_recreate_method(vk_Swapchain *self, PyObject *args) {
 }
 
 // -----------------------------------------------------------------------------
-// Type Definition
+// Python type definition
 // -----------------------------------------------------------------------------
+
 static PyMethodDef vk_Swapchain_methods[] = {
     {"present", (PyCFunction)vk_Swapchain_present, METH_VARARGS,
-     "Copy texture and present."},
-    {"is_suboptimal", (PyCFunction)vk_Swapchain_is_suboptimal, METH_NOARGS, ""},
+     "Copy a texture to the swapchain and present it to the screen.\n\n"
+     "Args:\n"
+     "  texture (vk.Resource): The image to display.\n"
+     "  x (int, optional): Destination x offset.\n"
+     "  y (int, optional): Destination y offset.\n"
+     "  wait_for_fence (bool, optional): ignored (sync via get_last_fence).\n"
+     "Returns True on success, False if the swapchain is out of date,\n"
+     "or raises an exception on error."},
+
+    {"get_last_fence", (PyCFunction)vk_Swapchain_get_last_fence, METH_NOARGS,
+     "Return the native handle of the fence from the last present(), or "
+     "None.\n\n"
+     "This fence can be waited on to know when the frame's GPU work is "
+     "complete."},
+
+    {"is_suboptimal", (PyCFunction)vk_Swapchain_is_suboptimal, METH_NOARGS,
+     "Return True if the present was suboptimal."},
+
     {"is_out_of_date", (PyCFunction)vk_Swapchain_is_out_of_date, METH_NOARGS,
-     ""},
+     "Return True if the swapchain is out of date and needs recreation."},
+
     {"needs_recreation", (PyCFunction)vk_Swapchain_needs_recreation,
-     METH_NOARGS, ""},
-    {"recreate", (PyCFunction)vk_Swapchain_recreate_method, METH_VARARGS, ""},
+     METH_NOARGS, "True if out_of_date or suboptimal."},
+
+    {"recreate", (PyCFunction)vk_Swapchain_recreate_method, METH_VARARGS,
+     "Recreate the swapchain (must be called after an out-of-date event).\n"
+     "Args: (width=0, height=0). 0 = keep current extent."},
+
     {nullptr, nullptr, 0, nullptr}};
 
 static PyMemberDef vk_Swapchain_members[] = {
     {"width", T_UINT,
-     offsetof(vk_Swapchain, image_extent) + offsetof(VkExtent2D, width), 0, ""},
+     offsetof(vk_Swapchain, image_extent) + offsetof(VkExtent2D, width), 0,
+     "Swapchain image width in pixels."},
     {"height", T_UINT,
      offsetof(vk_Swapchain, image_extent) + offsetof(VkExtent2D, height), 0,
-     ""},
-    {"image_count", T_UINT, offsetof(vk_Swapchain, image_count), 0, ""},
-    {"vsync", T_BOOL, offsetof(vk_Swapchain, vsync), 0, ""},
+     "Swapchain image height in pixels."},
+    {"image_count", T_UINT, offsetof(vk_Swapchain, image_count), 0,
+     "Number of swapchain images."},
+    {"vsync", T_BOOL, offsetof(vk_Swapchain, vsync), 0,
+     "True if presenting with VSync (fifo mode)."},
     {nullptr}};
 
 PyTypeObject vk_Swapchain_Type = {

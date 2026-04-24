@@ -1,4 +1,4 @@
-// Lanczos2 with antiringing – compute shader version
+// Lanczos2 with antiringing - compute shader version
 // Adapted from Magpie effect by funnyplanter (CC0-1.0)
 
 Texture2D<float4> InputTex : register(t0);

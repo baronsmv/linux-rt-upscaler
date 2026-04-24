@@ -1,9 +1,16 @@
 /**
  * @file vk_module.cpp
- * @brief Python module initialisation for the 'vulkan' extension.
+ * @brief Python module initialisation for the `vulkan` extension.
  *
- * This file defines the module's methods, constants, and exception types.
- * It also populates the pixel format mapping table.
+ * This file is the entry point of the C extension. It defines:
+ *   - The `vulkan` module object.
+ *   - A table of top-level functions (get_discovered_devices, enable_debug,
+ *     get_shader_binary_type).
+ *   - The custom exception types used throughout the wrapper.
+ *   - All supported Vulkan type objects (Device, Heap, Resource, …).
+ *   - The pixel-format constant -> (VkFormat, bytes per pixel) mapping.
+ *   - Numeric constants for sampler filters, address modes, heap types, and
+ *     all pixel format enums.
  */
 
 #include "vk_common.h"
@@ -15,9 +22,10 @@
 #include "vk_sampler.h"
 #include "vk_swapchain.h"
 
-/* ----------------------------------------------------------------------------
-   Exception objects (exposed as vulkan.ErrorName)
-   ------------------------------------------------------------------------- */
+// =============================================================================
+//  Global exception objects (prefixed with vk_)
+// =============================================================================
+
 PyObject *vk_Texture2DError = nullptr;
 PyObject *vk_BufferError = nullptr;
 PyObject *vk_ComputeError = nullptr;
@@ -27,9 +35,10 @@ PyObject *vk_SamplerError = nullptr;
 PyObject *vk_Texture1DError = nullptr;
 PyObject *vk_Texture3DError = nullptr;
 
-/* ----------------------------------------------------------------------------
-   Module method table
-   ------------------------------------------------------------------------- */
+// =============================================================================
+//  Module method table (top-level functions)
+// =============================================================================
+
 static PyMethodDef vulkan_module_methods[] = {
     {"get_discovered_devices", (PyCFunction)vk_get_discovered_devices,
      METH_NOARGS,
@@ -45,17 +54,22 @@ static struct PyModuleDef vulkan_module = {
     "Low-level Vulkan bindings with compute and presentation support.", -1,
     vulkan_module_methods};
 
-/* ----------------------------------------------------------------------------
-   Module initialisation
-   ------------------------------------------------------------------------- */
+// =============================================================================
+//  Module initialisation
+// =============================================================================
+
 PyMODINIT_FUNC PyInit_vulkan(void) {
   PyObject *m = PyModule_Create(&vulkan_module);
   if (!m)
     return nullptr;
 
-// Create and register exception types
+// -----------------------------------------------------------------
+// 1. Create and register all exception types
+// -----------------------------------------------------------------
 #define MAKE_ERR(name)                                                         \
   vk_##name = PyErr_NewException("vulkan." #name, nullptr, nullptr);           \
+  if (!vk_##name)                                                              \
+    return nullptr;                                                            \
   PyModule_AddObject(m, #name, vk_##name);
 
   MAKE_ERR(Texture2DError);
@@ -69,7 +83,9 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
 
 #undef MAKE_ERR
 
-// Register all Python types
+// -----------------------------------------------------------------
+// 2. Register all Python types
+// -----------------------------------------------------------------
 #define READY_TYPE(type)                                                       \
   if (PyType_Ready(&vk_##type##_Type) < 0)                                     \
     return nullptr;                                                            \
@@ -84,19 +100,24 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
 
 #undef READY_TYPE
 
-// Populate the format map (pixel constant -> VkFormat, bytes per pixel)
+// -----------------------------------------------------------------
+// 3. Populate the pixel-format map
+// -----------------------------------------------------------------
 #define VK_FORMAT_MAP(fmt, size) vk_format_map[fmt] = {VK_FORMAT_##fmt, size}
 #define VK_FORMAT_MAP_FLOAT(fmt, size)                                         \
   vk_format_map[fmt##_FLOAT] = {VK_FORMAT_##fmt##_SFLOAT, size}
 #define VK_FORMAT_MAP_SRGB(fmt, size)                                          \
   vk_format_map[fmt##_UNORM_SRGB] = {VK_FORMAT_##fmt##_SRGB, size}
 
+  // 128-bit formats
   VK_FORMAT_MAP_FLOAT(R32G32B32A32, 16);
   VK_FORMAT_MAP(R32G32B32A32_UINT, 16);
   VK_FORMAT_MAP(R32G32B32A32_SINT, 16);
   VK_FORMAT_MAP_FLOAT(R32G32B32, 12);
   VK_FORMAT_MAP(R32G32B32_UINT, 12);
   VK_FORMAT_MAP(R32G32B32_SINT, 12);
+
+  // 64-bit formats
   VK_FORMAT_MAP_FLOAT(R16G16B16A16, 8);
   VK_FORMAT_MAP(R16G16B16A16_UNORM, 8);
   VK_FORMAT_MAP(R16G16B16A16_UINT, 8);
@@ -105,6 +126,8 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
   VK_FORMAT_MAP_FLOAT(R32G32, 8);
   VK_FORMAT_MAP(R32G32_UINT, 8);
   VK_FORMAT_MAP(R32G32_SINT, 8);
+
+  // 32-bit formats
   VK_FORMAT_MAP(R8G8B8A8_UNORM, 4);
   VK_FORMAT_MAP_SRGB(R8G8B8A8, 4);
   VK_FORMAT_MAP(R8G8B8A8_UINT, 4);
@@ -118,6 +141,8 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
   VK_FORMAT_MAP_FLOAT(R32, 4);
   VK_FORMAT_MAP(R32_UINT, 4);
   VK_FORMAT_MAP(R32_SINT, 4);
+
+  // 16-bit formats
   VK_FORMAT_MAP(R8G8_UNORM, 2);
   VK_FORMAT_MAP(R8G8_UINT, 2);
   VK_FORMAT_MAP(R8G8_SNORM, 2);
@@ -127,16 +152,28 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
   VK_FORMAT_MAP(R16_UINT, 2);
   VK_FORMAT_MAP(R16_SNORM, 2);
   VK_FORMAT_MAP(R16_SINT, 2);
+
+  // 8-bit formats
   VK_FORMAT_MAP(R8_UNORM, 1);
   VK_FORMAT_MAP(R8_UINT, 1);
   VK_FORMAT_MAP(R8_SNORM, 1);
   VK_FORMAT_MAP(R8_SINT, 1);
+
+  // BGRA formats
   VK_FORMAT_MAP(B8G8R8A8_UNORM, 4);
   VK_FORMAT_MAP_SRGB(B8G8R8A8, 4);
+
+  // Special 10-bit format mapping (R10G10B10A2 -> A2R10G10B10 on Vulkan)
   vk_format_map[R10G10B10A2_UNORM] = {VK_FORMAT_A2B10G10R10_UNORM_PACK32, 4};
   vk_format_map[R10G10B10A2_UINT] = {VK_FORMAT_A2B10G10R10_UINT_PACK32, 4};
 
-  // Module constants
+#undef VK_FORMAT_MAP
+#undef VK_FORMAT_MAP_FLOAT
+#undef VK_FORMAT_MAP_SRGB
+
+  // -----------------------------------------------------------------
+  // 4. Expose module-level constants
+  // -----------------------------------------------------------------
   PyModule_AddIntConstant(m, "SHADER_BINARY_TYPE_SPIRV", 1);
 
   // Sampler filters
@@ -153,7 +190,7 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
   PyModule_AddIntConstant(m, "HEAP_UPLOAD", 1);
   PyModule_AddIntConstant(m, "HEAP_READBACK", 2);
 
-// Pixel formats (expose numeric constants)
+// All pixel formats as module-level constants
 #define ADD_CONST(name) PyModule_AddIntConstant(m, #name, name)
 
   ADD_CONST(R32G32B32A32_FLOAT);

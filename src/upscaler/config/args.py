@@ -236,7 +236,7 @@ Can be a:
   Hex code (e.g., '#000000', '#FF0000', '#00000080')
   Functional notation ('rgb(255,0,0)', 'rgba(255,0,0,0.5)')
 
-Note: RGB values must be integers 0–255.""",
+Note: RGB values must be integers 0-255.""",
     )
 
     # ----------------------------------------------------------------------

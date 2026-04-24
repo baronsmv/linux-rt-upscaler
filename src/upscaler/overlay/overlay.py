@@ -204,16 +204,16 @@ class OverlayWindow(QMainWindow):
         if event.type() == QEvent.WindowStateChange:
             minimized = bool(self.windowState() & Qt.WindowMinimized)
             if minimized and self._forwarder.enabled:
-                logger.debug("Window minimized – disabling event forwarding")
+                logger.debug("Window minimized - disabling event forwarding")
                 self._forwarder.enabled = False
             elif not minimized and not self._forwarder.enabled and self._should_forward:
-                logger.debug("Window restored – enabling event forwarding")
+                logger.debug("Window restored - enabling event forwarding")
                 self._forwarder.enabled = True
         super().changeEvent(event)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """Quit the application when the overlay window is closed."""
-        logger.info("Overlay window closed – quitting application.")
+        logger.info("Overlay window closed - quitting application.")
         self._opacity_controller.close()
         self._forwarder.close()
         QApplication.quit()
@@ -222,7 +222,7 @@ class OverlayWindow(QMainWindow):
     @Slot()
     def on_pipeline_stopped(self) -> None:
         """Called from the pipeline thread when it exits due to an error."""
-        logger.info("Pipeline stopped – quitting application.")
+        logger.info("Pipeline stopped - quitting application.")
         QApplication.quit()
 
     @Slot(str)

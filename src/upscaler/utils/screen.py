@@ -15,7 +15,7 @@ def _get_screen(screen_spec: str) -> QScreen:
     - integer as string  - screen at that index (e.g., '0')
     - screen name        - case-insensitive substring match (e.g., 'HDMI-1')
     Raises ValueError if no matching screen is found.
-    Note: The 'all' spec is not handled here – _get_virtual_desktop() handles that.
+    Note: The 'all' spec is not handled here - _get_virtual_desktop() handles that.
     """
     screens = QGuiApplication.screens()
     if not screens:

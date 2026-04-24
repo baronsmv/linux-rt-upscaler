@@ -69,7 +69,7 @@ class Pipeline:
         self._win_info = win_info
         self.overlay = overlay
 
-        # Crop parameters – remain constant during a session.
+        # Crop parameters - remain constant during a session.
         self._crop_left = config.crop_left
         self._crop_top = config.crop_top
         self._crop_right = config.crop_right
@@ -89,7 +89,7 @@ class Pipeline:
         # Vulkan device configuration.
         configure_device(config.vulkan_buffer_pool_size)
 
-        # Swapchain manager – handles Vulkan surface and present.
+        # Swapchain manager - handles Vulkan surface and present.
         self._swapchain_manager = SwapchainManager(
             overlay.xid,
             self._screen_width,
@@ -105,7 +105,7 @@ class Pipeline:
         )
         self.osd = OSDManager(osd_texts, self._screen_width, self._screen_height)
 
-        # Presenter – Lanczos scaling, OSD blending, and swapchain presentation.
+        # Presenter - Lanczos scaling, OSD blending, and swapchain presentation.
         self.presenter = Presenter(
             screen_width=self._screen_width,
             screen_height=self._screen_height,
@@ -119,7 +119,7 @@ class Pipeline:
             swapchain_manager=self._swapchain_manager,
         )
 
-        # Upscaler manager – orchestrates full-frame or tile-based upscaling.
+        # Upscaler manager - orchestrates full-frame or tile-based upscaling.
         self.upscaler_mgr = UpscalerManager(
             crop_width=self.crop_width,
             crop_height=self.crop_height,
@@ -138,7 +138,7 @@ class Pipeline:
             win_info.handle, win_info.width, win_info.height
         )
 
-        # Mouse mapping rectangle – updated each frame.
+        # Mouse mapping rectangle - updated each frame.
         overlay.scaling_rect = [0, 0, 0, 0]
 
         # Threading control.
@@ -151,7 +151,7 @@ class Pipeline:
         self._switch_queue: Queue[Optional[WindowInfo]] = Queue()
         self.osd_queue: Queue[Tuple[str, float]] = Queue()
 
-        # Frame grabber – created on the pipeline thread.
+        # Frame grabber - created on the pipeline thread.
         self._grabber: Optional[FrameGrabber] = None
 
         # Performance counters.
@@ -164,7 +164,7 @@ class Pipeline:
         self.osd.prepare_textures()
 
     # ----------------------------------------------------------------------
-    # Public API – lifecycle and external requests
+    # Public API - lifecycle and external requests
     # ----------------------------------------------------------------------
     def start(self) -> None:
         """Start the pipeline thread."""
@@ -244,7 +244,7 @@ class Pipeline:
             self.overlay.show()
 
     # ----------------------------------------------------------------------
-    # Frame processing – core of the pipeline
+    # Frame processing - core of the pipeline
     # ----------------------------------------------------------------------
     def _process_one_frame(self) -> None:
         """Capture, upscale, and present a single frame."""
@@ -306,7 +306,7 @@ class Pipeline:
                 self.upscaler_mgr.process_tile_frame(dirty_tiles, rects, frame)
                 src_tex = self.upscaler_mgr.get_output_texture()
             else:
-                # Too many dirty tiles – fall back to full-frame processing.
+                # Too many dirty tiles - fall back to full-frame processing.
                 logger.debug("Tile threshold exceeded; using full-frame for this frame")
                 self.upscaler_mgr.upload_full_frame(
                     frame=frame,
@@ -440,7 +440,7 @@ class Pipeline:
                 if not self.config.follow_focus:
                     self._window_tracker.check_alive()
                     if not self._window_tracker.alive:
-                        logger.info("Target window closed – exiting")
+                        logger.info("Target window closed - exiting")
                         break
 
                 # Update window state (size, minimized, focus) and handle pauses.

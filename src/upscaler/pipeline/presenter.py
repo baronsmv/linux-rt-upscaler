@@ -150,7 +150,7 @@ class Presenter:
         # 1. Dispatch Lanczos (writes to self.screen_tex)
         self.lanczos.compute.dispatch(self.groups_x, self.groups_y, 1)
 
-        # 2. Blend OSD (if active) – modifies self.screen_tex in place
+        # 2. Blend OSD (if active) - modifies self.screen_tex in place
         self.osd.blend_active(self.screen_tex)
 
         # 3. Present to swapchain

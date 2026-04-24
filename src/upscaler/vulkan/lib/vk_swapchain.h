@@ -4,6 +4,9 @@
 #include "vk_common.h"
 #include <vector>
 
+// ---------------------------------------------------------------------------
+// Opaque type representing a Vulkan swapchain, its images, and sync primitives
+// ---------------------------------------------------------------------------
 struct vk_Swapchain {
   PyObject_HEAD;
   vk_Device *py_device;
@@ -17,11 +20,11 @@ struct vk_Swapchain {
   std::vector<VkImage> images;
   std::vector<VkImageView> image_views;
 
-  // Synchronisation: per-image fences, shared semaphores
-  VkFence *fences;                       // One fence per swapchain image
-  VkSemaphore image_available_semaphore; // Shared
-  VkSemaphore render_finished_semaphore; // Shared
-  VkCommandBuffer *command_buffers;      // One command buffer per image
+  VkFence *fences;
+  VkSemaphore image_available_semaphore;
+  VkSemaphore render_finished_semaphore;
+  VkCommandBuffer *command_buffers;
+  VkFence last_present_fence;
 
   bool suboptimal;
   bool out_of_date;
@@ -34,10 +37,12 @@ struct vk_Swapchain {
 
 extern PyTypeObject vk_Swapchain_Type;
 
+// Lifecycle
 void vk_Swapchain_dealloc(vk_Swapchain *self);
 bool vk_Swapchain_recreate(vk_Swapchain *self, uint32_t width = 0,
                            uint32_t height = 0);
 
+// Creation & presentation
 PyObject *vk_Device_create_swapchain_impl(vk_Device *self, PyObject *args);
 PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args);
 
@@ -47,4 +52,7 @@ PyObject *vk_Swapchain_is_out_of_date(vk_Swapchain *self, PyObject *ignored);
 PyObject *vk_Swapchain_needs_recreation(vk_Swapchain *self, PyObject *ignored);
 PyObject *vk_Swapchain_recreate_method(vk_Swapchain *self, PyObject *args);
 
-#endif
+// Frame-level synchronisation
+PyObject *vk_Swapchain_get_last_fence(vk_Swapchain *self, PyObject *ignored);
+
+#endif // VK_SWAPCHAIN_H

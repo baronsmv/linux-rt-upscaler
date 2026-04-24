@@ -29,7 +29,7 @@ typedef struct TileCacheEntry {
 } TileCacheEntry;
 
 /**
- * Capture context – opaque structure holding all state.
+ * Capture context - opaque structure holding all state.
  */
 typedef struct CaptureContext {
   Display *dpy;
@@ -88,7 +88,7 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
                         size_t output_size, OutputRect *rects, int max_rects);
 
 /**
- * Simplified capture – returns 0 on success, 1 if no change, -1 on error.
+ * Simplified capture - returns 0 on success, 1 if no change, -1 on error.
  */
 int capture_grab(CaptureContext *ctx, unsigned char *output_data);
 

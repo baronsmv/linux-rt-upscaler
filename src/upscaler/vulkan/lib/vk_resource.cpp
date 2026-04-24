@@ -1,11 +1,25 @@
 /**
  * @file vk_resource.cpp
- * @brief Vulkan resource methods: upload, download, copy, and batch texture
- * upload.
+ * @brief Vulkan resource (buffer / image) data-transfer methods.
  *
- * This file implements the vk.Resource Python type, which represents a Vulkan
- * buffer or image. It provides methods for data transfer between host and
- * device, as well as resource-to-resource copies.
+ * The `vk.Resource` Python type represents a Vulkan buffer or image.
+ * This file implements the methods that move data between host and device:
+ *
+ *   - `upload()`               - host to device (buffer only).
+ *   - `upload_subresources()`  - host to device (texture rectangles).
+ *   - `download()`             - device to host (texture only).
+ *   - `copy_to()`              - device to device (buffer or image).
+ *   - `clear_color()`          - fill an image with a solid RGBA colour.
+ *
+ * All methods are **synchronous**: they record, submit, and wait for a
+ * command buffer, so Python execution blocks until the GPU operation
+ * finishes. Timely completion is guaranteed by either mapping host-visible
+ * memory or using a temporary fence.
+ *
+ * The resource object also keeps pre-filled `VkDescriptorBufferInfo` /
+ * `VkDescriptorImageInfo` structures that are used when the resource is
+ * bound to a compute pipeline via the descriptor set helpers in
+ * `vk_utils.cpp`.
  */
 
 #include "vk_resource.h"
@@ -13,9 +27,15 @@
 #include <cstring>
 #include <functional>
 
-/* ----------------------------------------------------------------------------
-   Resource deallocator
-   ------------------------------------------------------------------------- */
+// =============================================================================
+//  Lifecycle - deallocation
+// =============================================================================
+
+/**
+ * Destroy all Vulkan objects owned by the resource.
+ * If the resource was sub-allocated from a heap, the memory is **not**
+ * freed here - that belongs to the heap itself.
+ */
 void vk_Resource_dealloc(vk_Resource *self) {
   if (self->py_device) {
     VkDevice dev = self->py_device->device;
@@ -23,7 +43,6 @@ void vk_Resource_dealloc(vk_Resource *self) {
       vkDestroyImageView(dev, self->image_view, nullptr);
     if (self->buffer_view)
       vkDestroyBufferView(dev, self->buffer_view, nullptr);
-    // Free memory only if not suballocated from a heap
     if (!self->py_heap && self->memory)
       vkFreeMemory(dev, self->memory, nullptr);
     if (self->image)
@@ -36,15 +55,20 @@ void vk_Resource_dealloc(vk_Resource *self) {
   Py_TYPE(self)->tp_free(reinterpret_cast<PyObject *>(self));
 }
 
-/* ----------------------------------------------------------------------------
-   upload - upload data to a buffer resource
-   ------------------------------------------------------------------------- */
+// =============================================================================
+//  Data upload (host to device)
+// =============================================================================
+
 /**
- * Upload data from a Python bytes-like object into a buffer resource.
+ * Upload raw bytes to a buffer.
+ *
+ * The destination buffer must be host-visible (created with `HEAP_UPLOAD`
+ * or bound to an upload heap). The function maps the memory, copies the
+ * data, and unmaps.
  *
  * Args:
- *     data (bytes): data to upload.
- *     offset (int, optional): destination offset in bytes (default 0).
+ *   data (bytes, bytearray, memoryview): source data.
+ *   offset (int, optional): byte offset in the buffer (default 0).
  */
 PyObject *vk_Resource_upload(vk_Resource *self, PyObject *args) {
   Py_buffer view;
@@ -57,13 +81,12 @@ PyObject *vk_Resource_upload(vk_Resource *self, PyObject *args) {
     PyErr_SetString(PyExc_TypeError, "Resource is not a buffer");
     return nullptr;
   }
-
   if (offset + view.len > self->size) {
     PyBuffer_Release(&view);
-    PyErr_Format(
-        PyExc_ValueError,
-        "Upload size %zd exceeds buffer size (offset %llu + %zd > %llu)",
-        view.len, offset, view.len, self->size);
+    PyErr_Format(PyExc_ValueError,
+                 "Upload of %zd bytes at offset %llu exceeds "
+                 "buffer size %llu",
+                 view.len, offset, self->size);
     return nullptr;
   }
 
@@ -71,7 +94,7 @@ PyObject *vk_Resource_upload(vk_Resource *self, PyObject *args) {
                                self->heap_offset + offset, view.len);
   if (!mapped) {
     PyBuffer_Release(&view);
-    return nullptr; // error already set by vk_map_memory
+    return nullptr; // exception already set by vk_map_memory
   }
 
   memcpy(mapped, view.buf, view.len);
@@ -80,14 +103,23 @@ PyObject *vk_Resource_upload(vk_Resource *self, PyObject *args) {
   Py_RETURN_NONE;
 }
 
-/* ----------------------------------------------------------------------------
-   upload_subresources - batch upload of rectangles to a texture
-   ------------------------------------------------------------------------- */
+// =============================================================================
+//  Texture rectangle upload
+// =============================================================================
+
 /**
- * Batch upload of multiple rectangular regions into a texture resource.
+ * Batch upload multiple rectangular regions to a texture.
+ *
+ * All rectangles are gathered into a single staging buffer and then copied
+ * to the image via one command buffer submission. This is far more
+ * efficient than many small uploads.
  *
  * Args:
- *     rects (list): list of 5-tuples (data, x, y, width, height).
+ *   rects (list of tuples): each tuple is either
+ *       (data, x, y, width, height)           or
+ *       (data, x, y, width, height, slice)
+ *     where `data` is a bytes-like object and (x,y) is the top-left corner
+ *     of the region in the texture.
  */
 PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
   PyObject *rects_list;
@@ -105,7 +137,9 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
 
   vk_Device *dev = self->py_device;
 
-  // First pass: validate rectangles and compute total staging size
+  // -----------------------------------------------------------------
+  // 1. Validate all rectangles and compute total staging size
+  // -----------------------------------------------------------------
   struct RectUpload {
     uint32_t x, y, w, h;
     PyBufferGuard buffer;
@@ -125,8 +159,8 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
     Py_ssize_t tsize = PyTuple_Size(tuple);
     if (tsize != 5 && tsize != 6) {
       PyErr_Format(PyExc_TypeError,
-                   "Item %zd must be a 5- or 6-tuple (data, x, y, width, "
-                   "height[, slice])",
+                   "Item %zd must be a 5- or 6-tuple "
+                   "(data, x, y, width, height [, slice])",
                    i);
       return nullptr;
     }
@@ -134,7 +168,6 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
     RectUpload r = {};
     PyObject *data_obj = nullptr;
     uint32_t slice = 0;
-
     if (tsize == 5) {
       if (!PyArg_ParseTuple(tuple, "OIIII", &data_obj, &r.x, &r.y, &r.w, &r.h))
         return nullptr;
@@ -150,31 +183,28 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
                    self->slices - 1);
       return nullptr;
     }
-
     if (!r.buffer.acquire(data_obj, PyBUF_SIMPLE))
       return nullptr;
-
     if (r.buffer.view.len < (size_t)(r.w * r.h * 4)) {
-      PyErr_Format(
-          PyExc_ValueError,
-          "Data size %zd too small for %ux%u rectangle (need %u bytes)",
-          r.buffer.view.len, r.w, r.h, r.w * r.h * 4);
+      PyErr_Format(PyExc_ValueError,
+                   "Data size %zd too small for %ux%u rectangle "
+                   "(need %u bytes)",
+                   r.buffer.view.len, r.w, r.h, r.w * r.h * 4);
       return nullptr;
     }
-
     if (r.w == 0 || r.h == 0)
       continue;
-
     if (r.x + r.w > self->image_extent.width ||
         r.y + r.h > self->image_extent.height) {
       PyErr_Format(PyExc_ValueError,
-                   "Rectangle (%u,%u %ux%u) exceeds texture dimensions (%ux%u)",
+                   "Rectangle (%u,%u %ux%u) exceeds texture "
+                   "dimensions (%ux%u)",
                    r.x, r.y, r.w, r.h, self->image_extent.width,
                    self->image_extent.height);
       return nullptr;
     }
 
-    VkDeviceSize sz = r.w * r.h * 4; // assume 4 bytes per pixel (RGBA8)
+    VkDeviceSize sz = r.w * r.h * 4; // RGBA8
     r.offset = total_size;
     total_size += sz;
     rects.push_back(std::move(r));
@@ -183,25 +213,23 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
   if (rects.empty())
     Py_RETURN_NONE;
 
-  // Use RAII staging buffer to gather all rectangles
+  // -----------------------------------------------------------------
+  // 2. Gather all pixel data into a single staging buffer
+  // -----------------------------------------------------------------
   ScopedStagingBuffer staging(dev, total_size);
-  if (!staging.valid()) {
-    // error already set by ScopedStagingBuffer constructor
-    return nullptr;
-  }
+  if (!staging.valid())
+    return nullptr; // exception already set
 
-  // Copy all rectangles into the staging buffer
   uint8_t *dst = static_cast<uint8_t *>(staging.mapped());
-  for (auto &r : rects) {
+  for (auto &r : rects)
     memcpy(dst + r.offset, r.buffer.view.buf, r.buffer.view.len);
-  }
 
-  // Execute copy commands using one-time command buffer
+  // -----------------------------------------------------------------
+  // 3. Record and submit the copy command buffer
+  // -----------------------------------------------------------------
   bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
-    // Transition texture to transfer destination
     vk_cmd_transition_for_copy_dst(cmd, self->image, 0, self->slices);
 
-    // Issue copy commands for each rectangle
     for (const auto &r : rects) {
       VkBufferImageCopy region = {};
       region.bufferOffset = r.offset;
@@ -215,28 +243,29 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     }
 
-    // Transition back to GENERAL layout for compute shader access
     vk_cmd_transition_for_compute(cmd, self->image, 0, self->slices);
   });
 
-  if (!ok) {
-    // error already set by vk_execute_one_time_commands
-    return nullptr;
-  }
-
-  Py_RETURN_NONE;
+  return ok ? Py_None : nullptr;
 }
 
-/* ----------------------------------------------------------------------------
-   download - download entire texture to bytes
-   ------------------------------------------------------------------------- */
+// =============================================================================
+//  Data download (device to host)
+// =============================================================================
+
 /**
- * Download the entire texture resource into a bytes object.
+ * Download the entire texture as a row-major RGBA `bytes` object.
  *
- * Returns:
- *     bytes: raw pixel data (row-major, RGBA).
+ * The process is:
+ *   1. Copy the image to a temporary device-local buffer.
+ *   2. Copy that buffer to a host-visible staging buffer.
+ *   3. Read the staging buffer into a Python bytes object.
+ *
+ * Temporary Vulkan objects are destroyed before returning.
+ *
+ * Only textures are supported - buffers use `HEAP_READBACK` and a simple map.
  */
-PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
+PyObject *vk_Resource_download(vk_Resource *self, PyObject * /*ignored*/) {
   if (!self->image) {
     PyErr_SetString(PyExc_TypeError, "Resource is not a texture");
     return nullptr;
@@ -245,7 +274,7 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
   vk_Device *dev = self->py_device;
   VkDeviceSize buf_size = self->size;
 
-  // Create temporary device-local buffer for the image data
+  // --- Temporary device-local buffer ---
   VkBuffer device_buffer;
   VkDeviceMemory device_memory;
   VkBufferCreateInfo binfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
@@ -271,7 +300,7 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
   }
   vkBindBufferMemory(dev->device, device_buffer, device_memory, 0);
 
-  // Use RAII staging buffer for host-visible download
+  // --- Host-visible staging buffer ---
   ScopedStagingBuffer staging(dev, buf_size);
   if (!staging.valid()) {
     vkDestroyBuffer(dev->device, device_buffer, nullptr);
@@ -279,9 +308,8 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
     return nullptr;
   }
 
-  // Execute copy: image -> device buffer -> staging buffer
+  // --- Execute the copy chain ---
   bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
-    // Transition texture to transfer source
     vk_cmd_transition_for_copy_src(cmd, self->image, 0, 1);
 
     VkBufferImageCopy region = {};
@@ -292,7 +320,7 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
                            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, device_buffer,
                            1, &region);
 
-    // Barrier to make device buffer visible for subsequent copy
+    // Make device buffer visible for subsequent copy
     VkBufferMemoryBarrier buf_barrier = {
         VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
     buf_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -303,53 +331,44 @@ PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored) {
                          VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1,
                          &buf_barrier, 0, nullptr);
 
-    // Copy to staging buffer
     VkBufferCopy copy = {0, 0, buf_size};
     vkCmdCopyBuffer(cmd, device_buffer, staging.buffer(), 1, &copy);
 
-    // Transition texture back to GENERAL
     vk_cmd_transition_for_compute(cmd, self->image, 0, 1);
   });
 
-  // Clean up temporary device buffer regardless of success
+  // Destroy temporary device-local resources
   vkDestroyBuffer(dev->device, device_buffer, nullptr);
   vkFreeMemory(dev->device, device_memory, nullptr);
 
-  if (!ok) {
-    return nullptr; // error already set
-  }
-
-  // ScopedStagingBuffer already mapped the memory; use it directly
-  PyObject *result_bytes = PyBytes_FromStringAndSize(
-      static_cast<char *>(staging.mapped()), buf_size);
-  if (!result_bytes) {
-    PyErr_NoMemory();
+  if (!ok)
     return nullptr;
-  }
 
-  return result_bytes;
+  // Staging buffer is already mapped - extract the data
+  PyObject *result = PyBytes_FromStringAndSize(
+      static_cast<char *>(staging.mapped()), buf_size);
+  if (!result)
+    PyErr_NoMemory();
+  return result;
 }
 
-/* ----------------------------------------------------------------------------
-   copy_to - copy between resources
-   ------------------------------------------------------------------------- */
+// =============================================================================
+//  Device-to-device copy
+// =============================================================================
+
 /**
- * Copy data from this resource to another resource.
- * Supports buffer-to-buffer, buffer-to-texture, texture-to-buffer,
- * and texture-to-texture.
+ * Copy data between two resources (buffer to buffer, buffer to image, image
+ * to buffer or image to image). The copy region may be a sub-rectangle or
+ * sub-buffer range.
  *
- * Args:
- *     dst (vk.Resource): destination resource.
- *     size (int, optional): number of bytes to copy (buffer-to-buffer only).
- *     src_offset (int, optional): source offset (buffer only).
- *     dst_offset (int, optional): destination offset (buffer only).
- *     width (int, optional): copy width (texture only, default full).
- *     height (int, optional): copy height (texture only, default full).
- *     depth (int, optional): copy depth (texture only, default 1).
- *     src_x, src_y, src_z (int, optional): source offsets.
- *     dst_x, dst_y, dst_z (int, optional): destination offsets.
- *     src_slice (int, optional): source array layer.
- *     dst_slice (int, optional): destination array layer.
+ * Args (see Python docstring for the full list):
+ *   dst         - destination resource.
+ *   size        - byte count (buffer to buffer only).
+ *   src_offset  - source byte offset (buffer only).
+ *   dst_offset  - destination byte offset (buffer only).
+ *   width, height, depth - image copy extent.
+ *   src_x/y/z, dst_x/y/z - image offsets.
+ *   src_slice, dst_slice - array layers.
  */
 PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
   PyObject *dst_obj;
@@ -405,14 +424,13 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
     }
   }
 
-  // Execute copy using one-time command buffer
+  // Record and execute the copy via a one-time command buffer
   bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
     if (src_is_buf && dst_is_buf) {
       VkBufferCopy region = {src_offset, dst_offset, size};
       vkCmdCopyBuffer(cmd, self->buffer, dst->buffer, 1, &region);
     } else if (src_is_buf && !dst_is_buf) {
       vk_cmd_transition_for_copy_dst(cmd, dst->image, dst_slice, 1);
-
       VkBufferImageCopy region = {};
       region.bufferOffset = src_offset;
       region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -421,11 +439,9 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
       region.imageExtent = dst->image_extent;
       vkCmdCopyBufferToImage(cmd, self->buffer, dst->image,
                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
       vk_cmd_transition_for_compute(cmd, dst->image, dst_slice, 1);
     } else if (!src_is_buf && dst_is_buf) {
       vk_cmd_transition_for_copy_src(cmd, self->image, src_slice, 1);
-
       VkBufferImageCopy region = {};
       region.bufferOffset = dst_offset;
       region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -435,11 +451,9 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
       vkCmdCopyImageToBuffer(cmd, self->image,
                              VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst->buffer,
                              1, &region);
-
       vk_cmd_transition_for_compute(cmd, self->image, src_slice, 1);
-    } else /* !src_is_buf && !dst_is_buf */ {
+    } else { /* image to image */
       VkImageMemoryBarrier barriers[2] = {};
-      // Source image: GENERAL -> TRANSFER_SRC_OPTIMAL
       barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
       barriers[0].image = self->image;
       barriers[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -450,7 +464,6 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
       barriers[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
       barriers[0].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-      // Destination image: GENERAL -> TRANSFER_DST_OPTIMAL
       barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
       barriers[1].image = dst->image;
       barriers[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -479,7 +492,6 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
                           static_cast<int32_t>(dst_y),
                           static_cast<int32_t>(dst_z)};
       region.extent = {width, height, depth};
-
       vkCmdCopyImage(cmd, self->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                      dst->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
                      &region);
@@ -490,26 +502,30 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
       barriers[0].srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
       barriers[0].dstAccessMask =
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-
       barriers[1].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
       barriers[1].newLayout = VK_IMAGE_LAYOUT_GENERAL;
       barriers[1].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
       barriers[1].dstAccessMask =
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-
       vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
                            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
                            0, nullptr, 2, barriers);
     }
   });
 
-  if (!ok) {
-    return nullptr; // error already set
-  }
-
-  Py_RETURN_NONE;
+  return ok ? Py_None : nullptr;
 }
 
+// =============================================================================
+//  Clear colour
+// =============================================================================
+
+/**
+ * Fill the entire image with a constant RGBA colour.
+ *
+ * The image is temporarily transitioned to `TRANSFER_DST_OPTIMAL`,
+ * cleared, and returned to `GENERAL` layout.
+ */
 PyObject *vk_Resource_clear_color(vk_Resource *self, PyObject *args) {
   float r, g, b, a;
   if (!PyArg_ParseTuple(args, "ffff", &r, &g, &b, &a))
@@ -523,8 +539,7 @@ PyObject *vk_Resource_clear_color(vk_Resource *self, PyObject *args) {
   vk_Device *dev = self->py_device;
   VkClearColorValue clear_value = {r, g, b, a};
   VkImageSubresourceRange range = {
-      VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, // baseMipLevel, levelCount
-      0, 1                             // baseArrayLayer, layerCount
+      VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 // one mip, one layer
   };
 
   bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
@@ -534,46 +549,61 @@ PyObject *vk_Resource_clear_color(vk_Resource *self, PyObject *args) {
     vk_cmd_transition_for_compute(cmd, self->image, 0, 1);
   });
 
-  if (!ok)
-    return nullptr;
-  Py_RETURN_NONE;
+  return ok ? Py_None : nullptr;
 }
 
-/* ----------------------------------------------------------------------------
-   Resource type definition
-   ------------------------------------------------------------------------- */
+// =============================================================================
+//  Type definition
+// =============================================================================
+
 static PyMemberDef vk_Resource_members[] = {
-    {"size", T_ULONGLONG, offsetof(vk_Resource, size), 0, "Size in bytes"},
+    {"size", T_ULONGLONG, offsetof(vk_Resource, size), 0,
+     "Total size of the resource in bytes."},
     {"width", T_UINT,
      offsetof(vk_Resource, image_extent) + offsetof(VkExtent3D, width), 0,
-     "Width in pixels"},
+     "Image width in pixels (0 for buffers)."},
     {"height", T_UINT,
      offsetof(vk_Resource, image_extent) + offsetof(VkExtent3D, height), 0,
-     "Height in pixels"},
+     "Image height in pixels."},
     {"depth", T_UINT,
      offsetof(vk_Resource, image_extent) + offsetof(VkExtent3D, depth), 0,
-     "Depth in pixels"},
+     "Image depth (1 for 2D)."},
     {"row_pitch", T_ULONGLONG, offsetof(vk_Resource, row_pitch), 0,
-     "Row pitch in bytes"},
+     "Row pitch in bytes (0 for buffers)."},
     {"slices", T_UINT, offsetof(vk_Resource, slices), 0,
-     "Number of array slices"},
+     "Number of array layers."},
     {"heap_size", T_ULONGLONG, offsetof(vk_Resource, heap_size), 0,
-     "Size of underlying memory allocation"},
+     "Actual size of the underlying memory allocation."},
     {"heap_type", T_INT, offsetof(vk_Resource, heap_type), 0,
-     "Heap type (0=DEFAULT,1=UPLOAD,2=READBACK)"},
+     "Memory type: 0=HEAP_DEFAULT, 1=HEAP_UPLOAD, 2=HEAP_READBACK."},
     {nullptr}};
 
 static PyMethodDef vk_Resource_methods[] = {
     {"upload", (PyCFunction)vk_Resource_upload, METH_VARARGS,
-     "Upload data to a buffer."},
+     "Upload data to a buffer.\n\n"
+     "Args: data (bytes), offset (int, default 0)."},
+
     {"upload_subresources", (PyCFunction)vk_Resource_upload_subresources,
-     METH_VARARGS, "Batch upload rectangles to a texture."},
+     METH_VARARGS,
+     "Batch upload rectangles to a texture.\n\n"
+     "Args: rects (list of 5- or 6-tuples "
+     "(data, x, y, width, height [, slice]))."},
+
     {"download", (PyCFunction)vk_Resource_download, METH_NOARGS,
-     "Download entire texture as bytes."},
+     "Download an entire texture as a Python bytes object (RGBA)."},
+
     {"copy_to", (PyCFunction)vk_Resource_copy_to, METH_VARARGS,
-     "Copy to another resource."},
+     "Copy between resources (buffer ↔ buffer, buffer ↔ image, "
+     "image ↔ image).\n\n"
+     "Args:\n"
+     "  dst (Resource)\n"
+     "  size, src_offset, dst_offset (ints, buffer copies)\n"
+     "  width, height, depth, src_x/y/z, dst_x/y/z, src_slice, dst_slice"},
+
     {"clear_color", (PyCFunction)vk_Resource_clear_color, METH_VARARGS,
-     "Clear the entire image to a solid color."},
+     "Clear the entire image to a solid RGBA colour.\n\n"
+     "Args: r, g, b, a (floats, 0.0-1.0)."},
+
     {nullptr, nullptr, 0, nullptr}};
 
 PyTypeObject vk_Resource_Type = {

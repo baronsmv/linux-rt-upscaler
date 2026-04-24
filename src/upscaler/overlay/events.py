@@ -12,11 +12,12 @@ specification (32-byte wire format) and sent via xcb_send_event.
 
 import logging
 import struct
+from typing import Optional
+
 import xcffib
 import xcffib.xproto
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
-from typing import Optional
 
 from ..window import open_xcb_connection, close_xcb_connection
 
@@ -72,7 +73,7 @@ class X11EventForwarder:
             )
         else:
             self.enabled = False
-            logger.warning("XCB connection unavailable – event forwarding disabled")
+            logger.warning("XCB connection unavailable - event forwarding disabled")
 
     def close(self) -> None:
         """Close the XCB connection and release resources."""

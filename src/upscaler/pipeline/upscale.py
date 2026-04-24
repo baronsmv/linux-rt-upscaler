@@ -82,7 +82,7 @@ class UpscalerManager:
         # Internal state.
         self._first_tile_frame = True
 
-        # Full-frame resources (always created – used for fallback and first tile frame).
+        # Full-frame resources (always created - used for fallback and first tile frame).
         self.staging: Optional[Buffer] = None
         self.input: Optional[Texture2D] = None
         self.output: Optional[Texture2D] = None
@@ -347,7 +347,7 @@ class UpscalerManager:
 
         # First tile frame: prime the output with a full capture.
         if self._first_tile_frame:
-            logger.debug("First tile frame – performing initial full capture")
+            logger.debug("First tile frame - performing initial full capture")
             self.upload_full_frame(
                 frame=frame_data,
                 rects=rects,

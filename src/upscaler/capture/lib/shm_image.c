@@ -134,7 +134,7 @@ int shm_capture_region(CaptureContext *ctx, int rx, int ry, int rw, int rh,
     return 0;
 
   if (!shm_recreate_if_needed(ctx)) {
-    /* SHM unavailable – use XGetImage */
+    /* SHM unavailable - use XGetImage */
     x11_lock();
     XImage *fb = XGetImage(ctx->dpy, ctx->xid, ctx->x + rx, ctx->y + ry, rw, rh,
                            AllPlanes, ZPixmap);

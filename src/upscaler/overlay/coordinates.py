@@ -76,7 +76,7 @@ class CoordinateMapper:
         # Check if inside scaling rect
         rx, ry, rw, rh = self.scaling_rect
         if rw == 0 or rh == 0:
-            # No valid scaling rect – cannot map
+            # No valid scaling rect - cannot map
             return 0, 0, False
 
         if not (rx <= screen_x < rx + rw and ry <= screen_y < ry + rh):

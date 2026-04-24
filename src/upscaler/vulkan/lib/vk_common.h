@@ -9,9 +9,9 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-/* ----------------------------------------------------------------------------
-   Global Vulkan state (defined in vk_instance.c)
-   ------------------------------------------------------------------------- */
+// =========================================================================
+//  Global Vulkan state (set up in vk_instance.cpp)
+// =========================================================================
 extern VkInstance vk_instance;
 extern bool vk_supports_swapchain;
 extern bool vk_debug_enabled;
@@ -19,9 +19,9 @@ extern std::unordered_map<uint32_t, std::pair<VkFormat, uint32_t>>
     vk_format_map;
 extern std::vector<std::string> vk_debug_messages;
 
-/* ----------------------------------------------------------------------------
-   Python error objects (created in vk_module.c)
-   ------------------------------------------------------------------------- */
+// =========================================================================
+//  Python error objects (set up in vk_module.cpp)
+// =========================================================================
 extern PyObject *vk_Texture2DError;
 extern PyObject *vk_BufferError;
 extern PyObject *vk_ComputeError;
@@ -31,9 +31,9 @@ extern PyObject *vk_SamplerError;
 extern PyObject *vk_Texture1DError;
 extern PyObject *vk_Texture3DError;
 
-/* ----------------------------------------------------------------------------
-   Forward declarations of Python type structures (defined in their modules)
-   ------------------------------------------------------------------------- */
+// =========================================================================
+//  Forward declarations of Python object types
+// =========================================================================
 typedef struct vk_Device vk_Device;
 typedef struct vk_Heap vk_Heap;
 typedef struct vk_Resource vk_Resource;
@@ -41,9 +41,9 @@ typedef struct vk_Compute vk_Compute;
 typedef struct vk_Swapchain vk_Swapchain;
 typedef struct vk_Sampler vk_Sampler;
 
-/* ----------------------------------------------------------------------------
-   Pixel format constants
-   ------------------------------------------------------------------------- */
+// =========================================================================
+//  Pixel format constants (matching Python module constants)
+// =========================================================================
 #define R32G32B32A32_FLOAT 2
 #define R32G32B32A32_UINT 3
 #define R32G32B32A32_SINT 4
@@ -89,9 +89,10 @@ typedef struct vk_Sampler vk_Sampler;
 #define B8G8R8A8_UNORM 87
 #define B8G8R8A8_UNORM_SRGB 91
 
-/* ----------------------------------------------------------------------------
-   Core object structures (PyObject plus Vulkan handles)
-   ------------------------------------------------------------------------- */
+// =========================================================================
+//  Core object structures
+// =========================================================================
+
 struct vk_Device {
   PyObject_HEAD;
   VkPhysicalDevice physical_device;
@@ -99,13 +100,13 @@ struct vk_Device {
   VkQueue queue;
   uint32_t queue_family_index;
   VkCommandPool command_pool;
-  VkCommandBuffer internal_cmd_buffer; // used for short, synchronous operations
-  VkPipelineCache pipeline_cache;      // shared across all pipelines
+  VkCommandBuffer internal_cmd_buffer; // short synchronous operations
+  VkPipelineCache pipeline_cache;      // shared by all pipelines
   std::mutex cmd_pool_mutex;
 
   VkPhysicalDeviceMemoryProperties mem_props;
   VkPhysicalDeviceFeatures features;
-  VkPhysicalDeviceVulkan12Features features12; // for descriptor indexing etc.
+  VkPhysicalDeviceVulkan12Features features12;
 
   bool supports_bindless;
   bool supports_sparse;
@@ -114,7 +115,7 @@ struct vk_Device {
   VkQueryPool timestamp_pool;
   uint32_t timestamp_count;
 
-  // Staging buffer pool for efficient uploads/downloads
+  // Staging buffer pool (mappable, coherent)
   struct {
     VkBuffer *buffers;
     VkDeviceMemory *memories;
@@ -123,15 +124,13 @@ struct vk_Device {
     int next;
   } staging_pool;
 
-  // Properties exposed to Python
+  // Python-exposed properties
   char *name;
   uint64_t dedicated_video_memory;
   uint64_t dedicated_system_memory;
   uint64_t shared_system_memory;
-  uint32_t vendor_id;
-  uint32_t device_id;
-  bool is_hardware;
-  bool is_discrete;
+  uint32_t vendor_id, device_id;
+  bool is_hardware, is_discrete;
 };
 
 struct vk_Heap {
@@ -139,7 +138,7 @@ struct vk_Heap {
   vk_Device *py_device;
   VkDeviceMemory memory;
   uint64_t size;
-  int heap_type; // 0 = DEFAULT, 1 = UPLOAD, 2 = READBACK
+  int heap_type; // 0=DEFAULT, 1=UPLOAD, 2=READBACK
 };
 
 struct vk_Resource {
@@ -150,7 +149,7 @@ struct vk_Resource {
   VkImageView image_view;
   VkBufferView buffer_view;
   VkDeviceMemory memory;
-  vk_Heap *py_heap; // optional heap this resource is bound to
+  vk_Heap *py_heap; // optional backing heap
   uint64_t heap_offset;
   uint64_t size;
   uint64_t row_pitch;
@@ -161,7 +160,7 @@ struct vk_Resource {
   uint64_t heap_size;
   int heap_type;
 
-  // For descriptor updates
+  // Pre-filled descriptor info (used when binding)
   VkDescriptorBufferInfo descriptor_buffer_info;
   VkDescriptorImageInfo descriptor_image_info;
 
@@ -181,16 +180,16 @@ struct vk_Compute {
   VkShaderModule shader_module;
   VkFence dispatch_fence;
   uint32_t push_constant_size;
-  uint32_t bindless; // number of bindless slots per type
+  uint32_t bindless;
 
-  // Python lists holding bound resources (for lifetime management)
+  // References to bound resources (lifetime management)
   PyObject *py_cbv_list;
   PyObject *py_srv_list;
   PyObject *py_uav_list;
   PyObject *py_samplers_list;
 };
 
-// Forward declaration; full definition in vk_swapchain.h
+// Full definition in vk_swapchain.h
 struct vk_Swapchain;
 
 struct vk_Sampler {
@@ -200,9 +199,9 @@ struct vk_Sampler {
   VkDescriptorImageInfo descriptor_image_info;
 };
 
-/* ----------------------------------------------------------------------------
-   Python type objects (declared here, defined in respective .c files)
-   ------------------------------------------------------------------------- */
+// =========================================================================
+//  Python type objects (declared here, defined in their respective modules)
+// =========================================================================
 extern PyTypeObject vk_Device_Type;
 extern PyTypeObject vk_Heap_Type;
 extern PyTypeObject vk_Resource_Type;
@@ -210,50 +209,21 @@ extern PyTypeObject vk_Compute_Type;
 extern PyTypeObject vk_Swapchain_Type;
 extern PyTypeObject vk_Sampler_Type;
 
-/* ----------------------------------------------------------------------------
-   Utility macros
-   ------------------------------------------------------------------------- */
+// =========================================================================
+//  Convenience macros
+// =========================================================================
+
+// Zero all bytes after the PyObject header (used in object constructors).
 #define VK_CLEAR_OBJECT(obj)                                                   \
   memset(((char *)(obj)) + sizeof(PyObject), 0,                                \
          sizeof(*(obj)) - sizeof(PyObject))
 
+// Align a value up to the next multiple.
 #define VK_ALIGN_UP(x, alignment) (((x) + (alignment) - 1) & ~((alignment) - 1))
 
-/* ----------------------------------------------------------------------------
-   Function declarations (implemented in various modules)
-   ------------------------------------------------------------------------- */
-// vk_instance.c
-bool vk_instance_ensure(void);
-PyObject *vk_enable_debug_mode(PyObject *self, PyObject *args);
-PyObject *vk_get_discovered_devices(PyObject *self, PyObject *args);
-PyObject *vk_get_shader_binary_type(PyObject *self);
-
-// vk_utils.c
-uint32_t vk_find_memory_type_index(VkPhysicalDeviceMemoryProperties *props,
-                                   VkMemoryPropertyFlags flags);
-VkResult vk_execute_command_buffer(vk_Device *dev, VkCommandBuffer cmd,
-                                   VkFence fence, uint32_t wait_semaphore_count,
-                                   VkSemaphore *wait_semaphores,
-                                   VkPipelineStageFlags *wait_stages,
-                                   uint32_t signal_semaphore_count,
-                                   VkSemaphore *signal_semaphores);
-void vk_image_barrier(VkCommandBuffer cmd, VkImage image,
-                      VkImageLayout old_layout, VkImageLayout new_layout,
-                      VkPipelineStageFlags src_stage,
-                      VkPipelineStageFlags dst_stage, VkAccessFlags src_access,
-                      VkAccessFlags dst_access, uint32_t base_mip,
-                      uint32_t mip_count, uint32_t base_layer,
-                      uint32_t layer_count);
-bool vk_staging_buffer_acquire(vk_Device *dev, VkDeviceSize size,
-                               VkBuffer *out_buffer, VkDeviceMemory *out_memory,
-                               void **out_mapped, bool *used_pool);
-void vk_staging_buffer_release(vk_Device *dev, VkBuffer buffer,
-                               VkDeviceMemory memory, bool used_pool);
-const char *vk_spirv_get_entry_point(const uint32_t *code, size_t size);
-uint32_t *vk_spirv_patch_nonreadable_uav(const uint32_t *code, size_t size,
-                                         uint32_t binding);
-
-// Descriptor checking (templated, defined in header for easy inclusion)
+// =========================================================================
+//  Template helper - validate and populate descriptor resource lists
+// =========================================================================
 template <typename ResT, typename SampT>
 bool vk_check_descriptor_lists(PyTypeObject *res_type, PyObject *cbv_list,
                                std::vector<ResT *> &cbv, PyObject *srv_list,
@@ -306,4 +276,4 @@ bool vk_check_descriptor_lists(PyTypeObject *res_type, PyObject *cbv_list,
          check_samplers(sampler_list, samplers);
 }
 
-#endif /* VK_COMMON_H */
+#endif // VK_COMMON_H

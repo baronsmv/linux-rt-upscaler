@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Linux RT Upscaler – Configuration File
+# Linux RT Upscaler - Configuration File
 # Default location: ~/.config/linux-rt-upscaler/config.yaml
 # ------------------------------------------------------------------------------
 
@@ -170,7 +170,7 @@ log_file: null
 # ------------------------------------------------------------------------------
 
 # Modifier keys: Ctrl, Alt, Shift, Super (Windows key).
-# Key names: letters A–Z, numbers 0–9, F1–F12, Space, Return, Tab, Escape,
+# Key names: letters A-Z, numbers 0-9, F1-F12, Space, Return, Tab, Escape,
 #            Left, Right, Up, Down.
 # All hotkeys are global and work even when the overlay is not focused.
 hotkeys:
@@ -194,7 +194,7 @@ profiles:
 
   # Example of a manually selected profile (use -p fata_morgana)
   fata_morgana:
-    # Automatic matching rules (optional – if omitted, the profile is manual only)
+    # Automatic matching rules (optional - if omitted, the profile is manual only)
     match:
       # Exact title match (case-insensitive)
       title: "The House in Fata Morgana"

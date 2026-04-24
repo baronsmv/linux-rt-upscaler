@@ -1,6 +1,6 @@
 /**
  * @file capture_x11.c
- * @brief Main library entry points – orchestrates modules.
+ * @brief Main library entry points - orchestrates modules.
  */
 
 #include "capture.h"
@@ -110,7 +110,7 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
   // Buffer size clamping
   size_t required = (size_t)ctx->width * ctx->height * 4;
   if (output_size < required) {
-    // Buffer too small – clamp height to fit
+    // Buffer too small - clamp height to fit
     int max_h = (int)(output_size / (ctx->width * 4));
     if (max_h < ctx->height) {
       ctx->height = max_h;
@@ -228,7 +228,7 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
      * full-frame rect. */
     if (rect_count == 1 && rects[0].width == ctx->width &&
         rects[0].height == ctx->height) {
-      /* Full frame was requested – we may need to recapture if we hadn't
+      /* Full frame was requested - we may need to recapture if we hadn't
        * already */
       if (!use_full_frame) {
         shm_capture_region(ctx, 0, 0, ctx->width, ctx->height, output_data);
@@ -250,7 +250,7 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
       }
     }
   } else {
-    /* No tile cache – fallback to damage rectangles directly */
+    /* No tile cache - fallback to damage rectangles directly */
     if (num_damage > 0) {
       for (int i = 0; i < num_damage && rect_count < max_rects; i++) {
         int rx = damage_rects[i].x - ctx->x;
