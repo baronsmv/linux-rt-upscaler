@@ -224,23 +224,20 @@ class UpscalerManager:
     # ----------------------------------------------------------------------
     # Early fallback decision (avoids expensive tile extraction)
     # ----------------------------------------------------------------------
-    def _count_dirty_tiles(self, rects: List[Tuple[int, int, int, int, int]]) -> int:
+    def _count_dirty_tile_cells(
+        self, rects: List[Tuple[int, int, int, int, int]]
+    ) -> int:
         """
-        Return the number of unique tile grid cells that overlap any
-        expanded damage rectangle. Expansion uses `tile_context_margin`.
+        Return the number of unique tile grid cells that overlap any *raw* damage
+        rectangle (no margin added). This matches the tile extraction logic.
         """
-        margin = self.config.tile_context_margin
         tile_size = self.config.tile_size
         tiles = set()
         for rx, ry, rw, rh, _ in rects:
-            x0 = max(0, rx - margin)
-            y0 = max(0, ry - margin)
-            x1 = min(self.crop_width, rx + rw + margin)
-            y1 = min(self.crop_height, ry + rh + margin)
-            tx0 = x0 // tile_size
-            ty0 = y0 // tile_size
-            tx1 = min(self.tiles_x, (x1 + tile_size - 1) // tile_size)
-            ty1 = min(self.tiles_y, (y1 + tile_size - 1) // tile_size)
+            tx0 = rx // tile_size
+            ty0 = ry // tile_size
+            tx1 = min(self.tiles_x, (rx + rw + tile_size - 1) // tile_size)
+            ty1 = min(self.tiles_y, (ry + rh + tile_size - 1) // tile_size)
             for ty in range(ty0, ty1):
                 for tx in range(tx0, tx1):
                     tiles.add((tx, ty))
@@ -248,20 +245,22 @@ class UpscalerManager:
 
     def _should_fallback(self, rects: List[Tuple[int, int, int, int, int]]) -> bool:
         """
-        Returns True if the damage pattern is too widespread for tile
-        processing, based on dirty tile count and total damage area.
-        """
-        # Quick count of dirty tiles
-        dirty_tile_count = self._count_dirty_tiles(rects)
+        Returns True if tile processing should be skipped in favor of full-frame.
 
-        # Total area of expanded damage (for the area threshold check)
+        Decision is based on:
+          - Number of *dirty tile cells* (raw rectangles, no margin).
+          - Total expanded pixel area (damage expanded by context margin).
+        """
+        dirty_tile_count = self._count_dirty_tile_cells(rects)
+
+        # Area check uses expanded rectangles (captured region size)
         expanded = TileProcessor.expand_damage_rects(
             rects, self.crop_width, self.crop_height, self.config.tile_context_margin
         )
         total_area = sum(w * h for _, _, w, h in expanded)
         threshold_area = self.config.area_threshold * self.crop_width * self.crop_height
 
-        # Capacity limits (different between direct & cache modes)
+        # Tile capacity limits
         if self.mode == "tile":
             tile_limit = self.config.max_tile_layers
         else:  # cache
