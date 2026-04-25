@@ -78,9 +78,9 @@ void main(uint3 id : SV_DispatchThreadID)
 {
     float2 pt = float2(1.0 / in_width, 1.0 / in_height);
     float2 full_opt = float2(1.0 / tileParams.fullOutWidth, 1.0 / tileParams.fullOutHeight);
-    float2 pos = (float2(id.xy) + 0.5) * pt;
-    int2 interior_lr = int2(id.xy) - int2(tileParams.validOffset);
-    int2 gxy = interior_lr * 2;
+    int2 interior_lr = int2(tileParams.validOffset) + int2(id.xy);
+    float2 pos = (float2(interior_lr) + 0.5) * pt;
+    int2 gxy = int2(id.xy) * 2;
     int2 globalOutXY = gxy + int2(tileParams.dstOffset);
     int2 maxOut = int2(tileParams.dstOffset) + int2(tileParams.tileOutExtent);
 
