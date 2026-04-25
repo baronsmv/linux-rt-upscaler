@@ -240,9 +240,11 @@ class TileProcessor:
 
         # The feature map resolution for the last SRCNN stage
         if self.double_upscale:
-            feat_lr = self.expanded_tile_size * 2  # 2x low-res
+            feat_lr = self.expanded_tile_size * 2
+            pre_final = self.stages[-2]
         else:
             feat_lr = self.expanded_tile_size
+            pre_final = self.stages[0]
 
         # Constant buffer for the final shader
         cb_data = struct.pack(
@@ -259,8 +261,6 @@ class TileProcessor:
         final_cb = Buffer(len(cb_data))
         final_cb.upload(cb_data)
 
-        # SRVs: residual texture + feature maps from the stage before the final one
-        pre_final = self.stages[-1] if self.double_upscale else self.stages[0]
         srv_list = [self.residual_tex]
         for i in range(self.factory.config.num_textures):
             srv_list.append(pre_final.outputs[f"t{i}"])
@@ -428,15 +428,16 @@ class TileProcessor:
             self.stages[0].pipelines[0].dispatch_sequence(sequence=dispatches)
 
     def _dispatch_double(self, specs: List[TileSpec]) -> None:
-        """Two-stage dispatch with correct push constants per stage."""
-        # Stage 1 (lr to 2x) - no push constants needed (the tile shaders ignore them)
+        """Two-stage dispatch with correct push constants for every pass."""
+        # Stage 1 (lr → 2×) – push constants with valid_offset_mult=1
         gx1, gy1 = self.groups_per_stage[0]
         dispatches_s1 = []
-        for i in range(len(specs)):
+        for i, spec in enumerate(specs):
+            push = self._make_push_bytes(i, spec, valid_offset_mult=1)
             for pipe in self.stages[0].pipelines:
-                dispatches_s1.append((pipe, gx1, gy1, 1, b""))
+                dispatches_s1.append((pipe, gx1, gy1, 1, push))
 
-        # Stage 2 (2x to 4x) - push constants with scaled valid offsets
+        # Stage 2 (2× → 4×) – push constants with valid_offset_mult=2
         gx2, gy2 = self.groups_per_stage[1]
         dispatches_s2 = []
         for i, spec in enumerate(specs):
@@ -444,7 +445,7 @@ class TileProcessor:
             for pipe in self.stages[1].pipelines:
                 dispatches_s2.append((pipe, gx2, gy2, 1, push))
 
-        # Submit both sequences (they share the same pipeline set but we submit separately)
+        # Submit both sequences separately
         if dispatches_s1:
             self.stages[0].pipelines[0].dispatch_sequence(sequence=dispatches_s1)
         if dispatches_s2:
