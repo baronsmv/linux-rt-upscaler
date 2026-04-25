@@ -30,7 +30,8 @@ for model in $models
     end
 
     "$cnn_dir/converter.py" "$original_model.hlsl"
-    "$cnn_dir/converter.py" -t "$original_model.hlsl"
+    "$cnn_dir/converter.py" -m tile "$original_model.hlsl"
+    "$cnn_dir/converter.py" -m cache "$original_model.hlsl"
 
     mv "$original_model" "$model_dir"
 end

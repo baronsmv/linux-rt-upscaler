@@ -272,23 +272,11 @@ class UpscalerManager:
     def should_use_tile_mode(self, rects: List[Tuple[int, int, int, int, int]]) -> bool:
         """
         Determine whether tile processing should be attempted for the current frame.
-
-        - In direct tile mode: True if any damage is reported and the early
-          fallback decision does **not** force full-frame.
-        - In cache mode: delegates to the cached processor's own heuristic,
-          also augmented by the early fallback.
         """
         if not rects:
             return False
 
-        if self.mode == "cache":
-            # The cached processor may have its own logic; we add the early
-            # fallback as an additional safety net.
-            if self._should_fallback(rects):
-                return False
-            return self.tile_processor.should_use_tile_mode(len(rects))
-        else:
-            return not self._should_fallback(rects)
+        return not self._should_fallback(rects)
 
     def process_tile_frame(
         self,
@@ -339,7 +327,7 @@ class UpscalerManager:
             return
 
         # Update the residual texture (full frame with damage regions)
-        self.tile_processor.upload_full_frame(frame_data, rects)
+        self.tile_processor.upload_residual(frame_data, rects)
 
         # Safety check: if extraction somehow exceeded the layer capacity
         max_dirty = self.config.max_tile_layers

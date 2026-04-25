@@ -1,6 +1,7 @@
 import logging
 import struct
-from typing import List, Optional, Tuple
+from dataclasses import dataclass
+from typing import List, Tuple
 
 from .utils import expand_damage_rects
 from ..config import Config
@@ -8,6 +9,40 @@ from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
 from ..vulkan import Buffer, Compute, Texture2D, HEAP_UPLOAD
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class TileSpec:
+    """Immutable description of a tile's geometry."""
+
+    tx: int
+    ty: int
+    valid_lr_offset_x: int  # interior offset inside expanded tile (low-res pixels)
+    valid_lr_offset_y: int  # same
+
+    # derived quantities (cached for convenience)
+    dst_out_px_x: int
+    dst_out_px_y: int
+    tile_out_extent_w: int
+    tile_out_extent_h: int
+
+    @classmethod
+    def from_raw(
+        cls,
+        tx: int,
+        ty: int,
+        valid_x: int,
+        valid_y: int,
+        tile_size: int,
+        scale: int,
+        full_out_w: int,
+        full_out_h: int,
+    ) -> "TileSpec":
+        dst_out_x = tx * tile_size * scale
+        dst_out_y = ty * tile_size * scale
+        extent_w = min(tile_size * scale, full_out_w - dst_out_x)
+        extent_h = min(tile_size * scale, full_out_h - dst_out_y)
+        return cls(tx, ty, valid_x, valid_y, dst_out_x, dst_out_y, extent_w, extent_h)
 
 
 class TileProcessor:
@@ -44,6 +79,8 @@ class TileProcessor:
         config: Config,
         crop_width: int,
         crop_height: int,
+        model_variant: str = "_tile",
+        push_constant_size: int = 36,
     ) -> None:
         """
         Initialize the direct tile processor.
@@ -53,6 +90,8 @@ class TileProcessor:
             crop_width: Width of the captured crop area in pixels.
             crop_height: Height of the captured crop area in pixels.
             max_layers: Maximum concurrent tiles per batch.
+            model_variant: Suffix of the shaders used.
+            push_constant_size: TileParams push data size.
 
         Raises:
             ValueError: If crop dimensions are non-positive.
@@ -61,326 +100,199 @@ class TileProcessor:
         self.config = config
         self.crop_width = crop_width
         self.crop_height = crop_height
-        self.model_name = config.model
-        self.double_upscale = config.double_upscale
-        self.tile_size = config.tile_size
         self.margin = config.tile_context_margin
+        self.tile_size = config.tile_size
+        self.double_upscale = config.double_upscale
         self.area_threshold = config.area_threshold
         self.max_layers = config.max_tile_layers
 
         if crop_width <= 0 or crop_height <= 0:
             raise ValueError(f"Invalid crop dimensions: {crop_width}x{crop_height}")
-        if self.tile_size <= 0:
-            raise ValueError(f"Invalid tile size: {self.tile_size}")
-        if self.max_layers <= 0:
-            raise ValueError(f"Invalid max_layers: {self.max_layers}")
+        if self.tile_size <= 0 or self.max_layers <= 0:
+            raise ValueError("Invalid tile_size or max_layers")
 
+        # Sizes
         self.expanded_tile_size = self.tile_size + 2 * self.margin
+        self.scale = 4 if self.double_upscale else 2
+        self.full_out_w = crop_width * self.scale
+        self.full_out_h = crop_height * self.scale
 
-        scale = 4 if self.double_upscale else 2
-        self.tile_out_w_final = self.expanded_tile_size * scale
-        self.tile_out_h_final = self.expanded_tile_size * scale
-
-        out_w = crop_width * scale
-        out_h = crop_height * scale
-        # Output texture is a 2D array of 1 slice (compatible with unified shader)
-        self.output_texture = Texture2D(out_w, out_h, slices=1, force_array_view=True)
-
-        # Load model configuration and create pipeline factory
-        model_config = load_cunny_model(self.model_name, variant="_tile")
-        model_config.push_constant_size = self._get_push_constant_size()
+        # Factory
+        model_config = load_cunny_model(
+            config.model, variant=model_variant, push_constant_size=push_constant_size
+        )
+        self.push_constant_size = push_constant_size
         self.factory = PipelineFactory(model_config)
 
-        # Staging buffer for uploading tile data (reused across frames)
+        # Residual (full low-res frame), updated each frame with damage
+        self.residual_tex = Texture2D(
+            crop_width, crop_height, slices=1, force_array_view=True
+        )
+        self.residual_staging = Buffer(
+            crop_width * crop_height * 4, heap_type=HEAP_UPLOAD
+        )
+
+        # Staging for tile data - resized on demand in process_tiles
         self.staging = Buffer(
             self.expanded_tile_size * self.expanded_tile_size * 4,
             heap_type=HEAP_UPLOAD,
         )
 
-        # Residual texture: holds the full captured frame (damage regions updated)
-        self.full_input_tex = Texture2D(
-            crop_width, crop_height, slices=1, force_array_view=True
-        )
-        # Staging buffer for uploading to residual texture (rarely used, small)
-        self.full_staging = Buffer(crop_width * crop_height * 4, heap_type=HEAP_UPLOAD)
-
-        # SRCNN stages and dispatch groups (populated by _create_stages)
+        # SRCNN stages and dispatch groups
         self.stages: List[SRCNN] = []
         self.groups_per_stage: List[Tuple[int, int]] = []
         self._create_stages()
 
-        # Custom final pipeline (overrides the last pass to write directly to output)
-        self.final_pipeline: Optional[Compute] = None
+        # Custom final pipeline (writes to the full output texture)
         self._finalize_pipeline()
 
-        # Reference to the input texture for tile uploads
-        self.input_tex = self.stages[0].input
-
         logger.info(
-            f"TileProcessor initialized: crop={crop_width}x{crop_height}, "
+            f"TileProcessor: crop={crop_width}x{crop_height}, "
             f"tile={self.tile_size}, margin={self.margin}, "
-            f"max_layers={self.max_layers}"
+            f"scale={self.scale}x, layers={self.max_layers}"
         )
 
-    # --------------------------------------------------------------------------
-    #  Template Methods (hooks for subclasses)
-    # --------------------------------------------------------------------------
-    def _get_push_constant_size(self) -> int:
-        """Return the size of the push constant block in bytes."""
-        return 44  # 11 uints x 4 bytes
+    # ------------------------------------------------------------------
+    #  Stage creation
+    # ------------------------------------------------------------------
+    def _create_stages(self) -> None:
+        """Set up SRCNN stages with array textures correctly sized."""
+        # Common sizes
+        lr = self.expanded_tile_size  # low-res
+        single_2x = lr * 2
+        single_4x = lr * 4
 
-    def _make_push_data(
-        self,
-        tx: int,
-        ty: int,
-        layer_idx: int,
-        valid_x: int,
-        valid_y: int,
-        full_out_w: int,
-        full_out_h: int,
-        actual_out_w: int,
-        actual_out_h: int,
-    ) -> bytes:
-        """
-        Build the push constant block for a single tile.
+        # Input texture (array, low-res)
+        input_tex = Texture2D(lr, lr, slices=self.max_layers, force_array_view=True)
 
-        The default implementation sets `outputLayer = 0` (direct mode).
-        Subclasses may override this to provide a different output layer
-        (e.g., cache mode).
+        # Stage 1: lr to 2x
+        inter_tex = Texture2D(
+            single_2x, single_2x, slices=self.max_layers, force_array_view=True
+        )
+        out1 = {"output": inter_tex}
+        for i in range(self.factory.config.num_textures):
+            out1[f"t{i}"] = Texture2D(
+                lr, lr, slices=self.max_layers, force_array_view=True
+            )
 
-        Returns:
-            Packed bytes (60 bytes) ready for upload.
-        """
-        scale = 4 if self.double_upscale else 2
-        dst_x = tx * self.tile_size * scale
-        dst_y = ty * self.tile_size * scale
+        srnn1 = SRCNN(
+            factory=self.factory,
+            width=lr,
+            height=lr,
+            input_texture=input_tex,
+            output_textures=out1,
+            push_constant_size=self.push_constant_size,
+        )
+        self.stages.append(srnn1)
+        self.groups_per_stage.append(dispatch_groups(lr, lr, last_pass=False))
 
-        return struct.pack(
-            "I" * 11,  # 11 unsigned ints
-            layer_idx,  # inputLayer
-            dst_x,
-            dst_y,  # dstOffset (output pixels)
-            self.margin,  # margin (low‑res)
-            full_out_w,
-            full_out_h,  # fullOutWidth/Height (output pixels)
-            valid_x,
-            valid_y,  # validOffset, LOW‑RES interior offset
-            actual_out_w,
-            actual_out_h,  # tileOutExtent (output pixels)
-            0,  # outputLayer
+        if self.double_upscale:
+            # Stage 2: 2x to 4x
+            final_out_array = Texture2D(
+                single_4x, single_4x, slices=self.max_layers, force_array_view=True
+            )
+            out2 = {"output": final_out_array}
+            for i in range(self.factory.config.num_textures):
+                out2[f"t{i}"] = Texture2D(
+                    single_2x, single_2x, slices=self.max_layers, force_array_view=True
+                )
+
+            srnn2 = SRCNN(
+                factory=self.factory,
+                width=single_2x,
+                height=single_2x,
+                input_texture=inter_tex,
+                output_textures=out2,
+                push_constant_size=self.push_constant_size,
+            )
+            self.stages.append(srnn2)
+            self.groups_per_stage.append(
+                dispatch_groups(single_2x, single_2x, last_pass=False)
+            )
+        else:
+            # Single stage: reuse output textures at final size
+            final_out_array = Texture2D(
+                single_2x, single_2x, slices=self.max_layers, force_array_view=True
+            )
+            out1["output"] = final_out_array
+            self.stages[0] = SRCNN(
+                factory=self.factory,
+                width=lr,
+                height=lr,
+                input_texture=input_tex,
+                output_textures=out1,
+                push_constant_size=self.push_constant_size,
+            )
+            self.groups_per_stage[0] = dispatch_groups(lr, lr, last_pass=False)
+
+        # Output texture accessible from outside
+        self.output_texture = Texture2D(
+            self.full_out_w, self.full_out_h, slices=1, force_array_view=True
         )
 
+    # ------------------------------------------------------------------
+    #  Custom final pipeline
+    # ------------------------------------------------------------------
     def _finalize_pipeline(self) -> None:
-        """
-        Replace the final pass pipeline with a custom one that writes directly
-        to the full output texture.
+        """Build a custom pipeline that writes the final pass into self.output_texture."""
+        final_pass_idx = self.factory.config.passes - 1
+        final_shader = self.factory.config.shaders[final_pass_idx]
 
-        This method is called once during initialization. It creates a new
-        compute pipeline for the last pass, binding `full_input_tex` as an SRV
-        and `output_texture` as the UAV. Subclasses may override this to bind
-        a different output target (e.g., an atlas).
-        """
-        final_pass_index = self.factory.config.passes - 1
-        final_shader = self.factory.config.shaders[final_pass_index]
+        # The feature map resolution for the last SRCNN stage
+        if self.double_upscale:
+            feat_lr = self.expanded_tile_size * 2  # 2x low-res
+        else:
+            feat_lr = self.expanded_tile_size
 
-        scale = 4 if self.double_upscale else 2
-        full_out_w = self.crop_width * scale
-        full_out_h = self.crop_height * scale
+        # Constant buffer for the final shader
         cb_data = struct.pack(
             "IIIIffff",
-            self.expanded_tile_size,  # in_width
-            self.expanded_tile_size,  # in_height
-            full_out_w,  # out_width
-            full_out_h,  # out_height
-            1.0 / self.expanded_tile_size,  # in_dx
-            1.0 / self.expanded_tile_size,  # in_dy
-            1.0 / full_out_w,  # out_dx
-            1.0 / full_out_h,  # out_dy
+            feat_lr,
+            feat_lr,  # in_width, in_height (feature map size)
+            self.full_out_w,
+            self.full_out_h,
+            1.0 / feat_lr,
+            1.0 / feat_lr,
+            1.0 / self.full_out_w,
+            1.0 / self.full_out_h,
         )
         final_cb = Buffer(len(cb_data))
         final_cb.upload(cb_data)
 
-        # SRVs: residual texture + intermediate textures from the previous stage
-        srv_list = [self.full_input_tex]
-        pre_final_stage = self.stages[-2] if self.double_upscale else self.stages[0]
+        # SRVs: residual texture + feature maps from the stage before the final one
+        pre_final = self.stages[-1] if self.double_upscale else self.stages[0]
+        srv_list = [self.residual_tex]
         for i in range(self.factory.config.num_textures):
-            srv_list.append(pre_final_stage.outputs[f"t{i}"])
+            srv_list.append(pre_final.outputs[f"t{i}"])
 
         uav_list = [self.output_texture]
         sampler_list = [
             self.factory._get_sampler(t)
-            for t in self.factory.config.samplers[final_pass_index]
+            for t in self.factory.config.samplers[final_pass_idx]
         ]
 
-        self.final_pipeline = Compute(
+        final_pipe = Compute(
             final_shader,
             cbv=[final_cb],
             srv=srv_list,
             uav=uav_list,
             samplers=sampler_list,
-            push_size=self.factory.config.push_constant_size,
+            push_size=self.push_constant_size,
         )
 
-        # Replace the original final pass in the stage's pipeline list
+        # Replace the original final pipeline in the appropriate stage
         if self.double_upscale:
-            self.stages[-1].pipelines[-1] = self.final_pipeline
+            self.stages[-1].pipelines[-1] = final_pipe
         else:
-            self.stages[0].pipelines[-1] = self.final_pipeline
+            self.stages[0].pipelines[-1] = final_pipe
 
-    # --------------------------------------------------------------------------
-    #  Stage Construction (internal)
-    # --------------------------------------------------------------------------
-    def _create_stages(self) -> None:
-        """
-        Create SRCNN stages with array textures sized for expanded tiles.
-
-        This method builds the input texture array, intermediate feature map
-        arrays, and the SRCNN instances. The stages are stored in `self.stages`.
-        """
-        # Input array: expanded tile size, `max_layers` slices
-        input_tex = Texture2D(
-            self.expanded_tile_size,
-            self.expanded_tile_size,
-            slices=self.max_layers,
-            force_array_view=True,
-        )
-
-        # First stage outputs (intermediate feature maps)
-        inter_tex = Texture2D(
-            self.expanded_tile_size,
-            self.expanded_tile_size,
-            slices=self.max_layers,
-            force_array_view=True,
-        )
-        outputs1 = {"output": inter_tex}
-        for i in range(self.factory.config.num_textures):
-            outputs1[f"t{i}"] = Texture2D(
-                self.expanded_tile_size,
-                self.expanded_tile_size,
-                slices=self.max_layers,
-                force_array_view=True,
-            )
-
-        srnn1 = SRCNN(
-            factory=self.factory,
-            width=self.expanded_tile_size,
-            height=self.expanded_tile_size,
-            input_texture=input_tex,
-            output_textures=outputs1,
-            push_constant_size=self.factory.config.push_constant_size,
-        )
-        self.stages.append(srnn1)
-        self.groups_per_stage.append(
-            dispatch_groups(
-                self.expanded_tile_size, self.expanded_tile_size, last_pass=False
-            )
-        )
-
-        if self.double_upscale:
-            # Second stage (feature maps, same size)
-            inter_tex2 = Texture2D(
-                self.expanded_tile_size,
-                self.expanded_tile_size,
-                slices=self.max_layers,
-                force_array_view=True,
-            )
-            outputs2 = {"output": inter_tex2}
-            for i in range(self.factory.config.num_textures):
-                outputs2[f"t{i}"] = Texture2D(
-                    self.expanded_tile_size,
-                    self.expanded_tile_size,
-                    slices=self.max_layers,
-                    force_array_view=True,
-                )
-
-            srnn2 = SRCNN(
-                factory=self.factory,
-                width=self.expanded_tile_size,
-                height=self.expanded_tile_size,
-                input_texture=inter_tex,
-                output_textures=outputs2,
-                push_constant_size=self.factory.config.push_constant_size,
-            )
-            self.stages.append(srnn2)
-            self.groups_per_stage.append(
-                dispatch_groups(
-                    self.expanded_tile_size, self.expanded_tile_size, last_pass=False
-                )
-            )
-
-            # Final stage output (2x upscaled)
-            final_out_array = Texture2D(
-                self.expanded_tile_size * 2,
-                self.expanded_tile_size * 2,
-                slices=self.max_layers,
-                force_array_view=True,
-            )
-            outputs_final = {"output": final_out_array}
-            for i in range(self.factory.config.num_textures):
-                outputs_final[f"t{i}"] = Texture2D(
-                    self.expanded_tile_size * 2,
-                    self.expanded_tile_size * 2,
-                    slices=self.max_layers,
-                    force_array_view=True,
-                )
-
-            srnn_final = SRCNN(
-                factory=self.factory,
-                width=self.expanded_tile_size,
-                height=self.expanded_tile_size,
-                input_texture=inter_tex2,
-                output_textures=outputs_final,
-                push_constant_size=self.factory.config.push_constant_size,
-            )
-            self.stages.append(srnn_final)
-            self.groups_per_stage.append(
-                dispatch_groups(
-                    self.expanded_tile_size * 2,
-                    self.expanded_tile_size * 2,
-                    last_pass=True,
-                )
-            )
-        else:
-            # Single stage (2x upscaling): output is final array
-            final_out_array = Texture2D(
-                self.expanded_tile_size * 2,
-                self.expanded_tile_size * 2,
-                slices=self.max_layers,
-                force_array_view=True,
-            )
-            outputs1["output"] = final_out_array
-            self.stages[0] = SRCNN(
-                factory=self.factory,
-                width=self.expanded_tile_size,
-                height=self.expanded_tile_size,
-                input_texture=input_tex,
-                output_textures=outputs1,
-                push_constant_size=self.factory.config.push_constant_size,
-            )
-            self.groups_per_stage[0] = dispatch_groups(
-                self.expanded_tile_size * 2,
-                self.expanded_tile_size * 2,
-                last_pass=True,
-            )
-
-    # --------------------------------------------------------------------------
-    #  Public methods
-    # --------------------------------------------------------------------------
-    def upload_full_frame(
+    # ------------------------------------------------------------------
+    #  Residual (full-frame) updates
+    # ------------------------------------------------------------------
+    def upload_residual(
         self, frame: memoryview, rects: List[Tuple[int, int, int, int, int]]
     ) -> None:
-        """
-        Upload expanded damage regions to the residual texture.
-
-        The residual texture (`full_input_tex`) provides the surrounding context
-        for the final pass. Only the areas that intersect expanded damage
-        rectangles are updated; this is sufficient because the final pass only
-        reads these regions.
-
-        Args:
-            frame: Raw BGRA pixel data for the entire crop area.
-            rects: Damage rectangles from the frame grabber (x, y, w, h, hash).
-        """
+        """Update the residual texture with damage regions."""
         if not rects:
             return
 
@@ -391,12 +303,11 @@ class TileProcessor:
             return
 
         total_area = sum(w * h for _, _, w, h in expanded)
-        threshold_area = self.area_threshold * self.crop_width * self.crop_height
+        threshold = self.area_threshold * self.crop_width * self.crop_height
 
-        if total_area <= threshold_area:
+        if total_area <= threshold:
             uploads = []
             stride = self.crop_width * 4
-
             for ex, ey, ew, eh in expanded:
                 rect_data = bytearray(ew * eh * 4)
                 for row in range(eh):
@@ -405,119 +316,136 @@ class TileProcessor:
                     rect_data[dst_start : dst_start + ew * 4] = frame[
                         src_start : src_start + ew * 4
                     ]
-                # Upload to layer 0 only
                 uploads.append((bytes(rect_data), ex, ey, ew, eh, 0))
-            self.full_input_tex.upload_subresources(uploads)
+            self.residual_tex.upload_subresources(uploads)
         else:
-            # Full-frame upload to layer 0 (once, not per layer)
             frame_bytes = bytes(frame)
-            self.full_input_tex.upload_subresources(
+            self.residual_tex.upload_subresources(
                 [(frame_bytes, 0, 0, self.crop_width, self.crop_height, 0)]
             )
 
+    # ------------------------------------------------------------------
+    #  Tile processing
+    # ------------------------------------------------------------------
     def process_tiles(
         self, dirty_tiles: List[Tuple[int, int, bytes, int, int]]
     ) -> None:
         """
-        Process a batch of expanded dirty tiles.
-
-        The batch size is limited to `self.max_layers`. Each tile is assigned a
-        unique layer index, uploaded to the input array, and processed by the
-        SRCNN pipeline. The final pass writes the interior region directly to
-        the full output texture.
+        Process a batch of dirty tiles.
 
         Args:
-            dirty_tiles: List of tuples as returned by `extract_expanded_tiles`:
-                (tile_x, tile_y, data_bytes, valid_x, valid_y)
+            dirty_tiles: List of (tx, ty, data, valid_x, valid_y)
         """
         if not dirty_tiles:
             return
 
-        # Limit batch size
         batch = dirty_tiles[: self.max_layers]
         num_tiles = len(batch)
 
-        expected_data_size = self.expanded_tile_size * self.expanded_tile_size * 4
-        total_staging = num_tiles * expected_data_size
+        expected_data = self.expanded_tile_size * self.expanded_tile_size * 4
+        total_staging = num_tiles * expected_data
+        self._ensure_staging(total_staging)
 
-        # Ensure staging buffer is large enough
-        if self.staging.size < total_staging:
-            self.staging = Buffer(total_staging, heap_type=HEAP_UPLOAD)
-
-        scale = 4 if self.double_upscale else 2
-        full_out_w = self.crop_width * scale
-        full_out_h = self.crop_height * scale
-
-        uploads = []
-        tile_batch: List[Tuple[int, int, int, bytes]] = []  # (tx, ty, layer, push_data)
-
-        for layer_idx, (tx, ty, data, valid_x, valid_y) in enumerate(batch):
-            # Sanitize data size
-            if len(data) != expected_data_size:
-                logger.warning(f"Tile ({tx},{ty}) size mismatch, adjusting.")
-                if len(data) < expected_data_size:
-                    data += b"\x00" * (expected_data_size - len(data))
-                else:
-                    data = data[:expected_data_size]
-
-            # Upload tile to the input array layer
-            uploads.append(
-                (
-                    data,
-                    0,
-                    0,
-                    self.expanded_tile_size,
-                    self.expanded_tile_size,
-                    layer_idx,
-                )
-            )
-
-            # Compute actual output extent (may be smaller at image edges)
-            actual_out_w = min(
-                self.tile_size * scale, full_out_w - tx * self.tile_size * scale
-            )
-            actual_out_h = min(
-                self.tile_size * scale, full_out_h - ty * self.tile_size * scale
-            )
-
-            push_data = self._make_push_data(
+        # Build TileSpec objects for each tile
+        specs = []
+        for tx, ty, data, vx, vy in batch:
+            spec = TileSpec.from_raw(
                 tx,
                 ty,
-                layer_idx,
-                valid_x,
-                valid_y,
-                full_out_w,
-                full_out_h,
-                actual_out_w,
-                actual_out_h,
+                vx,
+                vy,
+                self.tile_size,
+                self.scale,
+                self.full_out_w,
+                self.full_out_h,
             )
-            tile_batch.append((tx, ty, layer_idx, push_data))
+            specs.append(spec)
 
-        # Perform all uploads
-        self.input_tex.upload_subresources(uploads)
+        # Upload pixel data to input array layers 0..num_tiles-1
+        uploads = []
+        for i, (tx, ty, data, vx, vy) in enumerate(batch):
+            data = self._sanitize_data(data, expected_data)
+            uploads.append(
+                (data, 0, 0, self.expanded_tile_size, self.expanded_tile_size, i)
+            )
+        self.stages[0].input.upload_subresources(uploads)
 
-        # Build and execute dispatch sequence
-        dispatches = self._build_dispatch_sequence(tile_batch)
+        if self.double_upscale:
+            self._dispatch_double(specs)
+        else:
+            self._dispatch_single(specs)
+
+    def _ensure_staging(self, required: int) -> None:
+        if self.staging.size < required:
+            self.staging = Buffer(required, heap_type=HEAP_UPLOAD)
+
+    @staticmethod
+    def _sanitize_data(data: bytes, expected: int) -> bytes:
+        if len(data) != expected:
+            if len(data) < expected:
+                data += b"\x00" * (expected - len(data))
+            else:
+                data = data[:expected]
+        return data
+
+    # ------------------------------------------------------------------
+    #  Push constant helpers
+    # ------------------------------------------------------------------
+    def _make_push_bytes(
+        self, layer: int, spec: TileSpec, valid_offset_mult: int = 1
+    ) -> bytes:
+        """
+        Build push constant bytes for one tile and one stage.
+
+        valid_offset_mult: 1 for first stage (low-res),
+                           2 for second stage (2x upscaled tile).
+        """
+        return struct.pack(
+            "I" * 9,
+            layer,  # inputLayer
+            spec.dst_out_px_x,
+            spec.dst_out_px_y,  # dstOffset
+            self.full_out_w,
+            self.full_out_h,
+            spec.valid_lr_offset_x * valid_offset_mult,
+            spec.valid_lr_offset_y * valid_offset_mult,
+            spec.tile_out_extent_w,
+            spec.tile_out_extent_h,
+        )
+
+    # ------------------------------------------------------------------
+    #  Dispatch sequences
+    # ------------------------------------------------------------------
+    def _dispatch_single(self, specs: List[TileSpec]) -> None:
+        """Single-stage dispatch."""
+        gx, gy = self.groups_per_stage[0]
+        dispatches = []
+        for i, spec in enumerate(specs):
+            push = self._make_push_bytes(i, spec, valid_offset_mult=1)
+            for pipe in self.stages[0].pipelines:
+                dispatches.append((pipe, gx, gy, 1, push))
         if dispatches:
-            # Use the first pipeline's dispatch_sequence (any pipeline works)
             self.stages[0].pipelines[0].dispatch_sequence(sequence=dispatches)
 
-    def _build_dispatch_sequence(
-        self, tile_batch: List[Tuple[int, int, int, bytes]]
-    ) -> List[Tuple[Compute, int, int, int, bytes]]:
-        """
-        Build a flat list of dispatches for a batch of tiles.
+    def _dispatch_double(self, specs: List[TileSpec]) -> None:
+        """Two-stage dispatch with correct push constants per stage."""
+        # Stage 1 (lr to 2x) - no push constants needed (the tile shaders ignore them)
+        gx1, gy1 = self.groups_per_stage[0]
+        dispatches_s1 = []
+        for i in range(len(specs)):
+            for pipe in self.stages[0].pipelines:
+                dispatches_s1.append((pipe, gx1, gy1, 1, b""))
 
-        For each tile, we append all passes (stages) in order.
-        The resulting sequence can be submitted in one call.
+        # Stage 2 (2x to 4x) - push constants with scaled valid offsets
+        gx2, gy2 = self.groups_per_stage[1]
+        dispatches_s2 = []
+        for i, spec in enumerate(specs):
+            push = self._make_push_bytes(i, spec, valid_offset_mult=2)
+            for pipe in self.stages[1].pipelines:
+                dispatches_s2.append((pipe, gx2, gy2, 1, push))
 
-        Returns:
-            List of (Compute, groups_x, groups_y, groups_z, push_data).
-        """
-        dispatches = []
-        for _, _, _, push_data in tile_batch:
-            for stage_idx, srnn in enumerate(self.stages):
-                gx, gy = self.groups_per_stage[stage_idx]
-                for pipe in srnn.pipelines:
-                    dispatches.append((pipe, gx, gy, 1, push_data))
-        return dispatches
+        # Submit both sequences (they share the same pipeline set but we submit separately)
+        if dispatches_s1:
+            self.stages[0].pipelines[0].dispatch_sequence(sequence=dispatches_s1)
+        if dispatches_s2:
+            self.stages[1].pipelines[0].dispatch_sequence(sequence=dispatches_s2)

@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 _MODEL_CACHE: Dict[Tuple[str, str], ModelConfig] = {}
 
 
-def load_cunny_model(model_name: str, variant: str = "") -> ModelConfig:
+def load_cunny_model(
+    model_name: str, variant: str = "", push_constant_size: int = 0
+) -> ModelConfig:
     """
     Load a CuNNy model configuration and SPIR-V shaders.
 
@@ -103,7 +105,7 @@ def load_cunny_model(model_name: str, variant: str = "") -> ModelConfig:
         samplers=samplers_raw,
         shaders=shaders,
         entry_point="main",
-        push_constant_size=0,
+        push_constant_size=push_constant_size,
         output_names=output_names,
     )
 

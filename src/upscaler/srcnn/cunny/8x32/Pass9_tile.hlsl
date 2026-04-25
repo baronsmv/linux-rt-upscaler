@@ -43,12 +43,10 @@ cbuffer Constants : register(b0) {
 struct TileParams {
     uint inputLayer;
     uint2 dstOffset;
-    uint margin;
     uint fullOutWidth;
     uint fullOutHeight;
     uint2 validOffset;
     uint2 tileOutExtent;
-    uint outputLayer;
 };
 [[vk::push_constant]] TileParams tileParams;
 
