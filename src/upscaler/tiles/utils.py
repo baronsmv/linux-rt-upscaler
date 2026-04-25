@@ -49,17 +49,11 @@ def expand_damage_rects(
         if rw <= 0 or rh <= 0:
             continue
 
-        # Compute expanded bounds
-        ex0 = rx - margin
-        ey0 = ry - margin
-        ex1 = rx + rw + margin
-        ey1 = ry + rh + margin
-
-        # Clamp to crop area
-        ex0 = max(0, ex0)
-        ey0 = max(0, ey0)
-        ex1 = min(crop_width, ex1)
-        ey1 = min(crop_height, ey1)
+        # Compute expanded bounds and clamp to crop area
+        ex0 = max(0, rx - margin)
+        ey0 = max(0, ry - margin)
+        ex1 = min(crop_width, rx + rw + margin)
+        ey1 = min(crop_height, ry + rh + margin)
 
         # Only include if the clamped region is non-empty
         if ex1 > ex0 and ey1 > ey0:

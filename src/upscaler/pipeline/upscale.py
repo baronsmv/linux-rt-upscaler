@@ -11,32 +11,23 @@ logger = logging.getLogger(__name__)
 
 class UpscalerManager:
     """
-    Manages SRCNN upscaling in full-frame, tile, or cached-tile mode.
+    Manages SRCNN upscaling in full‑frame or tile‑based mode.
 
-    The manager always creates full-frame resources (input texture, staging
-    buffer, and SRCNN stages) to enable seamless fallback when tile mode cannot
-    handle a frame efficiently (e.g., too many dirty tiles). In tile-based
-    modes, it also instantiates a `TileProcessor` or `CachedTileProcessor`
-    and delegates the actual tile processing to it.
+    Full‑frame resources are always created to allow seamless fallback
+    when tile mode cannot handle a frame efficiently.  Tile mode is
+    enabled/disabled via a simple boolean flag (`config.use_tile`).
 
-    All configuration values are read directly from the `Config` object
-    stored in `self.config`.  This means that changes to the config (e.g.
-    `area_threshold`, `model`) are picked up immediately for subsequent
-    frames, while structural changes (tile size, upscaling model) require
-    a pipeline recreation (already handled by `Pipeline.recreate_upscaler()`).
+    In tile mode, the damage rectangles are **expanded by the context
+    margin** before dirty‑tile detection, so that any change inside the
+    convolutional receptive field triggers reprocessing – eliminating
+    artifact seams.
     """
 
     def __init__(self, config: Config, crop_width: int, crop_height: int) -> None:
-        if config.processing_mode not in PROCESSING_MODES:
-            raise ValueError(
-                f"Unknown mode '{config.processing_mode}'. Valid modes: {PROCESSING_MODES}"
-            )
-
         self.config = config
         self.crop_width = crop_width
         self.crop_height = crop_height
-        self.mode = config.processing_mode
-        self._first_tile_frame = True
+        self.use_tile = config.use_tile_processing
 
         # Pre-compute total number of tiles for quick fallback decisions
         self.tiles_x = (crop_width + config.tile_size - 1) // config.tile_size
@@ -51,17 +42,16 @@ class UpscalerManager:
         self.full_groups: List[Tuple[int, int]] = []
         self._init_full_mode()
 
-        # Tile processor (only for tile-based modes)
-        self.tile_processor: Optional[Union[TileProcessor, CachedTileProcessor]] = None
-        if self.mode == "tile":
+        # Tile processor (only when tile mode is enabled)
+        self.tile_processor: Optional[TileProcessor] = None
+        self._first_tile_frame = True
+        if self.use_tile:
             self._init_tile_mode()
-        elif self.mode == "cache":
-            self._init_cache_mode()
 
         logger.info(
-            "UpscalerManager initialized: mode=%s, crop=%dx%d, tile_size=%d, "
+            "UpscalerManager initialized: tile_mode=%s, crop=%dx%d, tile_size=%d, "
             "margin=%d, tiles=%sx%s (%d total)",
-            self.mode,
+            self.use_tile,
             crop_width,
             crop_height,
             config.tile_size,
@@ -137,6 +127,7 @@ class UpscalerManager:
             )
 
     def _init_tile_mode(self) -> None:
+        """Create the tile processor and rebind the full‑frame output."""
         self.tile_processor = TileProcessor(
             config=self.config,
             crop_width=self.crop_width,
@@ -145,17 +136,8 @@ class UpscalerManager:
         self.output = self.tile_processor.output_texture
         self._rebind_full_frame_output()
 
-    def _init_cache_mode(self) -> None:
-        self.tile_processor = CachedTileProcessor(
-            config=self.config,
-            crop_width=self.crop_width,
-            crop_height=self.crop_height,
-        )
-        self.output = self.tile_processor.output_texture
-        self._rebind_full_frame_output()
-
     def _rebind_full_frame_output(self) -> None:
-        """Update the full-frame SRCNN stages to write into the current output."""
+        """Update the last SRCNN stage to write into the current output texture."""
         if not self.full_stages:
             return
         stage_idx = -1 if self.config.double_upscale else 0
@@ -280,25 +262,20 @@ class UpscalerManager:
 
     def process_tile_frame(
         self,
-        dirty_tiles: Union[
-            List[
-                Tuple[int, int, bytes, int, int]
-            ],  # tile mode (tx,ty,data,valid_x,valid_y)
-            List[Tuple[int, int, int, bytes]],  # cache mode (tx,ty,hash,data)
-        ],
+        dirty_tiles: List[Tuple[int, int, bytes, int, int]],
         rects: List[Tuple[int, int, int, int, int]],
         frame_data: memoryview,
     ) -> None:
         """
-        Process a frame using the active tile processor.
+        Process a frame using the tile processor.
 
         On the first tile frame a full capture is forced to seed the output.
         For subsequent frames, if the early fallback decision triggers (too many
         dirty tiles or too large area), the frame is processed in full-frame mode
         without extracting individual tiles.
         """
-        if self.mode not in ("tile", "cache"):
-            raise RuntimeError("process_tile_frame called in non-tile mode")
+        if not self.use_tile:
+            raise RuntimeError("process_tile_frame called when tile mode is disabled")
 
         # First tile frame: seed the output with a full-frame pass
         if self._first_tile_frame:
