@@ -252,21 +252,19 @@ class UpscalerManager:
           - Total expanded pixel area (damage expanded by context margin).
         """
         dirty_tile_count = self._count_dirty_tile_cells(rects)
+        tile_limit = self.config.max_tile_layers
 
-        # Area check uses expanded rectangles (captured region size)
+        if dirty_tile_count >= tile_limit:
+            return True
+
+        # Only compute area if tile count is below limit
         expanded = TileProcessor.expand_damage_rects(
             rects, self.crop_width, self.crop_height, self.config.tile_context_margin
         )
         total_area = sum(w * h for _, _, w, h in expanded)
         threshold_area = self.config.area_threshold * self.crop_width * self.crop_height
 
-        # Tile capacity limits
-        if self.mode == "tile":
-            tile_limit = self.config.max_tile_layers
-        else:  # cache
-            tile_limit = self.config.cache_capacity
-
-        return (dirty_tile_count >= tile_limit) or (total_area > threshold_area)
+        return total_area > threshold_area
 
     # ----------------------------------------------------------------------
     # Tile mode entry point
@@ -314,7 +312,7 @@ class UpscalerManager:
         if self.mode not in ("tile", "cache"):
             raise RuntimeError("process_tile_frame called in non‑tile mode")
 
-        # –– First tile frame: seed the output with a full‑frame pass ––
+        # First tile frame: seed the output with a full‑frame pass
         if self._first_tile_frame:
             logger.debug("First tile frame – performing initial full capture")
             self.upload_full_frame(
@@ -327,8 +325,8 @@ class UpscalerManager:
             self._first_tile_frame = False
             return
 
-        # –– Early fallback decision – avoids extracting tiles if we will
-        #     end up using full‑frame anyway ––
+        # Early fallback decision
+        # Avoids extracting tiles if we will end up using full‑frame anyway
         if self._should_fallback(rects):
             logger.debug("Early fallback to full‑frame (threshold exceeded)")
             self.upload_full_frame(
@@ -340,17 +338,11 @@ class UpscalerManager:
             self.process_full_frame()
             return
 
-        # –– Update the residual texture (full frame with damage regions) ––
+        # Update the residual texture (full frame with damage regions)
         self.tile_processor.upload_full_frame(frame_data, rects)
 
-        # –– Delegate tile processing (extraction already happened in the
-        #     caller, but we can still enforce a safety bound) ––
         # Safety check: if extraction somehow exceeded the layer capacity
-        max_dirty = (
-            self.config.max_tile_layers
-            if self.mode == "tile"
-            else self.config.cache_capacity
-        )
+        max_dirty = self.config.max_tile_layers
         if len(dirty_tiles) > max_dirty:
             logger.warning(
                 "Extracted %d tiles exceeds capacity %d – falling back to full‑frame",

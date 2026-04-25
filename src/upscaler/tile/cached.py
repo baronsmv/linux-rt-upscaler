@@ -44,7 +44,6 @@ class CachedTileProcessor(TileProcessor):
             config=config,
             crop_width=crop_width,
             crop_height=crop_height,
-            max_layers=self.cache_capacity,  # array textures sized for cache
         )
 
         # ------------------------------------------------------------------

@@ -361,52 +361,66 @@ Increase if you see timeout warnings. Default: %(default)s""",
         "--no-damage-tracking",
         action="store_false",
         dest="use_damage_tracking",
-        help="""Always upload the entire frame in full frame mode
-(disables partial uploads).""",
+        help="""Disable partial uploads: always transfer the entire cropped
+frame to the GPU, even when only a small part has changed.
+This avoids any risk of missed updates from the compositor
+but uses more PCIe bandwidth. Leave it on unless you
+suspect partial updates cause visual glitches.""",
     )
     processing_group.add_argument(
         "--tile-size",
         type=int,
         default=DEFAULT_CONFIG.tile_size,
-        help="""Tile size (in pixels).
-Smaller values give finer granularity at tracking changes
-but increase CPU overhead.
-Recommended: 32-128, default %(default)s.""",
+        help="""Size of each tile in pixels.
+Smaller tiles track changes more precisely, reducing wasted
+processing, but adding additional CPU overhead.
+Multiples of 32 work best with GPU workgroups.
+Recommended range: 32-128, default %(default)s.""",
     )
     processing_group.add_argument(
         "--tile-context-margin",
         type=int,
         default=DEFAULT_CONFIG.tile_context_margin,
-        help="""Extra border pixels around each tile to provide convolution
-context. Larger margins improve quality at tile boundaries
-but increase processing cost.
-Recommended: 8-24, default %(default)s.""",
+        help="""Extra border pixels added around each tile before upscaling
+(tile and cache modes). Provides the neural network with
+surrounding context to avoid artifacts at tile seams.
+Larger margins improve quality at boundaries but increase
+the amount of data processed per tile.
+Complex models (like 8x32) benefit from higher values.
+Recommended range: 4-24, default %(default)s.""",
     )
     processing_group.add_argument(
         "--max-tile-layers",
         type=int,
         default=DEFAULT_CONFIG.max_tile_layers,
-        help="""Maximum number of concurrent tile layers (batch size) in
-tile mode. Higher values allow more tiles per batch but
-use more VRAM and may slow processing on dynamic content.
-Recommended: 8-16, default %(default)s.""",
+        help="""Maximum number of tiles that can be processed per frame
+before falling back to full-frame (tile and cache modes).
+Higher values allow the upscaler to handle more scattered
+changes without fallback, but each tile adds GPU dispatches
+which can eventually worsen performance on these modes.
+Recommended range: 4-32, default %(default)s.""",
     )
     processing_group.add_argument(
         "--area-threshold",
         type=float,
         default=DEFAULT_CONFIG.area_threshold,
-        help="""Fraction of the total frame area that, when dirty, triggers
-a fallback to full-frame processing.
-0.0 always uses full-frame; 1.0 never falls back.
-Default: %(default)s.""",
+        help="""Fraction of the window area that, when dynamic, forces a
+switch to full‑frame processing (tile and cache modes).
+Smaller values (e.g., 0.15) fall back earlier, avoiding
+too many tiny tiles; larger values (e.g., 0.5) try tile
+mode more aggressively.
+0.0 always uses full‑frame; 1.0 never falls back.
+Recommended range: 0.15-0.5, default: %(default)s.""",
     )
     processing_group.add_argument(
         "--cache-capacity",
         type=int,
         default=DEFAULT_CONFIG.cache_capacity,
-        help="""Maximum number of tiles stored in LRU cache (cache mode).
-Higher values cache more unique tiles at the cost of VRAM.
-Recommended: 128-1024, default %(default)s.""",
+        help="""Number of tile slots in the LRU cache (cache mode only).
+Larger caches can remember more unique tiles, reducing
+repeated upscaling when the same content reappears
+frequently. Each slot costs a small amount of VRAM.
+Recommended range: 128-1024, default %(default)s.""",
     )
 
     # ----------------------------------------------------------------------

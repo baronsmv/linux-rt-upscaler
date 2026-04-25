@@ -44,7 +44,6 @@ class TileProcessor:
         config: Config,
         crop_width: int,
         crop_height: int,
-        max_layers: int = None,
     ) -> None:
         """
         Initialize the direct tile processor.
@@ -67,9 +66,7 @@ class TileProcessor:
         self.tile_size = config.tile_size
         self.margin = config.tile_context_margin
         self.area_threshold = config.area_threshold
-        self.max_layers = (
-            max_layers if max_layers is not None else config.max_tile_layers
-        )
+        self.max_layers = config.max_tile_layers
 
         if crop_width <= 0 or crop_height <= 0:
             raise ValueError(f"Invalid crop dimensions: {crop_width}x{crop_height}")
