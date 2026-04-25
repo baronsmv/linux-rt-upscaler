@@ -155,22 +155,19 @@ class TileProcessor:
         dst_x = tx * self.tile_size * scale
         dst_y = ty * self.tile_size * scale
 
-        valid_block_x = valid_x * scale
-        valid_block_y = valid_y * scale
-
         return struct.pack(
-            "IIIIIIIIIII",  # 11 unsigned ints
+            "I" * 11,  # 11 unsigned ints
             layer_idx,  # inputLayer
             dst_x,
-            dst_y,  # dstOffset
-            self.margin,  # margin
+            dst_y,  # dstOffset (output pixels)
+            self.margin,  # margin (low‑res)
             full_out_w,
-            full_out_h,  # fullOutWidth, fullOutHeight
-            valid_block_x,
-            valid_block_y,  # validOffset
+            full_out_h,  # fullOutWidth/Height (output pixels)
+            valid_x,
+            valid_y,  # validOffset, LOW‑RES interior offset
             actual_out_w,
-            actual_out_h,  # tileOutExtent
-            0,  # outputLayer (always 0 for direct mode)
+            actual_out_h,  # tileOutExtent (output pixels)
+            0,  # outputLayer
         )
 
     def _finalize_pipeline(self) -> None:

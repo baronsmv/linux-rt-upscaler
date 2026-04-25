@@ -449,13 +449,11 @@ void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
 {{
     float2 pt = float2(1.0 / in_width, 1.0 / in_height);
     float2 full_opt = float2(1.0 / tileParams.fullOutWidth, 1.0 / tileParams.fullOutHeight);
-    uint2 interior_id = id.xy + tileParams.validOffset;
-    uint2 gxy = interior_id * 2;
-    float2 feature_pt = float2(1.0 / in_width, 1.0 / in_height);
-    float2 feature_coord = float2(tileParams.margin, tileParams.margin) + float2(interior_id);
-    float2 pos = (feature_coord + 0.5) * feature_pt;
-    uint2 globalOutXY = gxy + tileParams.dstOffset;
-    uint2 maxOut = tileParams.dstOffset + tileParams.tileOutExtent;
+    float2 pos = (float2(id.xy) + 0.5) * pt;
+    int2 interior_lr = int2(id.xy) - int2(tileParams.validOffset);
+    int2 gxy = interior_lr * 2;
+    int2 globalOutXY = gxy + int2(tileParams.dstOffset);
+    int2 maxOut = int2(tileParams.dstOffset) + int2(tileParams.tileOutExtent);
 """
             else:
                 return f"""[numthreads({nt[0]},{nt[1]},{nt[2]})]
