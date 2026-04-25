@@ -17,7 +17,6 @@ UPSCALING_MODELS = (
     "veryfast",
 )
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
-PROCESSING_MODES = ("full", "tile", "cache")
 
 DEFAULT_HOTKEYS = {
     "toggle_scaling": "Alt+Shift+S",
@@ -100,19 +99,12 @@ class Config:
     frame_timeout_ns: int = 1_000_000_000
 
     # Processing mode
-    processing_mode: str = "tile"
-    tile_size: int = 64
-    area_threshold: float = 0.3
-
-    # Full mode
+    use_tile_processing: bool = True
     use_damage_tracking: bool = True
-
-    # Tile and cache modes
+    tile_size: int = 64
     tile_context_margin: int = 16
     max_tile_layers: int = 16
-
-    # Cache mode
-    cache_capacity: int = 512
+    area_threshold: float = 0.3
 
     # Logging (set via flags, not directly from CLI)
     log_level: str = "WARNING"

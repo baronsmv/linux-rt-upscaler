@@ -15,7 +15,7 @@ from .upscale import UpscalerManager
 from ..capture import FrameGrabber
 from ..config import Config, OverlayMode
 from ..overlay import OverlayWindow
-from ..tiles import extract_expanded_tiles, extract_dirty_tiles_with_hash
+from ..tiles import extract_expanded_tiles
 from ..utils import parse_output_geometry
 from ..vulkan import configure_device
 from ..window import WindowInfo, WindowTracker
@@ -256,7 +256,7 @@ class Pipeline:
             return
 
         # 3. Upscale based on the active mode.
-        if self.upscaler_mgr.mode == "full":
+        if not self.upscaler_mgr.use_tile:  # full‑frame mode
             self.upscaler_mgr.upload_full_frame(
                 frame=frame,
                 rects=rects,
@@ -265,30 +265,16 @@ class Pipeline:
             )
             self.upscaler_mgr.process_full_frame()
             src_tex = self.upscaler_mgr.get_output_texture()
-        else:
-            # Tile-based mode ("tile" or "cache").
+        else:  # tile mode
             if self.upscaler_mgr.should_use_tile_mode(rects):
-                if self.upscaler_mgr.mode == "tile":
-                    # Tile mode: extract expanded tiles with valid offsets.
-                    dirty_tiles = extract_expanded_tiles(
-                        frame=frame,
-                        rects=rects,
-                        crop_width=self.crop_width,
-                        crop_height=self.crop_height,
-                        tile_size=self.config.tile_size,
-                        margin=self.config.tile_context_margin,
-                    )
-                else:  # cache mode
-                    # Cache mode: extract tiles and compute content hash.
-                    dirty_tiles = extract_dirty_tiles_with_hash(
-                        frame=frame,
-                        rects=rects,
-                        crop_width=self.crop_width,
-                        crop_height=self.crop_height,
-                        tile_size=self.config.tile_size,
-                        margin=self.config.tile_context_margin,
-                    )
-
+                dirty_tiles = extract_expanded_tiles(
+                    frame=frame,
+                    rects=rects,
+                    crop_width=self.crop_width,
+                    crop_height=self.crop_height,
+                    tile_size=self.config.tile_size,
+                    margin=self.config.tile_context_margin,
+                )
                 self.upscaler_mgr.process_tile_frame(dirty_tiles, rects, frame)
                 src_tex = self.upscaler_mgr.get_output_texture()
             else:

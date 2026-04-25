@@ -5,7 +5,7 @@ from importlib.metadata import version, PackageNotFoundError
 from typing import Tuple, Dict, Optional, Any
 
 from .logging import setup_logging
-from .models import Config, OverlayMode, UPSCALING_MODELS, PROCESSING_MODES
+from .models import Config, OverlayMode, UPSCALING_MODELS
 
 logger = logging.getLogger(__name__)
 
@@ -95,26 +95,6 @@ Default: %(default)s""",
         action="store_true",
         help="""Perform two 2x passes (total 4x) for higher resolution
 screens (4k, 1440p) or low-resolution sources""",
-    )
-    upscaling_group.add_argument(
-        "--processing-mode",
-        choices=PROCESSING_MODES,
-        default=DEFAULT_CONFIG.processing_mode,
-        help="""How frames are upscaled.
-Default: %(default)s
-
-Modes:
-  full   - Full-frame processing.
-           Best for video / dynamic content.
-  tile   - Tile-based processing.
-           Best for static windows (visual novels, text).
-  cache  - Tile-based with LRU cache.
-           Like tile, but remembers recently-seen tiles.
-           Excellent for repetitive UI changes.
-
-For more customization, see ADVANCED PROCESSING OPTIONS.
-
-""",
     )
     upscaling_group.add_argument(
         "--lanczos-blur",
@@ -354,73 +334,110 @@ Increase if you see timeout warnings. Default: %(default)s""",
     )
 
     # ----------------------------------------------------------------------
-    # Processing section
+    # Tile Processing section
     # ----------------------------------------------------------------------
-    processing_group = parser.add_argument_group("ADVANCED PROCESSING OPTIONS")
-    processing_group.add_argument(
+    tile_group = parser.add_argument_group("TILE PROCESSING OPTIONS")
+    tile_group.add_argument(
+        "--no-tile-processing",
+        action="store_false",
+        dest="use_tile_processing",
+        default=DEFAULT_CONFIG.use_tile_processing,
+        help="""Disable tile-based processing.
+
+Tile mode divides the frame into smaller tiles and only
+re‑processes the ones that have changed. This is ideal for
+mostly static content (text editors, visual novels)
+where only small regions are updated each frame.
+
+When disabled, the whole frame is upscaled in one pass,
+better for video or rapidly changing content, or to avoid
+any possible artifact from individual tile-processing.
+
+""",
+    )
+    tile_group.add_argument(
         "--no-damage-tracking",
         action="store_false",
         dest="use_damage_tracking",
-        help="""Disable partial uploads: always transfer the entire cropped
-frame to the GPU, even when only a small part has changed.
-This avoids any risk of missed updates from the compositor
-but uses more PCIe bandwidth. Leave it on unless you
-suspect partial updates cause visual glitches.""",
+        help="""Always transfer the entire cropped frame to the GPU instead
+of only the changed regions.
+
+This increases PCIe bandwidth usage but guarantees the GPU
+always has the full image, eliminating any potential risk
+of missed updates from the compositor.
+
+Keep enabled unless you suspect damage tracking causes
+visual glitches.
+
+""",
     )
-    processing_group.add_argument(
+
+    tile_group.add_argument(
         "--tile-size",
         type=int,
         default=DEFAULT_CONFIG.tile_size,
-        help="""Size of each tile in pixels.
-Smaller tiles track changes more precisely, reducing wasted
-processing, but adding additional CPU overhead.
+        help="""Size (in pixels) of each tile’s interior.
+
+Small tiles track changes more precisely and process less
+redundant data, but add CPU overhead during extraction.
+Large tiles reduce CPU work but cause more over‑processing.
+
 Multiples of 32 work best with GPU workgroups.
-Recommended range: 32-128, default %(default)s.""",
+Recommended range: 32‑128, default %(default)s.
+
+""",
     )
-    processing_group.add_argument(
+
+    tile_group.add_argument(
         "--tile-context-margin",
         type=int,
         default=DEFAULT_CONFIG.tile_context_margin,
-        help="""Extra border pixels added around each tile before upscaling
-(tile and cache modes). Provides the neural network with
-surrounding context to avoid artifacts at tile seams.
-Larger margins improve quality at boundaries but increase
-the amount of data processed per tile.
-Complex models (like 8x32) benefit from higher values.
-Recommended range: 4-24, default %(default)s.""",
+        help="""Extra border pixels added around each tile before processing.
+
+Provides the neural network with surrounding context to
+avoid artifacts at tile boundaries.
+Larger margins improve boundary quality but increase the
+amount of data processed per tile.
+
+More complex models benefit from higher values.
+Recommended range: 4‑24, default %(default)s.
+
+""",
     )
-    processing_group.add_argument(
+
+    tile_group.add_argument(
         "--max-tile-layers",
         type=int,
         default=DEFAULT_CONFIG.max_tile_layers,
-        help="""Maximum number of tiles that can be processed per frame
-before falling back to full-frame (tile and cache modes).
-Higher values allow the upscaler to handle more scattered
-changes without fallback, but each tile adds GPU dispatches
-which can eventually worsen performance on these modes.
-Recommended range: 4-32, default %(default)s.""",
+        help="""Maximum number of tiles processed per frame in tile mode.
+
+When the count of dirty tiles exceeds this limit, the
+pipeline falls back to full‑frame processing to avoid
+excessive GPU dispatches.
+
+Higher values tolerate more scattered changes, but each
+tile adds a GPU dispatch and may eventually hurt
+performance.
+
+Recommended range: 4‑32, default %(default)s.
+
+""",
     )
-    processing_group.add_argument(
+
+    tile_group.add_argument(
         "--area-threshold",
         type=float,
         default=DEFAULT_CONFIG.area_threshold,
-        help="""Fraction of the window area that, when dynamic, forces a
-switch to full-frame processing (tile and cache modes).
-Smaller values (e.g., 0.15) fall back earlier, avoiding
-too many tiny tiles; larger values (e.g., 0.5) try tile
-mode more aggressively.
-0.0 always uses full-frame; 1.0 never falls back.
-Recommended range: 0.15-0.5, default: %(default)s.""",
-    )
-    processing_group.add_argument(
-        "--cache-capacity",
-        type=int,
-        default=DEFAULT_CONFIG.cache_capacity,
-        help="""Number of tile slots in the LRU cache (cache mode only).
-Larger caches can remember more unique tiles, reducing
-repeated upscaling when the same content reappears
-frequently. Each slot costs a small amount of VRAM.
-Recommended range: 128-1024, default %(default)s.""",
+        help="""Fraction of the window area (0.0–1.0) that, when dirty,
+forces a fallback to full‑frame processing in tile mode.
+
+Smaller values (e.g., 0.15) fall back earlier, preventing
+too many tiny tile dispatches. Larger values (e.g., 0.5)
+try tile mode more aggressively. 0.0 always uses full‑frame
+for dirty frames; 1.0 never falls back.
+
+Recommended range: 0.15‑0.5, default %(default)s.
+""",
     )
 
     # ----------------------------------------------------------------------
