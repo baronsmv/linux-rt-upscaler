@@ -1,9 +1,9 @@
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
-from ..config import Config, PROCESSING_MODES
+from ..config import Config
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
-from ..tiles import CachedTileProcessor, TileProcessor, expand_damage_rects
+from ..tiles import TileProcessor, expand_damage_rects
 from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD
 
 logger = logging.getLogger(__name__)
