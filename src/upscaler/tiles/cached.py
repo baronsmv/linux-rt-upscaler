@@ -1,11 +1,8 @@
 import logging
-from typing import List, Tuple
-
-import xxhash
+from typing import Generator, List, Tuple
 
 from .atlas import TileAtlasManager
 from .tile import TileProcessor
-from .utils import extract_expanded_tiles
 from ..config import Config
 from ..vulkan import Texture2D
 
@@ -162,28 +159,7 @@ class CachedTileProcessor(TileProcessor):
     # ----------------------------------------------------------------------
     #  Helper - split misses into chunks that fit in max_layers
     # ----------------------------------------------------------------------
-    def _chunk_misses(self, misses: List) -> List[List]:
+    def _chunk_misses(self, misses: List) -> Generator[List]:
         """Yield sub-lists of misses with at most `self.max_layers` items."""
         for i in range(0, len(misses), self.max_layers):
             yield misses[i : i + self.max_layers]
-
-    # ----------------------------------------------------------------------
-    #  Static utility - extract tiles with content hash
-    # ----------------------------------------------------------------------
-    @staticmethod
-    def extract_dirty_tiles_with_hash(
-        frame: memoryview,
-        rects: List[Tuple[int, int, int, int, int]],
-        crop_width: int,
-        crop_height: int,
-        tile_size: int,
-        margin: int,
-    ) -> List[Tuple[int, int, int, bytes, int, int]]:
-        expanded_tiles = extract_expanded_tiles(
-            frame, rects, crop_width, crop_height, tile_size, margin
-        )
-        result = []
-        for tx, ty, data, valid_x, valid_y in expanded_tiles:
-            h = xxhash.xxh64(data).intdigest()
-            result.append((tx, ty, h, data, valid_x, valid_y))
-        return result

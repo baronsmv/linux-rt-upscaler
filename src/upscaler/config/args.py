@@ -405,11 +405,11 @@ Recommended range: 4-32, default %(default)s.""",
         type=float,
         default=DEFAULT_CONFIG.area_threshold,
         help="""Fraction of the window area that, when dynamic, forces a
-switch to full‑frame processing (tile and cache modes).
+switch to full-frame processing (tile and cache modes).
 Smaller values (e.g., 0.15) fall back earlier, avoiding
 too many tiny tiles; larger values (e.g., 0.5) try tile
 mode more aggressively.
-0.0 always uses full‑frame; 1.0 never falls back.
+0.0 always uses full-frame; 1.0 never falls back.
 Recommended range: 0.15-0.5, default: %(default)s.""",
     )
     processing_group.add_argument(

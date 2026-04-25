@@ -15,7 +15,7 @@ from .upscale import UpscalerManager
 from ..capture import FrameGrabber
 from ..config import Config, OverlayMode
 from ..overlay import OverlayWindow
-from ..tile import TileProcessor, CachedTileProcessor
+from ..tiles import extract_expanded_tiles, extract_dirty_tiles_with_hash
 from ..utils import parse_output_geometry
 from ..vulkan import configure_device
 from ..window import WindowInfo, WindowTracker
@@ -270,7 +270,7 @@ class Pipeline:
             if self.upscaler_mgr.should_use_tile_mode(rects):
                 if self.upscaler_mgr.mode == "tile":
                     # Tile mode: extract expanded tiles with valid offsets.
-                    dirty_tiles = TileProcessor.extract_expanded_tiles(
+                    dirty_tiles = extract_expanded_tiles(
                         frame=frame,
                         rects=rects,
                         crop_width=self.crop_width,
@@ -280,7 +280,7 @@ class Pipeline:
                     )
                 else:  # cache mode
                     # Cache mode: extract tiles and compute content hash.
-                    dirty_tiles = CachedTileProcessor.extract_dirty_tiles_with_hash(
+                    dirty_tiles = extract_dirty_tiles_with_hash(
                         frame=frame,
                         rects=rects,
                         crop_width=self.crop_width,

@@ -1,6 +1,8 @@
 import logging
 from typing import List, Tuple, Set
 
+import xxhash
+
 logger = logging.getLogger(__name__)
 
 
@@ -229,6 +231,27 @@ def extract_expanded_tiles(
 
         result.append((tx, ty, bytes(data), dst_x0, dst_y0))
 
+    return result
+
+
+# ----------------------------------------------------------------------
+#  Extract tiles with content hash
+# ----------------------------------------------------------------------
+def extract_dirty_tiles_with_hash(
+    frame: memoryview,
+    rects: List[Tuple[int, int, int, int, int]],
+    crop_width: int,
+    crop_height: int,
+    tile_size: int,
+    margin: int,
+) -> List[Tuple[int, int, int, bytes, int, int]]:
+    expanded_tiles = extract_expanded_tiles(
+        frame, rects, crop_width, crop_height, tile_size, margin
+    )
+    result = []
+    for tx, ty, data, valid_x, valid_y in expanded_tiles:
+        h = xxhash.xxh64(data).intdigest()
+        result.append((tx, ty, h, data, valid_x, valid_y))
     return result
 
 

@@ -2,7 +2,7 @@ import logging
 import struct
 from typing import List, Optional, Tuple
 
-from .utils import expand_damage_rects, extract_expanded_tiles
+from .utils import expand_damage_rects
 from ..config import Config
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
 from ..vulkan import Buffer, Compute, Texture2D, HEAP_UPLOAD
@@ -524,30 +524,3 @@ class TileProcessor:
                 for pipe in srnn.pipelines:
                     dispatches.append((pipe, gx, gy, 1, push_data))
         return dispatches
-
-    # --------------------------------------------------------------------------
-    #  Static convenience wrappers (delegate to tile_utils)
-    # --------------------------------------------------------------------------
-    @staticmethod
-    def expand_damage_rects(
-        rects: List[Tuple[int, int, int, int, int]],
-        crop_width: int,
-        crop_height: int,
-        margin: int,
-    ) -> List[Tuple[int, int, int, int]]:
-        """Delegate to `tile_utils.expand_damage_rects`."""
-        return expand_damage_rects(rects, crop_width, crop_height, margin)
-
-    @staticmethod
-    def extract_expanded_tiles(
-        frame: memoryview,
-        rects: List[Tuple[int, int, int, int, int]],
-        crop_width: int,
-        crop_height: int,
-        tile_size: int,
-        margin: int,
-    ) -> List[Tuple[int, int, bytes, int, int]]:
-        """Delegate to `tile_utils.extract_expanded_tiles`."""
-        return extract_expanded_tiles(
-            frame, rects, crop_width, crop_height, tile_size, margin
-        )
