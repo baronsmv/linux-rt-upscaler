@@ -80,7 +80,7 @@ class TileProcessor:
         crop_width: int,
         crop_height: int,
         model_variant: str = "_tile",
-        push_constant_size: int = 36,
+        push_constant_size: int = 40,
     ) -> None:
         """
         Initialize the direct tile processor.
@@ -401,12 +401,13 @@ class TileProcessor:
                            2 for second stage (2x upscaled tile).
         """
         return struct.pack(
-            "I" * 9,
+            "I" * 10,
             layer,  # inputLayer
             spec.dst_out_px_x,
             spec.dst_out_px_y,  # dstOffset
             self.full_out_w,
             self.full_out_h,
+            self.margin,
             spec.valid_lr_offset_x * valid_offset_mult,
             spec.valid_lr_offset_y * valid_offset_mult,
             spec.tile_out_extent_w,

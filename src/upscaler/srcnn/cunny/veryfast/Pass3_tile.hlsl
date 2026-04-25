@@ -45,6 +45,7 @@ struct TileParams {
     uint2 dstOffset;
     uint fullOutWidth;
     uint fullOutHeight;
+    uint margin;
     uint2 validOffset;
     uint2 tileOutExtent;
 };
