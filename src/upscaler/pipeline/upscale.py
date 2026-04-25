@@ -27,17 +27,6 @@ class UpscalerManager:
     """
 
     def __init__(self, config: Config, crop_width: int, crop_height: int) -> None:
-        """
-        Initialize the upscaler manager.
-
-        Args:
-            config:      Global configuration object (may be updated at runtime).
-            crop_width:  Width of the captured crop area (pixels).
-            crop_height: Height of the captured crop area (pixels).
-
-        Raises:
-            ValueError: If the configured mode is invalid.
-        """
         if config.processing_mode not in PROCESSING_MODES:
             raise ValueError(
                 f"Unknown mode '{config.processing_mode}'. Valid modes: {PROCESSING_MODES}"
@@ -47,21 +36,22 @@ class UpscalerManager:
         self.crop_width = crop_width
         self.crop_height = crop_height
         self.mode = config.processing_mode
-
-        # Internal state
         self._first_tile_frame = True
 
-        # Full-frame resources (always created - used for fallback and first tile frame)
+        # Pre‑compute total number of tiles for quick fallback decisions
+        self.tiles_x = (crop_width + config.tile_size - 1) // config.tile_size
+        self.tiles_y = (crop_height + config.tile_size - 1) // config.tile_size
+        self.total_tiles = self.tiles_x * self.tiles_y
+
+        # Full‑frame resources (always created – used for fallback & seeding)
         self.staging: Optional[Buffer] = None
         self.input: Optional[Texture2D] = None
         self.output: Optional[Texture2D] = None
         self.full_stages: List[SRCNN] = []
         self.full_groups: List[Tuple[int, int]] = []
-
-        # Create full-frame pipeline
         self._init_full_mode()
 
-        # Tile processor (only for tile-based modes).
+        # Tile processor (only for tile‑based modes)
         self.tile_processor: Optional[Union[TileProcessor, CachedTileProcessor]] = None
         if self.mode == "tile":
             self._init_tile_mode()
@@ -69,24 +59,23 @@ class UpscalerManager:
             self._init_cache_mode()
 
         logger.info(
-            f"UpscalerManager initialized: mode={self.mode}, "
-            f"crop={crop_width}x{crop_height}, "
-            f"tile_size={self.config.tile_size}, "
-            f"margin={self.config.tile_context_margin}"
+            "UpscalerManager initialized: mode=%s, crop=%dx%d, tile_size=%d, "
+            "margin=%d, tiles=%sx%s (%d total)",
+            self.mode,
+            crop_width,
+            crop_height,
+            config.tile_size,
+            config.tile_context_margin,
+            self.tiles_x,
+            self.tiles_y,
+            self.total_tiles,
         )
 
     # ----------------------------------------------------------------------
     # Initialization helpers
     # ----------------------------------------------------------------------
     def _init_full_mode(self) -> None:
-        """
-        Set up full-frame upscaling (one or two SRCNN stages).
-
-        This method creates the input texture, staging buffer, and all
-        intermediate/output textures required for a full-frame upscale.
-        The resulting stages are stored in `self.full_stages` and can be
-        used directly or as a fallback.
-        """
+        """Set up full‑frame upscaling (one or two SRCNN stages)."""
         model_config = load_cunny_model(self.config.model, variant="")
         factory = PipelineFactory(model_config)
 
@@ -94,11 +83,10 @@ class UpscalerManager:
         out_w_first = in_w * 2
         out_h_first = in_h * 2
 
-        # Input texture and staging buffer
         self.input = Texture2D(in_w, in_h)
         self.staging = Buffer(self.input.size, heap_type=HEAP_UPLOAD)
 
-        # Intermediate texture for the first stage output
+        # Intermediate texture for first stage output
         inter_tex = Texture2D(out_w_first, out_h_first)
         outputs1 = {"output": inter_tex}
         for i in range(model_config.num_textures):
@@ -116,7 +104,6 @@ class UpscalerManager:
         self.full_groups.append(dispatch_groups(in_w, in_h, last_pass=False))
 
         if self.config.double_upscale:
-            # Second stage for 4x upscaling
             out_w_final = out_w_first * 2
             out_h_final = out_h_first * 2
             self.output = Texture2D(out_w_final, out_h_final)
@@ -138,7 +125,6 @@ class UpscalerManager:
                 dispatch_groups(out_w_first, out_h_first, last_pass=False)
             )
         else:
-            # Single stage 2x upscaling
             self.output = inter_tex
             outputs1["output"] = self.output
             self.full_stages[0] = SRCNN(
@@ -151,7 +137,6 @@ class UpscalerManager:
             )
 
     def _init_tile_mode(self) -> None:
-        """Instantiate the tile (non-cached) tile processor."""
         self.tile_processor = TileProcessor(
             config=self.config,
             crop_width=self.crop_width,
@@ -161,7 +146,6 @@ class UpscalerManager:
         self._rebind_full_frame_output()
 
     def _init_cache_mode(self) -> None:
-        """Instantiate the cached tile processor."""
         self.tile_processor = CachedTileProcessor(
             config=self.config,
             crop_width=self.crop_width,
@@ -171,27 +155,14 @@ class UpscalerManager:
         self._rebind_full_frame_output()
 
     def _rebind_full_frame_output(self) -> None:
-        """
-        Update the full-frame SRCNN stages to use the current `self.output`.
-
-        When a tile processor replaces the output texture (e.g., with its own
-        full-frame texture), the full-frame fallback pipeline must be updated
-        to write to that same texture. This method recreates the final SRCNN
-        stage(s) with the new output UAV.
-        """
+        """Update the full‑frame SRCNN stages to write into the current output."""
         if not self.full_stages:
             return
-
-        # Determine which stage holds the final output UAV
         stage_idx = -1 if self.config.double_upscale else 0
         old_stage = self.full_stages[stage_idx]
-        factory = old_stage.factory  # Shared PipelineFactory
-
-        # Update the output dict to point to the new output texture
+        factory = old_stage.factory
         new_outputs = dict(old_stage.outputs)
         new_outputs["output"] = self.output
-
-        # Create a new SRCNN stage with the same inputs and updated outputs
         new_stage = SRCNN(
             factory=factory,
             width=old_stage.width,
@@ -200,13 +171,11 @@ class UpscalerManager:
             output_textures=new_outputs,
             push_constant_size=old_stage.push_constant_size,
         )
-
-        # Replace the old stage
         self.full_stages[stage_idx] = new_stage
-        logger.debug("Full-frame output texture rebound to current active output")
+        logger.debug("Full‑frame output texture rebound to current active output")
 
     # ----------------------------------------------------------------------
-    # Full-frame processing API (used for fallback and first tile frame)
+    # Full‑frame processing (used for fallback and first tile frame)
     # ----------------------------------------------------------------------
     def upload_full_frame(
         self,
@@ -216,29 +185,20 @@ class UpscalerManager:
         margin: int,
     ) -> None:
         """
-        Upload full-frame (or partial damage regions) to the input texture.
+        Upload full‑frame or partial damage regions to the input texture.
 
-        This method always uses the full-frame resources created at
-        initialization. It supports either uploading the entire frame or
-        only the expanded damage regions.
-
-        Args:
-            frame: Raw BGRA pixel data for the entire crop area.
-            rects: Damage rectangles from FrameGrabber (x, y, w, h, hash).
-            use_damage_tracking: If True, upload only the expanded damage regions.
-            margin: Number of pixels to expand each damage rectangle.
+        When `use_damage_tracking` is True and the total expanded damage area
+        is below `area_threshold`, only those regions are uploaded.
         """
         if use_damage_tracking and rects:
-            # Expand damage rectangles and upload only those regions
             expanded = TileProcessor.expand_damage_rects(
                 rects, self.crop_width, self.crop_height, margin
             )
             total_area = sum(w * h for _, _, w, h in expanded)
-            frame_area = self.crop_width * self.crop_height
-            threshold_area = self.config.area_threshold * frame_area
-
+            threshold_area = (
+                self.config.area_threshold * self.crop_width * self.crop_height
+            )
             if total_area <= threshold_area:
-                # Partial upload - only the expanded dirty rectangles
                 uploads = []
                 stride = self.crop_width * 4
                 for ex, ey, ew, eh in expanded:
@@ -253,29 +213,93 @@ class UpscalerManager:
                 self.input.upload_subresources(uploads)
                 return
 
-        # Full upload (either no damage tracking, no rects, or threshold exceeded)
         self.staging.upload(frame)
         self.staging.copy_to(self.input)
 
     def process_full_frame(self) -> None:
-        """
-        Execute the compute dispatches for the full frame.
-
-        This method uses the full-frame SRCNN stages created at initialization.
-        It is used as a fallback when tile mode cannot handle the frame
-        efficiently, and also for the first tile frame to prime the output.
-        """
+        """Execute the compute dispatches for the full frame."""
         for srnn, (gx, gy) in zip(self.full_stages, self.full_groups):
             srnn.dispatch(gx, gy, 1)
 
     # ----------------------------------------------------------------------
+    # Early fallback decision (avoids expensive tile extraction)
+    # ----------------------------------------------------------------------
+    def _count_dirty_tiles(self, rects: List[Tuple[int, int, int, int, int]]) -> int:
+        """
+        Return the number of unique tile grid cells that overlap any
+        expanded damage rectangle. Expansion uses `tile_context_margin`.
+        """
+        margin = self.config.tile_context_margin
+        tile_size = self.config.tile_size
+        tiles = set()
+        for rx, ry, rw, rh, _ in rects:
+            x0 = max(0, rx - margin)
+            y0 = max(0, ry - margin)
+            x1 = min(self.crop_width, rx + rw + margin)
+            y1 = min(self.crop_height, ry + rh + margin)
+            tx0 = x0 // tile_size
+            ty0 = y0 // tile_size
+            tx1 = min(self.tiles_x, (x1 + tile_size - 1) // tile_size)
+            ty1 = min(self.tiles_y, (y1 + tile_size - 1) // tile_size)
+            for ty in range(ty0, ty1):
+                for tx in range(tx0, tx1):
+                    tiles.add((tx, ty))
+        return len(tiles)
+
+    def _should_fallback(self, rects: List[Tuple[int, int, int, int, int]]) -> bool:
+        """
+        Returns True if the damage pattern is too widespread for tile
+        processing, based on dirty tile count and total damage area.
+        """
+        # Quick count of dirty tiles
+        dirty_tile_count = self._count_dirty_tiles(rects)
+
+        # Total area of expanded damage (for the area threshold check)
+        expanded = TileProcessor.expand_damage_rects(
+            rects, self.crop_width, self.crop_height, self.config.tile_context_margin
+        )
+        total_area = sum(w * h for _, _, w, h in expanded)
+        threshold_area = self.config.area_threshold * self.crop_width * self.crop_height
+
+        # Capacity limits (different between direct & cache modes)
+        if self.mode == "tile":
+            tile_limit = self.config.max_tile_layers
+        else:  # cache
+            tile_limit = self.config.cache_capacity
+
+        return (dirty_tile_count >= tile_limit) or (total_area > threshold_area)
+
+    # ----------------------------------------------------------------------
     # Tile mode entry point
     # ----------------------------------------------------------------------
+    def should_use_tile_mode(self, rects: List[Tuple[int, int, int, int, int]]) -> bool:
+        """
+        Determine whether tile processing should be attempted for the current frame.
+
+        - In direct tile mode: True if any damage is reported and the early
+          fallback decision does **not** force full‑frame.
+        - In cache mode: delegates to the cached processor's own heuristic,
+          also augmented by the early fallback.
+        """
+        if not rects:
+            return False
+
+        if self.mode == "cache":
+            # The cached processor may have its own logic; we add the early
+            # fallback as an additional safety net.
+            if self._should_fallback(rects):
+                return False
+            return self.tile_processor.should_use_tile_mode(len(rects))
+        else:
+            return not self._should_fallback(rects)
+
     def process_tile_frame(
         self,
         dirty_tiles: Union[
-            List[Tuple[int, int, bytes, int, int]],  # tile mode
-            List[Tuple[int, int, int, bytes]],  # cache mode
+            List[
+                Tuple[int, int, bytes, int, int]
+            ],  # tile mode (tx,ty,data,valid_x,valid_y)
+            List[Tuple[int, int, int, bytes]],  # cache mode (tx,ty,hash,data)
         ],
         rects: List[Tuple[int, int, int, int, int]],
         frame_data: memoryview,
@@ -283,64 +307,31 @@ class UpscalerManager:
         """
         Process a frame using the active tile processor.
 
-        This method implements the following logic:
-
-        - On the very first tile frame, a full capture is performed to
-          initialize the output texture. Subsequent frames only update
-          dirty tiles.
-        - If the number of dirty tiles exceeds `max_tile_layers`, the
-          frame is processed using the full-frame fallback instead.
-        - The residual texture (`full_input_tex`) is updated with the
-          expanded damage regions before tile processing.
-        - The actual tile processing is delegated to `self.tile_processor`.
-
-        Args:
-            dirty_tiles: Pre-extracted tile data. Format depends on mode:
-                - tile mode: (tile_x, tile_y, data_bytes, valid_x, valid_y)
-                - cache mode:  (tile_x, tile_y, hash, data_bytes)
-            rects: Original damage rectangles (used by tile mode for
-                uploading the residual texture).
-            frame_data: Full captured frame (used by tile mode for residual
-                texture uploads).
-
-        Raises:
-            RuntimeError: If called when not in a tile-based mode.
+        On the first tile frame a full capture is forced to seed the output.
+        For subsequent frames, if the early fallback decision triggers (too many
+        dirty tiles or too large area), the frame is processed in full‑frame mode
+        without extracting individual tiles.
         """
         if self.mode not in ("tile", "cache"):
-            raise RuntimeError("process_tile_frame called in non-tile mode")
+            raise RuntimeError("process_tile_frame called in non‑tile mode")
 
-        # First tile frame: prime the output with a full capture
+        # –– First tile frame: seed the output with a full‑frame pass ––
         if self._first_tile_frame:
-            logger.debug("First tile frame - performing initial full capture")
+            logger.debug("First tile frame – performing initial full capture")
             self.upload_full_frame(
                 frame=frame_data,
                 rects=rects,
-                use_damage_tracking=False,  #  Upload whole frame
+                use_damage_tracking=False,
                 margin=self.config.tile_context_margin,
             )
             self.process_full_frame()
             self._first_tile_frame = False
             return
 
-        # Compute damage area to decide whether to fall back to full-frame
-        expanded = TileProcessor.expand_damage_rects(
-            rects, self.crop_width, self.crop_height, self.config.tile_context_margin
-        )
-        total_area = sum(w * h for _, _, w, h in expanded)
-        threshold_area = self.config.area_threshold * self.crop_width * self.crop_height
-
-        # Fallback if too many tiles (direct mode) or damage area exceeds threshold
-        max_tiles = (
-            self.config.max_tile_layers
-            if self.mode == "tile"
-            else self.config.cache_capacity
-        )  # use appropriate limit
-        if len(dirty_tiles) > max_tiles or total_area > threshold_area:
-            logger.debug(
-                "Falling back to full-frame (%d dirty tiles, %.1f%% area)",
-                len(dirty_tiles),
-                100.0 * total_area / (self.crop_width * self.crop_height),
-            )
+        # –– Early fallback decision – avoids extracting tiles if we will
+        #     end up using full‑frame anyway ––
+        if self._should_fallback(rects):
+            logger.debug("Early fallback to full‑frame (threshold exceeded)")
             self.upload_full_frame(
                 frame=frame_data,
                 rects=rects,
@@ -350,34 +341,30 @@ class UpscalerManager:
             self.process_full_frame()
             return
 
-        # Update the residual texture (always needed before tile processing)
+        # –– Update the residual texture (full frame with damage regions) ––
         self.tile_processor.upload_full_frame(frame_data, rects)
 
-        # Delegate to the tile processor (handles hits, misses, and copies)
+        # –– Delegate tile processing (extraction already happened in the
+        #     caller, but we can still enforce a safety bound) ––
+        # Safety check: if extraction somehow exceeded the layer capacity
+        max_dirty = (
+            self.config.max_tile_layers
+            if self.mode == "tile"
+            else self.config.cache_capacity
+        )
+        if len(dirty_tiles) > max_dirty:
+            logger.warning(
+                "Extracted %d tiles exceeds capacity %d – falling back to full‑frame",
+                len(dirty_tiles),
+                max_dirty,
+            )
+            self.upload_full_frame(
+                frame_data, rects, False, self.config.tile_context_margin
+            )
+            self.process_full_frame()
+            return
+
         self.tile_processor.process_tiles(dirty_tiles)
-
-    def should_use_tile_mode(self, num_dirty_rects: int) -> bool:
-        """
-        Determine whether tile mode should be used for the current frame.
-
-        - In tile mode: tile mode is used whenever there is any damage
-          (the fallback inside `process_tile_frame` will handle excessive
-          tiles).
-        - In cache mode: tile mode is used only if the number of dirty tiles
-          is below the configured threshold (as determined by the cached
-          processor).
-
-        Args:
-            num_dirty_rects: Number of damage rectangles reported by the grabber.
-
-        Returns:
-            True if tile processing should be attempted, False otherwise.
-        """
-        if self.mode == "tile":
-            return num_dirty_rects > 0
-        elif self.mode == "cache":
-            return self.tile_processor.should_use_tile_mode(num_dirty_rects)
-        return False
 
     # ----------------------------------------------------------------------
     # Output access

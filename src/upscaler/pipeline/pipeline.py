@@ -267,7 +267,7 @@ class Pipeline:
             src_tex = self.upscaler_mgr.get_output_texture()
         else:
             # Tile-based mode ("tile" or "cache").
-            if self.upscaler_mgr.should_use_tile_mode(len(rects)):
+            if self.upscaler_mgr.should_use_tile_mode(rects):
                 if self.upscaler_mgr.mode == "tile":
                     # Tile mode: extract expanded tiles with valid offsets.
                     dirty_tiles = TileProcessor.extract_expanded_tiles(
