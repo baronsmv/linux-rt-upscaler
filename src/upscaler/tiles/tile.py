@@ -392,7 +392,7 @@ class TileProcessor:
     #  Push constant helpers
     # ------------------------------------------------------------------
     def _make_push_bytes(
-        self, layer: int, spec: TileSpec, valid_offset_mult: int = 1
+        self, layer: int, spec: TileSpec, margin: int, valid_offset_mult: int = 1
     ) -> bytes:
         """
         Build push constant bytes for one tile and one stage.
@@ -407,7 +407,7 @@ class TileProcessor:
             spec.dst_out_px_y,  # dstOffset
             self.full_out_w,
             self.full_out_h,
-            self.margin,
+            margin,
             spec.valid_lr_offset_x * valid_offset_mult,
             spec.valid_lr_offset_y * valid_offset_mult,
             spec.tile_out_extent_w,
@@ -422,7 +422,7 @@ class TileProcessor:
         gx, gy = self.groups_per_stage[0]
         dispatches = []
         for i, spec in enumerate(specs):
-            push = self._make_push_bytes(i, spec, valid_offset_mult=1)
+            push = self._make_push_bytes(i, spec, self.margin, valid_offset_mult=1)
             for pipe in self.stages[0].pipelines:
                 dispatches.append((pipe, gx, gy, 1, push))
         if dispatches:
@@ -434,7 +434,7 @@ class TileProcessor:
         gx1, gy1 = self.groups_per_stage[0]
         dispatches_s1 = []
         for i, spec in enumerate(specs):
-            push = self._make_push_bytes(i, spec, valid_offset_mult=1)
+            push = self._make_push_bytes(i, spec, self.margin, valid_offset_mult=1)
             for pipe in self.stages[0].pipelines:
                 dispatches_s1.append((pipe, gx1, gy1, 1, push))
 
@@ -442,7 +442,7 @@ class TileProcessor:
         gx2, gy2 = self.groups_per_stage[1]
         dispatches_s2 = []
         for i, spec in enumerate(specs):
-            push = self._make_push_bytes(i, spec, valid_offset_mult=2)
+            push = self._make_push_bytes(i, spec, self.margin * 2, valid_offset_mult=2)
             for pipe in self.stages[1].pipelines:
                 dispatches_s2.append((pipe, gx2, gy2, 1, push))
 
