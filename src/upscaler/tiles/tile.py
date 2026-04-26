@@ -241,7 +241,7 @@ class TileProcessor:
         # The feature map resolution for the last SRCNN stage
         if self.double_upscale:
             feat_lr = self.expanded_tile_size * 2
-            pre_final = self.stages[-2]
+            pre_final = self.stages[-1]
         else:
             feat_lr = self.expanded_tile_size
             pre_final = self.stages[0]
