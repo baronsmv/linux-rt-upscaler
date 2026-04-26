@@ -31,12 +31,12 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
   - `fast` – Default. Recommended for slow machines.
   - `faster`
   - `veryfast` – Fastest option, lowest quality.
+- **Tile‑Based Processing** – Divides each frame into tiles, re‑upscaling only the regions that change, drastically reducing GPU and CPU load for mostly static content.
 - **Attach to Any Window** – Either grab the currently active window, select from visible windows or launch a new program and capture its window automatically.
-- **Flexible Output Geometry** – Control the overlay size, scaling mode, offset and borders.
+- **Flexible Output Geometry** – Control the overlay size, scaling mode, offset and borders, with interactive zoom and pan.
 - **Input Forwarding** – Click, move, and drag on the upscaled image as if interacting directly with the original window.
-- **Hardware Accelerated** – Vulkan compute (Compushady) works on NVIDIA, AMD, and Intel GPUs.
-- **XWayland Compatible** – Runs under Wayland compositors by automatically forcing X11 platform for Qt.
-- **Global Hotkeys & On-Screen Display** – Switch models, take lossless screenshots and more using keyboard shortcuts.
+- **Hardware Accelerated** – Custom Vulkan compute backend works on NVIDIA, AMD, and Intel GPUs.
+- **Global Hotkeys & On-Screen Display** – Switch models, zoom, pan, take lossless screenshots and more using keyboard shortcuts.
 
 ## Requirements
 
@@ -149,16 +149,17 @@ upscale --help
 
 ### Controls
 
-| Shortcut          | Action                                                                   |
-| ----------------- | ------------------------------------------------------------------------ |
-| `Alt`+`Shift`+`S` | Toggle overlay visibility / pause processing                             |
-| `Alt`+`Shift`+`M` | Switch to the next upscaling model                                       |
-| `Alt`+`Shift`+`G` | Cycle output geometry (fit → stretch → cover)                            |
-| `Alt`+`Shift`+`P` | Take a lossless screenshot (`--screenshot-dir DIR` defines the location) |
+| Shortcut                            | Action                                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------ |
+| `Alt`+`Shift`+`S`                   | Toggle overlay visibility / pause processing                             |
+| `Alt`+`Shift`+`M`                   | Switch to the next upscaling model                                       |
+| `Alt`+`Shift`+`G`                   | Cycle output geometry (fit → stretch → cover)                            |
+| `Alt`+`Shift`+`P`                   | Take a lossless screenshot (`--screenshot-dir DIR` defines the location) |
+| `Alt`+`Shift`+`+` / `-`             | Zoom in / Zoom out                                                       |
+| `Alt`+`Shift`+`↑` / `↓` / `←` / `→` | Pan the upscaled content                                                 |
+| `Alt`+`Shift`+`Escape`              | Exit the application                                                     |
 
 All hotkeys can be customised in the configuration file.
-
-- **Exit**: `Ctrl+C` in the terminal.
 
 ### Profiles
 
@@ -220,15 +221,13 @@ This project tackles the other half of the equation: **AI-powered upscaling** to
 
 ## Acknowledgments
 
-This project stands on the shoulders of several open-source works:
+This project stands on the shoulders of several open-source works, mantained by amazing people and communities:
 
-- **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real-time CuNNy upscaling on Linux. This project extends that foundation with full-screen scaling, accurate input forwarding, and support for all CuNNy NVL models and GPU vendors.
-- **[funnyplanter](https://github.com/funnyplanter)** – For [CuNNy](https://github.com/funnyplanter/CuNNy), the neural network upscaling models, especially the Magpie NVL variants trained for visual novel content.
-- **[Compushady](https://github.com/rdeioris/compushady)** – Python library for GPU compute (Vulkan backend).
-- **[screeninfo](https://github.com/rr-/screeninfo)** – Python library to fetch location and size of physical screens.
-- **[PySide6](https://pypi.org/project/PySide6/)** – Qt bindings used for the overlay window.
-- **[python-xlib](https://github.com/python-xlib/python-xlib)** – X11 client library for window management and input forwarding.
-- **[xcffib](https://github.com/tych0/xcffib)** – XCB binding for Python.
-- **[pyewmh](https://github.com/parkouss/pyewmh)** – Query and control of window manager.
-- **[psutil](https://github.com/giampaolo/psutil)** – Library for retrieving information on running processes.
-- **[Pillow](https://python-pillow.github.io/)** – The Python Imaging Library
+- **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real‑time CuNNy upscaling on Linux. This project began from that proof‑of‑concept and has since evolved into a complete rewrite with a custom Vulkan backend, tile‑based processing, and more features.
+- **[funnyplanter](https://github.com/funnyplanter)** – For the incredible [CuNNy](https://github.com/funnyplanter/CuNNy) neural network upscaling models, especially the Magpie NVL variants trained on visual novel artwork.
+- The original **[Compushady](https://github.com/rdeioris/compushady)** library, which served as an invaluable foundation during early development. The current release uses a custom, tailored Vulkan backend that builds on those early lessons and grows to meet the project’s specific needs.
+- **[PySide6](https://pypi.org/project/PySide6/)** – The Qt binding that powers the entire graphical overlay window.
+- **[xcffib](https://github.com/tych0/xcffib)** – The low‑level XCB binding used for all window management and event forwarding.
+- **[screeninfo](https://github.com/rr-/screeninfo)** – Provides the physical dimensions and positions of all connected monitors, used for scaling factor detection.
+- **[psutil](https://github.com/giampaolo/psutil)** – Helps locate the target window by matching process IDs and window classes when attaching to a running application or launching a new one.
+- **[Pillow](https://python-pillow.github.io/)** – The Python Imaging Library is used for saving lossless screenshots and for rendering the on‑screen display text as an image, which is then uploaded to the GPU.

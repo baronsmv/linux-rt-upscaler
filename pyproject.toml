@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "linux-rt-upscaler"
-version = "0.2.10"
+version = "0.3.0"
 description = "Real-time AI upscaler for any Linux window"
 readme = "README.md"
 authors = [
@@ -35,7 +35,6 @@ dependencies = [
     "pyyaml",
     "screeninfo",
     "xcffib",
-    "xxhash",
 ]
 
 [project.urls]
