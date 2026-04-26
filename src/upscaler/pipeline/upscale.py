@@ -285,6 +285,14 @@ class UpscalerManager:
         # First tile frame: seed the output with a full-frame pass
         if self._first_tile_frame:
             logger.debug("First tile frame - performing initial full capture")
+
+            # Upload the whole low-res frame to residual_1x
+            frame_bytes = bytes(frame_data)
+            self.tile_processor.residual_1x.upload_subresources(
+                [(frame_bytes, 0, 0, self.crop_width, self.crop_height, 0)]
+            )
+
+            # Full-frame upscale for the output
             self.upload_full_frame(
                 frame=frame_data,
                 rects=rects,
@@ -299,6 +307,12 @@ class UpscalerManager:
         # Avoids extracting tiles if we will end up using full-frame anyway
         if self._should_fallback(rects):
             logger.debug("Early fallback to full-frame (threshold exceeded)")
+
+            # Upload the full frame to residual_1x so tile mode later has a fresh base
+            frame_bytes = bytes(frame_data)
+            self.tile_processor.residual_1x.upload_subresources(
+                [(frame_bytes, 0, 0, self.crop_width, self.crop_height, 0)]
+            )
             self.upload_full_frame(
                 frame=frame_data,
                 rects=rects,
