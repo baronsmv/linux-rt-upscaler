@@ -226,9 +226,7 @@ class TileProcessor:
             self.groups_per_stage[0] = dispatch_groups(lr, lr, last_pass=False)
 
         # Output texture accessible from outside
-        self.output_texture = Texture2D(
-            self.full_out_w, self.full_out_h, slices=1, force_array_view=True
-        )
+        self.output_texture = Texture2D(self.full_out_w, self.full_out_h)
 
     # ------------------------------------------------------------------
     #  Custom final pipeline

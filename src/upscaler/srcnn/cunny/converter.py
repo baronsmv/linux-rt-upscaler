@@ -266,7 +266,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
         # Texture declarations with registers
         tex_decl_lines = self._build_texture_declarations(
-            in_textures, out_textures, tile
+            in_textures, out_textures, is_final, tile
         )
 
         # Sampler declarations
@@ -324,7 +324,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
                         cond = f"{cond_x} && {cond_y}"
                         new_core.append(f"{indent}if ({cond})")
                         new_core.append(
-                            f"{indent}    OUTPUT[uint3(globalOutXY + int2({off_x}, {off_y}), 0)] = {rhs};"
+                            f"{indent}    OUTPUT[globalOutXY + int2({off_x}, {off_y})] = {rhs};"
                         )
                     else:
                         new_core.append(line)
@@ -418,6 +418,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         self,
         in_textures: List[str],
         out_textures: List[str],
+        is_final: bool,
         tile: bool,
     ) -> List[str]:
         """Return SRV and UAV declaration lines with registers."""
@@ -430,8 +431,8 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
             lines.append("")
         # Output textures
         for idx, tex in enumerate(out_textures):
-            # In tile mode, output is always an array (even for final pass)
-            suffix = "Array" if tile else ""
+            # In tile mode, output is always an array (except for final pass)
+            suffix = "Array" if tile and not is_final else ""
             lines.append(
                 f'[[vk::image_format("rgba8")]] RWTexture2D{suffix}<float4> {tex} : register(u{idx});'
             )

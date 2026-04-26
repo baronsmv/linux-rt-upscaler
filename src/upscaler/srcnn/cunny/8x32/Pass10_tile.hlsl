@@ -72,7 +72,7 @@ Texture2DArray<float4> T5 : register(t6);
 Texture2DArray<float4> T6 : register(t7);
 Texture2DArray<float4> T7 : register(t8);
 
-[[vk::image_format("rgba8")]] RWTexture2DArray<float4> OUTPUT : register(u0);
+[[vk::image_format("rgba8")]] RWTexture2D<float4> OUTPUT : register(u0);
 
 SamplerState SP : register(s0);
 SamplerState SL : register(s1);
@@ -419,11 +419,11 @@ void main(uint3 id : SV_DispatchThreadID)
     float2 fpos = (float2(globalOutXY) + 0.5) * full_opt;
 
     if (globalOutXY.x < maxOut.x && globalOutXY.y < maxOut.y)
-        OUTPUT[uint3(globalOutXY + int2(0, 0), 0)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 0.0) * full_opt, 0), 0).rgb + float3(r0.x, r1.x, r2.x)), 1.0);
+        OUTPUT[globalOutXY + int2(0, 0)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 0.0) * full_opt, 0), 0).rgb + float3(r0.x, r1.x, r2.x)), 1.0);
     if (globalOutXY.x + 1 < maxOut.x && globalOutXY.y < maxOut.y)
-        OUTPUT[uint3(globalOutXY + int2(1, 0), 0)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 0.0) * full_opt, 0), 0).rgb + float3(r0.y, r1.y, r2.y)), 1.0);
+        OUTPUT[globalOutXY + int2(1, 0)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 0.0) * full_opt, 0), 0).rgb + float3(r0.y, r1.y, r2.y)), 1.0);
     if (globalOutXY.x < maxOut.x && globalOutXY.y + 1 < maxOut.y)
-        OUTPUT[uint3(globalOutXY + int2(0, 1), 0)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 1.0) * full_opt, 0), 0).rgb + float3(r0.z, r1.z, r2.z)), 1.0);
+        OUTPUT[globalOutXY + int2(0, 1)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(0.0, 1.0) * full_opt, 0), 0).rgb + float3(r0.z, r1.z, r2.z)), 1.0);
     if (globalOutXY.x + 1 < maxOut.x && globalOutXY.y + 1 < maxOut.y)
-        OUTPUT[uint3(globalOutXY + int2(1, 1), 0)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 1.0) * full_opt, 0), 0).rgb + float3(r0.w, r1.w, r2.w)), 1.0);
+        OUTPUT[globalOutXY + int2(1, 1)] = float4(saturate(INPUT.SampleLevel(SL, float3(fpos + float2(1.0, 1.0) * full_opt, 0), 0).rgb + float3(r0.w, r1.w, r2.w)), 1.0);
 }
