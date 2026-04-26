@@ -352,12 +352,11 @@ class UpscalerManager:
                 src_slice=0,
                 dst_slice=0,
             )
+
             # 2. Run the first SRCNN stage (upscale 1x -> 2x)
             gx, gy = self._residual_upscale_groups
-            self.full_stages[0].pipelines[0].dispatch(
-                gx, gy, 1
-            )  # only pass 1, not all passes
-            self.full_stages[0].dispatch(gx, gy, 1)  # runs all pipelines of stage 1
+            self.full_stages[0].dispatch(gx, gy, 1)
+
             # 3. Copy the 2x result to the tile processor's 2x residual
             self._residual_dst_tex.copy_to(
                 self.tile_processor.residual_2x,
