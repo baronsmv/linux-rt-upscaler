@@ -357,8 +357,9 @@ class UpscalerManager:
             )
         else:
             # Update the residual texture (full frame)
-            self.tile_processor.residual_1x.upload_subresources(
-                [(bytes(frame_data), 0, 0, self.crop_width, self.crop_height, 0)]
+            self.tile_processor.residual_staging.upload(frame_data)
+            self.tile_processor.residual_staging.copy_to(
+                self.tile_processor.residual_1x
             )
 
         self.tile_processor.process_tiles(dirty_tiles)
