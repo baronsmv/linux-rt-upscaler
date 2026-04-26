@@ -16,9 +16,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Duration (in seconds) for on-screen display messages.
-OSD_DURATION = 1.5
-
 
 class PipelineController:
     """
@@ -32,6 +29,7 @@ class PipelineController:
         _pipeline (Pipeline): Reference to the owning pipeline.
         _available_models (Tuple[str, ...]): List of upscaling model names.
         _available_geometries (Tuple[str, ...]): List of output geometry modes.
+        _osd_duration (float): Duration (in seconds) for on-screen display messages.
         _current_model_index (int): Index of the currently active model.
         _current_geometry_index (int): Index of the currently active geometry.
     """
@@ -53,6 +51,9 @@ class PipelineController:
         self._pipeline = pipeline
         self._available_models = available_models
         self._available_geometries = available_geometries
+
+        # OSD
+        self._osd_duration = self._pipeline.config.osd_duration
 
         # Thread-safe request queues
         self._model_switch_queue: Queue[bool] = Queue()  # True = next, False = previous
@@ -172,7 +173,7 @@ class PipelineController:
         self._pipeline.clear_frame_queue()
 
         # Show OSD message
-        self._pipeline.osd_queue.put((f"Model: {new_model}", OSD_DURATION))
+        self._pipeline.osd_queue.put((f"Model: {new_model}", self._osd_duration))
 
     def _apply_geometry_cycle(self) -> None:
         """Cycle to the next output geometry mode."""
@@ -201,11 +202,10 @@ class PipelineController:
         self._pipeline.update_content_dimensions()
 
         # Show OSD message
-        self._pipeline.osd_queue.put((f"Geometry: {new_geometry}", OSD_DURATION))
+        self._pipeline.osd_queue.put((f"Geometry: {new_geometry}", self._osd_duration))
 
-    @staticmethod
     def _download_and_save(
-        texture: Texture2D, width: int, height: int, pipeline: "Pipeline"
+        self, texture: Texture2D, width: int, height: int, pipeline: "Pipeline"
     ) -> None:
         """
         Download texture data from GPU and save as PNG.
@@ -258,7 +258,7 @@ class PipelineController:
             logger.error("Failed to save screenshot: %s", e, exc_info=True)
 
         message = "Screenshot saved" if success else "Screenshot failed"
-        pipeline.osd_queue.put((message, OSD_DURATION))
+        pipeline.osd_queue.put((message, self._osd_duration))
 
     def _save_screenshot(self) -> None:
         """
@@ -268,7 +268,7 @@ class PipelineController:
             src_tex = self._pipeline.upscaler_mgr.get_output_texture()
             if src_tex is None:
                 logger.warning("No output texture available for screenshot")
-                self._pipeline.osd_queue.put(("Screenshot failed", OSD_DURATION))
+                self._pipeline.osd_queue.put(("Screenshot failed", self._osd_duration))
                 return
 
             temp_tex = Texture2D(src_tex.width, src_tex.height)
@@ -288,7 +288,7 @@ class PipelineController:
             ).start()
         except Exception as e:
             logger.error(f"Failed to initiate screenshot: {e}", exc_info=True)
-            self._pipeline.osd_queue.put(("Screenshot failed", OSD_DURATION))
+            self._pipeline.osd_queue.put(("Screenshot failed", self._osd_duration))
 
     # ----------------------------------------------------------------------
     # Initialisation helpers

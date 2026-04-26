@@ -492,7 +492,8 @@ class Pipeline:
         """Show any pending OSD messages."""
         try:
             text, duration = self.osd_queue.get_nowait()
-            self.osd.show(text, duration)
+            if self.config.show_osd:
+                self.osd.show(text, duration)
         except Empty:
             pass
 
