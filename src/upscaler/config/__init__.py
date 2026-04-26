@@ -6,6 +6,7 @@ from .models import (
     OverlayMode,
     OUTPUT_GEOMETRIES,
     UPSCALING_MODELS,
+    ZOOM_LEVELS,
 )
 from .setup import setup_config
 
@@ -16,4 +17,5 @@ __all__ = [
     "setup_config",
     "OUTPUT_GEOMETRIES",
     "UPSCALING_MODELS",
+    "ZOOM_LEVELS",
 ]

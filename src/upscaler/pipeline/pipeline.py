@@ -5,6 +5,7 @@ from enum import Enum, auto
 from queue import Empty, Queue
 from typing import Optional, Tuple
 
+import shiboken6
 from PySide6.QtCore import QMetaObject, Qt
 
 from .controller import PipelineController
@@ -85,6 +86,7 @@ class Pipeline:
         self.controller = PipelineController(self)
         self.controller.set_initial_model_index(config.model)
         self.controller.set_initial_geometry_index(config.output_geometry)
+        self.controller.set_initial_zoom_index()
 
         # Vulkan device configuration.
         configure_device(config.vulkan_buffer_pool_size)
@@ -99,8 +101,9 @@ class Pipeline:
 
         # On-screen display manager.
         osd_texts = tuple(
-            [f"Model: {m}" for m in self.controller._available_models]
-            + [f"Geometry: {g}" for g in self.controller._available_geometries]
+            [f"Model: {m}" for m in self.controller.available_models]
+            + [f"Geometry: {g}" for g in self.controller.available_geometries]
+            + [f"Zoom: {z}" for z in self.controller.available_zoom_levels]
             + ["Screenshot saved", "Screenshot failed"]
         )
         self.osd = OSDManager(osd_texts, self._screen_width, self._screen_height)
@@ -250,6 +253,11 @@ class Pipeline:
         osd_tex, needs_redraw = self.osd.update()
         if needs_redraw:
             is_dirty = True
+
+        # Check overlay validity before using it
+        if not shiboken6.isValid(self.overlay):
+            self._running = False
+            return
         self.overlay.update_opacity()
 
         if not is_dirty and osd_tex is None:
@@ -448,9 +456,13 @@ class Pipeline:
                 break
 
         self._stopped_event.set()
-        QMetaObject.invokeMethod(
-            self.overlay, "on_pipeline_stopped", Qt.QueuedConnection
-        )
+        if shiboken6.isValid(self.overlay):
+            try:
+                QMetaObject.invokeMethod(
+                    self.overlay, "on_pipeline_stopped", Qt.QueuedConnection
+                )
+            except RuntimeError:
+                pass  # object already deleted
         logger.info("Pipeline thread stopped")
 
     def _process_switch_requests(self) -> None:

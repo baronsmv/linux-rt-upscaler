@@ -16,9 +16,20 @@ class HotkeyManager(QObject):
 
     # Signals
     toggle_scaling = Signal()
+    exit_app = Signal()
+
+    screenshot = Signal()
+
     cycle_model = Signal()
     cycle_geometry = Signal()
-    screenshot = Signal()
+
+    zoom_in = Signal()
+    zoom_out = Signal()
+
+    offset_left = Signal()
+    offset_right = Signal()
+    offset_up = Signal()
+    offset_down = Signal()
 
     _MODIFIER_MAP = {
         "Ctrl": ModMask.Control,
@@ -89,6 +100,19 @@ class HotkeyManager(QObject):
         "F10": 0xFFC7,
         "F11": 0xFFC8,
         "F12": 0xFFC9,
+        # Symbols (US keyboard layout)
+        "LeftBracket": 0x5B,
+        "RightBracket": 0x5D,
+        "Backslash": 0x5C,
+        "Semicolon": 0x3B,
+        "Apostrophe": 0x27,
+        "Comma": 0x2C,
+        "Period": 0x2E,
+        "Slash": 0x2F,
+        "Plus": 0x2B,
+        "Minus": 0x2D,
+        "Equal": 0x3D,
+        "Grave": 0x60,
         # Other common keys
         "Space": 0x20,
         "Return": 0xFF0D,

@@ -26,7 +26,7 @@ class Presenter:
         screen_height (int): Physical overlay height in pixels.
         content_width (int): Logical content width (before scaling).
         content_height (int): Logical content height (before scaling).
-        scale_mode (str): Scaling mode ("fit", "fill", "stretch", "center").
+        scale_mode (str): Scaling mode ("fit", "fill", "stretch").
         background_color (BackgroundColor): RGBA clear color for unused areas.
         offset_x (int): Horizontal offset for the content rectangle.
         offset_y (int): Vertical offset for the content rectangle.
@@ -56,7 +56,7 @@ class Presenter:
         Args:
             screen_width, screen_height: Overlay window dimensions.
             content_width, content_height: Logical content dimensions.
-            scale_mode: One of "fit", "fill", "stretch", "center".
+            scale_mode: One of "fit", "fill", "stretch".
             background_color: RGBA tuple for background areas.
             offset_x, offset_y: Additional offset for the content rectangle.
             osd_manager: OSD manager instance.

@@ -58,6 +58,9 @@ def main() -> None:
     pipeline = Pipeline(config, win_info, overlay)
     pipeline.start()
     logger.info("Pipeline started")
+
+    # Graceful shutdown on Qt exit
+    app.aboutToQuit.connect(lambda: pipeline.stop())
     logger.info(
         f"Total initialization time: {time.perf_counter() - overall_start:.2f}s"
     )
@@ -79,10 +82,22 @@ def main() -> None:
 
     # Connect signals
     hotkey_manager.toggle_scaling.connect(controller.toggle_overlay)
-    hotkey_manager.cycle_model.connect(controller.switch_model)
-    hotkey_manager.cycle_geometry.connect(controller.switch_geometry)
+    hotkey_manager.exit_app.connect(controller.exit_app)
+
     hotkey_manager.screenshot.connect(controller.take_screenshot)
 
+    hotkey_manager.cycle_model.connect(controller.switch_model)
+    hotkey_manager.cycle_geometry.connect(controller.switch_geometry)
+
+    hotkey_manager.zoom_in.connect(controller.zoom_in)
+    hotkey_manager.zoom_out.connect(controller.zoom_out)
+
+    hotkey_manager.offset_up.connect(controller.offset_up)
+    hotkey_manager.offset_down.connect(controller.offset_down)
+    hotkey_manager.offset_left.connect(controller.offset_left)
+    hotkey_manager.offset_right.connect(controller.offset_right)
+
+    # Start Hotkey Manager
     hotkey_manager.start()
 
     # Event loop

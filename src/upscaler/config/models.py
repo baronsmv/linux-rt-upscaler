@@ -17,12 +17,20 @@ UPSCALING_MODELS = (
     "veryfast",
 )
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
+ZOOM_LEVELS = ("50%", "75%", "100%", "150%", "200%", "300%", "400%")
 
 DEFAULT_HOTKEYS = {
     "toggle_scaling": "Alt+Shift+S",
+    "exit_app": "Alt+Shift+Escape",
+    "screenshot": "Alt+Shift+P",
     "cycle_model": "Alt+Shift+M",
     "cycle_geometry": "Alt+Shift+G",
-    "screenshot": "Alt+Shift+P",
+    "zoom_in": "Alt+Shift+Plus",
+    "zoom_out": "Alt+Shift+Minus",
+    "offset_up": "Alt+Shift+Up",
+    "offset_down": "Alt+Shift+Down",
+    "offset_left": "Alt+Shift+Left",
+    "offset_right": "Alt+Shift+Right",
 }
 
 
@@ -110,4 +118,6 @@ class Config:
 
     # Config file (not a configurable option, just used internally)
     config_file: Optional[str] = None
+
+    # Hotkeys
     hotkeys: Dict[str, str] = field(default_factory=lambda: DEFAULT_HOTKEYS.copy())
