@@ -7,7 +7,7 @@
  *   - A table of top-level functions (get_discovered_devices, enable_debug,
  *     get_shader_binary_type).
  *   - The custom exception types used throughout the wrapper.
- *   - All supported Vulkan type objects (Device, Heap, Resource, …).
+ *   - All supported Vulkan type objects (Device, Heap, Resource, ...).
  *   - The pixel-format constant -> (VkFormat, bytes per pixel) mapping.
  *   - Numeric constants for sampler filters, address modes, heap types, and
  *     all pixel format enums.

@@ -29,15 +29,29 @@
 //
 // =============================================================================
 
+// -----------------------------------------------------------------------------
+//  Constant buffer - set once per stage, shared by all tiles.
+// -----------------------------------------------------------------------------
 cbuffer Constants : register(b0) {
-    uint in_width;
-    uint in_height;
-    uint out_width;
-    uint out_height;
-    float in_dx;
-    float in_dy;
-    float out_dx;
-    float out_dy;
+    // --- Feature-map dimensions for the *current* stage ---
+    uint in_width;                 // width  of the texture(s) we sample this pass
+    uint in_height;                // height of the texture(s) we sample this pass
+    //   For intermediate passes:
+    //     = expanded_tile_size (tile_size + 2 * margin).
+    //   For final pass:
+    //     = expanded_tile_size * scale (e.g., 2x or 4x tile)
+    //
+    // --- Dimensions of the full upscaled output frame ---
+    uint out_width;                // only used in final pass: = full_out_w
+    uint out_height;               // only used in final pass: = full_out_h
+    //   Intermediate passes don't read these fields; they exist for layout compatibility.
+
+    // --- Precomputed reciprocals (1.0 / dimension) ---
+    //     Avoids division in the hot loop; every thread uses the same values.
+    float in_dx;                   // = 1.0 / in_width
+    float in_dy;                   // = 1.0 / in_height
+    float out_dx;                  // = 1.0 / out_width   (final pass only)
+    float out_dy;                  // = 1.0 / out_height  (final pass only)
 };
 
 float2 GetInputPt() { return float2(in_dx, in_dy); }
@@ -66,9 +80,24 @@ SamplerState SL : register(s1);
 [numthreads(8,8,1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
+    // -----------------------------------------------------------------------------
+    //  Coordinate mapping for the final shuffle pass (full-frame)
+    //
+    //    The last pass upsamples by 2x using a 2x2 output quad per thread.
+    //    The dispatch grid covers the *low-resolution* feature map (1:1),
+    //    and each thread writes 4 pixels into the full-size output.
+    // -----------------------------------------------------------------------------
+    
+    // (1) texel size of the low-res feature map (same as in_width/in_height)
     float2 pt = float2(GetInputPt());
+    
+    // (2) gxy is the *low-res* pixel coordinate of this thread.
+    //     Multiply by 2 to get the top-left of the 2x2 upscaled quad.
     uint2 gxy = id.xy * 2;
+    
+    // (3) Sampling position (centre of low-res pixel).
     float2 pos = ((gxy >> 1) + 0.5) * pt;
+    //     (gxy >> 1) recovers the original id.xy.
 
     V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
     V4 r0 = 0.0;

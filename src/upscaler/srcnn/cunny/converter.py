@@ -208,27 +208,56 @@ class HlslGenerator:
 
     @staticmethod
     def common_header(tile: bool) -> str:
-        header = """cbuffer Constants : register(b0) {
-    uint in_width;
-    uint in_height;
-    uint out_width;
-    uint out_height;
-    float in_dx;
-    float in_dy;
-    float out_dx;
-    float out_dy;
+        header = """// -----------------------------------------------------------------------------
+//  Constant buffer - set once per stage, shared by all tiles.
+// -----------------------------------------------------------------------------
+cbuffer Constants : register(b0) {
+    // --- Feature-map dimensions for the *current* stage ---
+    uint in_width;                 // width  of the texture(s) we sample this pass
+    uint in_height;                // height of the texture(s) we sample this pass
+    //   For intermediate passes:
+    //     = expanded_tile_size (tile_size + 2 * margin).
+    //   For final pass:
+    //     = expanded_tile_size * scale (e.g., 2x or 4x tile)
+    //
+    // --- Dimensions of the full upscaled output frame ---
+    uint out_width;                // only used in final pass: = full_out_w
+    uint out_height;               // only used in final pass: = full_out_h
+    //   Intermediate passes don't read these fields; they exist for layout compatibility.
+
+    // --- Precomputed reciprocals (1.0 / dimension) ---
+    //     Avoids division in the hot loop; every thread uses the same values.
+    float in_dx;                   // = 1.0 / in_width
+    float in_dy;                   // = 1.0 / in_height
+    float out_dx;                  // = 1.0 / out_width   (final pass only)
+    float out_dy;                  // = 1.0 / out_height  (final pass only)
 };
 
 """
         if tile:
-            header += """struct TileParams {
-    uint inputLayer;
-    uint2 dstOffset;
-    uint fullOutWidth;
-    uint fullOutHeight;
-    uint margin;
-    uint2 validOffset;
-    uint2 tileOutExtent;
+            header += """// -----------------------------------------------------------------------------
+// Push-constant block: passed from Python, contains per-tile metadata.
+// Layout must match the struct.pack("I"*8, ...) in TileProcessor.
+// -----------------------------------------------------------------------------
+struct TileParams {
+    // ---- Layer selection (only for array textures) ----
+    uint inputLayer;               // which slice of the 2D array to read
+
+    // ---- Output location in the full upscaled frame ----
+    uint2 dstOffset;               // top-left corner of this tile’s
+                                   // output rectangle (in upscaled pixels)
+
+    // ---- Size of the *full* output frame ----
+    uint fullOutWidth;             // overall width  (upscaled pixels)
+    uint fullOutHeight;            // overall height (upscaled pixels)
+
+    // ---- Context margin (pixels in the *current* feature-map space) ----
+    uint margin;                   // for stage 1 = context_margin, for stage 2 = context_margin * 2
+
+    // ---- Dimensions of the tile’s output region ----
+    uint2 tileOutExtent;           // width and height that this tile
+                                   // actually writes to (may be smaller
+                                   // at right/bottom edges)
 };
 [[vk::push_constant]] TileParams tileParams;
 
@@ -447,29 +476,95 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
                 return f"""[numthreads({nt[0]},{nt[1]},{nt[2]})]
 void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
 {{
+    // -----------------------------------------------------------------------------
+    //  Coordinate mapping:
+    //    The dispatch covers a *single* expanded tile.  The workgroup's (x,y)
+    //    position `id.xy` corresponds to the low-resolution feature-map pixel
+    //    inside the expanded region.
+    //
+    //    All sizes are in the *current* feature-map space (e.g., 40x40 for an
+    //    expanded 32x32 tile with margin 4).
+    // -----------------------------------------------------------------------------
+
+    // (1) texel size of the **feature map** (NOT the full output image)
     float2 pt = float2(1.0 / in_width, 1.0 / in_height);
-    float2 full_opt = float2(1.0 / tileParams.fullOutWidth, 1.0 / tileParams.fullOutHeight);
-    float2 pos = (float2(tileParams.margin, tileParams.margin) + float2(id.xy) + 0.5) * pt;
+
+    // (2) texel size of the **full output image** - used when sampling the
+    //     residual (INPUT) texture.
+    float2 full_opt = float2(1.0 / tileParams.fullOutWidth,
+                              1.0 / tileParams.fullOutHeight);
+
+    // (3) Sampling position inside the feature map.
+    //     tileParams.margin is the context margin in feature-map pixels.
+    //     We offset by (margin, margin) to skip the padded border and land on
+    //     the start of the **valid interior** region.  The +0.5 ensures we sample
+    //     pixel centres.
+    float2 pos = (float2(tileParams.margin, tileParams.margin)
+                   + float2(id.xy) + 0.5) * pt;
+
+    // (4) Each workgroup thread (id.xy) produces a 2x2 block of output pixels.
+    //     `gxy` is the top-left pixel (in upscaled output coordinates) of this
+    //     thread's 2x2 quad, **relative to the tile's output region**.
     int2 gxy = int2(id.xy) * 2;
+
+    // (5) Convert to **global** output coordinates by adding the tile's offset
+    //     within the full upscaled frame.
     int2 globalOutXY = gxy + int2(tileParams.dstOffset);
+
+    // (6) The tile may be clipped at the right or bottom edge of the canvas.
+    //     `maxOut` is the exclusive upper bound for valid writes.
     int2 maxOut = int2(tileParams.dstOffset) + int2(tileParams.tileOutExtent);
 """
             else:
                 return f"""[numthreads({nt[0]},{nt[1]},{nt[2]})]
 void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
 {{
+    // -----------------------------------------------------------------------------
+    //  Coordinate mapping for the final shuffle pass (full-frame)
+    //
+    //    The last pass upsamples by 2x using a 2x2 output quad per thread.
+    //    The dispatch grid covers the *low-resolution* feature map (1:1),
+    //    and each thread writes 4 pixels into the full-size output.
+    // -----------------------------------------------------------------------------
+    
+    // (1) texel size of the low-res feature map (same as in_width/in_height)
     float2 pt = float2(GetInputPt());
+    
+    // (2) gxy is the *low-res* pixel coordinate of this thread.
+    //     Multiply by 2 to get the top-left of the 2x2 upscaled quad.
     uint2 gxy = id.xy * 2;
+    
+    // (3) Sampling position (centre of low-res pixel).
     float2 pos = ((gxy >> 1) + 0.5) * pt;
+    //     (gxy >> 1) recovers the original id.xy.
 """
         else:
             # Intermediate passes: 1x1 output per thread
             return f"""[numthreads({nt[0]},{nt[1]},{nt[2]})]
 void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
 {{
+    // -----------------------------------------------------------------------------
+    //  Coordinate mapping for intermediate passes
+    //
+    //    Each thread processes exactly one output pixel.
+    //    The dispatch grid covers the entire input texture (1:1 mapping).
+    // -----------------------------------------------------------------------------
+    
+    // (1) texel size of the **input** texture(s) for this pass.
+    //     In tile mode this is the expanded tile size (e.g., 40x40),
+    //     in full-frame mode it is the crop width/height.
     float2 pt = float2(GetInputPt());
+    
+    // (2) position of this thread’s output pixel within the input grid.
+    //     gxy is the pixel coordinate (x, y), directly from the dispatch ID.
     uint2 gxy = id.xy;
+    
+    // (3) normalized sampling position (0-1) - pixel *centre*.
+    //     pt converts pixel coordinates to UV space; +0.5 aligns to pixel centres.
     float2 pos = (gxy + 0.5) * pt;
+    
+    //   In subsequent macro O(t, x, y) we sample at (pos + float2(x,y)*pt),
+    //   which yields the centre of neighbouring pixels (x,y offsets in pixels).
 """
 
     def _extract_core_lines(self, body: str) -> List[str]:

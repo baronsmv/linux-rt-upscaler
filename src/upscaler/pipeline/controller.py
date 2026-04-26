@@ -329,7 +329,7 @@ class PipelineController:
             # Build format variables for the filename template
             now = datetime.now()
             fmt_vars = {
-                "timestamp": now,  # datetime object to supports {timestamp:%Y-%m-%d …}
+                "timestamp": now,  # datetime object to supports {timestamp:%Y-%m-%d ...}
                 "model": pipeline.config.model,
                 "width": width,
                 "height": height,

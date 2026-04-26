@@ -186,7 +186,7 @@ void vk_Device_dealloc(vk_Device *self) {
 
 /**
  * Ensure that `self` has a fully operational logical device and associated
- * resources (command pool, queue, staging pool, …). This is the only place
+ * resources (command pool, queue, staging pool, ...). This is the only place
  * where the logical device is created; it is idempotent and thread-safe
  * because it returns early when `self->device` is already valid.
  *

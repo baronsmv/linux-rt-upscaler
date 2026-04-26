@@ -29,25 +29,54 @@
 //
 // =============================================================================
 
+// -----------------------------------------------------------------------------
+//  Constant buffer - set once per stage, shared by all tiles.
+// -----------------------------------------------------------------------------
 cbuffer Constants : register(b0) {
-    uint in_width;
-    uint in_height;
-    uint out_width;
-    uint out_height;
-    float in_dx;
-    float in_dy;
-    float out_dx;
-    float out_dy;
+    // --- Feature-map dimensions for the *current* stage ---
+    uint in_width;                 // width  of the texture(s) we sample this pass
+    uint in_height;                // height of the texture(s) we sample this pass
+    //   For intermediate passes:
+    //     = expanded_tile_size (tile_size + 2 * margin).
+    //   For final pass:
+    //     = expanded_tile_size * scale (e.g., 2x or 4x tile)
+    //
+    // --- Dimensions of the full upscaled output frame ---
+    uint out_width;                // only used in final pass: = full_out_w
+    uint out_height;               // only used in final pass: = full_out_h
+    //   Intermediate passes don't read these fields; they exist for layout compatibility.
+
+    // --- Precomputed reciprocals (1.0 / dimension) ---
+    //     Avoids division in the hot loop; every thread uses the same values.
+    float in_dx;                   // = 1.0 / in_width
+    float in_dy;                   // = 1.0 / in_height
+    float out_dx;                  // = 1.0 / out_width   (final pass only)
+    float out_dy;                  // = 1.0 / out_height  (final pass only)
 };
 
+// -----------------------------------------------------------------------------
+// Push-constant block: passed from Python, contains per-tile metadata.
+// Layout must match the struct.pack("I"*8, ...) in TileProcessor.
+// -----------------------------------------------------------------------------
 struct TileParams {
-    uint inputLayer;
-    uint2 dstOffset;
-    uint fullOutWidth;
-    uint fullOutHeight;
-    uint margin;
-    uint2 validOffset;
-    uint2 tileOutExtent;
+    // ---- Layer selection (only for array textures) ----
+    uint inputLayer;               // which slice of the 2D array to read
+
+    // ---- Output location in the full upscaled frame ----
+    uint2 dstOffset;               // top-left corner of this tile’s
+                                   // output rectangle (in upscaled pixels)
+
+    // ---- Size of the *full* output frame ----
+    uint fullOutWidth;             // overall width  (upscaled pixels)
+    uint fullOutHeight;            // overall height (upscaled pixels)
+
+    // ---- Context margin (pixels in the *current* feature-map space) ----
+    uint margin;                   // for stage 1 = context_margin, for stage 2 = context_margin * 2
+
+    // ---- Dimensions of the tile’s output region ----
+    uint2 tileOutExtent;           // width and height that this tile
+                                   // actually writes to (may be smaller
+                                   // at right/bottom edges)
 };
 [[vk::push_constant]] TileParams tileParams;
 
@@ -81,9 +110,28 @@ SamplerState SL : register(s1);
 [numthreads(8,8,1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
+    // -----------------------------------------------------------------------------
+    //  Coordinate mapping for intermediate passes
+    //
+    //    Each thread processes exactly one output pixel.
+    //    The dispatch grid covers the entire input texture (1:1 mapping).
+    // -----------------------------------------------------------------------------
+    
+    // (1) texel size of the **input** texture(s) for this pass.
+    //     In tile mode this is the expanded tile size (e.g., 40x40),
+    //     in full-frame mode it is the crop width/height.
     float2 pt = float2(GetInputPt());
+    
+    // (2) position of this thread’s output pixel within the input grid.
+    //     gxy is the pixel coordinate (x, y), directly from the dispatch ID.
     uint2 gxy = id.xy;
+    
+    // (3) normalized sampling position (0-1) - pixel *centre*.
+    //     pt converts pixel coordinates to UV space; +0.5 aligns to pixel centres.
     float2 pos = (gxy + 0.5) * pt;
+    
+    //   In subsequent macro O(t, x, y) we sample at (pos + float2(x,y)*pt),
+    //   which yields the centre of neighbouring pixels (x,y offsets in pixels).
 
     V3 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2;
     V4 r0 = 0.0, r1 = 0.0, r2 = 0.0, r3 = 0.0, r4 = 0.0, r5 = 0.0, r6 = 0.0, r7 = 0.0;

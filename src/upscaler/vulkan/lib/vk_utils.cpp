@@ -651,10 +651,10 @@ void vk_cmd_transition_for_present(VkCommandBuffer cmd, VkImage image) {
  * supports `VK_EXT_descriptor_indexing`.
  *
  * @param dev          Initialised device.
- * @param cbv          Constant buffer resources (binding 0…).
- * @param srv          Shader resource resources (binding 1024…).
- * @param uav          Unordered access resources (binding 2048…).
- * @param samplers     Samplers (binding 3072…).
+ * @param cbv          Constant buffer resources (binding 0...).
+ * @param srv          Shader resource resources (binding 1024...).
+ * @param uav          Unordered access resources (binding 2048...).
+ * @param samplers     Samplers (binding 3072...).
  * @param bindless     If >0, create arrays of this size; otherwise
  *                     individual bindings.
  * @param out_layout   Receives the newly created layout.
