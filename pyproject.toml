@@ -54,10 +54,15 @@ packages = [
     "upscaler.overlay",
     "upscaler.pipeline",
     "upscaler.shaders",
+    "upscaler.srcnn",
+    "upscaler.tiles",
     "upscaler.utils",
-    "upscaler.window"
+    "upscaler.vulkan",
+    "upscaler.window",
 ]
 
 [tool.setuptools.package-data]
-"upscaler.shaders" = ["*.hlsl", "*/*/*.hlsl", "*/*/model.json"]
-"upscaler.capture" = ["*.c", "*.h", "lib/*.c", "lib/*.h"]
+"upscaler.shaders" = ["**/*.hlsl", "**/*.spv"]
+"upscaler.srcnn" = ["**/*.hlsl", "**/*.spv", "**/*.json"]
+"upscaler.capture" = ["lib/*.c", "lib/*.h"]
+"upscaler.vulkan" = ["lib/*.cpp", "lib/*.h"]

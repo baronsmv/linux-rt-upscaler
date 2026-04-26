@@ -1,5 +1,7 @@
 include README.md
 include LICENSE
-recursive-include src/upscaler/shaders *.hlsl
+recursive-include src/upscaler/shaders *.hlsl *.spv
+recursive-include src/upscaler/srcnn *.hlsl *.spv
 recursive-include src/upscaler/capture/lib *.c *.h
+recursive-include src/upscaler/vulkan/lib *.cpp *.h
 prune docs
