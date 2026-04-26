@@ -322,9 +322,6 @@ class UpscalerManager:
             self.process_full_frame()
             return
 
-        # Update the residual texture (full frame with damage regions)
-        self.tile_processor.upload_residual(frame_data, rects)
-
         # Safety check: if extraction somehow exceeded the layer capacity
         max_dirty = self.config.max_tile_layers
         if len(dirty_tiles) > max_dirty:
@@ -340,17 +337,12 @@ class UpscalerManager:
             return
 
         if self.config.double_upscale:
-            # 1. Copy the 1x residual to the full‑frame input texture
-            self.tile_processor.residual_1x.copy_to(
-                self._residual_src_tex,
-                width=self.crop_width,
-                height=self.crop_height,
-                src_x=0,
-                src_y=0,
-                dst_x=0,
-                dst_y=0,
-                src_slice=0,
-                dst_slice=0,
+            # 1. Always use the complete current frame to produce a fresh 2x residual
+            self.upload_full_frame(
+                frame_data,
+                rects,
+                use_damage_tracking=False,
+                margin=self.config.tile_context_margin,
             )
 
             # 2. Run the first SRCNN stage (upscale 1x -> 2x)
@@ -363,6 +355,9 @@ class UpscalerManager:
                 width=self.crop_width * 2,
                 height=self.crop_height * 2,
             )
+        else:
+            # Update the residual texture (full frame with damage regions)
+            self.tile_processor.upload_residual(frame_data, rects)
 
         self.tile_processor.process_tiles(dirty_tiles)
 
