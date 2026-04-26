@@ -14,7 +14,7 @@ class UpscalerManager:
     Manages SRCNN upscaling in full-frame or tile-based mode.
 
     Full-frame resources are always created to allow seamless fallback
-    when tile mode cannot handle a frame efficiently.  Tile mode is
+    when tile mode cannot handle a frame efficiently. Tile mode is
     enabled/disabled via a simple boolean flag (`config.use_tile`).
 
     In tile mode, the damage rectangles are **expanded by the context

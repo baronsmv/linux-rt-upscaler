@@ -128,7 +128,7 @@ class SwapchainManager:
 
         This must be called **before** the CPU starts writing to any GPU
         resource that is reused across frames (e.g., staging buffers,
-        input textures).  It guarantees that the GPU has finished all work
+        input textures). It guarantees that the GPU has finished all work
         related to the previous frame, including the final image copy for
         presentation.
 

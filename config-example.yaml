@@ -47,7 +47,7 @@ lanczos_blur: 1.0
 #   - "primary" : use the primary monitor (default)
 #   - "all"     : cover all connected monitors (multi-monitor spanning)
 #   - "HDMI-1", "eDP-1", ... : specific monitor name (use `xrandr` to list)
-#   - 0, 1, ...  : monitor index (0 = first)
+#   - 0, 1, ... : monitor index (0 = first)
 # Default: primary
 monitor: primary
 

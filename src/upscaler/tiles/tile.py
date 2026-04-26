@@ -17,9 +17,9 @@ class TileSpec:
     Immutable description of one tile's geometry in the final upscaled frame.
 
     The processor divides the crop area into a grid of `tile_size x tile_size`
-    cells (low-resolution).  Each cell is expanded by a context margin, upscaled
+    cells (low-resolution). Each cell is expanded by a context margin, upscaled
     through the SRCNN stages, and then the interior is written back to the full
-    output texture.  This class holds the per-tile values that are packed into
+    output texture. This class holds the per-tile values that are packed into
     the push-constant block (`TileParams` in HLSL).
     """
 
@@ -28,7 +28,7 @@ class TileSpec:
 
     # These two fields are computed during tile extraction and represent the
     # offset (in low-res pixels) from the top-left of the *expanded* tile to
-    # the start of the valid interior region.  At the image borders the
+    # the start of the valid interior region. At the image borders the
     # expansion is clamped, so this value may be smaller than `margin`.
     # The shader currently does NOT read these fields - they are kept for
     # future use or for debugging.
@@ -80,9 +80,9 @@ class TileProcessor:
     Direct tile-based upscaling processor.
 
     The processor divides the captured crop area into a grid of tiles of size
-    `tile_size`.  Each *dirty* tile (overlapping a damage rectangle) is
+    `tile_size`. Each *dirty* tile (overlapping a damage rectangle) is
     expanded by a context margin, uploaded to a dedicated layer of an
-    **array texture**, and processed by the SRCNN pipeline.  The final pass
+    **array texture**, and processed by the SRCNN pipeline. The final pass
     writes the interior region directly to the full output texture.
 
     Overview of the tile pipeline:
@@ -94,7 +94,7 @@ class TileProcessor:
 
     2. **Upload to array texture**:
        - Each expanded tile is uploaded to a separate slice of a 2D array
-         texture.  Up to `max_layers` tiles can be processed concurrently.
+         texture. Up to `max_layers` tiles can be processed concurrently.
 
     3. **SRCNN passes 1-3 (or 1-2 for single upscale)**:
        - The intermediate passes operate entirely on array textures, using the
@@ -114,7 +114,7 @@ class TileProcessor:
 
     Why a separate final pass?
        The intermediate passes use array textures for concurrency, but the
-       Lanczos presentation scaler expects a **plain 2D** texture.  The final
+       Lanczos presentation scaler expects a **plain 2D** texture. The final
        pass merges the residual frame and feature maps into a single 2D output,
        avoiding any texture type mismatch.
     """
@@ -166,7 +166,7 @@ class TileProcessor:
 
         # --- Residual texture -------------------------------------------------
         # Holds the *full* low-res frame, updated each frame with the damage
-        # regions.  This is read by the final pass to supply the YUV reference
+        # regions. This is read by the final pass to supply the YUV reference
         # for the residual addition (the “skip connection” in the shuffle).
         self.residual_tex = Texture2D(
             crop_width, crop_height, slices=1, force_array_view=True
@@ -287,7 +287,7 @@ class TileProcessor:
 
         The built-in last pass would write to the array texture `final_out_array`.
         Here we create a *custom* Compute pipeline that writes directly into
-        `self.output_texture` (a plain 2D image).  The constant buffer
+        `self.output_texture` (a plain 2D image). The constant buffer
         is populated with:
           - in_width / in_height: feature-map size for the last stage
             (expanded_tile_size x scale).
@@ -356,7 +356,7 @@ class TileProcessor:
         Update the residual (full low-res frame) with damage regions.
 
         The residual is used by the final shuffle pass to provide the
-        “original” pixel values for the YUV conversion.  Only the areas
+        “original” pixel values for the YUV conversion. Only the areas
         that have changed (expanded by the context margin) are uploaded
         to save bandwidth; if the total damaged area exceeds a threshold,
         the entire frame is uploaded.
@@ -404,7 +404,7 @@ class TileProcessor:
         Process a batch of dirty tiles.
 
         Each dirty tile contains the expanded pixel data and the valid
-        interior offset.  The tiles are uploaded to consecutive slices
+        interior offset. The tiles are uploaded to consecutive slices
         of the input array texture, and then the SRCNN stages are
         dispatched with per-tile push constants.
 
