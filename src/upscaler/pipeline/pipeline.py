@@ -231,7 +231,9 @@ class Pipeline:
         """Capture, upscale, and present a single frame."""
         # Ensure the GPU has finished the previous frame's presentation
         # This prevents write-after-read hazards on shared resources
-        if not self._swapchain_manager.wait_for_last_present():
+        if not self._swapchain_manager.wait_for_last_present(
+            timeout_ns=self.config.frame_timeout
+        ):
             logger.warning("Frame fence wait timed out - possible GPU hang?")
 
         # 1. Grab the current frame from the target window.

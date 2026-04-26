@@ -226,15 +226,36 @@ class PipelineController:
             img = Image.frombytes("RGBA", (width, height), data, "raw", "BGRA")
             img = img.convert("RGB")
 
+            # Build format variables for the filename template
+            now = datetime.now()
+            fmt_vars = {
+                "timestamp": now,  # datetime object → supports {timestamp:%Y-%m-%d …}
+                "model": pipeline.config.model,
+                "width": width,
+                "height": height,
+            }
+
+            try:
+                filename = pipeline.config.screenshot_filename.format(**fmt_vars)
+            except (KeyError, ValueError) as e:
+                logger.error(
+                    "Screenshot filename format error: %s - falling back to default", e
+                )
+                filename = f"Screenshot_{now:%Y%m%d_%H%M%S}.png"
+
             save_dir = os.path.expanduser(pipeline.config.screenshot_dir)
-            os.makedirs(save_dir, exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = os.path.join(save_dir, f"Screenshot_{timestamp}.png")
-            img.save(filename)
-            logger.info(f"Screenshot saved to {filename}")
+            full_path = os.path.join(save_dir, filename)
+
+            # Create subdirectories if the template contains path separators (e.g., {model}/…)
+            dir_part = os.path.dirname(full_path)
+            if dir_part and not os.path.exists(dir_part):
+                os.makedirs(dir_part, exist_ok=True)
+
+            img.save(full_path)
+            logger.info("Screenshot saved to %s", full_path)
             success = True
         except Exception as e:
-            logger.error(f"Failed to save screenshot: {e}", exc_info=True)
+            logger.error("Failed to save screenshot: %s", e, exc_info=True)
 
         message = "Screenshot saved" if success else "Screenshot failed"
         pipeline.osd_queue.put((message, OSD_DURATION))

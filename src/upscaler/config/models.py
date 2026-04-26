@@ -79,12 +79,23 @@ class Config:
     # Screenshots
     screenshot_dir: str = os.path.join(user_pictures_dir(), "Screenshots")
     screenshot_filename: str = "Screenshot_{timestamp:%Y%m%d_%H%M%S}"
-    screenshot_format: str = "png"
-    screenshot_jpeg_quality: int = 95
 
     # OSD
     show_osd: bool = True
     osd_duration: float = 1.5
+
+    # Vulkan
+    vulkan_present_mode: str = VulkanPresentMode.FIFO.value
+    vulkan_buffer_pool_size: int = 8
+    frame_timeout: int = 1_000_000_000
+
+    # Tile processing
+    use_tile_processing: bool = True
+    use_damage_tracking: bool = True
+    tile_size: int = 64
+    tile_context_margin: int = 16
+    max_tile_layers: int = 16
+    area_threshold: float = 0.3
 
     # Window detection
     target_delay: int = 5
@@ -92,19 +103,6 @@ class Config:
     class_timeout: int = 5
     total_timeout: int = 60
     starting_phase: int = 1
-
-    # Vulkan
-    vulkan_present_mode: str = VulkanPresentMode.FIFO.value
-    vulkan_buffer_pool_size: int = 8
-    frame_timeout_ns: int = 1_000_000_000
-
-    # Processing mode
-    use_tile_processing: bool = True
-    use_damage_tracking: bool = True
-    tile_size: int = 64
-    tile_context_margin: int = 16
-    max_tile_layers: int = 16
-    area_threshold: float = 0.3
 
     # Logging (set via flags, not directly from CLI)
     log_level: str = "WARNING"

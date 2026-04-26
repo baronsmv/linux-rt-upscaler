@@ -260,21 +260,19 @@ Default: %(default)s""",
         "--screenshot-filename",
         type=str,
         default=DEFAULT_CONFIG.screenshot_filename,
-        help="""Template for screenshot file names. Supports
-{timestamp}, {model} and standard Python format specifiers.
-Default: %(default)s""",
-    )
-    screenshot_group.add_argument(
-        "--screenshot-format",
-        choices=["png", "jpg"],
-        default=DEFAULT_CONFIG.screenshot_format,
-        help="Image format for saved screenshots. Default: %(default)s",
-    )
-    screenshot_group.add_argument(
-        "--screenshot-jpeg-quality",
-        type=int,
-        default=DEFAULT_CONFIG.screenshot_jpeg_quality,
-        help="JPEG quality (1-100) when using jpg format. Default: %(default)s",
+        help="""File name template for screenshots.
+Default: Screenshot_YYYYMMDD_HHMMSS.png (local time)
+
+Available placeholders:
+    {timestamp}  - capture time (supports strftime),
+                   e.g. {timestamp:%%Y-%%m-%%d_%%H-%%M-%%S})
+    {model}      - active upscaling model
+    {width}      - upscaled image width in pixels
+    {height}     - upscaled image height in pixels
+
+Example: "{model}/{timestamp:%%H-%%M-%%S}.png"
+         saves to "fast/14-30-22.png"
+""",
     )
 
     # ----------------------------------------------------------------------
@@ -335,9 +333,9 @@ Recommended range: 2-16, default: %(default)s
 """,
     )
     vulkan_group.add_argument(
-        "--frame-timeout-ns",
+        "--frame-timeout",
         type=int,
-        default=DEFAULT_CONFIG.frame_timeout_ns,
+        default=DEFAULT_CONFIG.frame_timeout,
         help="""Maximum time (in nanoseconds) to wait for the GPU to
 complete the previous frame before starting the next
 capture. If the GPU is still busy after this timeout, the
