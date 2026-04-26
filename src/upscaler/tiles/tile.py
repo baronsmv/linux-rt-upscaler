@@ -304,9 +304,12 @@ class TileProcessor:
         final_pass_idx = self.factory.config.passes - 1
         final_shader = self.factory.config.shaders[final_pass_idx]
 
-        # In TileProcessor._finalize_pipeline
-        feat_lr = self.expanded_tile_size * self.scale
-        pre_final = self.stages[-1] if self.double_upscale else self.stages[0]
+        if self.double_upscale:
+            feat_lr = self.expanded_tile_size * 2  # 2x upscaled tile
+            pre_final = self.stages[-1]
+        else:
+            feat_lr = self.expanded_tile_size
+            pre_final = self.stages[0]
 
         cb_data = struct.pack(
             "IIIIffff",
