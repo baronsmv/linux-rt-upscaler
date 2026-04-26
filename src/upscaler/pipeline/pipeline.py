@@ -256,7 +256,7 @@ class Pipeline:
             return
 
         # 3. Upscale based on the active mode.
-        if not self.upscaler_mgr.use_tile:  # full‑frame mode
+        if not self.upscaler_mgr.use_tile:  # full-frame mode
             self.upscaler_mgr.upload_full_frame(
                 frame=frame,
                 rects=rects,

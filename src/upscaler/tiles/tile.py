@@ -430,7 +430,7 @@ class TileProcessor:
 
     def _dispatch_double(self, specs: List[TileSpec]) -> None:
         """Two-stage dispatch with correct push constants for every pass."""
-        # Stage 1 (lr → 2×) – push constants with valid_offset_mult=1
+        # Stage 1 (lr to 2x) - push constants with valid_offset_mult=1
         gx1, gy1 = self.groups_per_stage[0]
         dispatches_s1 = []
         for i, spec in enumerate(specs):
@@ -438,7 +438,7 @@ class TileProcessor:
             for pipe in self.stages[0].pipelines:
                 dispatches_s1.append((pipe, gx1, gy1, 1, push))
 
-        # Stage 2 (2× → 4×) – push constants with valid_offset_mult=2
+        # Stage 2 (2x to 4x) - push constants with valid_offset_mult=2
         gx2, gy2 = self.groups_per_stage[1]
         dispatches_s2 = []
         for i, spec in enumerate(specs):

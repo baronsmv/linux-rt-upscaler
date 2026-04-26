@@ -313,24 +313,44 @@ Modes:
               is displayed. Higher power usage.
   immediate - Lowest latency, no V-Sync. Frames are displayed
               immediately, may cause visible tearing.
-    """,
+
+""",
     )
     vulkan_group.add_argument(
         "--vulkan-buffer-pool-size",
         type=int,
         default=DEFAULT_CONFIG.vulkan_buffer_pool_size,
-        help="""Number of pre-allocated staging buffers for partial
-texture updates. Larger values reduce allocation overhead
-during frequent small changes, but use a small amount of
-additional VRAM.
-Default: %(default)s""",
+        help="""Number of pre-allocated staging buffers used for uploading
+partial texture updates.
+
+A larger pool reduces the overhead of creating temporary
+buffers on the fly during frequent damage updates, but
+reserves a small amount of extra VRAM.
+
+Raise this value if you notice stutters when many small
+regions change rapidly.
+
+Recommended range: 2-16, default: %(default)s
+
+""",
     )
     vulkan_group.add_argument(
         "--frame-timeout-ns",
         type=int,
         default=DEFAULT_CONFIG.frame_timeout_ns,
-        help="""Nanoseconds to wait for the previous frame's GPU fence.
-Increase if you see timeout warnings. Default: %(default)s""",
+        help="""Maximum time (in nanoseconds) to wait for the GPU to
+complete the previous frame before starting the next
+capture. If the GPU is still busy after this timeout, the
+frame is skipped.
+
+Lower values reduce CPU blocking but may cause dropped
+frames under heavy load. Higher values guarantee each frame
+completes before proceeding, at the cost of potential
+pipeline stalls.
+
+Recommended range: 16666667 (1/60 s) - 1000000000 (1 s)
+Default: %(default)s
+""",
     )
 
     # ----------------------------------------------------------------------
@@ -345,8 +365,8 @@ Increase if you see timeout warnings. Default: %(default)s""",
         help="""Disable tile-based processing.
 
 Tile mode divides the frame into smaller tiles and only
-re‑processes the ones that have changed. This is ideal for
-mostly static content (text editors, visual novels)
+re-processes the ones that have changed. This is ideal for
+mostly static content (e.g., text editors, visual novels)
 where only small regions are updated each frame.
 
 When disabled, the whole frame is upscaled in one pass,
@@ -380,10 +400,10 @@ visual glitches.
 
 Small tiles track changes more precisely and process less
 redundant data, but add CPU overhead during extraction.
-Large tiles reduce CPU work but cause more over‑processing.
+Large tiles reduce CPU work but cause more over-processing.
 
 Multiples of 32 work best with GPU workgroups.
-Recommended range: 32‑128, default %(default)s.
+Recommended range: 32-128, default: %(default)s
 
 """,
     )
@@ -396,11 +416,13 @@ Recommended range: 32‑128, default %(default)s.
 
 Provides the neural network with surrounding context to
 avoid artifacts at tile boundaries.
-Larger margins improve boundary quality but increase the
-amount of data processed per tile.
 
-More complex models benefit from higher values.
-Recommended range: 4‑24, default %(default)s.
+Larger margins improve boundary quality but increase the
+amount of data processed per tile. More complex models
+benefit from higher values because their receptive field
+is larger and they use deeper convolution stacks.
+
+Recommended range: 4-24, default: %(default)s
 
 """,
     )
@@ -412,14 +434,14 @@ Recommended range: 4‑24, default %(default)s.
         help="""Maximum number of tiles processed per frame in tile mode.
 
 When the count of dirty tiles exceeds this limit, the
-pipeline falls back to full‑frame processing to avoid
+pipeline falls back to full-frame processing to avoid
 excessive GPU dispatches.
 
 Higher values tolerate more scattered changes, but each
 tile adds a GPU dispatch and may eventually hurt
 performance.
 
-Recommended range: 4‑32, default %(default)s.
+Recommended range: 4-32, default: %(default)s
 
 """,
     )
@@ -428,15 +450,15 @@ Recommended range: 4‑32, default %(default)s.
         "--area-threshold",
         type=float,
         default=DEFAULT_CONFIG.area_threshold,
-        help="""Fraction of the window area (0.0–1.0) that, when dirty,
-forces a fallback to full‑frame processing in tile mode.
+        help="""Fraction of the window area (0.0-1.0) that, when dirty,
+forces a fallback to full-frame processing in tile mode.
 
 Smaller values (e.g., 0.15) fall back earlier, preventing
 too many tiny tile dispatches. Larger values (e.g., 0.5)
-try tile mode more aggressively. 0.0 always uses full‑frame
+try tile mode more aggressively. 0.0 always uses full-frame
 for dirty frames; 1.0 never falls back.
 
-Recommended range: 0.15‑0.5, default %(default)s.
+Recommended range: 0.15-0.5, default: %(default)s
 """,
     )
 

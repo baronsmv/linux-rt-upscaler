@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Any, Optional, Dict, Tuple, Callable
+from typing import Any, Optional, Dict, Tuple
 
 from PySide6.QtGui import QColor
 
@@ -128,14 +128,23 @@ def validate_color(color_str: str, _: str) -> None:
         exit(1)
 
 
-_VALIDATORS: Dict[str, Tuple[Callable, str, Any]] = {
+_VALIDATORS: Dict[str, Tuple] = {
+    "lanczos_blur": (validate_number, "lanczos_blur", 0),
+    "scale_factor": (validate_number, "scale_factor", 0, None, False),
     "output_geometry": (validate_geometry, "output_geometry"),
     "background_color": (validate_color, "background_color"),
-    "scale_factor": (validate_number, "scale_factor", 0, None, False, True),
     "crop_top": (validate_number, "crop_top", 0),
     "crop_bottom": (validate_number, "crop_bottom", 0),
     "crop_left": (validate_number, "crop_left", 0),
     "crop_right": (validate_number, "crop_right", 0),
+    "screenshot_jpeg_quality": (validate_number, "screenshot_jpeg_quality", 0, 100),
+    "osd_duration": (validate_number, "osd_duration", 0),
+    "vulkan_buffer_pool_size": (validate_number, "vulkan_buffer_pool_size", 0),
+    "frame_timeout_ns": (validate_number, "frame_timeout_ns", 0),
+    "tile_size": (validate_number, "tile_size", 0, None, False),
+    "tile_context_margin": (validate_number, "tile_context_margin", 0),
+    "max_tile_layers": (validate_number, "max_tile_layers", 0),
+    "area_threshold": (validate_number, "area_threshold", 0, 1),
     "target_delay": (validate_number, "target_delay", 0),
     "pid_timeout": (validate_number, "pid_timeout", 0),
     "class_timeout": (validate_number, "class_timeout", 0),

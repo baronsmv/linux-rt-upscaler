@@ -11,15 +11,15 @@ logger = logging.getLogger(__name__)
 
 class UpscalerManager:
     """
-    Manages SRCNN upscaling in full‑frame or tile‑based mode.
+    Manages SRCNN upscaling in full-frame or tile-based mode.
 
-    Full‑frame resources are always created to allow seamless fallback
+    Full-frame resources are always created to allow seamless fallback
     when tile mode cannot handle a frame efficiently.  Tile mode is
     enabled/disabled via a simple boolean flag (`config.use_tile`).
 
     In tile mode, the damage rectangles are **expanded by the context
-    margin** before dirty‑tile detection, so that any change inside the
-    convolutional receptive field triggers reprocessing – eliminating
+    margin** before dirty-tile detection, so that any change inside the
+    convolutional receptive field triggers reprocessing - eliminating
     artifact seams.
     """
 
@@ -127,7 +127,7 @@ class UpscalerManager:
             )
 
     def _init_tile_mode(self) -> None:
-        """Create the tile processor and rebind the full‑frame output."""
+        """Create the tile processor and rebind the full-frame output."""
         self.tile_processor = TileProcessor(
             config=self.config,
             crop_width=self.crop_width,
