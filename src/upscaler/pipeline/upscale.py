@@ -343,8 +343,6 @@ class UpscalerManager:
             self.full_stages[0].pipelines[0].dispatch(
                 gx, gy, 1
             )  # only pass 1, not all passes
-            # Actually we need to run all passes of stage 1? No, stage 1 consists of several passes.
-            # We must dispatch the entire stage's sequence. We can use the SRCNN's dispatch method.
             self.full_stages[0].dispatch(gx, gy, 1)  # runs all pipelines of stage 1
             # 3. Copy the 2x result to the tile processor's 2x residual
             self._residual_dst_tex.copy_to(
