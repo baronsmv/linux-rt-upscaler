@@ -136,6 +136,11 @@ class UpscalerManager:
         self.output = self.tile_processor.output_texture
         self._rebind_full_frame_output()
 
+        if self.config.double_upscale:
+            self._residual_upscale_groups = self.full_groups[0]  # (gx, gy) for stage 1
+            self._residual_src_tex = self.input  # full‑frame 1x input
+            self._residual_dst_tex = self.full_stages[0].outputs["output"]  # 2x inter
+
     def _rebind_full_frame_output(self) -> None:
         """Update the last SRCNN stage to write into the current output texture."""
         if not self.full_stages:
@@ -319,6 +324,34 @@ class UpscalerManager:
             )
             self.process_full_frame()
             return
+
+        if self.config.double_upscale:
+            # 1. Copy the 1x residual to the full‑frame input texture
+            self.tile_processor.residual_1x.copy_to(
+                self._residual_src_tex,
+                width=self.crop_width,
+                height=self.crop_height,
+                src_x=0,
+                src_y=0,
+                dst_x=0,
+                dst_y=0,
+                src_slice=0,
+                dst_slice=0,
+            )
+            # 2. Run the first SRCNN stage (upscale 1x -> 2x)
+            gx, gy = self._residual_upscale_groups
+            self.full_stages[0].pipelines[0].dispatch(
+                gx, gy, 1
+            )  # only pass 1, not all passes
+            # Actually we need to run all passes of stage 1? No, stage 1 consists of several passes.
+            # We must dispatch the entire stage's sequence. We can use the SRCNN's dispatch method.
+            self.full_stages[0].dispatch(gx, gy, 1)  # runs all pipelines of stage 1
+            # 3. Copy the 2x result to the tile processor's 2x residual
+            self._residual_dst_tex.copy_to(
+                self.tile_processor.residual_2x,
+                width=self.crop_width * 2,
+                height=self.crop_height * 2,
+            )
 
         self.tile_processor.process_tiles(dirty_tiles)
 

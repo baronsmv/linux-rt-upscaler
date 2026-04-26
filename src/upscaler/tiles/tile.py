@@ -168,8 +168,11 @@ class TileProcessor:
         # Holds the *full* low-res frame, updated each frame with the damage
         # regions. This is read by the final pass to supply the YUV reference
         # for the residual addition (the “skip connection” in the shuffle).
-        self.residual_tex = Texture2D(
+        self.residual_1x = Texture2D(
             crop_width, crop_height, slices=1, force_array_view=True
+        )
+        self.residual_2x = (
+            Texture2D(crop_width * 2, crop_height * 2) if self.double_upscale else None
         )
         self.residual_staging = Buffer(
             crop_width * crop_height * 4, heap_type=HEAP_UPLOAD
@@ -320,8 +323,13 @@ class TileProcessor:
         final_cb = Buffer(len(cb_data))
         final_cb.upload(cb_data)
 
+        # Choose the right residual texture for the final pass
+        residual_for_final = (
+            self.residual_2x if self.double_upscale else self.residual_1x
+        )
+
         # SRV list: residual texture + the feature maps from the last stage.
-        srv_list = [self.residual_tex]
+        srv_list = [residual_for_final]
         for i in range(self.factory.config.num_textures):
             srv_list.append(pre_final.outputs[f"t{i}"])
 
@@ -386,11 +394,11 @@ class TileProcessor:
                         src_start : src_start + ew * 4
                     ]
                 uploads.append((bytes(rect_data), ex, ey, ew, eh, 0))
-            self.residual_tex.upload_subresources(uploads)
+            self.residual_1x.upload_subresources(uploads)
         else:
             # Full upload.
             frame_bytes = bytes(frame)
-            self.residual_tex.upload_subresources(
+            self.residual_1x.upload_subresources(
                 [(frame_bytes, 0, 0, self.crop_width, self.crop_height, 0)]
             )
 
