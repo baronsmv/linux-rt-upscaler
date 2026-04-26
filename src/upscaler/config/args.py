@@ -100,8 +100,9 @@ screens (4k, 1440p) or low-resolution sources""",
         "--lanczos-blur",
         type=float,
         default=DEFAULT_CONFIG.lanczos_blur,
-        help="""Sharpness of the Lanczos scaling.
-1.0 = standard, <1 sharper, >1 softer.  Default: %(default)s""",
+        help="""Lanczos kernel blur factor. Values below 1.0 increase
+sharpness and ringing; values above 1.0 smooth the result.
+Recommended range: 0.8 - 1.2, default: %(default)s""",
     )
 
     # ----------------------------------------------------------------------
@@ -253,7 +254,7 @@ Note: RGB values must be integers 0-255.""",
         "--screenshot-dir",
         type=str,
         default=DEFAULT_CONFIG.screenshot_dir,
-        help="""Directory to save screenshots."
+        help="""Directory to save screenshots.
 Default: %(default)s""",
     )
     screenshot_group.add_argument(
@@ -261,17 +262,17 @@ Default: %(default)s""",
         type=str,
         default=DEFAULT_CONFIG.screenshot_filename,
         help="""File name template for screenshots.
-Default: Screenshot_YYYYMMDD_HHMMSS.png (local time)
+Default: Screenshot_{timestamp:%%Y%%m%%d_%%H%%M%%S}.png
 
 Available placeholders:
-    {timestamp}  - capture time (supports strftime),
-                   e.g. {timestamp:%%Y-%%m-%%d_%%H-%%M-%%S})
-    {model}      - active upscaling model
-    {width}      - upscaled image width in pixels
-    {height}     - upscaled image height in pixels
+  {timestamp}  - capture time (supports strftime,
+                 e.g. {timestamp:%%Y-%%m-%%d_%%H-%%M-%%S})
+  {model}      - active upscaling model
+  {width}      - upscaled image width in pixels
+  {height}     - upscaled image height in pixels
 
 Example: "{model}/{timestamp:%%H-%%M-%%S}.png"
-         saves to "fast/14-30-22.png"
+saves to "fast/14-30-22.png"
 """,
     )
 

@@ -86,7 +86,7 @@ class Config:
 
     # Screenshots
     screenshot_dir: str = os.path.join(user_pictures_dir(), "Screenshots")
-    screenshot_filename: str = "Screenshot_{timestamp:%Y%m%d_%H%M%S}"
+    screenshot_filename: str = "Screenshot_{timestamp:%Y%m%d_%H%M%S}.png"
 
     # OSD
     show_osd: bool = True

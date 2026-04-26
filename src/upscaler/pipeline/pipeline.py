@@ -115,9 +115,7 @@ class Pipeline:
             content_width=overlay.content_width,
             content_height=overlay.content_height,
             scale_mode=overlay.scale_mode,
-            background_color=config.background_color,
-            offset_x=config.offset_x,
-            offset_y=config.offset_y,
+            config=self.config,
             osd_manager=self.osd,
             swapchain_manager=self._swapchain_manager,
         )

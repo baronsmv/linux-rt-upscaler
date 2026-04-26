@@ -1,13 +1,13 @@
 import logging
 from typing import List, TYPE_CHECKING
 
+from ..config import Config
 from ..shaders import LanczosScaler
 from ..utils import calculate_scaling_rect
 from ..vulkan import Texture2D
 
 if TYPE_CHECKING:
     from .osd import OSDManager
-    from ..config import BackgroundColor
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,7 @@ class Presenter:
         content_width: int,
         content_height: int,
         scale_mode: str,
-        background_color: "BackgroundColor",
-        offset_x: int,
-        offset_y: int,
+        config: Config,
         osd_manager: "OSDManager",
         swapchain_manager,
     ) -> None:
@@ -67,9 +65,10 @@ class Presenter:
         self.content_width = content_width
         self.content_height = content_height
         self.scale_mode = scale_mode
-        self.background_color = background_color
-        self.offset_x = offset_x
-        self.offset_y = offset_y
+        self.background_color = config.background_color
+        self.offset_x = config.offset_x
+        self.offset_y = config.offset_y
+        self.lanczos_blur = config.lanczos_blur
         self.osd = osd_manager
         self.swapchain = swapchain_manager
 
@@ -137,7 +136,7 @@ class Presenter:
             dst_y,
             r_w,
             r_h,
-            1.0,  # blur factor (1.0 = standard Lanczos2)
+            blur=self.lanczos_blur,  # blur factor (1.0 = standard Lanczos2)
         )
 
     def present(self, wait_for_fence: bool = False) -> None:

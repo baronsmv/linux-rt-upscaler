@@ -3,41 +3,58 @@
 # Default location: ~/.config/linux-rt-upscaler/config.yaml
 # ------------------------------------------------------------------------------
 
-# All options are optional. Missing fields will fall back to their default
-# values (listed below). The final configuration is built in this order:
+# All options are optional. Missing fields fall back to their default values
+# (listed below). The final configuration is built in this order:
 #   1. Application defaults
-#   2. General options defined in this file (top level)
-#   3. Profile options (if a profile is selected manually with -p or matches
-#      the window title automatically)
+#   2. Top-level options defined in this file
+#   3. Profile-specific options (if a profile is selected manually with -p or
+#      matches the target window title automatically)
 #   4. Command-line overrides (e.g., --model 4x24)
+#
+# Any option can be overridden inside a profile (see `profiles` section at the
+# bottom of this file). Hotkeys cannot be changed per profile.
 
 
 # ------------------------------------------------------------------------------
-# General Options (applied to all windows unless overridden by a profile)
+# General Options
 # ------------------------------------------------------------------------------
 
-# Upscaling model (trade-off between quality and performance).
-# Available models (ordered from highest to lowest quality):
-#   - 8x32, 4x32, 4x24, 4x16, 4x12, 3x12, fast, faster, veryfast
+# Upscaling model (trade-off between visual quality and GPU load).
+# Available models, ordered from highest to lowest quality:
+#   8x32, 4x32, 4x24, 4x16, 4x12, 3x12, fast, faster, veryfast
 # Default: fast
 model: fast
 
-# Perform two sequential 2x upscales (total 4x) for very high-resolution screens
-# or low-resolution sources. Enabling this increases GPU load.
+# Perform two sequential 2x upscales (total 4x) instead of a single 2x pass.
+# Useful for very high-resolution screens (4K) or low-resolution sources.
+# Enabling this increases GPU and VRAM usage.
 # Default: false
 double_upscale: false
 
-# Monitor selection.
-#   - "primary"         : use the primary monitor (default)
-#   - "all"             : cover all monitors (multi-monitor spanning)
-#   - "HDMI-1", "eDP-1" : specific monitor name (use xrandr to list names)
-#   - 0, 1, …           : monitor index (0 = first)
+# Lanczos kernel blur factor used during the final scaling pass.
+# - 1.0 is the standard Lanczos-2 (sharp, mild ringing).
+# - Values below 1.0 increase sharpness and ringing.
+# - Values above 1.0 produce a smoother, softer image.
+# Recommended range: 0.8 - 1.2
+# Default: 1.0
+lanczos_blur: 1.0
+
+# ------------------------------------------------------------------------------
+# Monitor / Display
+# ------------------------------------------------------------------------------
+
+# Monitor to cover.
+#   - "primary" : use the primary monitor (default)
+#   - "all"     : cover all connected monitors (multi-monitor spanning)
+#   - "HDMI-1", "eDP-1", … : specific monitor name (use `xrandr` to list)
+#   - 0, 1, …  : monitor index (0 = first)
 # Default: primary
 monitor: primary
 
-# Override the automatically detected Wayland scale factor (e.g., 1.5 for 150%).
-# This is required when monitor is set to "all" because scaling cannot be
+# Override the automatically detected Wayland scale factor.
+# This is required when `monitor` is set to "all" because scaling cannot be
 # detected reliably across multiple monitors.
+# Example: 1.5 for 150% scaling.
 # Default: null (auto-detected)
 scale_factor: null
 
@@ -46,27 +63,29 @@ scale_factor: null
 # ------------------------------------------------------------------------------
 
 # How the upscaled content is placed inside the overlay window.
-# Can be a simple mode or a precise dimension. Examples:
-#   - "fit"      : letterboxed, preserve aspect ratio (default)
-#   - "stretch"  : fill the window, ignore aspect ratio
-#   - "cover"    : fill the window, crop if necessary
-#   - "1920x1080": fit inside 1920x1080
-#   - "1920x1080!": stretch to exactly 1920x1080
-#   - "1920x1080^": cover a 1920x1080 area (crop)
-#   - "50%"      : fit to 50% of the monitor
-#   - "50%!"     : stretch to 50% of the monitor
-#   - "1920x"    : fixed width 1920, height proportional (fit)
-#   - "1920x!"   : fixed width 1920, height proportional (stretch)
-#   - "x1080"    : fixed height 1080, width proportional (fit)
-#   - "x1080!"   : fixed height 1080, width proportional (stretch)
+# Recognised formats:
+#   - "fit"        : letterboxed, preserve aspect ratio (default)
+#   - "stretch"    : fill the overlay window, ignore aspect ratio
+#   - "cover"      : fill the window, crop if necessary
+#   - "1920x1080"  : fit inside a 1920x1080 area
+#   - "1920x1080!" : stretch to exactly 1920x1080
+#   - "1920x1080^" : cover a 1920x1080 area (crop)
+#   - "50%"        : use 50% of the monitor, content fitted
+#   - "50%!"       : use 50% of the monitor, content stretched
+#   - "1920x"      : fixed width 1920, height proportional (fit)
+#   - "1920x!"     : fixed width 1920, height proportional (stretch)
+#   - "x1080"      : fixed height 1080, width proportional (fit)
+#   - "x1080!"     : fixed height 1080, width proportional (stretch)
 # Default: fit
 output_geometry: fit
 
-# Overlay window behaviour.
-#   - "always-on-top"   : floating, unmanaged overlay that stays above all windows
-#                         (mouse events are forwarded to the target window).
-#   - "top-transparent" : same as above but click-through.
-#   - "fullscreen"      : fullscreen borderless window (covers the whole monitor).
+# Overlay window behavior.
+#   - "always-on-top"   : floating, unmanaged overlay above all other windows.
+#                         Mouse events are forwarded to the target window.
+#   - "top-transparent" : same as above, but click-through (mouse events pass
+#                         to the window below).
+#   - "fullscreen"      : borderless fullscreen window that covers the entire
+#                         monitor. Mouse events are forwarded.
 #   - "windowed"        : normal window with decorations, fixed size.
 # Default: always-on-top
 overlay_mode: always-on-top
@@ -80,14 +99,16 @@ crop_left: 0
 crop_right: 0
 
 # Horizontal / vertical offset (in pixels) from the centered position.
-# Positive moves right/down, negative moves left/up.
+# Positive values move right / down; negative values move left / up.
 # Default: 0
 offset_x: 0
 offset_y: 0
 
-# Color of letterbox / pillarbox bars. Can be a CSS color name or hex code.
-# Default: black
-background_color: "#000000"
+# Color of letterbox / pillarbox bars. Accepts CSS color names or hex codes.
+# Examples:
+#   "black", "#000000", "red", "#FF0000", "rgba(0,0,0,0.8)", "transparent"
+# Default: "#000000"
+background_color: black
 
 # ------------------------------------------------------------------------------
 # Interaction Options
@@ -97,8 +118,8 @@ background_color: "#000000"
 # Default: false
 follow_focus: false
 
-# When the target window loses focus, pause frame processing and hide the overlay
-# (only applies when overlay_mode is "always-on-top" or "top-transparent").
+# When the target window loses focus, pause frame processing and hide the
+# overlay. Only active when overlay_mode is "always-on-top" or "top-transparent".
 # Default: true
 pause_on_focus_loss: true
 
@@ -110,30 +131,125 @@ pause_on_focus_loss: true
 # Default: ~/Pictures/Screenshots (localized)
 screenshot_dir: "~/Pictures/Screenshots"
 
+# File name template for screenshots. Supports Python format placeholders:
+#   {timestamp}  - capture time (may include strftime format specs)
+#   {model}      - active upscaling model name
+#   {width}      - upscaled image width in pixels
+#   {height}     - upscaled image height in pixels
+# Example:
+#   "{model}/{timestamp:%Y-%m-%d_%H-%M-%S}.png"
+#    saves at "fast/2025-06-01_14-30-22.png"
+# If the resulting filename has no recognized image extension (.png/.jpg/etc.),
+# .png is appended automatically.
+# Default: Screenshot_{timestamp:%Y%m%d_%H%M%S}.png
+screenshot_filename: "Screenshot_{timestamp:%Y%m%d_%H%M%S}.png"
+
+# ------------------------------------------------------------------------------
+# On-Screen Display (OSD)
+# ------------------------------------------------------------------------------
+
+# Show on-screen status messages (model change, geometry change, zoom, offset,
+# screenshot confirmation).
+# Default: true
+show_osd: true
+
+# How long (in seconds) OSD messages remain visible before fading.
+# Default: 1.5
+osd_duration: 1.5
+
 # ------------------------------------------------------------------------------
 # Vulkan Performance Options (Advanced)
 # ------------------------------------------------------------------------------
-# These options control low-level Vulkan behavior. Adjust them only if you
-# experience performance issues or want to fine-tune power/performance trade-offs.
 
-# Vulkan presentation mode:
-#   - "fifo"      : V-Sync on. Lowest power, no tearing. (Default)
-#   - "mailbox"   : No V-Sync, tear-free, lower latency, higher GPU usage.
-#   - "immediate" : No V-Sync, lowest latency, may tear.
+# Vulkan presentation mode.
+#   - "fifo"      : V-Sync on. Limits FPS to display refresh rate.
+#                   Lowest power consumption, no tearing. (Default)
+#   - "mailbox"   : Tear-free, lower latency. GPU renders as fast as possible;
+#                   only the latest complete frame is shown. Higher power usage.
+#   - "immediate" : Lowest latency, no V-Sync. Frames are displayed immediately;
+#                   may cause visible tearing.
 # Default: fifo
 vulkan_present_mode: fifo
 
-# Number of pre-allocated staging buffers (each 2 MB) used for partial texture
-# uploads. Increase this if you notice stuttering during heavy partial updates
-# (e.g., rapid typing in a large window). Each buffer uses ~2 MB VRAM.
+# Number of reusable staging buffers (each ~2 MB) for partial texture uploads.
+# A larger pool reduces the overhead of allocating temporary buffers during
+# frequent damage updates, preventing micro-stutters. Each additional buffer
+# consumes about 2 MB of VRAM.
+# Raise this value if you notice stutters when many small regions change rapidly.
+# Recommended range: 2 - 16
 # Default: 8
 vulkan_buffer_pool_size: 8
+
+# Maximum time (in nanoseconds) to wait for the GPU to finish the previous frame
+# before starting the next capture. If the GPU is still busy after this timeout,
+# the frame is skipped to avoid blocking the pipeline.
+# Lower values reduce CPU blocking but may cause dropped frames under heavy load.
+# Higher values guarantee each frame completes, at the cost of potential stalls.
+# Recommended range: 16666667 (1/60s) - 1000000000 (1s)
+# Default: 1000000000 (1 second)
+frame_timeout: 1000000000
+
+# ------------------------------------------------------------------------------
+# Tile Processing Options (Advanced)
+# ------------------------------------------------------------------------------
+
+# Enable or disable tile-based processing.
+# Tile mode divides the frame into smaller tiles and only re-processes the ones
+# that have changed. This is ideal for mostly static content (text editors,
+# visual novels). Disabling it forces whole-frame upscaling, which is better
+# for video or rapidly changing scenes and eliminates any possibility of
+# tile-boundary artifacts.
+# Default: true
+use_tile_processing: true
+
+# Use damage tracking (compositor-provided dirty rectangles) to upload only
+# changed regions of the captured frame. When disabled, the entire frame is
+# uploaded every time, increasing PCIe bandwidth but guaranteeing the GPU has
+# the full image.
+# Keep enabled unless you suspect missing updates cause visual glitches.
+# Default: true
+use_damage_tracking: true
+
+# Interior size of each tile (in pixels). The actual tile processed includes an
+# extra border defined by `tile_context_margin`.
+# Small tiles track changes more precisely but increase CPU extraction overhead.
+# Large tiles reduce CPU work but cause more over-processing.
+# Multiples of 32 align well with GPU workgroups.
+# Recommended range: 32 - 128
+# Default: 64
+tile_size: 64
+
+# Extra border pixels added around each tile before processing. Provides the
+# neural network with surrounding context, preventing artefacts at tile
+# boundaries. Larger margins improve boundary quality but increase the amount
+# of data processed per tile. More complex models benefit from higher values
+# because their receptive field is larger.
+# Recommended range: 4 - 24
+# Default: 16
+tile_context_margin: 16
+
+# Maximum number of tiles processed in a single frame. When the count of dirty
+# tiles exceeds this limit, the pipeline falls back to full-frame processing
+# to avoid excessive GPU dispatches.
+# Recommended range: 4 - 32
+# Default: 16
+max_tile_layers: 16
+
+# Fraction of the window area (0.0-1.0) that, when dirty, forces a fallback to
+# full-frame processing even if the number of dirty tiles is below the layer
+# limit.
+# Smaller values (e.g., 0.15) fall back earlier, preventing many tiny tile
+# dispatches. Larger values (e.g., 0.5) try tile mode more aggressively.
+# 0.0 always uses full-frame for dirty frames; 1.0 never falls back by area.
+# Recommended range: 0.15 - 0.5
+# Default: 0.3
+area_threshold: 0.3
 
 # ------------------------------------------------------------------------------
 # Window Detection Timeouts (used when launching a program)
 # ------------------------------------------------------------------------------
 
-# Seconds to wait before capturing the active window.
+# Seconds to wait before capturing the active window after program launch.
 # Default: 5
 target_delay: 5
 
@@ -145,7 +261,7 @@ pid_timeout: 10
 # Default: 10
 class_timeout: 10
 
-# Total time before giving up window detection.
+# Total time before giving up window detection entirely.
 # Default: 30
 total_timeout: 30
 
@@ -168,37 +284,60 @@ log_file: null
 # ------------------------------------------------------------------------------
 # Hotkeys (Keyboard Shortcuts)
 # ------------------------------------------------------------------------------
-
 # Modifier keys: Ctrl, Alt, Shift, Super (Windows key).
 # Key names: letters A-Z, numbers 0-9, F1-F12, Space, Return, Tab, Escape,
 #            Left, Right, Up, Down.
+# Special key names for symbols (US layout):
+#   LeftBracket, RightBracket, Backslash, Semicolon, Apostrophe,
+#   Comma, Period, Slash, Plus, Minus, Equal, Grave
 # All hotkeys are global and work even when the overlay is not focused.
-hotkeys:
-  toggle_scaling: "Alt+Shift+S"   # Show/hide overlay
-  cycle_model: "Alt+Shift+M"      # Switch to next upscaling model
-  cycle_geometry: "Alt+Shift+G"   # Cycle output geometry (fit -> stretch -> cover)
-  screenshot: "Alt+Shift+P"       # Take a lossless screenshot (pre-Lanczos)
 
+hotkeys:
+  # Show / hide the overlay (toggle pause)
+  toggle_scaling: "Alt+Shift+S"
+
+  # Cycle to the next upscaling model (e.g., fast -> faster -> ...)
+  cycle_model: "Alt+Shift+M"
+
+  # Cycle output geometry mode: fit -> stretch -> cover
+  cycle_geometry: "Alt+Shift+G"
+
+  # Take a lossless screenshot of the fully upscaled output
+  screenshot: "Alt+Shift+P"
+
+  # Zoom in / out (cycle through pre-defined zoom levels: 50%, 75%, 100%, ...)
+  zoom_in: "Alt+Shift+Plus"
+  zoom_out: "Alt+Shift+Minus"
+
+  # Pan the upscaled content (offset)
+  offset_up: "Alt+Shift+Up"
+  offset_down: "Alt+Shift+Down"
+  offset_left: "Alt+Shift+Left"
+  offset_right: "Alt+Shift+Right"
+
+  # Gracefully exit the application
+  exit_app: "Alt+Shift+Escape"
 
 # ------------------------------------------------------------------------------
 # Profiles
 # ------------------------------------------------------------------------------
 # Profiles allow you to define window-specific settings. They are applied:
-#   - Manually via the -p/--profile CLI argument, or
+#   - Manually via the `-p` / `--profile` CLI argument, or
 #   - Automatically when the target window title matches a match rule.
 #
-# Inside each profile, you can override any of the options listed above
-# (model, crop, output_geometry, etc.). Hotkeys cannot be changed per profile.
+# Inside each profile you can override any of the options listed above (except
+# hotkeys). Nested dictionaries (e.g., hotkeys) are merged with the top-level
+# ones, so you can add or override individual keys.
 
 profiles:
 
-  # Example of a manually selected profile (use -p fata_morgana)
+  # Example of a manually selected profile (use `-p fata_morgana`)
   fata_morgana:
-    # Automatic matching rules (optional - if omitted, the profile is manual only)
+    # Match rules (optional - if omitted, the profile is manual only).
     match:
       # Exact title match (case-insensitive)
       title: "The House in Fata Morgana"
-      # Substring match (case-insensitive)
+      # Substring match
       title_contains: "Fata Morgana"
       # Title starts with this prefix
       title_startswith: "The House"

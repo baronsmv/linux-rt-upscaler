@@ -346,10 +346,19 @@ class PipelineController:
             save_dir = os.path.expanduser(pipeline.config.screenshot_dir)
             full_path = os.path.join(save_dir, filename)
 
-            # Create subdirectories if the template contains path separators (e.g., {model}/…)
+            # Create subdirectories if the template contains path separators (e.g., {model}/...)
             dir_part = os.path.dirname(full_path)
             if dir_part and not os.path.exists(dir_part):
                 os.makedirs(dir_part, exist_ok=True)
+
+            # Ensure filename has a recognized image extension
+            if not os.path.splitext(full_path)[1].lower() in (
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".bmp",
+            ):
+                full_path += ".png"
 
             img.save(full_path)
             logger.info("Screenshot saved to %s", full_path)
