@@ -34,33 +34,34 @@ extern PyObject *vk_HeapError;
 //  PyBufferGuard - move constructor, move assignment, acquire, release
 // =============================================================================
 
-PyBufferGuard::PyBufferGuard(PyBufferGuard&& other) noexcept
+PyBufferGuard::PyBufferGuard(PyBufferGuard &&other) noexcept
     : view(other.view), owned(other.owned) {
-    other.owned = false;
+  other.owned = false;
 }
 
-PyBufferGuard& PyBufferGuard::operator=(PyBufferGuard&& other) noexcept {
-    if (this != &other) {
-        if (owned) PyBuffer_Release(&view);
-        view   = other.view;
-        owned  = other.owned;
-        other.owned = false;
-    }
-    return *this;
+PyBufferGuard &PyBufferGuard::operator=(PyBufferGuard &&other) noexcept {
+  if (this != &other) {
+    if (owned)
+      PyBuffer_Release(&view);
+    view = other.view;
+    owned = other.owned;
+    other.owned = false;
+  }
+  return *this;
 }
 
 bool PyBufferGuard::acquire(PyObject *obj, int flags) {
-    if (PyObject_GetBuffer(obj, &view, flags) < 0)
-        return false;
-    owned = true;
-    return true;
+  if (PyObject_GetBuffer(obj, &view, flags) < 0)
+    return false;
+  owned = true;
+  return true;
 }
 
 void PyBufferGuard::release() {
-    if (owned) {
-        PyBuffer_Release(&view);
-        owned = false;
-    }
+  if (owned) {
+    PyBuffer_Release(&view);
+    owned = false;
+  }
 }
 
 // =============================================================================

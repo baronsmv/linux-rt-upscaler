@@ -9,6 +9,7 @@
  *   - `upload_subresources()`  - host to device (texture rectangles).
  *   - `download()`             - device to host (texture only).
  *   - `copy_to()`              - device to device (buffer or image).
+ *   - `batch_copy_to_array()`  - copy tiles to Texture2DArray slices.
  *   - `clear_color()`          - fill an image with a solid RGBA colour.
  *
  * All methods are **synchronous**: they record, submit, and wait for a
@@ -516,6 +517,139 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
   return ok ? Py_None : nullptr;
 }
 
+/**
+ * Copy a list of rectangular regions from this image to slices of a 2D array.
+ *
+ * The source image must be a 2D image (single slice) in
+ * VK_IMAGE_LAYOUT_GENERAL. The destination must be a 2D array image.  All
+ * copies are executed in a single command buffer with appropriate image layout
+ * transitions.
+ *
+ * Args (Python):
+ *   dst (vk_Resource): Target 2D array image.
+ *   regions (list of 5‑tuples): Each tuple is (src_x, src_y, dst_slice,
+ *                                 copy_width, copy_height).
+ *
+ * Returns: None on success, or raises an exception.
+ */
+PyObject *vk_Resource_batch_copy_to_array(vk_Resource *self, PyObject *args) {
+  PyObject *dst_obj;
+  PyObject *regions_list;
+  if (!PyArg_ParseTuple(args, "OO!", &dst_obj, &PyList_Type, &regions_list))
+    return nullptr;
+
+  // Validate destination
+  if (!PyObject_TypeCheck(dst_obj, &vk_Resource_Type)) {
+    PyErr_SetString(PyExc_TypeError, "dst must be a Resource");
+    return nullptr;
+  }
+  vk_Resource *dst = reinterpret_cast<vk_Resource *>(dst_obj);
+  vk_Device *dev = self->py_device;
+  if (dst->py_device != dev) {
+    PyErr_SetString(vk_ResourceError, "Resources belong to different devices");
+    return nullptr;
+  }
+  if (!self->image || !dst->image) {
+    PyErr_SetString(vk_ResourceError,
+                    "Both source and destination must be images");
+    return nullptr;
+  }
+  if (self->slices != 1) {
+    PyErr_SetString(vk_ResourceError, "Source image must be a single 2D image");
+    return nullptr;
+  }
+  uint32_t dst_slice_count = dst->slices;
+  if (dst_slice_count < 1) {
+    PyErr_SetString(vk_ResourceError, "Destination image has no slices");
+    return nullptr;
+  }
+
+  // Parse the region list
+  Py_ssize_t num_regions = PyList_Size(regions_list);
+  if (num_regions == 0) {
+    Py_RETURN_NONE; // nothing to do
+  }
+
+  std::vector<VkImageCopy> copies;
+  copies.reserve(num_regions);
+
+  for (Py_ssize_t i = 0; i < num_regions; ++i) {
+    PyObject *tuple = PyList_GetItem(regions_list, i);
+    if (!PyTuple_Check(tuple) || PyTuple_Size(tuple) != 5) {
+      PyErr_Format(PyExc_ValueError, "Region %zd must be a 5‑tuple", i);
+      return nullptr;
+    }
+
+    uint32_t src_x, src_y, dst_slice, width, height;
+    if (!PyArg_ParseTuple(tuple, "IIIII", &src_x, &src_y, &dst_slice, &width,
+                          &height))
+      return nullptr;
+
+    if (dst_slice >= dst_slice_count) {
+      PyErr_Format(PyExc_ValueError,
+                   "Region %zd: dst_slice %u exceeds maximum %u", i, dst_slice,
+                   dst_slice_count);
+      return nullptr;
+    }
+    if (width == 0 || height == 0)
+      continue;
+
+    VkImageCopy region = {};
+    region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.mipLevel = 0;
+    region.srcSubresource.baseArrayLayer = 0;
+    region.srcSubresource.layerCount = 1;
+    region.srcOffset = {static_cast<int32_t>(src_x),
+                        static_cast<int32_t>(src_y), 0};
+    region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.mipLevel = 0;
+    region.dstSubresource.baseArrayLayer = dst_slice;
+    region.dstSubresource.layerCount = 1;
+    region.dstOffset = {0, 0, 0};
+    region.extent = {width, height, 1};
+
+    copies.push_back(region);
+  }
+
+  // Execute with a single command buffer
+  bool ok = vk_execute_one_time_commands(dev, [&](VkCommandBuffer cmd) {
+    // --- Transition source to TRANSFER_SRC_OPTIMAL ---
+    // (Need VkImageMemoryBarrier; use the existing utility)
+    vk_image_barrier(cmd, self->image, VK_IMAGE_LAYOUT_GENERAL,
+                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+                     VK_ACCESS_TRANSFER_READ_BIT, 0, 1, 0, 1);
+
+    // --- Transition destination (all layers) to TRANSFER_DST_OPTIMAL ---
+    vk_image_barrier(cmd, dst->image, VK_IMAGE_LAYOUT_GENERAL,
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+                     VK_ACCESS_TRANSFER_WRITE_BIT, 0, 1, 0, dst_slice_count);
+
+    // --- Record all copies ---
+    vkCmdCopyImage(cmd, self->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   dst->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                   static_cast<uint32_t>(copies.size()), copies.data());
+
+    // --- Transition images back to GENERAL ---
+    vk_image_barrier(cmd, self->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                     VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                     VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, 0,
+                     1, 0, 1);
+
+    vk_image_barrier(cmd, dst->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                     VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+                     0, 1, 0, dst_slice_count);
+  });
+
+  return ok ? Py_None : nullptr;
+}
+
 // =============================================================================
 //  Clear colour
 // =============================================================================
@@ -599,6 +733,13 @@ static PyMethodDef vk_Resource_methods[] = {
      "  dst (Resource)\n"
      "  size, src_offset, dst_offset (ints, buffer copies)\n"
      "  width, height, depth, src_x/y/z, dst_x/y/z, src_slice, dst_slice"},
+
+    {"batch_copy_to_array", (PyCFunction)vk_Resource_batch_copy_to_array,
+     METH_VARARGS,
+     "Copy multiple rectangular regions from this 2D image to slices of dst "
+     "array.\n"
+     "Args: dst (vk.Resource array image), regions (list of "
+     "(src_x,src_y,dst_slice,w,h))"},
 
     {"clear_color", (PyCFunction)vk_Resource_clear_color, METH_VARARGS,
      "Clear the entire image to a solid RGBA colour.\n\n"

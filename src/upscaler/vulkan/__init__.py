@@ -583,6 +583,21 @@ class Resource:
             dst_slice,
         )
 
+    def batch_copy_to_array(
+        self, destination: "Resource", regions: List[Tuple[int, int, int, int, int]]
+    ) -> None:
+        """
+        Copy multiple rectangular regions from this 2D image to slices of a 2D array.
+
+        The source must be a single 2D image; the destination must be a 2D array.
+        All copies are executed in a single command buffer.
+
+        Args:
+            destination: The target array texture.
+            regions: List of (src_x, src_y, dst_slice, width, height) tuples.
+        """
+        self._handle.batch_copy_to_array(destination._handle, regions)
+
 
 # ----------------------------------------------------------------------
 # Buffer

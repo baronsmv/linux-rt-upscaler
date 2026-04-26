@@ -26,14 +26,13 @@
 //  Global exception objects (prefixed with vk_)
 // =============================================================================
 
+PyObject *vk_ResourceError = nullptr;
 PyObject *vk_Texture2DError = nullptr;
 PyObject *vk_BufferError = nullptr;
 PyObject *vk_ComputeError = nullptr;
 PyObject *vk_SwapchainError = nullptr;
 PyObject *vk_HeapError = nullptr;
 PyObject *vk_SamplerError = nullptr;
-PyObject *vk_Texture1DError = nullptr;
-PyObject *vk_Texture3DError = nullptr;
 
 // =============================================================================
 //  Module method table (top-level functions)
@@ -72,14 +71,13 @@ PyMODINIT_FUNC PyInit_vulkan(void) {
     return nullptr;                                                            \
   PyModule_AddObject(m, #name, vk_##name);
 
+  MAKE_ERR(ResourceError);
   MAKE_ERR(Texture2DError);
   MAKE_ERR(BufferError);
   MAKE_ERR(ComputeError);
   MAKE_ERR(SwapchainError);
   MAKE_ERR(HeapError);
   MAKE_ERR(SamplerError);
-  MAKE_ERR(Texture1DError);
-  MAKE_ERR(Texture3DError);
 
 #undef MAKE_ERR
 

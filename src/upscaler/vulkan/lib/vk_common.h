@@ -22,14 +22,14 @@ extern std::vector<std::string> vk_debug_messages;
 // =========================================================================
 //  Python error objects (set up in vk_module.cpp)
 // =========================================================================
+
+extern PyObject *vk_ResourceError;
 extern PyObject *vk_Texture2DError;
 extern PyObject *vk_BufferError;
 extern PyObject *vk_ComputeError;
 extern PyObject *vk_SwapchainError;
 extern PyObject *vk_HeapError;
 extern PyObject *vk_SamplerError;
-extern PyObject *vk_Texture1DError;
-extern PyObject *vk_Texture3DError;
 
 // =========================================================================
 //  Forward declarations of Python object types

@@ -16,6 +16,7 @@ PyObject *vk_Resource_upload(vk_Resource *self, PyObject *args);
 PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args);
 PyObject *vk_Resource_download(vk_Resource *self, PyObject *ignored);
 PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args);
+PyObject *vk_Resource_batch_copy_to_array(vk_Resource *self, PyObject *args);
 PyObject *vk_Resource_clear_color(vk_Resource *self, PyObject *args);
 
 #endif // VK_RESOURCE_H

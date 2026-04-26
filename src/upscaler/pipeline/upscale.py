@@ -133,6 +133,9 @@ class UpscalerManager:
             crop_width=self.crop_width,
             crop_height=self.crop_height,
         )
+        # Give the tile processor access to the full‑frame input (for GPU tile copy)
+        self.tile_processor.set_full_input(self.input)
+
         self.output = self.tile_processor.output_texture
         self._rebind_full_frame_output()
 
@@ -356,7 +359,14 @@ class UpscalerManager:
                 height=self.crop_height * 2,
             )
         else:
-            # Update the residual texture (full frame)
+            # 2× upscale: upload full frame to self.input (needed for GPU tile copies)
+            self.upload_full_frame(
+                frame_data,
+                rects,
+                use_damage_tracking=False,
+                margin=self.config.tile_context_margin,
+            )
+            # Update residual_1x for the final pass
             self.tile_processor.residual_staging.upload(frame_data)
             self.tile_processor.residual_staging.copy_to(
                 self.tile_processor.residual_1x

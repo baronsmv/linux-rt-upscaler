@@ -1,9 +1,8 @@
 import logging
 import struct
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
-from .utils import expand_damage_rects
 from ..config import Config
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
 from ..vulkan import Buffer, Compute, Texture2D, HEAP_UPLOAD
@@ -179,13 +178,7 @@ class TileProcessor:
         self.residual_staging = Buffer(
             crop_width * crop_height * 4, heap_type=HEAP_UPLOAD
         )
-
-        # --- Staging buffer for tile pixel data ------------------------------
-        # Will be resized on demand in process_tiles().
-        self.staging = Buffer(
-            self.expanded_tile_size * self.expanded_tile_size * 4,
-            heap_type=HEAP_UPLOAD,
-        )
+        self._full_input: Optional[Texture2D] = None
 
         # --- SRCNN stages and dispatch groups --------------------------------
         self.stages: List[SRCNN] = []
@@ -357,83 +350,38 @@ class TileProcessor:
             self.stages[0].pipelines[-1] = final_pipe
 
     # ------------------------------------------------------------------
-    #  Residual (full-frame) updates
-    # ------------------------------------------------------------------
-    def upload_residual(
-        self, frame: memoryview, rects: List[Tuple[int, int, int, int, int]]
-    ) -> None:
-        """
-        Update the residual (full low-res frame) with damage regions.
-
-        The residual is used by the final shuffle pass to provide the
-        “original” pixel values for the YUV conversion. Only the areas
-        that have changed (expanded by the context margin) are uploaded
-        to save bandwidth; if the total damaged area exceeds a threshold,
-        the entire frame is uploaded.
-        """
-        if not rects:
-            return
-
-        expanded = expand_damage_rects(
-            rects, self.crop_width, self.crop_height, self.margin
-        )
-        if not expanded:
-            return
-
-        total_area = sum(w * h for _, _, w, h in expanded)
-        threshold = self.area_threshold * self.crop_width * self.crop_height
-
-        if total_area <= threshold:
-            # Partial upload: extract each expanded rectangle from the frame.
-            uploads = []
-            stride = self.crop_width * 4
-            for ex, ey, ew, eh in expanded:
-                rect_data = bytearray(ew * eh * 4)
-                for row in range(eh):
-                    src_start = (ey + row) * stride + ex * 4
-                    dst_start = row * ew * 4
-                    rect_data[dst_start : dst_start + ew * 4] = frame[
-                        src_start : src_start + ew * 4
-                    ]
-                uploads.append((bytes(rect_data), ex, ey, ew, eh, 0))
-            self.residual_1x.upload_subresources(uploads)
-        else:
-            # Full upload.
-            frame_bytes = bytes(frame)
-            self.residual_1x.upload_subresources(
-                [(frame_bytes, 0, 0, self.crop_width, self.crop_height, 0)]
-            )
-
-    # ------------------------------------------------------------------
     #  Tile processing
     # ------------------------------------------------------------------
     def process_tiles(
-        self, dirty_tiles: List[Tuple[int, int, bytes, int, int]]
+        self,
+        dirty_tiles: List[Tuple[int, int, bytes, int, int]],
     ) -> None:
         """
         Process a batch of dirty tiles.
 
-        Each dirty tile contains the expanded pixel data and the valid
-        interior offset. The tiles are uploaded to consecutive slices
-        of the input array texture, and then the SRCNN stages are
-        dispatched with per-tile push constants.
+        Interior tiles (fully inside the crop) are copied directly from the full‑frame
+        GPU texture using a batch image copy.  Border tiles are extracted on the CPU
+        (with edge clamping) and uploaded as before.
 
         Parameters:
             dirty_tiles: List of (tx, ty, pixel_data, valid_x, valid_y).
+                         For interior tiles, pixel_data is ignored.
         """
         if not dirty_tiles:
             return
 
         batch = dirty_tiles[: self.max_layers]
         num_tiles = len(batch)
+        tile_bytes = self.expanded_tile_size * self.expanded_tile_size * 4
 
-        expected_data = self.expanded_tile_size * self.expanded_tile_size * 4
-        total_staging = num_tiles * expected_data
-        self._ensure_staging(total_staging)
+        # ------------------------------------------------------------------
+        # 1. Build TileSpecs and classify tiles
+        # ------------------------------------------------------------------
+        interior_regions = []  # (src_x, src_y, dst_slice, width, height)
+        border_tiles = []  # (layer, pixel_data)
 
-        # Build TileSpec objects for each tile (pre-computes output coords).
         specs = []
-        for tx, ty, data, vx, vy in batch:
+        for i, (tx, ty, data, vx, vy) in enumerate(batch):
             spec = TileSpec.from_raw(
                 tx,
                 ty,
@@ -446,23 +394,60 @@ class TileProcessor:
             )
             specs.append(spec)
 
-        # Upload each tile’s pixel data to array slices 0 ... num_tiles-1.
-        uploads = []
-        for i, (tx, ty, data, vx, vy) in enumerate(batch):
-            data = self._sanitize_data(data, expected_data)
-            uploads.append(
-                (data, 0, 0, self.expanded_tile_size, self.expanded_tile_size, i)
-            )
-        self.stages[0].input.upload_subresources(uploads)
+            src_x = tx * self.tile_size - self.margin
+            src_y = ty * self.tile_size - self.margin
 
+            if (
+                0 <= src_x
+                and 0 <= src_y
+                and src_x + self.expanded_tile_size <= self.crop_width
+                and src_y + self.expanded_tile_size <= self.crop_height
+            ):
+                # Interior tile – will use GPU copy
+                interior_regions.append(
+                    (
+                        src_x,
+                        src_y,
+                        i,  # i = layer index
+                        self.expanded_tile_size,
+                        self.expanded_tile_size,
+                    )
+                )
+            else:
+                # Border tile – needs CPU edge clamping
+                border_tiles.append((i, self._sanitize_data(data, tile_bytes)))
+
+        # ------------------------------------------------------------------
+        # 2. GPU batch copy for interior tiles
+        # ------------------------------------------------------------------
+        if interior_regions and self._full_input is not None:
+            self._full_input.batch_copy_to_array(self.stages[0].input, interior_regions)
+
+        # ------------------------------------------------------------------
+        # 3. Upload border tiles via the existing host path
+        # ------------------------------------------------------------------
+        if border_tiles:
+            uploads = []
+            for layer, tile_data in border_tiles:
+                uploads.append(
+                    (
+                        tile_data,
+                        0,
+                        0,
+                        self.expanded_tile_size,
+                        self.expanded_tile_size,
+                        layer,
+                    )
+                )
+            self.stages[0].input.upload_subresources(uploads)
+
+        # ------------------------------------------------------------------
+        # 4. Dispatch passes
+        # ------------------------------------------------------------------
         if self.double_upscale:
             self._dispatch_double(specs)
         else:
             self._dispatch_single(specs)
-
-    def _ensure_staging(self, required: int) -> None:
-        if self.staging.size < required:
-            self.staging = Buffer(required, heap_type=HEAP_UPLOAD)
 
     @staticmethod
     def _sanitize_data(data: bytes, expected: int) -> bytes:
@@ -472,6 +457,10 @@ class TileProcessor:
             else:
                 data = data[:expected]
         return data
+
+    def set_full_input(self, texture: Texture2D) -> None:
+        """Set the full‑frame input texture used as the source for interior tiles."""
+        self._full_input = texture
 
     # ------------------------------------------------------------------
     #  Push constant helpers
