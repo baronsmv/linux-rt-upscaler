@@ -16,7 +16,7 @@ from .upscale import UpscalerManager
 from ..capture import FrameGrabber
 from ..config import Config, OverlayMode
 from ..overlay import OverlayWindow
-from ..tiles import extract_expanded_tiles
+from ..tiles import count_interior_dirty_tiles, extract_expanded_tiles
 from ..utils import parse_output_geometry
 from ..vulkan import configure_device
 from ..window import WindowInfo, WindowTracker
@@ -275,6 +275,14 @@ class Pipeline:
             src_tex = self.upscaler_mgr.get_output_texture()
         else:  # tile mode
             if self.upscaler_mgr.should_use_tile_mode(rects):
+                # Adaptive interior‑tile strategy
+                interior_count = count_interior_dirty_tiles(
+                    rects,
+                    self.crop_width,
+                    self.crop_height,
+                    self.config.tile_size,
+                    self.config.tile_context_margin,
+                )
                 dirty_tiles = extract_expanded_tiles(
                     frame=frame,
                     rects=rects,
@@ -282,6 +290,7 @@ class Pipeline:
                     crop_height=self.crop_height,
                     tile_size=self.config.tile_size,
                     margin=self.config.tile_context_margin,
+                    skip_interior=interior_count > 2,
                 )
                 self.upscaler_mgr.process_tile_frame(dirty_tiles, rects, frame)
                 src_tex = self.upscaler_mgr.get_output_texture()

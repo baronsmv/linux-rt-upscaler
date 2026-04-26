@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,8 @@ def extract_expanded_tiles(
     crop_height: int,
     tile_size: int,
     margin: int,
-) -> List[Tuple[int, int, bytes, int, int]]:
+    skip_interior: bool = False,
+) -> List[Tuple[int, int, Optional[bytes], int, int]]:
     """
     Extract expanded tiles for all tile grid cells that overlap any damage rectangle.
 
@@ -143,6 +144,18 @@ def extract_expanded_tiles(
         exp_y0 = tile_y0 - margin
         exp_x1 = exp_x0 + expanded_size
         exp_y1 = exp_y0 + expanded_size
+
+        if skip_interior:
+            # interior check
+            if (
+                0 <= exp_x0
+                and 0 <= exp_y0
+                and exp_x1 <= crop_width
+                and exp_y1 <= crop_height
+            ):
+                # Don't extract; caller will use GPU copy
+                result.append((tx, ty, None, margin, margin))
+                continue
 
         # Clamp source region to crop bounds
         src_x0 = max(0, exp_x0)
@@ -224,6 +237,46 @@ def extract_expanded_tiles(
         result.append((tx, ty, bytes(data), dst_x0, dst_y0))
 
     return result
+
+
+def count_interior_dirty_tiles(
+    rects: List[Tuple[int, int, int, int, int]],
+    crop_width: int,
+    crop_height: int,
+    tile_size: int,
+    margin: int,
+) -> int:
+    """
+    Return how many dirty tile grid cells are *fully inside* the crop area
+    (i.e. their expanded region stays within bounds and can be GPU‑copied).
+    """
+    tiles_x = (crop_width + tile_size - 1) // tile_size
+    tiles_y = (crop_height + tile_size - 1) // tile_size
+
+    dirty_tiles: Set[Tuple[int, int]] = set()
+    for rx, ry, rw, rh, _ in rects:
+        if rw <= 0 or rh <= 0:
+            continue
+        tx0 = rx // tile_size
+        ty0 = ry // tile_size
+        tx1 = (rx + rw + tile_size - 1) // tile_size
+        ty1 = (ry + rh + tile_size - 1) // tile_size
+        for ty in range(ty0, min(ty1, tiles_y)):
+            for tx in range(tx0, min(tx1, tiles_x)):
+                dirty_tiles.add((tx, ty))
+
+    interior = 0
+    for tx, ty in dirty_tiles:
+        src_x0 = tx * tile_size - margin
+        src_y0 = ty * tile_size - margin
+        if (
+            0 <= src_x0
+            and 0 <= src_y0
+            and src_x0 + tile_size + 2 * margin <= crop_width
+            and src_y0 + tile_size + 2 * margin <= crop_height
+        ):
+            interior += 1
+    return interior
 
 
 # ------------------------------------------------------------------------------

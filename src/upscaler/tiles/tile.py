@@ -397,24 +397,26 @@ class TileProcessor:
             src_x = tx * self.tile_size - self.margin
             src_y = ty * self.tile_size - self.margin
 
-            if (
+            interior = (
                 0 <= src_x
                 and 0 <= src_y
                 and src_x + self.expanded_tile_size <= self.crop_width
                 and src_y + self.expanded_tile_size <= self.crop_height
-            ):
-                # Interior tile – will use GPU copy
+            )
+
+            if interior and self._full_input is not None:
+                # GPU copy will handle this tile later
                 interior_regions.append(
                     (
                         src_x,
                         src_y,
-                        i,  # i = layer index
+                        i,
                         self.expanded_tile_size,
                         self.expanded_tile_size,
                     )
                 )
             else:
-                # Border tile – needs CPU edge clamping
+                # CPU upload needed (border tile, or interior with no GPU source)
                 border_tiles.append((i, self._sanitize_data(data, tile_bytes)))
 
         # ------------------------------------------------------------------

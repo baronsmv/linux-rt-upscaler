@@ -359,14 +359,40 @@ class UpscalerManager:
                 height=self.crop_height * 2,
             )
         else:
-            # 2× upscale: upload full frame to self.input (needed for GPU tile copies)
-            self.upload_full_frame(
-                frame_data,
-                rects,
-                use_damage_tracking=False,
-                margin=self.config.tile_context_margin,
+            interior_count = sum(
+                1
+                for tx, ty, data, vx, vy in dirty_tiles
+                if (
+                    0 <= tx * self.config.tile_size - self.config.tile_context_margin
+                    and 0
+                    <= ty * self.config.tile_size - self.config.tile_context_margin
+                    and tx * self.config.tile_size
+                    + self.config.tile_size
+                    + self.config.tile_context_margin
+                    <= self.crop_width
+                    and ty * self.config.tile_size
+                    + self.config.tile_size
+                    + self.config.tile_context_margin
+                    <= self.crop_height
+                )
             )
-            # Update residual_1x for the final pass
+
+            # Threshold: use GPU copies only when > 2 interior tiles are dirty
+            if interior_count > 2:
+                # Full upload to self.input (source for GPU copies)
+                self.upload_full_frame(
+                    frame_data,
+                    rects,
+                    use_damage_tracking=False,
+                    margin=self.config.tile_context_margin,
+                )
+                # Enable GPU copies inside process_tiles
+                self.tile_processor.set_full_input(self.input)
+            else:
+                # Fallback: no full upload; CPU extraction will be used
+                self.tile_processor.set_full_input(None)
+
+            # Update residual_1x (always full, cheap)
             self.tile_processor.residual_staging.upload(frame_data)
             self.tile_processor.residual_staging.copy_to(
                 self.tile_processor.residual_1x
