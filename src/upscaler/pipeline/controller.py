@@ -198,8 +198,18 @@ class PipelineController:
             Q_ARG(str, new_geometry),
         )
 
+        # Sync the presenter’s mode
+        self._pipeline.presenter.scale_mode = new_geometry
+
         # Recalculate content dimensions and update overlay
         self._pipeline.update_content_dimensions()
+
+        # Immediately recalc Lanczos rect so the change is visible at the next present
+        src_tex = self._pipeline.upscaler_mgr.get_output_texture()
+        if src_tex:
+            self._pipeline.presenter.update_lanczos_constants(
+                src_tex.width, src_tex.height
+            )
 
         # Show OSD message
         self._pipeline.osd_queue.put((f"Geometry: {new_geometry}", self._osd_duration))
