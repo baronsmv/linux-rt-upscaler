@@ -47,19 +47,9 @@ upscale = "upscaler.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-packages = [
-    "upscaler",
-    "upscaler.capture",
-    "upscaler.config",
-    "upscaler.overlay",
-    "upscaler.pipeline",
-    "upscaler.shaders",
-    "upscaler.srcnn",
-    "upscaler.tiles",
-    "upscaler.utils",
-    "upscaler.vulkan",
-    "upscaler.window",
-]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.package-data]
 "upscaler.shaders" = ["**/*.hlsl", "**/*.spv"]
