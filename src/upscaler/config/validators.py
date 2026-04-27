@@ -138,6 +138,8 @@ _VALIDATORS: Dict[str, Tuple] = {
     "crop_bottom": (validate_number, "crop_bottom", 0),
     "crop_left": (validate_number, "crop_left", 0),
     "crop_right": (validate_number, "crop_right", 0),
+    "offset_x": (validate_number, "offset_x"),
+    "offset_y": (validate_number, "offset_y"),
     "osd_duration": (validate_number, "osd_duration", 0),
     "vulkan_buffer_pool_size": (validate_number, "vulkan_buffer_pool_size", 0),
     "frame_timeout_ns": (validate_number, "frame_timeout_ns", 0),

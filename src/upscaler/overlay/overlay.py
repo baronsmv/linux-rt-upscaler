@@ -18,11 +18,19 @@ logger = logging.getLogger(__name__)
 
 class OverlayWindow(QMainWindow):
     """
-    An overlay window that can present upscaled content in various modes.
-    It can optionally forward mouse events to the target window using X11.
+    An overlay window that presents upscaled content and forwards mouse events.
 
-    The window delegates coordinate mapping to a CoordinateMapper instance and
-    event forwarding to an X11EventForwarder instance.
+    The overlay adapts to the chosen mode (always-on-top, fullscreen, windowed,
+    or transparent click-through). It uses a CoordinateMapper to translate
+    overlay-relative mouse coordinates to target window coordinates, and an
+    X11EventForwarder to send synthetic events.
+
+    Attributes:
+        content_width (int): Logical width of the upscaled content (before scaling).
+        content_height (int): Logical height of the upscaled content.
+        map_events (bool): Whether mouse events are currently being forwarded.
+        scaling_rect (List[int]): The rectangle (x, y, w, h) in overlay coordinates
+                                  where the content is drawn.
     """
 
     def __init__(self, config: Config, win_info: WindowInfo) -> None:
@@ -30,82 +38,77 @@ class OverlayWindow(QMainWindow):
         Create and show the overlay window.
 
         Args:
-            config: Full configuration (includes monitor, offsets, crop, etc.)
-            win_info: Information about the target window.
+            config: Full configuration (monitor, offsets, crop, overlay mode, etc.).
+            win_info: Initial information about the target window.
         """
         super().__init__()
         start_time = time.perf_counter()
         logger.info(
             f"Initializing OverlayWindow: mode={config.overlay_mode}, "
-            f"target_handle={win_info.handle}, scale_mode={config.output_geometry}"
+            f"target_handle={win_info.handle:#x}, scale_mode={config.output_geometry}"
         )
 
-        # Store references
+        # Store configuration and window info
         self._config = config
         self._win_info = win_info
 
-        # Transparency support
-        if self._config.background_color[3] < 1.0 or True:
+        # Transparency support (if background has alpha or we want click-through)
+        if self._config.background_color[3] < 1.0:
             self.setAttribute(Qt.WA_TranslucentBackground, True)
             self.setStyleSheet("background: transparent;")
 
-        # Compute geometry
+        # Compute initial geometry
         self._geometry = compute_overlay_geometry(config, win_info)
-        self.scale_mode = self._geometry.scale_mode
+        self.scale_mode: str = self._geometry.scale_mode
 
         # Initialize subcomponents
         self._mapper = CoordinateMapper()
         self._forwarder = X11EventForwarder()
+
+        # Determine whether we should forward events
         self._should_forward = (
             config.overlay_mode != OverlayMode.ALWAYS_ON_TOP_TRANSPARENT.value
         )
         self._forwarder.enabled = self._should_forward
         self._forwarder.target_handle = win_info.handle
 
-        self._mapper.set_target_size(win_info.width, win_info.height)
-        self._mapper.set_crop(
-            self._geometry.crop_left,
-            self._geometry.crop_top,
-            self._geometry.crop_width,
-            self._geometry.crop_height,
-        )
-        self._mapper.set_content_dimensions(
-            self._geometry.content_width, self._geometry.content_height
-        )
+        # Configure coordinate mapper with initial values
+        self._update_mapper()
 
-        # Set up the actual Qt window
+        # Set up the Qt window according to mode
         self._setup_window(self._geometry, config.overlay_mode)
 
-        # Enable mouse tracking if we will forward events
+        # Enable mouse tracking if we forward events
         self.setMouseTracking(self._should_forward)
 
-        # Create opacity controller
+        # Opacity controller (dim overlay when mouse leaves target window)
         self._opacity_controller = OpacityController(self, win_info)
 
-        # Force final size after window flags are applied
+        # Force final geometry after window flags are applied
         self.resize(self._geometry.overlay_width, self._geometry.overlay_height)
-        QApplication.processEvents()
 
-        # Store XID for logging only
-        self.xid = int(self.winId())
-        logger.debug(f"Overlay XID: {self.xid}")
+        # Store XID for debugging
+        self.xid: int = int(self.winId())
+        logger.debug(f"Overlay XID: {self.xid:#x}")
 
-        # Install event filter if needed and X display is available
+        # Install event filter for mouse forwarding
         if self._should_forward and self._forwarder.conn is not None:
             self.installEventFilter(self)
-
-        # Fallback if forwarder failed
-        if self._should_forward and self._forwarder.conn is None:
+        elif self._should_forward and self._forwarder.conn is None:
             logger.warning(
-                "Event forwarding disabled due to XCB connection failure. Window is now click-through."
+                "Event forwarding disabled due to XCB failure. Window is now click-through."
             )
             flags = self.windowFlags() | Qt.WindowTransparentForInput
             self.setWindowFlags(flags)
             self.show()
 
         logger.debug(
-            f"OverlayWindow initialized in {(time.perf_counter() - start_time)*1000:.2f} ms"
+            f"OverlayWindow initialized in {(time.perf_counter() - start_time) * 1000:.2f} ms"
         )
+
+    # ----------------------------------------------------------------------
+    # Properties
+    # ----------------------------------------------------------------------
 
     @property
     def content_width(self) -> int:
@@ -131,8 +134,18 @@ class OverlayWindow(QMainWindow):
     def scaling_rect(self, rect: List[int]) -> None:
         self._mapper.set_scaling_rect(rect)
 
+    # ----------------------------------------------------------------------
+    # Internal setup
+    # ----------------------------------------------------------------------
+
     def _setup_window(self, geometry: OverlayGeometry, mode: str) -> None:
-        """Apply the appropriate window flags and geometry for the chosen mode."""
+        """
+        Apply the appropriate window flags and geometry for the chosen mode.
+
+        Args:
+            geometry: OverlayGeometry object containing all required dimensions.
+            mode: One of the OverlayMode values.
+        """
         width = geometry.overlay_width
         height = geometry.overlay_height
         x = geometry.overlay_x
@@ -173,34 +186,115 @@ class OverlayWindow(QMainWindow):
         self.setWindowFlags(flags)
         self.show()
 
+    def _update_mapper(self) -> None:
+        """Update the coordinate mapper with current crop, content, and target sizes."""
+        self._mapper.set_target_size(self._win_info.width, self._win_info.height)
+        self._mapper.set_crop(
+            self._geometry.crop_left,
+            self._geometry.crop_top,
+            self._geometry.crop_width,
+            self._geometry.crop_height,
+        )
+        self._mapper.set_content_dimensions(
+            self._geometry.content_width, self._geometry.content_height
+        )
+
+    # ----------------------------------------------------------------------
+    # Public update methods (called from pipeline or focus monitor)
+    # ----------------------------------------------------------------------
+
     def set_crop(self, left: int, top: int, width: int, height: int) -> None:
-        """Update the crop region of the target window."""
+        """
+        Update the crop region of the target window.
+
+        Args:
+            left, top: Offset from target window origin.
+            width, height: Size of the cropped region.
+        """
         self._mapper.set_crop(left, top, width, height)
 
     def set_content_dimensions(self, width: int, height: int) -> None:
-        """Update the logical content dimensions."""
+        """
+        Update the logical content dimensions.
+
+        Args:
+            width: New content width.
+            height: New content height.
+        """
         self._mapper.set_content_dimensions(width, height)
 
     def set_target_handle(self, handle: int) -> None:
-        """Update the XID of the target window."""
+        """
+        Update the X11 window ID of the target window.
+
+        Args:
+            handle: New target window XID.
+        """
         self._forwarder.target_handle = handle
         self._opacity_controller.update_target_info(
             handle, self._mapper.client_width, self._mapper.client_height
         )
 
     def set_target_size(self, width: int, height: int) -> None:
-        """Update the actual target window size."""
+        """
+        Update the actual target window dimensions.
+
+        Args:
+            width: New target width.
+            height: New target height.
+        """
         self._mapper.set_target_size(width, height)
         self._opacity_controller.update_target_info(
             self._forwarder.target_handle, width, height
         )
 
+    def update_geometry(self, win_info: WindowInfo) -> None:
+        """
+        Recompute overlay geometry after a window or monitor change.
+
+        Args:
+            win_info: Updated target window information.
+        """
+        self._win_info = win_info
+        self._geometry = compute_overlay_geometry(self._config, win_info)
+        self.scale_mode = self._geometry.scale_mode
+        self._update_mapper()
+
+        # Apply new geometry to the overlay window
+        if self._config.overlay_mode == OverlayMode.FULLSCREEN.value:
+            # Fullscreen mode uses the entire monitor, so no resize needed
+            pass
+        else:
+            self.setGeometry(
+                self._geometry.overlay_x,
+                self._geometry.overlay_y,
+                self._geometry.overlay_width,
+                self._geometry.overlay_height,
+            )
+            if self._config.overlay_mode == OverlayMode.WINDOWED.value:
+                self.setFixedSize(
+                    self._geometry.overlay_width, self._geometry.overlay_height
+                )
+
+        logger.info(
+            f"Overlay geometry updated: {self._geometry.overlay_width}x{self._geometry.overlay_height}"
+        )
+
     def update_opacity(self) -> None:
-        """Update the window opacity based on mouse position."""
+        """Update the window opacity based on mouse position relative to target."""
         self._opacity_controller.update()
 
+    # ----------------------------------------------------------------------
+    # Qt event handlers
+    # ----------------------------------------------------------------------
+
     def changeEvent(self, event: QEvent) -> None:
-        """Detect window state changes (minimized) to enable/disable forwarding."""
+        """
+        Detect window state changes (minimized) to enable/disable event forwarding.
+
+        Args:
+            event: The change event.
+        """
         if event.type() == QEvent.WindowStateChange:
             minimized = bool(self.windowState() & Qt.WindowMinimized)
             if minimized and self._forwarder.enabled:
@@ -212,7 +306,12 @@ class OverlayWindow(QMainWindow):
         super().changeEvent(event)
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Quit the application when the overlay window is closed."""
+        """
+        Quit the application when the overlay window is closed.
+
+        Args:
+            event: The close event.
+        """
         logger.info("Overlay window closed - quitting application.")
         self._opacity_controller.close()
         self._forwarder.close()
@@ -221,16 +320,36 @@ class OverlayWindow(QMainWindow):
 
     @Slot()
     def on_pipeline_stopped(self) -> None:
-        """Called from the pipeline thread when it exits due to an error."""
+        """Slot called from the pipeline thread when it exits due to an error."""
         logger.info("Pipeline stopped - quitting application.")
         QApplication.quit()
 
     @Slot(str)
     def set_scale_mode(self, mode: str) -> None:
+        """
+        Set the scaling mode (fit, stretch, cover) dynamically.
+
+        Args:
+            mode: New scaling mode string.
+        """
         self.scale_mode = mode
 
+    # ----------------------------------------------------------------------
+    # Mouse event forwarding
+    # ----------------------------------------------------------------------
+
     def eventFilter(self, obj: Any, event: QEvent) -> bool:
-        """Filter mouse events and forward them when forwarding is enabled."""
+        """
+        Filter mouse events and forward them when forwarding is enabled.
+
+        Args:
+            obj: The object that generated the event.
+            event: The event to filter.
+
+        Returns:
+            True if the event was handled (and should not be processed further),
+            False otherwise.
+        """
         if not self._should_forward or not self._forwarder.enabled:
             return super().eventFilter(obj, event)
 
@@ -242,7 +361,9 @@ class OverlayWindow(QMainWindow):
             QEvent.Wheel,
         ):
             self._handle_mouse(event)
-            return True  # swallow the event (so it doesn't reach the underlying window)
+
+            # Swallow the event (prevents interaction with underlying window)
+            return True
 
         return super().eventFilter(obj, event)
 
@@ -252,16 +373,20 @@ class OverlayWindow(QMainWindow):
 
         This method uses the CoordinateMapper to transform overlay coordinates
         to target window coordinates, then calls the appropriate forwarder method.
+
+        Args:
+            event: The Qt mouse event (MouseMove, ButtonPress, ButtonRelease, or Wheel).
         """
         if self._forwarder.conn is None or self._forwarder.target_handle is None:
             logger.debug("_handle_mouse called but forwarding not available")
             return
 
+        # Get positions
         pos = event.position().toPoint()  # local overlay coordinates
-        screen_x = event.globalPosition().x()  # root X coordinate
-        screen_y = event.globalPosition().y()  # root Y coordinate
+        screen_x = int(event.globalPosition().x())  # root X coordinate
+        screen_y = int(event.globalPosition().y())  # root Y coordinate
 
-        # Map local to target coordinates
+        # Map to target window coordinates
         target_x, target_y, inside = self._mapper.map(pos.x(), pos.y())
         if not inside:
             logger.debug(
@@ -271,28 +396,29 @@ class OverlayWindow(QMainWindow):
 
         # Dispatch based on event type
         if event.type() == QEvent.MouseMove:
-            state = self._forwarder.get_current_button_state()
-            self._forwarder.forward_motion(
-                int(screen_x), int(screen_y), target_x, target_y, state
-            )
+            self._forwarder.forward_motion(screen_x, screen_y, target_x, target_y)
+
         elif event.type() == QEvent.MouseButtonPress:
             self._forwarder.forward_button(
-                event.button(), True, int(screen_x), int(screen_y), target_x, target_y
+                event.button(), True, screen_x, screen_y, target_x, target_y
             )
+
         elif event.type() == QEvent.MouseButtonRelease:
             self._forwarder.forward_button(
-                event.button(), False, int(screen_x), int(screen_y), target_x, target_y
+                event.button(), False, screen_x, screen_y, target_x, target_y
             )
+
         elif event.type() == QEvent.Wheel:
             delta = event.angleDelta()
-            # Process vertical and horizontal separately (Qt may combine both)
+            # Process vertical and horizontal separately
             if delta.y() != 0:
                 self._forwarder.forward_wheel(
-                    delta.y(), False, int(screen_x), int(screen_y), target_x, target_y
+                    delta.y(), False, screen_x, screen_y, target_x, target_y
                 )
             if delta.x() != 0:
                 self._forwarder.forward_wheel(
-                    delta.x(), True, int(screen_x), int(screen_y), target_x, target_y
+                    delta.x(), True, screen_x, screen_y, target_x, target_y
                 )
+
         else:
             logger.warning(f"Unexpected event type in _handle_mouse: {event.type()}")

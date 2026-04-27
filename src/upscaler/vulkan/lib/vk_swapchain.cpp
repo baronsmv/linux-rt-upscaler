@@ -612,20 +612,20 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
  *
  *     - The Lanczos shader writes into a screen texture of 3840x2160 pixels.
  *     - The swapchain is 7680x4320 pixels but we present only the logical
- *       region (the top‑left 3840x2160) by copying a smaller texture.
+ *       region (the top-left 3840x2160) by copying a smaller texture.
  *
- *  After presentation the compositor down‑samples the entire swapchain buffer
+ *  After presentation the compositor down-samples the entire swapchain buffer
  *  back onto the logical overlay window. This gives us:
  *
- *     - Correct on‑screen position - the overlay stays at (0,0) at logical
+ *     - Correct on-screen position - the overlay stays at (0,0) at logical
  *       size rather than expanding to the full physical surface.
  *     - Performance - Lanczos runs at 4K instead of 8K.
  *     - Robustness - the compositor handles any scale factor automatically.
  *
  *  The old behaviour (before this check was introduced) already worked this
- *  way and is well‑tested.
+ *  way and is well-tested.
  *
- *  If we kept the equal‑size check we would be forced to render the
+ *  If we kept the equal-size check we would be forced to render the
  *  screen texture at the physical swapchain resolution (e.g. 7680x4320),
  *  which would both waste GPU resources and cause the overlay to cover
  *  more area than intended (displacing it).

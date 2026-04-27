@@ -15,16 +15,16 @@ class TileSpec:
     """
     Immutable geometry of one tile in the final upscaled frame.
 
-    The crop area is divided into a grid of `tile_size` cells (low‑resolution).
+    The crop area is divided into a grid of `tile_size` cells (low-resolution).
     Each dirty cell is expanded by a context margin, upscaled through the SRCNN
     stages, and its interior region is written directly into the full output texture.
 
     Attributes:
-        tx, ty: Tile grid indices (0‑based).
-        valid_lr_offset_x, valid_lr_offset_y: Offset from the expanded tile’s top‑left
+        tx, ty: Tile grid indices (0-based).
+        valid_lr_offset_x, valid_lr_offset_y: Offset from the expanded tile’s top-left
             to the start of the valid interior (≤ margin). Provided by the extraction
             step; currently unused by the shader but kept for debugging.
-        dst_out_px_x, dst_out_px_y: Top‑left of the output rectangle (upscaled pixels).
+        dst_out_px_x, dst_out_px_y: Top-left of the output rectangle (upscaled pixels).
         tile_out_extent_w, tile_out_extent_h: Output region size (may be clipped at
             the right / bottom image border).
     """
@@ -63,19 +63,19 @@ class TileSpec:
 
 class TileProcessor:
     """
-    Direct tile‑based upscaling (2x or 4x).
+    Direct tile-based upscaling (2x or 4x).
 
     The crop area is partitioned into a grid of `tile_size x tile_size` cells.
     When a damage rectangle overlaps a cell, the cell’s expanded region
-    (`tile_size + 2xmargin`) is extracted from the full low‑res frame, edge‑clamped
-    if it extends beyond the crop boundary, and uploaded to one slice of a 2D‑array
+    (`tile_size + 2xmargin`) is extracted from the full low-res frame, edge-clamped
+    if it extends beyond the crop boundary, and uploaded to one slice of a 2D-array
     texture. All dirty tiles are processed in a single batch via the SRCNN compute
     pipeline; the final pass writes each tile’s 2x2 output block directly into the
     final 2D output texture.
 
     Two residual textures keep the “skip connection” fed:
-    - `residual_1x` – the full low‑res frame (updated by the caller).
-    - `residual_2x` – (4x only) the full 2x upscaled frame, prepared by the caller
+    - `residual_1x` - the full low-res frame (updated by the caller).
+    - `residual_2x` - (4x only) the full 2x upscaled frame, prepared by the caller
        using the first SRCNN stage.
 
     Attributes:
@@ -145,7 +145,7 @@ class TileProcessor:
         self._create_stages()
 
         # --------------------------------------------------------------------------
-        # Final pipeline (replaces the last pass’s built‑in pipeline)
+        # Final pipeline (replaces the last pass’s built-in pipeline)
         # --------------------------------------------------------------------------
         self._finalize_pipeline()
 
@@ -164,14 +164,14 @@ class TileProcessor:
     # ======================================================================
     def _create_stages(self) -> None:
         """Create the SRCNN stages (one for 2x, two for 4x) using array textures."""
-        lr = self.expanded_tile_size  # low‑res feature map size
+        lr = self.expanded_tile_size  # low-res feature map size
         half = lr * 2  # after first 2x upscale
         full = lr * 4  # after second 2x upscale (4x total)
 
-        # Input array texture – one slice per concurrent tile
+        # Input array texture - one slice per concurrent tile
         input_tex = Texture2D(lr, lr, slices=self.max_layers, force_array_view=True)
 
-        # ---- Stage 1: low‑res to 2x --------------------------------------------
+        # ---- Stage 1: low-res to 2x --------------------------------------------
         inter_tex = Texture2D(half, half, slices=self.max_layers, force_array_view=True)
         out1 = {"output": inter_tex}
         for i in range(self.factory.config.num_textures):
@@ -226,7 +226,7 @@ class TileProcessor:
             )
             self.groups_per_stage[0] = dispatch_groups(lr, lr, last_pass=False)
 
-        # Final output – plain 2D texture required by Lanczos scaler
+        # Final output - plain 2D texture required by Lanczos scaler
         self.output_texture = Texture2D(self.full_out_w, self.full_out_h)
 
     # ======================================================================
@@ -250,12 +250,12 @@ class TileProcessor:
         final_pass_idx = self.factory.config.passes - 1
         final_shader = self.factory.config.shaders[final_pass_idx]
 
-        # Feature‑map size for the last intermediate stage
+        # Feature-map size for the last intermediate stage
         if self.double_upscale:
             feat_size = self.expanded_tile_size * 2  # after first 2x
             last_stage = self.stages[-1]
         else:
-            feat_size = self.expanded_tile_size  # low‑res
+            feat_size = self.expanded_tile_size  # low-res
             last_stage = self.stages[0]
 
         cb_data = struct.pack(
@@ -314,7 +314,7 @@ class TileProcessor:
 
         Args:
             dirty_tiles: List of (tx, ty, pixel_data, valid_x, valid_y).
-                         The pixel data *must* already be expanded and edge‑clamped.
+                         The pixel data *must* already be expanded and edge-clamped.
         """
         if not dirty_tiles:
             return
@@ -369,7 +369,7 @@ class TileProcessor:
     # ======================================================================
     def _make_push_bytes(self, layer: int, spec: TileSpec, margin: int) -> bytes:
         """
-        Serialise the `TileParams` push‑constant block (8 uint32 fields).
+        Serialise the `TileParams` push-constant block (8 uint32 fields).
 
         ┌─────────────────┬──────────────────────────────────────────┐
         │ Field           │ Description                              │

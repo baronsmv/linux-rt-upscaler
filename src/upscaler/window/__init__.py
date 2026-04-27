@@ -1,7 +1,7 @@
 """Window public modules."""
 
 from .acquisition import acquire_target_window
-from .display import open_xcb_connection, close_xcb_connection
+from .connection import open_xcb_connection, close_xcb_connection
 from .focus import FocusMonitor
 from .hotkeys import HotkeyManager
 from .info import WindowInfo

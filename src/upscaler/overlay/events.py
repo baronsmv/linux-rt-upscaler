@@ -1,17 +1,4 @@
-"""
-X11 event forwarding using pure XCB (xcffib).
-
-This module provides an X11EventForwarder class that sends synthetic
-X11 mouse events (motion, button press/release, wheel) to a target window.
-It is designed to be used from the Qt main thread and opens its own
-dedicated XCB connection, ensuring thread safety.
-
-The event structures are manually packed according to the X11 protocol
-specification (32-byte wire format) and sent via xcb_send_event.
-"""
-
 import logging
-import struct
 from typing import Optional
 
 import xcffib
@@ -19,7 +6,7 @@ import xcffib.xproto
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-from ..window import open_xcb_connection, close_xcb_connection
+from ..window import close_xcb_connection, open_xcb_connection
 
 logger = logging.getLogger(__name__)
 
@@ -33,20 +20,30 @@ BUTTON_MAP = {
     Qt.XButton2: 9,  # Forward
 }
 
+# X11 event masks (standard values)
+X11_BUTTON1_MASK = 256
+X11_BUTTON2_MASK = 512
+X11_BUTTON3_MASK = 1024
+X11_SHIFT_MASK = 1
+X11_CONTROL_MASK = 4
+X11_MOD1_MASK = 8  # Alt
+X11_MOD4_MASK = 64  # Super
+
 
 class X11EventForwarder:
     """
     Forwards mouse events to a target X11 window using synthetic X11 events.
 
     The forwarder opens a dedicated XCB connection and sends ButtonPress,
-    ButtonRelease, and MotionNotify events to the specified window ID.
-    Event forwarding can be enabled/disabled via the `enabled` attribute.
+    ButtonRelease, MotionNotify, and wheel events (as paired button press/release)
+    to the specified window ID. Event forwarding can be enabled/disabled via the
+    `enabled` attribute.
 
-    All X11 event structures are packed manually as 32-byte arrays according
-    to the core X11 protocol. This avoids dependency on higher-level libraries.
+    All event structures are built using xcffib.xproto synthetic event classes,
+    which guarantee proper wire format.
 
     Attributes:
-        conn (xcffib.Connection): XCB connection used for event sending.
+        conn (xcffib.Connection | None): XCB connection used for event sending.
         target_handle (int | None): X11 window ID to forward events to.
         enabled (bool): If False, events are silently dropped.
     """
@@ -100,7 +97,7 @@ class X11EventForwarder:
             # SendEvent(propagate=False, destination, event_mask, event_data)
             self.conn.core.SendEvent(
                 False,  # propagate
-                self.target_handle,  # destination
+                self.target_handle,  # destination window
                 event_mask,  # event_mask
                 event_data,  # 32-byte event payload
             )
@@ -108,39 +105,63 @@ class X11EventForwarder:
         except Exception as e:
             logger.error(f"Unexpected error sending X11 event: {e}", exc_info=True)
 
+    def _get_current_state(self) -> int:
+        """
+        Return the current X11 button + modifier mask.
+
+        Combines currently pressed mouse buttons (from QApplication) and
+        keyboard modifiers (Shift, Ctrl, Alt, Meta) into an X11 state mask.
+        Uses standard X11 numeric constants for reliability across xcffib versions.
+
+        Returns:
+            int: X11 state mask (bitwise OR of ButtonMask and ModMask values).
+        """
+        state = 0
+
+        # Mouse button masks (X11 Button1Mask = 256, Button2Mask = 512, Button3Mask = 1024)
+        buttons = QApplication.mouseButtons()
+        if buttons & Qt.LeftButton:
+            state |= X11_BUTTON1_MASK  # Button1Mask
+        if buttons & Qt.MiddleButton:
+            state |= X11_BUTTON2_MASK  # Button2Mask
+        if buttons & Qt.RightButton:
+            state |= X11_BUTTON3_MASK  # Button3Mask
+
+        # Keyboard modifier masks
+        mods = QApplication.keyboardModifiers()
+        if mods & Qt.ShiftModifier:
+            state |= X11_SHIFT_MASK  # ShiftMask
+        if mods & Qt.ControlModifier:
+            state |= X11_CONTROL_MASK  # ControlMask
+        if mods & Qt.AltModifier:
+            state |= X11_MOD1_MASK  # Mod1Mask (Alt)
+        if mods & Qt.MetaModifier:
+            state |= X11_MOD4_MASK  # Mod4Mask (Super/Win)
+
+        return state
+
     def forward_motion(
         self,
         screen_x: int,
         screen_y: int,
         target_x: int,
         target_y: int,
-        button_state: int,
     ) -> None:
         """
         Send a MotionNotify event to the target window.
 
-        The MotionNotify event structure (32 bytes):
-            - response_type: 6 (MotionNotify opcode)
-            - detail: 0 (unused)
-            - seq: 0 (filled by server)
-            - time: CurrentTime
-            - root: root window ID
-            - event: target window ID
-            - child: 0 (none)
-            - root_x, root_y: 16-bit screen coordinates
-            - event_x, event_y: 16-bit window-relative coordinates
-            - state: button/modifier mask
-            - same_screen: 1 (True)
-            - pad: 0
+        The event includes the current button and modifier state, ensuring
+        that the target window sees the correct cursor shape and any active
+        drag operations.
 
         Args:
             screen_x, screen_y: Global screen coordinates (root coordinates).
             target_x, target_y: Coordinates within the target window.
-            button_state: Bitmask of currently pressed buttons (XCB ButtonMask).
         """
-        # MotionNotify opcode = 6
-        motion = xcffib.xproto.MotionNotifyEvent.synthetic(
-            detail=0,
+        state = self._get_current_state()
+
+        motion_event = xcffib.xproto.MotionNotifyEvent.synthetic(
+            detail=0,  # not used for motion
             time=xcffib.xproto.Time.CurrentTime,
             root=self._root,
             event=self.target_handle,
@@ -149,7 +170,7 @@ class X11EventForwarder:
             root_y=screen_y,
             event_x=target_x,
             event_y=target_y,
-            state=button_state,
+            state=state,
             same_screen=True,
         )
         mask = (
@@ -157,7 +178,7 @@ class X11EventForwarder:
             | xcffib.xproto.EventMask.ButtonRelease
             | xcffib.xproto.EventMask.PointerMotion
         )
-        self._send_event(motion.pack(), mask)
+        self._send_event(motion_event.pack(), mask)
 
     def forward_button(
         self,
@@ -171,9 +192,6 @@ class X11EventForwarder:
         """
         Send a ButtonPress or ButtonRelease event.
 
-        The ButtonPress/ButtonRelease event structure (32 bytes) is identical
-        except for the opcode (4 for press, 5 for release) and the event mask.
-
         Args:
             qt_button: Qt button constant (e.g., Qt.LeftButton).
             press: True for press, False for release.
@@ -185,13 +203,13 @@ class X11EventForwarder:
             logger.warning(f"Unmapped Qt button {qt_button}, ignoring")
             return
 
-        # Get the current button state (already pressed buttons) *before* this event.
-        # This is important for proper drag and drop behaviour.
-        state = self.get_current_button_state()
+        # Get the current state (buttons + modifiers) before this event.
+        # This is important for proper drag and drop behavior, as the state
+        # field in a press event typically does not yet include the button being pressed.
+        state = self._get_current_state()
 
-        # Use the synthetic classmethod to build the event structure.
         if press:
-            btn_event = xcffib.xproto.ButtonPressEvent.synthetic(
+            event = xcffib.xproto.ButtonPressEvent.synthetic(
                 detail=x11_button,
                 time=xcffib.xproto.Time.CurrentTime,
                 root=self._root,
@@ -206,7 +224,7 @@ class X11EventForwarder:
             )
             mask = xcffib.xproto.EventMask.ButtonPress
         else:
-            btn_event = xcffib.xproto.ButtonReleaseEvent.synthetic(
+            event = xcffib.xproto.ButtonReleaseEvent.synthetic(
                 detail=x11_button,
                 time=xcffib.xproto.Time.CurrentTime,
                 root=self._root,
@@ -221,8 +239,7 @@ class X11EventForwarder:
             )
             mask = xcffib.xproto.EventMask.ButtonRelease
 
-        # The synthetic event object has a .pack() method that returns the 32-byte wire format.
-        self._send_event(btn_event.pack(), mask)
+        self._send_event(event.pack(), mask)
 
     def forward_wheel(
         self,
@@ -236,9 +253,10 @@ class X11EventForwarder:
         """
         Send wheel events (simulated as button presses/releases).
 
-        X11 traditionally uses buttons 4 (up), 5 (down), 6 (left), 7 (right)
+        X11 traditionally uses buttons 4 (up), 5 (down), 6 (right), 7 (left)
         for wheel scrolling. Each "click" of the wheel is sent as a press
-        immediately followed by a release.
+        immediately followed by a release. Multiple steps are emitted when
+        `abs(delta) >= 120` (Qt uses 120 units per wheel click).
 
         Args:
             delta: Signed wheel movement (positive = up/right, negative = down/left).
@@ -251,65 +269,42 @@ class X11EventForwarder:
         else:
             button = 4 if delta > 0 else 5  # 4 = up, 5 = down
 
-        steps = max(1, abs(delta) // 120)  # Qt uses 120 units per wheel click
+        steps = max(1, abs(delta) // 120)
+        # Use the current button+modifier state for each step.
+        # Note: some applications ignore the state field in wheel events.
+        state = self._get_current_state()
 
         for _ in range(steps):
-            # ButtonPress (opcode 4)
-            press_event = struct.pack(
-                "<BBHIIIIIHHHHBB",
-                4,  # ButtonPress
-                button,
-                0,
-                xcffib.xproto.Time.CurrentTime,
-                self._root,
-                self.target_handle,
-                0,
-                screen_x,
-                screen_y,
-                target_x,
-                target_y,
-                0,
-                1,
-                0,
+            # ButtonPress
+            press_event = xcffib.xproto.ButtonPressEvent.synthetic(
+                detail=button,
+                time=xcffib.xproto.Time.CurrentTime,
+                root=self._root,
+                event=self.target_handle,
+                child=0,
+                root_x=screen_x,
+                root_y=screen_y,
+                event_x=target_x,
+                event_y=target_y,
+                state=state,
+                same_screen=True,
             )
-            self._send_event(press_event, xcffib.xproto.EventMask.ButtonPress)
+            self._send_event(press_event.pack(), xcffib.xproto.EventMask.ButtonPress)
 
-            # ButtonRelease (opcode 5)
-            release_event = struct.pack(
-                "<BBHIIIIIHHHHBB",
-                5,  # ButtonRelease
-                button,
-                0,
-                xcffib.xproto.Time.CurrentTime,
-                self._root,
-                self.target_handle,
-                0,
-                screen_x,
-                screen_y,
-                target_x,
-                target_y,
-                0,
-                1,
-                0,
+            # ButtonRelease
+            release_event = xcffib.xproto.ButtonReleaseEvent.synthetic(
+                detail=button,
+                time=xcffib.xproto.Time.CurrentTime,
+                root=self._root,
+                event=self.target_handle,
+                child=0,
+                root_x=screen_x,
+                root_y=screen_y,
+                event_x=target_x,
+                event_y=target_y,
+                state=state,
+                same_screen=True,
             )
-            self._send_event(release_event, xcffib.xproto.EventMask.ButtonRelease)
-
-    def get_current_button_state(self) -> int:
-        """
-        Return an X11 button state mask based on currently pressed Qt buttons.
-
-        The mask is a bitwise OR of values like Button1Mask, Button2Mask, etc.
-        This is used to populate the `state` field of MotionNotify events.
-
-        Returns:
-            int: X11 button mask (see xcffib.xproto.ButtonMask).
-        """
-        state = 0
-        buttons = QApplication.mouseButtons()
-        if buttons & Qt.LeftButton:
-            state |= 256  # Button1Mask
-        if buttons & Qt.MiddleButton:
-            state |= 512  # Button2Mask
-        if buttons & Qt.RightButton:
-            state |= 1024  # Button3Mask
-        return state
+            self._send_event(
+                release_event.pack(), xcffib.xproto.EventMask.ButtonRelease
+            )

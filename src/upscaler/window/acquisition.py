@@ -10,7 +10,7 @@ import psutil
 import xcffib
 from xcffib.xproto import Window
 
-from .display import open_xcb_connection, close_xcb_connection
+from .connection import open_xcb_connection, close_xcb_connection
 from .info import (
     WindowInfo,
     AtomCache,
@@ -28,22 +28,29 @@ logger = logging.getLogger(__name__)
 
 
 def _list_windows() -> List[WindowInfo]:
-    """Enumerate all visible application windows using _NET_CLIENT_LIST."""
+    """
+    Enumerate all visible application windows using _NET_CLIENT_LIST.
+
+    Returns:
+        List of WindowInfo objects for windows that are considered application
+        windows (by size, type, and class). Returns empty list on failure.
+    """
     logger.info("Starting window enumeration")
     conn = open_xcb_connection()
     if not conn:
+        logger.error("Cannot open XCB connection for window enumeration")
         return []
 
     atoms = AtomCache(conn)
     root = conn.get_setup().roots[0].root
 
-    # Get top-level client windows
+    # Get top-level client windows via EWMH _NET_CLIENT_LIST
     cookie = conn.core.GetProperty(
         False, root, atoms.get("_NET_CLIENT_LIST"), xcffib.xproto.Atom.WINDOW, 0, 1024
     )
     reply = cookie.reply()
     if reply and reply.value_len:
-        # Convert buffer to list of window IDs
+        # Unpack the list of window IDs
         data = reply.value.buf()
         window_ids = list(struct.unpack(f"<{len(data)//4}I", data))
         windows = window_ids
@@ -78,9 +85,16 @@ def _list_windows() -> List[WindowInfo]:
 
 
 def get_active_window() -> Optional[WindowInfo]:
-    """Return WindowInfo for the currently active window."""
+    """
+    Return WindowInfo for the currently active (focused) window.
+
+    Returns:
+        WindowInfo object if an active window exists and is valid,
+        otherwise None.
+    """
     conn = open_xcb_connection()
     if not conn:
+        logger.error("Cannot open XCB connection to get active window")
         return None
 
     try:
@@ -99,10 +113,7 @@ def get_active_window() -> Optional[WindowInfo]:
         if not reply or not reply.value_len:
             return None
 
-        data = reply.value.buf()
-        if len(data) < 4:
-            return None
-        active_win = int.from_bytes(data[:4], byteorder="little")
+        active_win = reply.value.to_atoms()[0]
         if active_win == 0:
             return None
 
@@ -113,6 +124,9 @@ def get_active_window() -> Optional[WindowInfo]:
 
         name = get_window_name(conn, active_win, atoms) or "unknown"
         return WindowInfo(active_win, w, h, name)
+    except Exception as e:
+        logger.error(f"Failed to get active window: {e}")
+        return None
     finally:
         close_xcb_connection(conn)
 
@@ -125,13 +139,38 @@ def _find_by_pid(
     total_timeout: Optional[int] = 60,
     starting_phase: int = 1,
 ) -> WindowInfo:
-    """Locate a window by process ID (and optionally by class hint)."""
+    """
+    Locate a window by process ID (and optionally by class hint) using a two-phase search.
+
+    The search alternates between:
+      1. Phase 1: look for windows whose PID matches the process tree,
+         and optionally also check the class hint.
+      2. Phase 2: if a class hint is given, look purely by class hint
+         (ignoring PID) for `class_timeout` seconds.
+
+    Phases repeat until a window is found or `total_timeout` expires.
+
+    Args:
+        pid: Process ID of the launched program.
+        pid_timeout: Seconds to spend in phase 1 before switching to phase 2.
+        class_hint: Optional string to match against WM_CLASS (instance or class).
+        class_timeout: Seconds to spend in phase 2 before switching back.
+        total_timeout: Maximum total search time. If None, no total timeout.
+        starting_phase: 1 for PID+class first, 2 for pure class first.
+
+    Returns:
+        WindowInfo as soon as a matching, viewable window is found.
+
+    Raises:
+        TimeoutError: If no matching window appears within the total timeout.
+    """
     logger.info(
-        f"find_by_pid called with pid={pid}, class_hint={class_hint}, "
+        f"_find_by_pid called with pid={pid}, class_hint={class_hint}, "
         f"pid_timeout={pid_timeout}, class_timeout={class_timeout}, "
         f"total_timeout={total_timeout}, starting_phase={starting_phase}"
     )
 
+    # Gather all PIDs in the process tree
     try:
         proc = psutil.Process(pid)
         pids: Set[int] = {pid} | {child.pid for child in proc.children(recursive=True)}
@@ -141,7 +180,7 @@ def _find_by_pid(
         pids = {pid}
 
     class_hint_lower = class_hint.lower() if class_hint else None
-    phase = starting_phase
+    phase = starting_phase  # 1 = PID+class, 2 = pure class
     overall_start = time.time()
 
     def check_total_timeout() -> None:
@@ -150,10 +189,10 @@ def _find_by_pid(
                 f"No matching window found within total timeout of {total_timeout} seconds"
             )
 
+    # Single XCB connection for the entire search (more efficient)
     conn = open_xcb_connection()
     if not conn:
-        raise RuntimeError("Failed to open XCB connection")
-
+        raise RuntimeError("Failed to open XCB connection for window search")
     atoms = AtomCache(conn)
 
     try:
@@ -170,21 +209,24 @@ def _find_by_pid(
                         if not is_viewable(conn, win):
                             continue
 
+                        # PID check
                         win_pid = get_window_pid(conn, win, atoms)
                         if win_pid is None or win_pid not in pids:
                             continue
 
+                        # Optional class check (if hint provided)
                         if class_hint_lower:
-                            klass = get_window_class(conn, win, atoms)
-                            if not klass:
+                            klass_tuple = get_window_class(conn, win, atoms)
+                            if not klass_tuple:
                                 continue
-                            instance, cls = klass
+                            instance, cls = klass_tuple
                             if not (
                                 class_hint_lower in instance.lower()
                                 or class_hint_lower in cls.lower()
                             ):
                                 continue
 
+                        # Match found
                         geom = get_window_geometry(conn, win)
                         if geom is None:
                             continue
@@ -195,6 +237,7 @@ def _find_by_pid(
 
                     time.sleep(0.2)
 
+                # Phase 1 timed out
                 if class_hint_lower:
                     phase = 2
                     logger.info(
@@ -217,10 +260,10 @@ def _find_by_pid(
                             continue
 
                         if class_hint_lower:
-                            klass = get_window_class(conn, win, atoms)
-                            if not klass:
+                            klass_tuple = get_window_class(conn, win, atoms)
+                            if not klass_tuple:
                                 continue
-                            instance, cls = klass
+                            instance, cls = klass_tuple
                             if not (
                                 class_hint_lower in instance.lower()
                                 or class_hint_lower in cls.lower()
@@ -237,17 +280,27 @@ def _find_by_pid(
 
                     time.sleep(0.2)
 
+                # Phase 2 timed out - go back to phase 1
                 logger.info("Phase 2 timed out, restarting phase 1.")
                 phase = 1
 
     finally:
         close_xcb_connection(conn)
+        logger.debug("Closed XCB connection after window search")
 
 
 def _launch_and_find_window(
     config: Config,
 ) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
-    """Launch the program and find its window."""
+    """
+    Launch the program from config.program and use _find_by_pid to locate its window.
+
+    Args:
+        config: Configuration containing program list and timeout settings.
+
+    Returns:
+        A tuple (WindowInfo, Popen) on success, or (None, None) on failure/timeout.
+    """
     if not config.program:
         logger.error("No program specified in config")
         return None, None
@@ -277,7 +330,15 @@ def _launch_and_find_window(
 
 
 def _select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo]:
-    """Interactively let the user choose a window."""
+    """
+    Interactively let the user choose a window from the list.
+
+    Args:
+        windows: List of WindowInfo objects to choose from.
+
+    Returns:
+        The selected WindowInfo, or None if the user quits.
+    """
     windows.sort(key=lambda w: w.title.lower())
     print("\nAvailable windows:")
     for i, w in enumerate(windows):
@@ -300,10 +361,19 @@ def _select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo
 
 
 def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
-    """Wait target_delay seconds and return the active window."""
+    """
+    Wait target_delay seconds and then return the currently active window.
+
+    Args:
+        config: Configuration containing target_delay and log level.
+
+    Returns:
+        WindowInfo of the active window, or None on failure.
+    """
     if config.log_level != "ERROR":
         print(
-            f"No program specified. Will scale the currently active window in {config.target_delay} seconds..."
+            f"No program specified. Will scale the currently active window "
+            f"in {config.target_delay} seconds..."
         )
     try:
         time.sleep(config.target_delay)
@@ -322,10 +392,84 @@ def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
         return None
 
 
+def _activate_window(win_handle: int) -> None:
+    """
+    Activate (raise + focus) the target window using the most reliable method.
+
+    - Tries `xdotool windowactivate --sync` first because it respects EWMH and
+      works across all window managers, including KWin on XWayland.
+    - If `xdotool` is unavailable or the call fails, falls back to a direct
+      XCB `SetInputFocus`, which at least gives keyboard focus even if the
+      window doesn't pop to the front.
+
+    Args:
+        win_handle: X11 window ID to activate.
+    """
+    # Primary method: xdotool
+    if shutil.which("xdotool"):
+        try:
+            subprocess.run(
+                ["xdotool", "windowactivate", "--sync", str(win_handle)],
+                check=True,
+                timeout=3,
+                capture_output=True,
+            )
+            logger.info(f"Activated window {win_handle:#x} via xdotool")
+            return
+        except subprocess.TimeoutExpired:
+            logger.info(
+                f"xdotool timed out activating window {win_handle:#x}; "
+                "falling back to XCB focus."
+            )
+        except subprocess.CalledProcessError as e:
+            logger.info(
+                f"xdotool failed to activate window {win_handle:#x} (exit code {e.returncode}). "
+                "Falling back to XCB focus."
+            )
+        except FileNotFoundError:
+            pass
+
+    # Fallback: just give the window input focus
+    conn = open_xcb_connection()
+    if conn is None:
+        logger.info("Cannot focus window: XCB connection unavailable.")
+        return
+
+    try:
+        conn.core.SetInputFocus(
+            revert_to=xcffib.xproto.InputFocus.Parent,
+            focus=win_handle,
+            time=xcffib.xproto.Time.CurrentTime,
+        )
+        conn.flush()
+        logger.info(f"Focused window {win_handle:#x} (raise not guaranteed)")
+    except Exception as e:
+        logger.info(f"Failed to focus window {win_handle:#x} via XCB: {e}")
+    finally:
+        close_xcb_connection(conn)
+
+
 def acquire_target_window(
     config: Config,
 ) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
-    """Determine which window to upscale based on config."""
+    """
+    Determine which window to upscale based on configuration.
+
+    This is the main entry point for window acquisition. It supports three
+    modes:
+      - `config.select = True`: Show interactive list of windows for the user.
+      - `config.program` is set: Launch the program and wait for its window.
+      - Otherwise: Wait `target_delay` seconds and take the currently active window.
+
+    Args:
+        config: Configuration object (must have fields: select, program, target_delay,
+                pid_timeout, class_timeout, total_timeout, starting_phase, log_level).
+
+    Returns:
+        A tuple (WindowInfo, optional Popen process). If acquisition fails,
+        returns (None, None). The Popen object is only non-None when a program
+        was launched.
+    """
     start_time = time.perf_counter()
 
     if config.select:
@@ -348,7 +492,6 @@ def acquire_target_window(
 
         # Activate (raise + focus) the chosen window
         _activate_window(win_info.handle)
-
         return win_info, None
 
     elif config.program:
@@ -369,62 +512,3 @@ def acquire_target_window(
                 f"Active window acquired in {time.perf_counter() - start_time:.2f}s"
             )
         return win_info, None
-
-
-def _activate_window(win_handle: int) -> None:
-    """
-    Activate (raise + focus) the target window using the most reliable method.
-
-    - Tries ``xdotool windowactivate`` first because it respects EWMH and
-      works across all window managers, including KWin on XWayland.
-    - If ``xdotool`` is unavailable or the call fails, falls back to a
-      direct XCB ``SetInputFocus``, which at least gives keyboard focus
-      even if the window doesn't pop to the front.
-
-    The function is designed to be called from the main thread with a
-    valid X connection available.
-    """
-    # Primary method: xdotool
-    if shutil.which("xdotool"):
-        try:
-            subprocess.run(
-                ["xdotool", "windowactivate", "--sync", str(win_handle)],
-                check=True,
-                timeout=3,
-                capture_output=True,
-            )
-            logger.info("Activated window %s via xdotool", hex(win_handle))
-            return  # success, nothing more to do
-        except subprocess.TimeoutExpired:
-            logger.info(
-                "xdotool timed out activating window %s; falling back to XCB focus.",
-                hex(win_handle),
-            )
-        except subprocess.CalledProcessError as e:
-            logger.info(
-                "xdotool failed to activate window %s (exit code %d). "
-                "Falling back to XCB focus.",
-                hex(win_handle),
-                e.returncode,
-            )
-        except FileNotFoundError:
-            pass
-
-    # Fallback: just give the window input focus
-    conn = open_xcb_connection()
-    if conn is None:
-        logger.info("Cannot focus window: XCB connection unavailable.")
-        return
-
-    try:
-        conn.core.SetInputFocus(
-            revert_to=xcffib.xproto.InputFocus.Parent,
-            focus=win_handle,
-            time=xcffib.xproto.Time.CurrentTime,
-        )
-        conn.flush()
-        logger.info("Focused window %s (raise not guaranteed)", hex(win_handle))
-    except Exception:
-        logger.info("Failed to focus window %s via XCB", hex(win_handle))
-    finally:
-        close_xcb_connection(conn)

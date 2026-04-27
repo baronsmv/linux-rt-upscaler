@@ -27,7 +27,7 @@ def expand_damage_rects(
         List of (x, y, width, height) of expanded rectangles.
 
     Raises:
-        ValueError: If crop dimensions are non‑positive.
+        ValueError: If crop dimensions are non-positive.
     """
     if crop_width <= 0 or crop_height <= 0:
         raise ValueError(f"Invalid crop dimensions: {crop_width}x{crop_height}")
@@ -69,7 +69,7 @@ def extract_expanded_tiles(
 
     The frame is divided into a grid of `tile_size x tile_size` cells.
     For each cell that overlaps at least one damage rectangle, an expanded
-    region of size `(tile_size + 2xmargin)²` is copied out of the full‑frame
+    region of size `(tile_size + 2xmargin)²` is copied out of the full-frame
     buffer. If that region extends beyond the crop bounds, the missing
     pixels are filled by replicating the nearest valid edge pixel (edge
     clamping).
@@ -86,17 +86,17 @@ def extract_expanded_tiles(
         crop_width, crop_height: Crop dimensions in pixels.
         tile_size: Nominal interior size of a tile in pixels.
         margin: Context margin to add on all sides.
-        skip_interior: If True, interior tiles are not extracted – their
+        skip_interior: If True, interior tiles are not extracted - their
             returned pixel data will be ``None``.
 
     Returns:
         List of (tx, ty, data, valid_x, valid_y) tuples.
-        - tx, ty: Tile grid indices (0‑based).
+        - tx, ty: Tile grid indices (0-based).
         - data: Raw BGRA bytes of the expanded tile, or ``None`` if
                 `skip_interior` was True and the tile is interior.
         - valid_x, valid_y: Offset within the expanded buffer where the
           interior `tile_size x tile_size` region begins. Equals `margin`
-          for non‑edge tiles, smaller at borders.
+          for non-edge tiles, smaller at borders.
 
     Raises:
         ValueError: If `frame` size does not match crop dimensions.
@@ -138,7 +138,7 @@ def extract_expanded_tiles(
         exp_x1 = exp_x0 + expanded_side
         exp_y1 = exp_y0 + expanded_side
 
-        # If requested, skip interior tiles (return None) – caller handles them.
+        # If requested, skip interior tiles (return None) - caller handles them.
         if skip_interior and (
             0 <= exp_x0
             and 0 <= exp_y0
@@ -176,7 +176,7 @@ def extract_expanded_tiles(
             expanded_side,
         )
 
-        # Replicate edge pixels for any out‑of‑bounds areas.
+        # Replicate edge pixels for any out-of-bounds areas.
         if exp_y0 < 0:
             _pad_top(
                 data, frame, stride, dst_x0, dst_y0, copy_w, expanded_side, src_x0, 0
@@ -217,7 +217,7 @@ def extract_expanded_tiles(
 
 
 # ------------------------------------------------------------------------------
-#  Internal helpers – fast row/column copies with memoryview slicing
+#  Internal helpers - fast row/column copies with memoryview slicing
 # ------------------------------------------------------------------------------
 def _copy_region(
     dst: bytearray,

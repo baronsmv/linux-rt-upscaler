@@ -527,7 +527,7 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
  *
  * Args (Python):
  *   dst (vk_Resource): Target 2D array image.
- *   regions (list of 5‑tuples): Each tuple is (src_x, src_y, dst_slice,
+ *   regions (list of 5-tuples): Each tuple is (src_x, src_y, dst_slice,
  *                                 copy_width, copy_height).
  *
  * Returns: None on success, or raises an exception.
@@ -576,7 +576,7 @@ PyObject *vk_Resource_batch_copy_to_array(vk_Resource *self, PyObject *args) {
   for (Py_ssize_t i = 0; i < num_regions; ++i) {
     PyObject *tuple = PyList_GetItem(regions_list, i);
     if (!PyTuple_Check(tuple) || PyTuple_Size(tuple) != 5) {
-      PyErr_Format(PyExc_ValueError, "Region %zd must be a 5‑tuple", i);
+      PyErr_Format(PyExc_ValueError, "Region %zd must be a 5-tuple", i);
       return nullptr;
     }
 
