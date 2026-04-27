@@ -116,6 +116,7 @@ dependencies = [
     { name = "pyside6" },
     { name = "pyyaml" },
     { name = "screeninfo" },
+    { name = "shiboken6" },
     { name = "xcffib" },
 ]
 
@@ -128,6 +129,7 @@ requires-dist = [
     { name = "pyside6" },
     { name = "pyyaml" },
     { name = "screeninfo" },
+    { name = "shiboken6" },
     { name = "xcffib" },
 ]
 

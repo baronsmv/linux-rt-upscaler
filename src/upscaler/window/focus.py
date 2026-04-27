@@ -6,6 +6,7 @@ from typing import Optional
 import xcffib
 from PySide6.QtCore import QObject, Signal
 
+from .acquisition import activate_window
 from .connection import open_xcb_connection, close_xcb_connection
 from .info import AtomCache, WindowInfo, get_window_geometry, get_window_name
 
@@ -93,6 +94,8 @@ class FocusMonitor(QObject):
                                 f"Focus changed to: {win_info.handle:#x} - {win_info.title}"
                             )
                             self._current_handle = active_handle
+                            activate_window(win_info.handle)
+
                             # Emit signal (queued to main thread)
                             self.focus_changed.emit(win_info)
 

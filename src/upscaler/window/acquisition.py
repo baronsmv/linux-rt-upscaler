@@ -392,7 +392,7 @@ def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
         return None
 
 
-def _activate_window(win_handle: int) -> None:
+def activate_window(win_handle: int) -> None:
     """
     Activate (raise + focus) the target window using the most reliable method.
 
@@ -491,7 +491,7 @@ def acquire_target_window(
         )
 
         # Activate (raise + focus) the chosen window
-        _activate_window(win_info.handle)
+        activate_window(win_info.handle)
         return win_info, None
 
     elif config.program:

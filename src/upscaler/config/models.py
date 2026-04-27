@@ -59,6 +59,7 @@ class Config:
     select: bool = False
     follow_focus: bool = False
     pause_on_focus_loss: bool = True
+    focus_poll_interval: float = 0.2
 
     # Overlay
     overlay_mode: str = OverlayMode.ALWAYS_ON_TOP.value

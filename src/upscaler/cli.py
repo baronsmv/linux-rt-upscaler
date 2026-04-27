@@ -19,7 +19,7 @@ from PySide6.QtWidgets import QApplication
 from .config import setup_config
 from .overlay import OverlayWindow
 from .pipeline import Pipeline
-from .window import FocusMonitor, HotkeyManager
+from .window import FocusMonitor, HotkeyManager, activate_window
 
 logger = logging.getLogger(__name__)
 
@@ -66,15 +66,23 @@ def main() -> None:
     )
 
     # Monitor for change of focus
+    monitor = None
     if config.follow_focus:
-        monitor = FocusMonitor(interval=0.5)  # poll every 0.5 sec
-        monitor.start(
+        # Activate the initial target window
+        activate_window(win_info.handle)
+        logger.info(f"Activated initial target window {win_info.handle:#x}")
+
+        monitor = FocusMonitor(interval=config.focus_poll_interval)
+        # Connect signal: when focus changes, request pipeline switch
+        monitor.focus_changed.connect(
             lambda new_win: (
                 pipeline.request_switch(new_win)
-                if new_win.handle != overlay.xid  # ignore the overlay
+                if new_win.handle != overlay.xid  # ignore the overlay itself
                 else None
             )
         )
+        monitor.start()
+        logger.info("Focus monitor started")
 
     # Pipeline controller and Hotkey Manager
     controller = pipeline.controller
@@ -110,7 +118,7 @@ def main() -> None:
     finally:
         logger.debug("Cleaning up resources")
         pipeline.stop()
-        if config.follow_focus:
+        if monitor is not None:
             monitor.stop()
         if proc is not None:
             logger.info(f"Terminating launched process {proc.pid}")

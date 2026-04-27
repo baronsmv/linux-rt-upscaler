@@ -130,6 +130,7 @@ def validate_color(color_str: str, _: str) -> None:
 
 
 _VALIDATORS: Dict[str, Tuple] = {
+    "focus_poll_interval": (validate_number, "focus_poll_interval", 0.05),
     "lanczos_blur": (validate_number, "lanczos_blur", 0),
     "scale_factor": (validate_number, "scale_factor", 0, None, False),
     "output_geometry": (validate_geometry, "output_geometry"),

@@ -70,6 +70,14 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'""",
 when focus changes)""",
     )
     interaction_group.add_argument(
+        "--focus-poll-interval",
+        type=float,
+        default=DEFAULT_CONFIG.focus_poll_interval,
+        help="""How often (seconds) the application checks for window focus
+changes when --follow-focus is activated.
+Minimum is 0.05. Default: %(default)s""",
+    )
+    interaction_group.add_argument(
         "--no-focus-pause",
         action="store_false",
         dest="pause_on_focus_loss",

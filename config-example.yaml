@@ -118,6 +118,11 @@ background_color: black
 # Default: false
 follow_focus: false
 
+# How often (seconds) the focus monitor checks for window changes.
+# Lower = more responsive, higher = slightly less CPU usage. Must be > 0.05.
+# Default: 0.2
+focus_poll_interval: 0.2
+
 # When the target window loses focus, pause frame processing and hide the
 # overlay. Only active when overlay_mode is "always-on-top" or "top-transparent".
 # Default: true
