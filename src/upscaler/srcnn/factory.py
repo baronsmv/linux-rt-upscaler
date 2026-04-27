@@ -97,7 +97,7 @@ class PipelineFactory:
         # Key: (width, height, pass_index)
         self._cb_cache: Dict[Tuple, Buffer] = {}
 
-    def _get_sampler(self, sampler_type: str) -> Sampler:
+    def get_sampler(self, sampler_type: str) -> Sampler:
         """Return the appropriate shared sampler."""
         if sampler_type == "point":
             return self._sampler_point
@@ -179,7 +179,7 @@ class PipelineFactory:
             # Samplers for this pass
             sampler_list = []
             for sampler_type in self.config.samplers[pass_idx]:
-                sampler_list.append(self._get_sampler(sampler_type))
+                sampler_list.append(self.get_sampler(sampler_type))
 
             # Create compute pipeline
             pipe = Compute(

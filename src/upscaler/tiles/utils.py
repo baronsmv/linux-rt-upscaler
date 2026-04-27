@@ -1,7 +1,4 @@
-import logging
 from typing import List, Tuple, Set, Optional
-
-logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------------------------
@@ -14,28 +11,23 @@ def expand_damage_rects(
     margin: int,
 ) -> List[Tuple[int, int, int, int]]:
     """
-    Expand each damage rectangle by a given margin, clamped to crop bounds.
+    Expand each damage rectangle by `margin` pixels, clamped to the crop area.
 
-    Damage rectangles are reported by the frame grabber as (x, y, w, h, hash).
-    To provide sufficient context for convolution layers, we expand each
-    rectangle outward by `margin` pixels. The expanded rectangles are merged
-    if they overlap, but this function does **not** perform merging - it simply
-    returns the clamped, expanded rectangles. Merging is left to the caller if
-    desired.
+    Damage rectangles are reported as (x, y, width, height, hash). This
+    iterator discards the hash and returns only the (x, y, width, height)
+    of the expanded, clamped region. Rectangles that collapse to zero area
+    after clamping are omitted.
 
     Args:
-        rects: List of damage rectangles, each as (x, y, width, height, hash).
-        crop_width: Width of the captured crop area in pixels.
-        crop_height: Height of the captured crop area in pixels.
-        margin: Number of pixels to expand on all four sides.
+        rects: List of damage rectangles (x, y, w, h, hash).
+        crop_width, crop_height: Dimensions of the captured crop in pixels.
+        margin: Number of pixels to add on all four sides.
 
     Returns:
-        List of expanded rectangles as (x, y, width, height). The hash field
-        is discarded. Rectangles that would become empty after clamping are
-        omitted.
+        List of (x, y, width, height) of expanded rectangles.
 
     Raises:
-        ValueError: If crop_width or crop_height is non-positive.
+        ValueError: If crop dimensions are non‑positive.
     """
     if crop_width <= 0 or crop_height <= 0:
         raise ValueError(f"Invalid crop dimensions: {crop_width}x{crop_height}")
@@ -73,52 +65,54 @@ def extract_expanded_tiles(
     skip_interior: bool = False,
 ) -> List[Tuple[int, int, Optional[bytes], int, int]]:
     """
-    Extract expanded tiles for all tile grid cells that overlap any damage rectangle.
+    Extract expanded pixel data for every tile cell that touches a damage rectangle.
 
-    The frame is divided into a grid of tiles of size `tile_size`. For each tile
-    that intersects at least one damage rectangle, an expanded region of size
-    `(tile_size + 2*margin)²` is extracted. If the expanded region extends
-    beyond the crop area, the missing pixels are filled by replicating the
-    nearest valid edge pixel (edge clamping).
+    The frame is divided into a grid of `tile_size x tile_size` cells.
+    For each cell that overlaps at least one damage rectangle, an expanded
+    region of size `(tile_size + 2xmargin)²` is copied out of the full‑frame
+    buffer. If that region extends beyond the crop bounds, the missing
+    pixels are filled by replicating the nearest valid edge pixel (edge
+    clamping).
 
-    The function returns the raw pixel data for each expanded tile, together
-    with the valid offset (`valid_x`, `valid_y`) that indicates where the
-    interior `tile_size x tile_size` region begins within the expanded tile.
-    This offset is usually equal to `margin`, but may be smaller at image
-    boundaries where the expansion was clamped.
+    When `skip_interior` is True and a tile lies entirely inside the crop
+    (no clamping required), no CPU extraction is performed and the tile’s
+    pixel data is returned as ``None``. In that case the caller must
+    supply the tile data by another means (e.g. a GPU copy).
 
     Args:
         frame: Raw BGRA pixel data for the entire crop area. Must be
                `crop_width * crop_height * 4` bytes.
-        rects: Damage rectangles as (x, y, w, h, hash).
-        crop_width: Width of the crop area in pixels.
-        crop_height: Height of the crop area in pixels.
-        tile_size: Nominal tile size (interior region) in pixels.
-        margin: Context margin to add on each side.
+        rects: Damage rectangles as (x, y, width, height, hash).
+        crop_width, crop_height: Crop dimensions in pixels.
+        tile_size: Nominal interior size of a tile in pixels.
+        margin: Context margin to add on all sides.
+        skip_interior: If True, interior tiles are not extracted – their
+            returned pixel data will be ``None``.
 
     Returns:
-        List of tuples:
-            (tile_x, tile_y, data_bytes, valid_x, valid_y)
-        - `tile_x`, `tile_y`: Tile grid coordinates (0-based).
-        - `data_bytes`: Raw BGRA data of the expanded tile.
-        - `valid_x`, `valid_y`: Offset within the expanded tile where the
-          interior region begins. For non-edge tiles, this equals `margin`.
+        List of (tx, ty, data, valid_x, valid_y) tuples.
+        - tx, ty: Tile grid indices (0‑based).
+        - data: Raw BGRA bytes of the expanded tile, or ``None`` if
+                `skip_interior` was True and the tile is interior.
+        - valid_x, valid_y: Offset within the expanded buffer where the
+          interior `tile_size x tile_size` region begins. Equals `margin`
+          for non‑edge tiles, smaller at borders.
 
     Raises:
-        ValueError: If frame size does not match crop dimensions.
+        ValueError: If `frame` size does not match crop dimensions.
     """
-    expected_frame_bytes = crop_width * crop_height * 4
-    if len(frame) != expected_frame_bytes:
+    expected = crop_width * crop_height * 4
+    if len(frame) != expected:
         raise ValueError(
-            f"Frame size mismatch: expected {expected_frame_bytes} bytes, got {len(frame)}"
+            f"Frame size mismatch: expected {expected} bytes, got {len(frame)}"
         )
 
     stride = crop_width * 4
     tiles_x = (crop_width + tile_size - 1) // tile_size
     tiles_y = (crop_height + tile_size - 1) // tile_size
 
-    # Collect dirty tile grid cells (any overlap with a damage rectangle)
-    dirty_tiles: Set[Tuple[int, int]] = set()
+    # Gather all tile coordinates that intersect at least one damage rectangle.
+    dirty: Set[Tuple[int, int]] = set()
     for rx, ry, rw, rh, _ in rects:
         if rw <= 0 or rh <= 0:
             continue
@@ -128,42 +122,39 @@ def extract_expanded_tiles(
         ty1 = (ry + rh + tile_size - 1) // tile_size
         for ty in range(ty0, min(ty1, tiles_y)):
             for tx in range(tx0, min(tx1, tiles_x)):
-                dirty_tiles.add((tx, ty))
+                dirty.add((tx, ty))
 
-    expanded_size = tile_size + 2 * margin
-    expanded_bytes = expanded_size * expanded_size * 4
-    result: List[Tuple[int, int, bytes, int, int]] = []
+    expanded_side = tile_size + 2 * margin
+    expanded_bytes = expanded_side * expanded_side * 4
+    result: List[Tuple[int, int, Optional[bytes], int, int]] = []
 
-    for tx, ty in dirty_tiles:
-        # Top-left of the nominal tile in crop coordinates
+    for tx, ty in dirty:
         tile_x0 = tx * tile_size
         tile_y0 = ty * tile_size
 
-        # Expanded region before clamping
+        # Expanded bounds before clamping
         exp_x0 = tile_x0 - margin
         exp_y0 = tile_y0 - margin
-        exp_x1 = exp_x0 + expanded_size
-        exp_y1 = exp_y0 + expanded_size
+        exp_x1 = exp_x0 + expanded_side
+        exp_y1 = exp_y0 + expanded_side
 
-        if skip_interior:
-            # interior check
-            if (
-                0 <= exp_x0
-                and 0 <= exp_y0
-                and exp_x1 <= crop_width
-                and exp_y1 <= crop_height
-            ):
-                # Don't extract; caller will use GPU copy
-                result.append((tx, ty, None, margin, margin))
-                continue
+        # If requested, skip interior tiles (return None) – caller handles them.
+        if skip_interior and (
+            0 <= exp_x0
+            and 0 <= exp_y0
+            and exp_x1 <= crop_width
+            and exp_y1 <= crop_height
+        ):
+            result.append((tx, ty, None, margin, margin))
+            continue
 
-        # Clamp source region to crop bounds
+        # Clamp source rectangle to the crop area.
         src_x0 = max(0, exp_x0)
         src_y0 = max(0, exp_y0)
         src_x1 = min(crop_width, exp_x1)
         src_y1 = min(crop_height, exp_y1)
 
-        # Destination offsets within the expanded tile buffer
+        # Destination offset inside the expanded tile buffer.
         dst_x0 = src_x0 - exp_x0
         dst_y0 = src_y0 - exp_y0
         copy_w = src_x1 - src_x0
@@ -171,7 +162,7 @@ def extract_expanded_tiles(
 
         data = bytearray(expanded_bytes)
 
-        # Copy valid interior region
+        # Copy the valid interior region.
         _copy_region(
             data,
             frame,
@@ -182,17 +173,14 @@ def extract_expanded_tiles(
             copy_h,
             dst_x0,
             dst_y0,
-            expanded_size,
+            expanded_side,
         )
 
-        # Edge clamping for out-of-bounds areas
-        # Top padding (exp_y0 < 0)
+        # Replicate edge pixels for any out‑of‑bounds areas.
         if exp_y0 < 0:
             _pad_top(
-                data, frame, stride, dst_x0, dst_y0, copy_w, expanded_size, src_x0, 0
-            )  # src_y = 0 (top edge)
-
-        # Bottom padding (exp_y1 > crop_height)
+                data, frame, stride, dst_x0, dst_y0, copy_w, expanded_side, src_x0, 0
+            )
         if exp_y1 > crop_height:
             _pad_bottom(
                 data,
@@ -202,25 +190,14 @@ def extract_expanded_tiles(
                 dst_y0,
                 copy_w,
                 copy_h,
-                expanded_size,
+                expanded_side,
                 src_x0,
                 crop_height - 1,
-            )  # src_y = last row
-
-        # Left padding (exp_x0 < 0)
+            )
         if exp_x0 < 0:
             _pad_left(
-                data,
-                frame,
-                stride,
-                dst_x0,
-                expanded_size,
-                exp_y0,
-                crop_height,
-                src_x0,
+                data, frame, stride, dst_x0, expanded_side, exp_y0, crop_height, src_x0
             )
-
-        # Right padding (exp_x1 > crop_width)
         if exp_x1 > crop_width:
             _pad_right(
                 data,
@@ -228,7 +205,7 @@ def extract_expanded_tiles(
                 stride,
                 dst_x0,
                 copy_w,
-                expanded_size,
+                expanded_side,
                 exp_y0,
                 crop_height,
                 crop_width - 1,
@@ -239,48 +216,8 @@ def extract_expanded_tiles(
     return result
 
 
-def count_interior_dirty_tiles(
-    rects: List[Tuple[int, int, int, int, int]],
-    crop_width: int,
-    crop_height: int,
-    tile_size: int,
-    margin: int,
-) -> int:
-    """
-    Return how many dirty tile grid cells are *fully inside* the crop area
-    (i.e. their expanded region stays within bounds and can be GPU‑copied).
-    """
-    tiles_x = (crop_width + tile_size - 1) // tile_size
-    tiles_y = (crop_height + tile_size - 1) // tile_size
-
-    dirty_tiles: Set[Tuple[int, int]] = set()
-    for rx, ry, rw, rh, _ in rects:
-        if rw <= 0 or rh <= 0:
-            continue
-        tx0 = rx // tile_size
-        ty0 = ry // tile_size
-        tx1 = (rx + rw + tile_size - 1) // tile_size
-        ty1 = (ry + rh + tile_size - 1) // tile_size
-        for ty in range(ty0, min(ty1, tiles_y)):
-            for tx in range(tx0, min(tx1, tiles_x)):
-                dirty_tiles.add((tx, ty))
-
-    interior = 0
-    for tx, ty in dirty_tiles:
-        src_x0 = tx * tile_size - margin
-        src_y0 = ty * tile_size - margin
-        if (
-            0 <= src_x0
-            and 0 <= src_y0
-            and src_x0 + tile_size + 2 * margin <= crop_width
-            and src_y0 + tile_size + 2 * margin <= crop_height
-        ):
-            interior += 1
-    return interior
-
-
 # ------------------------------------------------------------------------------
-#  Internal Helper Functions for Tile Extraction
+#  Internal helpers – fast row/column copies with memoryview slicing
 # ------------------------------------------------------------------------------
 def _copy_region(
     dst: bytearray,
@@ -294,7 +231,7 @@ def _copy_region(
     dst_y: int,
     dst_stride: int,
 ) -> None:
-    """Copy a rectangular region from src to dst (row by row)."""
+    """Copy a rectangular region from src to dst, row by row."""
     for row in range(copy_h):
         src_start = (src_y + row) * src_stride + src_x * 4
         dst_start = ((dst_y + row) * dst_stride + dst_x) * 4
@@ -314,13 +251,12 @@ def _pad_top(
     src_x: int,
     src_y: int,
 ) -> None:
-    """Replicate the top valid row into the top padding area."""
+    """Fill top padding rows with the first valid row of the source."""
+    src_start = src_y * src_stride + src_x * 4
+    row_data = src[src_start : src_start + copy_w * 4]
     for y in range(first_valid_row):
-        src_start = src_y * src_stride + src_x * 4
         dst_start = y * dst_stride * 4 + dst_x * 4
-        dst[dst_start : dst_start + copy_w * 4] = src[
-            src_start : src_start + copy_w * 4
-        ]
+        dst[dst_start : dst_start + copy_w * 4] = row_data
 
 
 def _pad_bottom(
@@ -335,14 +271,13 @@ def _pad_bottom(
     src_x: int,
     src_y: int,
 ) -> None:
-    """Replicate the bottom valid row into the bottom padding area."""
-    last_valid_row = first_valid_row + copy_h - 1
-    for y in range(last_valid_row + 1, dst_stride):
-        src_start = src_y * src_stride + src_x * 4
+    """Fill bottom padding rows with the last valid row of the source."""
+    last_valid_y = first_valid_row + copy_h - 1
+    src_start = src_y * src_stride + src_x * 4
+    row_data = src[src_start : src_start + copy_w * 4]
+    for y in range(last_valid_y + 1, dst_stride):
         dst_start = y * dst_stride * 4 + dst_x * 4
-        dst[dst_start : dst_start + copy_w * 4] = src[
-            src_start : src_start + copy_w * 4
-        ]
+        dst[dst_start : dst_start + copy_w * 4] = row_data
 
 
 def _pad_left(
@@ -355,15 +290,13 @@ def _pad_left(
     crop_height: int,
     src_x: int,
 ) -> None:
-    """Replicate the leftmost valid column into the left padding area."""
+    """Fill left padding columns with the leftmost valid column of each row."""
     for y in range(dst_stride):
         src_y = min(max(exp_y0 + y, 0), crop_height - 1)
-        src_start = src_y * src_stride + src_x * 4
-        dst_start = y * dst_stride * 4
+        pixel = src[src_y * src_stride + src_x * 4 : src_y * src_stride + src_x * 4 + 4]
+        dst_row = y * dst_stride * 4
         for x in range(dst_x):
-            dst[dst_start + x * 4 : dst_start + x * 4 + 4] = src[
-                src_start : src_start + 4
-            ]
+            dst[dst_row + x * 4 : dst_row + x * 4 + 4] = pixel
 
 
 def _pad_right(
@@ -377,12 +310,10 @@ def _pad_right(
     crop_height: int,
     src_x: int,
 ) -> None:
-    """Replicate the rightmost valid column into the right padding area."""
+    """Fill right padding columns with the rightmost valid column of each row."""
     for y in range(dst_stride):
         src_y = min(max(exp_y0 + y, 0), crop_height - 1)
-        src_start = src_y * src_stride + src_x * 4
-        dst_start = y * dst_stride * 4 + (dst_x + copy_w) * 4
+        pixel = src[src_y * src_stride + src_x * 4 : src_y * src_stride + src_x * 4 + 4]
+        dst_row = y * dst_stride * 4 + (dst_x + copy_w) * 4
         for x in range(dst_stride - (dst_x + copy_w)):
-            dst[dst_start + x * 4 : dst_start + x * 4 + 4] = src[
-                src_start : src_start + 4
-            ]
+            dst[dst_row + x * 4 : dst_row + x * 4 + 4] = pixel
