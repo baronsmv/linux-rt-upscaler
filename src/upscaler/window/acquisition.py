@@ -1,4 +1,5 @@
 import logging
+import struct
 import subprocess
 import sys
 import time
@@ -49,6 +50,20 @@ def _list_windows() -> List[WindowInfo]:
             "No _NET_CLIENT_LIST property; falling back to recursive enumeration."
         )
         windows = enumerate_all_windows(conn)
+
+    print(f"[DEBUG] _NET_CLIENT_LIST reply: {reply is not None and reply.value_len}")
+    print(f"[DEBUG] Fallback used: {not reply or not reply.value_len}")
+    print(f"[DEBUG] Total windows to check: {len(windows)}")
+
+    if windows:
+        # quickly inspect first 3 IDs
+        for idx, wid in enumerate(windows[:3]):
+            print(
+                f"[DEBUG] checking win {hex(wid)}: "
+                f"viewable={is_viewable(conn, wid)}, "
+                f"geom={get_window_geometry(conn, wid)}, "
+                f"name={get_window_name(conn, wid, atoms)}"
+            )
 
     result: List[WindowInfo] = []
     for win in windows:

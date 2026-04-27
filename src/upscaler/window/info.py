@@ -1,4 +1,5 @@
 import logging
+import struct
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 
@@ -117,10 +118,13 @@ def get_window_pid(
 
 
 def is_viewable(conn: xcffib.Connection, win: Window) -> bool:
-    """Check if the window is mapped (viewable)."""
+    """Return True if the window is mapped, i.e., not Unmapped (0)."""
     try:
         attr = conn.core.GetWindowAttributes(win).reply()
-        return attr is not None and attr.map_state == xcffib.xproto.MapState.VIEWABLE
+        if attr is None:
+            return False
+        # X11 map_state: 0 = Unmapped, 1 = Unviewable, 2 = Viewable
+        return attr.map_state != 0
     except Exception:
         return False
 

@@ -7,7 +7,7 @@ from typing import Optional, Callable
 
 from .acquisition import get_active_window
 from .display import open_xcb_connection, close_xcb_connection
-from .info import WindowInfo
+from .info import WindowInfo, AtomCache
 
 logger = logging.getLogger(__name__)
 
