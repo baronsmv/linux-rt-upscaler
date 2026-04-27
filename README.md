@@ -223,11 +223,11 @@ This project tackles the other half of the equation: **AI-powered upscaling** to
 
 This project stands on the shoulders of several open-source works, mantained by amazing people and communities:
 
-- **[L65536](https://github.com/L65536)** – For the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real‑time CuNNy upscaling on Linux. This project began from that proof‑of‑concept and has since evolved into a complete rewrite with a custom Vulkan backend, tile‑based processing, and more features.
-- **[funnyplanter](https://github.com/funnyplanter)** – For the incredible [CuNNy](https://github.com/funnyplanter/CuNNy) neural network upscaling models, especially the Magpie NVL variants trained on visual novel artwork.
-- The original **[Compushady](https://github.com/rdeioris/compushady)** library, which served as an invaluable foundation during early development. The current release uses a custom, tailored Vulkan backend that builds on those early lessons and grows to meet the project’s specific needs.
-- **[PySide6](https://pypi.org/project/PySide6/)** – The Qt binding that powers the entire graphical overlay window.
-- **[xcffib](https://github.com/tych0/xcffib)** – The low‑level XCB binding used for all window management and event forwarding.
-- **[screeninfo](https://github.com/rr-/screeninfo)** – Provides the physical dimensions and positions of all connected monitors, used for scaling factor detection.
-- **[psutil](https://github.com/giampaolo/psutil)** – Helps locate the target window by matching process IDs and window classes when attaching to a running application or launching a new one.
-- **[Pillow](https://python-pillow.github.io/)** – The Python Imaging Library is used for saving lossless screenshots and for rendering the on‑screen display text as an image, which is then uploaded to the GPU.
+- **[L65536](https://github.com/L65536)**, for the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real‑time CuNNy upscaling on Linux. This project began from that proof‑of‑concept and has since evolved into a complete rewrite with a custom Vulkan backend, tile‑based processing, and more features.
+- **[funnyplanter](https://github.com/funnyplanter)**, for the incredible [CuNNy](https://github.com/funnyplanter/CuNNy) neural network upscaling models, especially the Magpie NVL variants trained on visual novel artwork.
+- **[Compushady](https://github.com/rdeioris/compushady)**, which served as an invaluable foundation during early development. The current release uses a custom, tailored Vulkan backend that builds on those early lessons and grows to meet the project’s specific needs.
+- **[PySide6](https://pypi.org/project/PySide6/)**, the Qt binding that powers the entire graphical overlay window.
+- **[xcffib](https://github.com/tych0/xcffib)**, the low‑level XCB binding used for all window management and event forwarding.
+- **[screeninfo](https://github.com/rr-/screeninfo)**, providing the physical dimensions and positions of all connected monitors, and used for scaling factor detection.
+- **[psutil](https://github.com/giampaolo/psutil)**, helping locate the target window by matching process IDs and window classes when attaching to a running application or launching a new one.
+- **[Pillow](https://python-pillow.github.io/)**, used for saving lossless screenshots and for rendering the on‑screen display text as an image, which is then uploaded to the GPU.
