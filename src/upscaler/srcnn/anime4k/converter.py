@@ -3,13 +3,12 @@
 Anime4K mpv shader → Vulkan GLSL compute shaders + model.json
 
 Features:
-- Wraps the original hook() logic in a reusable function.
-- Robust replacement of all texture macros (*_texOff, *_tex, *_pos, etc.)
-- Handles variable offsets and complex expressions correctly.
-- Fully resolves #define aliases (L_tex → LINELUMA_tex).
-- Automatically adds MAIN alias for the first input texture.
-- Generates full‑frame and optional tile‑mode compute shaders.
-- Produces model.json for the CuNNy‑compatible host pipeline.
+- Detects multiple passes (//!DESC) and extracts hook() logic.
+- Translates mpv texture macros (*_texOff, *_tex, *_pos, etc.).
+- Handles tile‑mode (2D Arrays) and full‑frame (2D) textures.
+- Resolves #define aliases.
+- Correctly generates the depth‑to‑space (final shuffle) pass.
+- Outputs model.json for the CuNNy‑compatible pipeline.
 """
 
 import argparse
@@ -28,14 +27,14 @@ from typing import List, Dict, Optional, Tuple
 @dataclass
 class PassInfo:
     desc: str
-    bindings: List[str]
+    bindings: List[str]  # texture names (1st = MAIN)
     save: Optional[str]
     width_expr: Optional[str]
     height_expr: Optional[str]
     components: int
     defines: List[str]
-    prologue: str  # helper functions before hook()
-    body: str  # code inside hook()
+    prologue: str
+    body: str
     when: Optional[str] = None
 
     @property
@@ -59,13 +58,15 @@ class Anime4KParser:
             lines = block.splitlines()
             desc = lines[0].strip()
 
-            bindings = []
-            save = None
-            width_expr = None
-            height_expr = None
-            components = 4
-            defines = []
-            when = None
+            bindings, save, width_expr, height_expr, components, defines, when = (
+                [],
+                None,
+                None,
+                None,
+                4,
+                [],
+                None,
+            )
 
             hook_idx = None
             for i, line in enumerate(lines):
@@ -92,14 +93,14 @@ class Anime4KParser:
                 elif s.startswith("#define"):
                     defines.append(s)
 
-            prologue_lines = []
-            for line in lines[1:hook_idx]:
-                s = line.strip()
-                if not s.startswith("//!") and not s.startswith("#define"):
-                    prologue_lines.append(line)
+            prologue_lines = [
+                line
+                for line in lines[1:hook_idx]
+                if not line.strip().startswith("//!")
+                and not line.strip().startswith("#define")
+            ]
             prologue = "\n".join(prologue_lines).strip()
 
-            # Extract hook body
             brace_count = 0
             body_lines = []
             for line in lines[hook_idx:]:
@@ -145,10 +146,15 @@ def replace_mpv_globals(code: str) -> str:
 
 
 def replace_texture_macros(
-    code: str, tex_mappings: Dict[str, str], array_mode: bool, point_sampler: str
+    code: str, tex_mappings: Dict[str, str], point_sampler: str, array_mode: bool
 ) -> str:
+    """
+    Recursively replace mpv texture macros with GLSL texture() calls.
+    When array_mode is True, textures are 2D arrays and coordinates
+    become vec3(coord, tile.inputLayer).
+    """
     for base, sampler in tex_mappings.items():
-        # --- texOff replacement ---
+        # texOff
         prefix = f"{base}_texOff"
         pattern = re.compile(rf"{re.escape(prefix)}\s*\(")
         for match in pattern.finditer(code):
@@ -163,19 +169,19 @@ def replace_texture_macros(
                 i += 1
             if depth == 0:
                 arg = code[start : i - 1].strip()
-                new_arg = f"pos + ({arg}) * vec2(ubo.in_dx, ubo.in_dy)"
+                coord2d = f"pos + ({arg}) * vec2(ubo.in_dx, ubo.in_dy)"
                 if array_mode:
-                    replacement = f"texture(sampler2DArray({sampler}, {point_sampler}), vec3({new_arg}, tile.inputLayer))"
+                    replacement = f"texture(sampler2DArray({sampler}, {point_sampler}), vec3({coord2d}, tile.inputLayer))"
                 else:
                     replacement = (
-                        f"texture(sampler2D({sampler}, {point_sampler}), {new_arg})"
+                        f"texture(sampler2D({sampler}, {point_sampler}), {coord2d})"
                     )
                 code = code[: match.start()] + replacement + code[i:]
                 return replace_texture_macros(
-                    code, tex_mappings, array_mode, point_sampler
+                    code, tex_mappings, point_sampler, array_mode
                 )
 
-        # --- tex replacement ---
+        # tex (without Off)
         prefix = f"{base}_tex"
         pattern = re.compile(rf"{re.escape(prefix)}\s*\(")
         for match in pattern.finditer(code):
@@ -198,7 +204,7 @@ def replace_texture_macros(
                     )
                 code = code[: match.start()] + replacement + code[i:]
                 return replace_texture_macros(
-                    code, tex_mappings, array_mode, point_sampler
+                    code, tex_mappings, point_sampler, array_mode
                 )
 
         code = code.replace(f"{base}_pos", "pos")
@@ -217,10 +223,7 @@ def resolve_defines_as_aliases(
         if m:
             alias_full = m.group(1)
             original_base = m.group(2)
-            if alias_full.endswith("_tex"):
-                alias_base = alias_full[:-4]
-            else:
-                alias_base = alias_full
+            alias_base = alias_full[:-4] if alias_full.endswith("_tex") else alias_full
             if original_base in tex_mappings:
                 extra_mappings[alias_base] = tex_mappings[original_base]
                 continue
@@ -239,14 +242,14 @@ def common_header() -> str:
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) uniform Constants {
-    float in_width;
-    float in_height;
-    float out_width;
-    float out_height;
-    float in_dx;
-    float in_dy;
-    float out_dx;
-    float out_dy;
+    uint   in_width;
+    uint   in_height;
+    uint   out_width;
+    uint   out_height;
+    float  in_dx;
+    float  in_dy;
+    float  out_dx;
+    float  out_dy;
 } ubo;
 
 layout(set = 0, binding = 1) uniform sampler pointSampler;
@@ -293,10 +296,8 @@ def generate_intermediate_pass(
             )
         tex_mappings[name] = f"tex_{safe}"
 
-    # In MPV, the first binding is always also accessible as MAIN
-    if "MAIN" not in tex_mappings and len(pinfo.bindings) > 0:
-        first_name = pinfo.bindings[0]
-        tex_mappings["MAIN"] = tex_mappings[first_name]
+    if "MAIN" not in tex_mappings and pinfo.bindings:
+        tex_mappings["MAIN"] = tex_mappings[pinfo.bindings[0]]
 
     out_binding = bind_start + len(pinfo.bindings)
     out_safe = tex_name_safe(out_name) if out_name != "output" else "output"
@@ -317,7 +318,7 @@ def generate_intermediate_pass(
     for d in filtered_defines:
         d_clean = replace_mpv_globals(d)
         d_clean = replace_texture_macros(
-            d_clean, tex_mappings, tile_mode, "pointSampler"
+            d_clean, tex_mappings, "pointSampler", tile_mode
         )
         lines.append(d_clean)
 
@@ -325,14 +326,14 @@ def generate_intermediate_pass(
         lines.append("")
         prologue = replace_mpv_globals(pinfo.prologue)
         prologue = replace_texture_macros(
-            prologue, tex_mappings, tile_mode, "pointSampler"
+            prologue, tex_mappings, "pointSampler", tile_mode
         )
         lines.append(prologue)
 
     lines.append("")
     lines.append("vec4 hook() {")
     body = replace_mpv_globals(pinfo.body)
-    body = replace_texture_macros(body, tex_mappings, tile_mode, "pointSampler")
+    body = replace_texture_macros(body, tex_mappings, "pointSampler", tile_mode)
     lines.append(body)
     lines.append("}")
 
@@ -342,8 +343,6 @@ def generate_intermediate_pass(
         lines.append("    ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);")
         lines.append("    ivec2 valid_xy = interior_xy + ivec2(tile.margin);")
         lines.append("    pos = (vec2(valid_xy) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);")
-        if is_final:
-            lines.append("    ivec2 global_xy = valid_xy + ivec2(tile.dstOffset);")
     else:
         lines.append("    ivec2 gxy = ivec2(gl_GlobalInvocationID.xy);")
         lines.append("    pos = (vec2(gxy) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);")
@@ -351,12 +350,15 @@ def generate_intermediate_pass(
     lines.append("    vec4 result = hook();")
     if tile_mode:
         if is_final:
-            lines.append(f"    imageStore(img_{out_safe}, global_xy, result);")
+            lines.append(
+                f"    imageStore(img_{out_safe}, ivec2(valid_xy) + ivec2(tile.dstOffset), result);"
+            )
         else:
             lines.append(f"    imageStore(img_{out_safe}, ivec3(valid_xy, 0), result);")
     else:
         lines.append(f"    imageStore(img_{out_safe}, gxy, result);")
     lines.append("}")
+
     return "\n".join(lines)
 
 
@@ -400,10 +402,6 @@ def generate_d2s_pass(
     )
     tex_mappings[main_tex] = f"tex_{safe_main}"
 
-    # Ensure MAIN is mapped to the first binding if not already present
-    if "MAIN" not in tex_mappings and len(pinfo.bindings) > 0:
-        tex_mappings["MAIN"] = tex_mappings[pinfo.bindings[0]]
-
     out_binding = main_binding + 1
     lines.append(
         f"layout(set = 0, binding = {out_binding}, rgba8) uniform image2D img_output;"
@@ -416,8 +414,8 @@ def generate_d2s_pass(
     for d in filtered_defines:
         d_clean = replace_mpv_globals(d)
         d_clean = replace_texture_macros(
-            d_clean, tex_mappings, tile_mode, "pointSampler"
-        )
+            d_clean, tex_mappings, "pointSampler", False
+        )  # MAIN is 2D
         lines.append(d_clean)
     if pinfo.prologue:
         lines.append("")
@@ -444,16 +442,20 @@ def generate_d2s_pass(
 
     lines.append("    vec2 f0 = fract(pos * vec2(ubo.in_width, ubo.in_height));")
     lines.append("    ivec2 i0 = ivec2(f0 * 2.0);")
+
     for idx, name in enumerate(feature_bindings):
         safe = tex_name_safe(name)
         if tile_mode:
             lines.append(
-                f"    float c{idx} = texture(sampler2DArray(tex_{safe}, pointSampler), vec3((vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos, tile.inputLayer))[i0.y * 2 + i0.x];"
+                f"    float c{idx} = texture(sampler2DArray(tex_{safe}, pointSampler), "
+                f"vec3((vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos, tile.inputLayer))[i0.y * 2 + i0.x];"
             )
         else:
             lines.append(
-                f"    float c{idx} = texture(sampler2D(tex_{safe}, pointSampler), (vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos)[i0.y * 2 + i0.x];"
+                f"    float c{idx} = texture(sampler2D(tex_{safe}, pointSampler), "
+                f"(vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos)[i0.y * 2 + i0.x];"
             )
+
     nf = len(feature_bindings)
     if nf == 1:
         lines.append("    float c1 = c0; float c2 = c0; float c3 = c0;")
@@ -465,11 +467,14 @@ def generate_d2s_pass(
     offsets = [(0, 0, "c0"), (1, 0, "c1"), (0, 1, "c2"), (1, 1, "c3")]
     for i, (ox, oy, cvar) in enumerate(offsets):
         if tile_mode:
-            lines.append(
-                f"    if ((base_out.x + {ox}) < int(tile.dstOffset.x + tile.tileOutExtent.x) && (base_out.y + {oy}) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {{"
+            cond = (
+                f"    if ((base_out.x + {ox}) < int(tile.dstOffset.x + tile.tileOutExtent.x) && "
+                f"(base_out.y + {oy}) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {{"
             )
+            lines.append(cond)
             lines.append(
-                f"        vec3 rgb_{i} = texture(sampler2D(tex_{safe_main}, linearSampler), (vec2(base_out) + vec2({ox+0.5}, {oy+0.5})) * full_opt).rgb;"
+                f"        vec3 rgb_{i} = texture(sampler2D(tex_{safe_main}, linearSampler), "
+                f"(vec2(base_out) + vec2({ox+0.5}, {oy+0.5})) * full_opt).rgb;"
             )
             lines.append(
                 f"        imageStore(img_output, ivec2(base_out) + ivec2({ox}, {oy}), vec4(rgb_{i} + {cvar}, 1.0));"
@@ -477,7 +482,8 @@ def generate_d2s_pass(
             lines.append("    }")
         else:
             lines.append(
-                f"    vec3 rgb_{i} = texture(sampler2D(tex_{safe_main}, linearSampler), (vec2(gxy) + vec2({ox+0.5}, {oy+0.5})) * full_opt).rgb;"
+                f"    vec3 rgb_{i} = texture(sampler2D(tex_{safe_main}, linearSampler), "
+                f"(vec2(gxy) + vec2({ox+0.5}, {oy+0.5})) * full_opt).rgb;"
             )
             lines.append(
                 f"    imageStore(img_output, gxy + ivec2({ox}, {oy}), vec4(rgb_{i} + {cvar}, 1.0));"
@@ -534,20 +540,22 @@ def main():
         "-t", "--tile", action="store_true", help="Generate tile‑mode variants"
     )
     args = parser.parse_args()
-    shader_path = args.shader_path
-    if not os.path.isfile(shader_path):
-        print(f"Error: {shader_path} not found.")
+
+    if not os.path.isfile(args.shader_path):
+        print(f"Error: {args.shader_path} not found.")
         return
-    with open(shader_path, "r", encoding="utf-8") as f:
+
+    with open(args.shader_path, "r", encoding="utf-8") as f:
         content = f.read()
-    parser_shader = Anime4KParser(content)
-    passes = parser_shader.passes
+
+    shader_parser = Anime4KParser(content)
+    passes = shader_parser.passes
     if not passes:
         print("No passes found.")
         return
 
-    shader_dir = os.path.dirname(shader_path)
-    shader_name = os.path.splitext(os.path.basename(shader_path))[0]
+    shader_dir = os.path.dirname(args.shader_path)
+    shader_name = os.path.splitext(os.path.basename(args.shader_path))[0]
     output_dir = os.path.join(shader_dir, shader_name)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -567,6 +575,7 @@ def main():
             out_name = "output"
         else:
             out_name = pinfo.save
+
         for tile in tile_modes:
             suffix = "_tile" if tile else ""
             if pinfo.is_d2s:
@@ -577,6 +586,7 @@ def main():
             with open(out_file, "w") as f:
                 f.write(code)
             print(f"Written {out_file}")
+
     print(f"Done. Output in {output_dir}")
 
 
