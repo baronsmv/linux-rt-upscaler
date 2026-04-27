@@ -107,10 +107,10 @@ class Config:
     area_threshold: float = 0.3
 
     # Window detection
-    target_delay: int = 5
-    pid_timeout: int = 5
-    class_timeout: int = 5
-    total_timeout: int = 60
+    target_delay: float = 5
+    pid_timeout: float = 5
+    class_timeout: float = 5
+    total_timeout: float = 60
     starting_phase: int = 1
 
     # Logging (set via flags, not directly from CLI)

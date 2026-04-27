@@ -475,25 +475,25 @@ Recommended range: 0.15-0.5, default: %(default)s
     window_detection_group = parser.add_argument_group("WINDOW DETECTION OPTIONS")
     window_detection_group.add_argument(
         "--target-delay",
-        type=int,
+        type=float,
         default=DEFAULT_CONFIG.target_delay,
         help="Seconds to wait before capturing active window",
     )
     window_detection_group.add_argument(
         "--pid-timeout",
-        type=int,
+        type=float,
         default=DEFAULT_CONFIG.pid_timeout,
         help="Seconds to try PID-based window detection",
     )
     window_detection_group.add_argument(
         "--class-timeout",
-        type=int,
+        type=float,
         default=DEFAULT_CONFIG.class_timeout,
         help="Seconds to try class-based window detection",
     )
     window_detection_group.add_argument(
         "--total-timeout",
-        type=int,
+        type=float,
         default=DEFAULT_CONFIG.total_timeout,
         help="Total seconds before giving up",
     )
