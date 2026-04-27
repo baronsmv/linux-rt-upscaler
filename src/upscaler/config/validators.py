@@ -1,5 +1,6 @@
 import logging
 import re
+import sys
 from typing import Any, Optional, Dict, Tuple
 
 from PySide6.QtGui import QColor
@@ -38,13 +39,13 @@ def validate_number(
                 logger.error(
                     f"Invalid argument: {arg_name} must be >= {left_limit}, got {value}"
                 )
-                exit(1)
+                sys.exit(1)
         else:
             if value <= left_limit:
                 logger.error(
                     f"Invalid argument: {arg_name} must be > {left_limit}, got {value}"
                 )
-                exit(1)
+                sys.exit(1)
 
     # Determine if the value violates the upper bound
     if right_limit is not None:
@@ -53,13 +54,13 @@ def validate_number(
                 logger.error(
                     f"Invalid argument: {arg_name} must be <= {right_limit}, got {value}"
                 )
-                exit(1)
+                sys.exit(1)
         else:
             if value >= right_limit:
                 logger.error(
                     f"Invalid argument: {arg_name} must be < {right_limit}, got {value}"
                 )
-                exit(1)
+                sys.exit(1)
 
 
 def validate_geometry(geometry: str, _: str) -> None:
@@ -83,7 +84,7 @@ def validate_geometry(geometry: str, _: str) -> None:
             "  x1080, x1080!\n"
             "  1920x1080, 1920x1080!, 1920x1080^"
         )
-        exit(1)
+        sys.exit(1)
 
 
 def validate_color(color_str: str, _: str) -> None:
@@ -99,7 +100,7 @@ def validate_color(color_str: str, _: str) -> None:
             logger.error(
                 f"Invalid hex color string '{color_str}' (must be 3, 4, 6, or 8 hex digits)"
             )
-            exit(1)
+            sys.exit(1)
 
     # Check for rgb/rgba functional notation
     rgba_match = re.match(
@@ -120,12 +121,12 @@ def validate_color(color_str: str, _: str) -> None:
             logger.error(
                 f"Invalid rgb/rgba values in '{color_str}' (must be 0-255 for rgb, 0.0-1.0 for alpha)"
             )
-            exit(1)
+            sys.exit(1)
 
     # Fallback to QColor for named colors and other formats
     if not QColor(color_str).isValid():
         logger.error(f"Invalid color string '{color_str}'")
-        exit(1)
+        sys.exit(1)
 
 
 _VALIDATORS: Dict[str, Tuple] = {

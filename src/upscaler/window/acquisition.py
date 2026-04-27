@@ -1,9 +1,11 @@
 import logging
-import psutil
 import subprocess
+import sys
 import time
-import xcffib
 from typing import List, Optional, Tuple, Set
+
+import psutil
+import xcffib
 
 from .display import open_xcb_connection, close_xcb_connection
 from .info import (
@@ -300,12 +302,16 @@ def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
         print(
             f"No program specified. Will scale the currently active window in {config.target_delay} seconds..."
         )
-    time.sleep(config.target_delay)
+    try:
+        time.sleep(config.target_delay)
+    except KeyboardInterrupt:
+        sys.exit(0)
+
     try:
         win_info = get_active_window()
         if not win_info:
             print("No visible windows found.")
-            exit(1)
+            sys.exit(1)
         logger.info(f"Got active window: {win_info.title}")
         return win_info
     except RuntimeError as e:
