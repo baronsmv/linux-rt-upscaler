@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Convert an Anime4K mpv shader to Vulkan-compatible GLSL compute shaders.
+Convert an Anime4K mpv shader to Vulkan GLSL compute shaders and model.json.
 
-Anime4K multi‑pass shaders:
-- Each pass starts with a //!DESC line.
-- Inputs are declared with //!BIND <tex>
-- Output is //!SAVE <tex>
-- The main function is vec4 hook().
+Features:
+- Parses multi‑pass shaders with //!DESC, //!BIND, //!SAVE, etc.
+- Generates one .glsl compute shader per pass (full‑frame).
+- Optionally generates tile‑mode variants (push constants + array textures).
+- Robust handling of missing //!SAVE (implicit MAIN writes).
+- Detects depth‑to‑space passes by description and uses a specialised generator.
+- Produces a model.json exactly as the CuNNy converter.
 
-The script generates:
-- One compute shader per pass (non‑tile) with Vulkan layout qualifiers.
-- Optionally tile‑based variants that use push constants, array textures and bounds checks.
-- A model.json file describing the pipeline (same format as the CuNNy converter).
+Usage:
+    python converter.py <shader.glsl> [--tile]
 """
 
 import argparse
@@ -29,67 +29,45 @@ from typing import List, Dict, Optional, Tuple
 
 @dataclass
 class Config:
-    """Conversion options."""
-
-    # Whether to generate tile‑mode variants.
     tile: bool = False
-    # Compute shader local size (matches CuNNy and most hardware).
     local_size: Tuple[int, int, int] = (8, 8, 1)
 
 
 # ----------------------------------------------------------------------
-# Data structures for passes
+# Data structures
 # ----------------------------------------------------------------------
 
 
 @dataclass
 class PassInfo:
-    """All information about a single shader pass."""
-
-    desc: str  # Description line (after //!DESC)
-    bindings: List[str]  # Input texture names in order
-    save: str  # Output texture name
-    width_expr: Optional[str]  # //!WIDTH directive
-    height_expr: Optional[str]  # //!HEIGHT directive
-    components: int  # //!COMPONENTS (default 4)
-    defines: List[str]  # #define lines before hook()
-    body: str  # Code inside vec4 hook() (without braces)
-    when: Optional[str] = None  # //!WHEN directive (ignored for simplicity)
-
-    @property
-    def is_final(self) -> bool:
-        """The final pass writes to MAIN (the output)."""
-        return self.save == "MAIN"
+    desc: str
+    bindings: List[str]
+    save: Optional[str]  # None if no //!SAVE directive
+    width_expr: Optional[str]
+    height_expr: Optional[str]
+    components: int
+    defines: List[str]
+    body: str
+    when: Optional[str] = None
 
     @property
     def is_d2s(self) -> bool:
-        """True if this is a depth‑to‑space pass (usually the final one)."""
+        """True if this pass performs depth‑to‑space (pixel shuffle)."""
         return "Depth-to-Space" in self.desc
-
-    @property
-    def input_names(self) -> List[str]:
-        return self.bindings
-
-    @property
-    def output_name(self) -> str:
-        return self.save
 
 
 # ----------------------------------------------------------------------
-# Parsing the mpv shader file
+# Parsing
 # ----------------------------------------------------------------------
 
 
 class Anime4KParser:
-    """Parses the Anime4K mpv shader into a list of PassInfo objects."""
-
     def __init__(self, content: str):
         self.content = content
         self.passes: List[PassInfo] = []
         self._parse()
 
     def _parse(self) -> None:
-        # Split on //!DESC lines; the first block before any DESC is discarded.
         blocks = re.split(r"^//!DESC\s+", self.content, flags=re.MULTILINE)[1:]
         for block in blocks:
             lines = block.splitlines()
@@ -103,29 +81,28 @@ class Anime4KParser:
             defines = []
             when = None
 
-            # Find the hook function and attributes
             body_start = 0
             for i, line in enumerate(lines):
-                stripped = line.strip()
-                if stripped.startswith("//!BIND"):
-                    bindings.append(stripped.split(maxsplit=1)[1].strip())
-                elif stripped.startswith("//!SAVE"):
-                    save = stripped.split(maxsplit=1)[1].strip()
-                elif stripped.startswith("//!WIDTH"):
-                    width_expr = stripped[len("//!WIDTH") :].strip()
-                elif stripped.startswith("//!HEIGHT"):
-                    height_expr = stripped[len("//!HEIGHT") :].strip()
-                elif stripped.startswith("//!COMPONENTS"):
-                    components = int(stripped.split()[-1])
-                elif stripped.startswith("//!WHEN"):
-                    when = stripped[len("//!WHEN") :].strip()
-                elif stripped.startswith("#define"):
-                    defines.append(stripped)
-                elif "vec4 hook()" in stripped:
+                s = line.strip()
+                if s.startswith("//!BIND"):
+                    bindings.append(s.split(maxsplit=1)[1].strip())
+                elif s.startswith("//!SAVE"):
+                    save = s.split(maxsplit=1)[1].strip()
+                elif s.startswith("//!WIDTH"):
+                    width_expr = s[len("//!WIDTH") :].strip()
+                elif s.startswith("//!HEIGHT"):
+                    height_expr = s[len("//!HEIGHT") :].strip()
+                elif s.startswith("//!COMPONENTS"):
+                    components = int(s.split()[-1])
+                elif s.startswith("//!WHEN"):
+                    when = s[len("//!WHEN") :].strip()
+                elif s.startswith("#define"):
+                    defines.append(s)
+                elif "vec4 hook()" in s:
                     body_start = i
                     break
 
-            # Extract the body of hook()
+            # Extract hook body
             brace_count = 0
             body_lines = []
             for line in lines[body_start:]:
@@ -153,64 +130,50 @@ class Anime4KParser:
 
 
 # ----------------------------------------------------------------------
-# GLSL code generation helpers
+# GLSL generation helpers
 # ----------------------------------------------------------------------
 
 
 def tex_name_safe(name: str) -> str:
-    """Transform a texture name into a valid GLSL variable."""
     return name.replace(".", "_").replace("-", "_")
-
-
-def texture_binding_number(base: int, index: int) -> int:
-    """Compute binding index for input textures (starting from `base`)."""
-    return base + index
 
 
 def replace_sampling_calls(
     body: str, tex_mappings: Dict[str, str], array_mode: bool, point_sampler: str
 ) -> str:
-    """
-    Replace mpv sampling macros with GLSL texture calls.
-    tex_mappings: name -> sampler variable
-    """
-    # Pattern: <name>_texOff(vec2(x, y))
-    # e.g., MAIN_texOff(vec2(-1.0, -1.0))
-    # or conv2d_tf_texOff(vec2(x, y))
-
-    for orig_name, sampler_var in tex_mappings.items():
-        macro = f"{orig_name}_texOff"
+    """Replace mpv sampling macros with GLSL texture calls."""
+    # texOff(vec2(x,y))
+    for orig, sampler in tex_mappings.items():
+        macro = f"{orig}_texOff"
         if array_mode:
-            replacement = f"texture(sampler2DArray({sampler_var}, {point_sampler}), vec3(pos + vec2(\\1, \\2) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))"
+            repl = f"texture(sampler2DArray({sampler}, {point_sampler}), vec3(pos + vec2(\\1, \\2) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))"
         else:
-            replacement = f"texture(sampler2D({sampler_var}, {point_sampler}), pos + vec2(\\1, \\2) * vec2(ubo.in_dx, ubo.in_dy))"
+            repl = f"texture(sampler2D({sampler}, {point_sampler}), pos + vec2(\\1, \\2) * vec2(ubo.in_dx, ubo.in_dy))"
         body = re.sub(
             rf"{re.escape(macro)}\s*\(\s*vec2\s*\(\s*([^)]+)\s*,\s*([^)]+)\s*\)\s*\)",
-            replacement,
+            repl,
             body,
         )
 
-    # Also handle the non‑offset lookups used in depth‑to‑space:
-    # pattern: <name>_tex(coord)
-    for orig_name, sampler_var in tex_mappings.items():
-        macro = f"{orig_name}_tex"
+    # tex(coord)
+    for orig, sampler in tex_mappings.items():
+        macro = f"{orig}_tex"
         if array_mode:
-            replacement = f"texture(sampler2DArray({sampler_var}, {point_sampler}), vec3(\\1, tile.inputLayer))"
+            repl = f"texture(sampler2DArray({sampler}, {point_sampler}), vec3(\\1, tile.inputLayer))"
         else:
-            replacement = f"texture(sampler2D({sampler_var}, {point_sampler}), \\1)"
-        body = re.sub(rf"{re.escape(macro)}\s*\(\s*([^)]+)\s*\)", replacement, body)
+            repl = f"texture(sampler2D({sampler}, {point_sampler}), \\1)"
+        body = re.sub(rf"{re.escape(macro)}\s*\(\s*([^)]+)\s*\)", repl, body)
 
-    # Replace the built-in pos macros used only in the final D2S pass
-    # e.g., conv2d_last_tf_pos -> pos  (since we already compute pos)
-    for orig_name in tex_mappings:
-        body = body.replace(f"{orig_name}_pos", "pos")
-        body = body.replace(f"{orig_name}_pt", "vec2(ubo.in_dx, ubo.in_dy)")
-        body = body.replace(f"{orig_name}_size", "vec2(ubo.in_width, ubo.in_height)")
+    # built-in macros
+    for orig in tex_mappings:
+        body = body.replace(f"{orig}_pos", "pos")
+        body = body.replace(f"{orig}_pt", "vec2(ubo.in_dx, ubo.in_dy)")
+        body = body.replace(f"{orig}_size", "vec2(ubo.in_width, ubo.in_height)")
 
     return body
 
 
-def generate_common_header() -> str:
+def common_header() -> str:
     return """#version 450
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
@@ -231,7 +194,7 @@ layout(set = 0, binding = 2) uniform sampler linearSampler;
 """
 
 
-def generate_push_constant_block() -> str:
+def push_constant_block() -> str:
     return """layout(push_constant) uniform TileParams {
     uint inputLayer;
     uvec2 dstOffset;
@@ -243,58 +206,45 @@ def generate_push_constant_block() -> str:
 """
 
 
-def generate_intermediate_pass(pass_info: PassInfo, tile_mode: bool) -> str:
-    """Generate a GLSL compute shader for an intermediate convolution pass."""
+def generate_intermediate_pass(pinfo: PassInfo, out_name: str, tile_mode: bool) -> str:
+    """Regular convolution / utility pass (may also be the final pass if not D2S)."""
     tex_mappings = {}
-    bindings_start = 3  # after ubo (0), pointSampler (1), linearSampler (2)
+    bind_start = 3
     lines = []
 
-    # Header and declarations
-    lines.append(generate_common_header())
+    lines.append(common_header())
     if tile_mode:
-        lines.append(generate_push_constant_block())
+        lines.append(push_constant_block())
 
-    # Input texture declarations
-    for idx, name in enumerate(pass_info.bindings):
-        binding = bindings_start + idx
+    # Input textures
+    for idx, name in enumerate(pinfo.bindings):
+        binding = bind_start + idx
         safe = tex_name_safe(name)
-        if tile_mode:
-            lines.append(
-                f"layout(set = 0, binding = {binding}) uniform sampler2DArray tex_{safe};"
-            )
-        else:
-            lines.append(
-                f"layout(set = 0, binding = {binding}) uniform sampler2D tex_{safe};"
-            )
+        stype = "sampler2DArray" if tile_mode else "sampler2D"
+        lines.append(
+            f"layout(set = 0, binding = {binding}) uniform {stype} tex_{safe};"
+        )
         tex_mappings[name] = f"tex_{safe}"
 
-    # Output image
-    out_binding = bindings_start + len(pass_info.bindings)
-    out_safe = tex_name_safe(pass_info.save) if pass_info.save != "MAIN" else "output"
-    if tile_mode and pass_info.save != "MAIN":
-        lines.append(
-            f"layout(set = 0, binding = {out_binding}, rgba8) uniform image2DArray img_{out_safe};"
-        )
+    # Output image: for tile mode, intermediate passes use array; final output uses 2D
+    out_binding = bind_start + len(pinfo.bindings)
+    out_safe = tex_name_safe(out_name)
+    if tile_mode and out_name != "output":
+        stype_out = "image2DArray"
     else:
-        lines.append(
-            f"layout(set = 0, binding = {out_binding}, rgba8) uniform image2D img_{out_safe};"
-        )
+        stype_out = "image2D"
+    lines.append(
+        f"layout(set = 0, binding = {out_binding}, rgba8) uniform {stype_out} img_{out_safe};"
+    )
 
     lines.append("")
-    # Defines
-    for d in pass_info.defines:
+    for d in pinfo.defines:
         lines.append(d)
     lines.append("")
 
     # Main function
     lines.append("void main() {")
     if tile_mode:
-        lines.append(
-            "    // Tile mode: process interior region only, using expanded tile size."
-        )
-        lines.append(
-            "    // in_width/in_height is the expanded tile size (includes margin)."
-        )
         lines.append("    ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);")
         lines.append("    ivec2 valid_xy = interior_xy + ivec2(tile.margin);")
         lines.append(
@@ -304,103 +254,75 @@ def generate_intermediate_pass(pass_info: PassInfo, tile_mode: bool) -> str:
         lines.append("    ivec2 gxy = ivec2(gl_GlobalInvocationID.xy);")
         lines.append("    vec2 pos = (vec2(gxy) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);")
 
-    # Body with sampling replacements
-    body = replace_sampling_calls(
-        pass_info.body, tex_mappings, tile_mode, "pointSampler"
-    )
+    body = replace_sampling_calls(pinfo.body, tex_mappings, tile_mode, "pointSampler")
+    # Remove any 'return result;' – we will write to the image directly.
+    body = re.sub(r"\breturn\s+result\s*;\s*$", "", body, flags=re.MULTILINE).rstrip()
     lines.append(body)
 
-    # Write output (assuming the body computes a vec4 variable named 'result'
-    # In the original code, the result is returned, so we need to make it explicit.
-    # The original body ends with 'return result;' we replace that with imageStore.
-    # We'll add a line that captures the result and stores it.
-    # For simplicity, we assume the original body last statement is 'return result;'
-    # We'll replace it inside the body before appending.
-    # We'll handle this by post-processing the body: replace 'return result;' with nothing
-    # and then store.
-    lines.append(
-        f'    imageStore(img_{out_safe}, {"ivec3(valid_xy, 0)" if tile_mode else "gxy"}, result);'
-    )
+    if tile_mode:
+        lines.append(f"    imageStore(img_{out_safe}, ivec3(valid_xy, 0), result);")
+    else:
+        lines.append(f"    imageStore(img_{out_safe}, gxy, result);")
+
     lines.append("}")
-
-    final_body = "\n".join(lines)
-    # replace the return statement
-    final_body = final_body.replace(
-        "return result;", ""
-    )  # already removed in body replacement?
-    # We also need to ensure we've stored 'result'. The original code does 'return result;'
-    # So we'll do the store ourselves. We'll remove any trailing return.
-    # This is a bit fragile; we'll instead use a simple approach:
-    # In the body replacement, we'll change 'return result;' to nothing, and then add the store.
-    return final_body
+    return "\n".join(lines)
 
 
-def generate_d2s_pass(pass_info: PassInfo, tile_mode: bool) -> str:
-    """Generate the final depth‑to‑space pass.
-
-    This pass reads the feature maps and the original image, performs the shuffle,
-    and adds the low‑res residual.
-    """
+def generate_d2s_pass(pinfo: PassInfo, out_name: str, tile_mode: bool) -> str:
+    """Specialised generator for depth‑to‑space (pixel shuffle) + residual add."""
     tex_mappings = {}
-    bindings_start = 3
+    bind_start = 3
     lines = []
 
-    lines.append(generate_common_header())
+    lines.append(common_header())
     if tile_mode:
-        lines.append(generate_push_constant_block())
+        lines.append(push_constant_block())
 
-    # We need to separate the feature maps (conv2d_last_tf*) and the original image (MAIN).
-    # The MAIN binding is always present and is the low‑res image.
+    # Separate MAIN (original image) from feature maps
     main_tex = None
     feature_bindings = []
-    for name in pass_info.bindings:
+    for name in pinfo.bindings:
         if name == "MAIN":
             main_tex = name
         else:
             feature_bindings.append(name)
 
     if not main_tex:
-        raise ValueError("Final pass missing MAIN binding")
+        raise ValueError("Depth‑to‑space pass missing MAIN binding (original image)")
 
-    # Declare feature inputs as samplers (with array if tile)
+    # Feature samplers
     for idx, name in enumerate(feature_bindings):
-        binding = bindings_start + idx
+        binding = bind_start + idx
         safe = tex_name_safe(name)
-        if tile_mode:
-            lines.append(
-                f"layout(set = 0, binding = {binding}) uniform sampler2DArray tex_{safe};"
-            )
-        else:
-            lines.append(
-                f"layout(set = 0, binding = {binding}) uniform sampler2D tex_{safe};"
-            )
+        stype = "sampler2DArray" if tile_mode else "sampler2D"
+        lines.append(
+            f"layout(set = 0, binding = {binding}) uniform {stype} tex_{safe};"
+        )
         tex_mappings[name] = f"tex_{safe}"
 
-    # MAIN (original image) always as sampler2D (even in tile mode, because it's the full low‑res image)
-    main_binding = bindings_start + len(feature_bindings)
+    # MAIN (original) always 2D (full frame even in tile mode)
+    main_binding = bind_start + len(feature_bindings)
     safe_main = tex_name_safe(main_tex)
     lines.append(
         f"layout(set = 0, binding = {main_binding}) uniform sampler2D tex_{safe_main};"
     )
     tex_mappings[main_tex] = f"tex_{safe_main}"
 
-    # Output image (2D)
+    # Output image (always 2D)
     out_binding = main_binding + 1
     lines.append(
         f"layout(set = 0, binding = {out_binding}, rgba8) uniform image2D img_output;"
     )
 
     lines.append("")
-    for d in pass_info.defines:
+    for d in pinfo.defines:
         lines.append(d)
     lines.append("")
 
     lines.append("void main() {")
     if tile_mode:
         lines.append("    ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);")
-        lines.append(
-            "    ivec2 base_output_xy = (interior_xy * 2) + ivec2(tile.dstOffset);"
-        )
+        lines.append("    ivec2 base_out = (interior_xy * 2) + ivec2(tile.dstOffset);")
         lines.append(
             "    vec2 pos = (vec2(interior_xy + tile.margin) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);"
         )
@@ -414,141 +336,117 @@ def generate_d2s_pass(pass_info: PassInfo, tile_mode: bool) -> str:
         )
         lines.append("    vec2 full_opt = vec2(ubo.out_dx, ubo.out_dy);")
 
-    # Convert the body: replace sampling macros and pos/pt/size references
-    body = replace_sampling_calls(
-        pass_info.body, tex_mappings, tile_mode, "pointSampler"
-    )
-
-    # Drop the original body lines and write our own implementation.
-    # We'll use a prebuilt function.
-    lines.append("")
-    lines.append("    // Depth‑to‑Space shuffle + residual add")
-    lines.append(f"    vec2 f0 = fract(pos * vec2(ubo.in_width, ubo.in_height));")
-    lines.append(f"    ivec2 i0 = ivec2(f0 * 2.0);")
-
-    # We'll generate sampling for each feature map
-    if tile_mode:
-        idx = 0
-        for name in feature_bindings:
-            safe = tex_name_safe(name)
+    # Depth‑to‑Space shuffle
+    lines.append("    vec2 f0 = fract(pos * vec2(ubo.in_width, ubo.in_height));")
+    lines.append("    ivec2 i0 = ivec2(f0 * 2.0);")
+    for idx, name in enumerate(feature_bindings):
+        safe = tex_name_safe(name)
+        if tile_mode:
             lines.append(
                 f"    float c{idx} = texture(sampler2DArray(tex_{safe}, pointSampler), vec3((vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos, tile.inputLayer))[i0.y * 2 + i0.x];"
             )
-            idx += 1
-        # For the last channel(s) reuse c2 as c3 if only one map? We need to follow original logic.
-        # We'll mimic the original's handling: if only one feature map, c0=c1=c2=c3.
-    else:
-        idx = 0
-        for name in feature_bindings:
-            safe = tex_name_safe(name)
+        else:
             lines.append(
                 f"    float c{idx} = texture(sampler2D(tex_{safe}, pointSampler), (vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos)[i0.y * 2 + i0.x];"
             )
-            idx += 1
 
-    # Now emulate the original code that sets c2 = c1 etc. depending on the number of maps.
-    # In the examples provided:
-    # - CNN(S) has only one conv2d_last_tf: its body does c1=c0; c2=c1; c3=c2.
-    # - UL has three, and c3 = c2.
-    # We'll handle both cases.
-    num_features = len(feature_bindings)
-    if num_features == 1:
-        lines.append("    float c1 = c0;")
-        lines.append("    float c2 = c1;")
+    # Replicate channels if fewer than 4 feature maps
+    nf = len(feature_bindings)
+    if nf == 1:
+        lines.append("    float c1 = c0; float c2 = c0; float c3 = c0;")
+    elif nf == 2:
+        lines.append("    float c2 = c1; float c3 = c1;")
+    elif nf == 3:
         lines.append("    float c3 = c2;")
-    elif num_features == 2:
-        lines.append("    float c2 = c1;")
-        lines.append("    float c3 = c2;")
-    elif num_features == 3:
-        # The original UL uses c3 = c2.
-        lines.append("    float c3 = c2;")
-    # else: assume 4 or more (rare)
+    # if nf >= 4 we already have c0..c3
 
-    # Residual add
-    if tile_mode:
-        lines.append(
-            "    ivec2 maxOut = ivec2(tile.dstOffset) + ivec2(tile.tileOutExtent);"
-        )
-        for offx, offy in [(0, 0), (1, 0), (0, 1), (1, 1)]:
-            c_idx = offy * 2 + offx
+    # Write 2x2 block
+    offsets = [(0, 0, 0), (1, 0, 1), (0, 1, 2), (1, 1, 3)]
+    for ox, oy, ci in offsets:
+        if tile_mode:
             lines.append(
-                f"    if ((base_output_xy.x + {offx}) < maxOut.x && (base_output_xy.y + {offy}) < maxOut.y) {{"
+                f"    if ((base_out.x + {ox}) < int(tile.dstOffset.x + tile.tileOutExtent.x) && (base_out.y + {oy}) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {{"
             )
             lines.append(
-                f"        vec3 rgb = texture(sampler2D(tex_{safe_main}, linearSampler), (vec2(base_output_xy) + vec2({offx+0.5}, {offy+0.5})) * full_opt).rgb;"
+                f"        vec3 rgb = texture(sampler2D(tex_{safe_main}, linearSampler), (vec2(base_out) + vec2({ox+0.5}, {oy+0.5})) * full_opt).rgb;"
             )
             lines.append(
-                f"        imageStore(img_output, ivec2(base_output_xy) + ivec2({offx}, {offy}), vec4(rgb + c{c_idx}, 1.0));"
+                f"        imageStore(img_output, ivec2(base_out) + ivec2({ox}, {oy}), vec4(rgb + c{ci}, 1.0));"
             )
             lines.append("    }")
-    else:
-        for offx, offy in [(0, 0), (1, 0), (0, 1), (1, 1)]:
-            c_idx = offy * 2 + offx
+        else:
             lines.append(
-                f"    vec3 rgb = texture(sampler2D(tex_{safe_main}, linearSampler), (vec2(gxy) + vec2({offx+0.5}, {offy+0.5})) * full_opt).rgb;"
+                f"    vec3 rgb = texture(sampler2D(tex_{safe_main}, linearSampler), (vec2(gxy) + vec2({ox+0.5}, {oy+0.5})) * full_opt).rgb;"
             )
             lines.append(
-                f"    imageStore(img_output, gxy + ivec2({offx}, {offy}), vec4(rgb + c{c_idx}, 1.0));"
+                f"    imageStore(img_output, gxy + ivec2({ox}, {oy}), vec4(rgb + c{ci}, 1.0));"
             )
 
     lines.append("}")
     return "\n".join(lines)
 
 
-def generate_pass(pass_info: PassInfo, tile_mode: bool) -> str:
-    """Dispatcher: generate the appropriate compute shader."""
-    if pass_info.is_final or pass_info.is_d2s:
-        # For the final pass we use the specialised depth‑to‑space generator
-        return generate_d2s_pass(pass_info, tile_mode)
-    else:
-        return generate_intermediate_pass(pass_info, tile_mode)
-
-
 # ----------------------------------------------------------------------
-# Model.json builder
+# Model.json builder (with implicit MAIN handling)
 # ----------------------------------------------------------------------
 
 
 def build_model_json(passes: List[PassInfo]) -> Dict:
-    """Create the model.json descriptor."""
+    """
+    Build the model.json descriptor, resolving implicit MAIN flows.
+    """
     srv_uav = []
-    # We'll assume samplers: all passes use point, final also linear.
-    samplers = []
-    for p in passes:
-        inputs = [name.lower() if name != "MAIN" else "input" for name in p.input_names]
-        outputs = [p.save.lower() if p.save != "MAIN" else "output"]
-        srv_uav.append([inputs, outputs])
-        if p.is_final:
-            samplers.append(["point", "linear"])
-        else:
-            samplers.append(["point"])
+    sampler_list = []
+    prev_output = "input"
+    all_tex_names = set()
 
-    # Count the number of unique intermediate textures (by name) for 'num_textures'
-    all_tex = set()
-    for p in passes:
-        all_tex.update(p.input_names)
-        all_tex.add(p.save)
-    num_textures = len(all_tex - {"MAIN"})  # exclude the special MAIN
+    total_passes = len(passes)
+    for idx, p in enumerate(passes):
+        is_last = idx == total_passes - 1
+
+        # Replace any "MAIN" binding with the previous output name
+        inputs = [
+            prev_output if name == "MAIN" else name.lower() for name in p.bindings
+        ]
+
+        # Determine output name
+        if p.save is None:
+            out_name = f"pass_{idx}_out"
+            if is_last:
+                out_name = "output"
+        elif p.save == "MAIN" and is_last:
+            out_name = "output"
+        else:
+            out_name = p.save.lower()
+
+        srv_uav.append([inputs, [out_name]])
+        sampler_list.append(["point", "linear"] if is_last else ["point"])
+
+        all_tex_names.update(inputs)
+        all_tex_names.add(out_name)
+        prev_output = out_name
+
+    num_textures = len(all_tex_names - {"input", "output"})
 
     return {
-        "name": None,  # filled later
-        "passes": len(passes),
+        "name": None,
+        "passes": total_passes,
         "num_textures": num_textures,
         "srv_uav": srv_uav,
-        "samplers": samplers,
+        "samplers": sampler_list,
     }
 
 
 # ----------------------------------------------------------------------
-# Main script
+# Main
 # ----------------------------------------------------------------------
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert Anime4K mpv shader to Vulkan compute shaders."
+        description="Anime4K mpv to Vulkan compute converter."
     )
-    parser.add_argument("shader_path", help="Path to the .glsl shader file")
+    parser.add_argument("shader_path", help="Path to .glsl shader file")
     parser.add_argument(
         "-t", "--tile", action="store_true", help="Generate tile‑mode variants"
     )
@@ -562,40 +460,55 @@ def main():
     with open(shader_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Parse
     shader_parser = Anime4KParser(content)
-    if not shader_parser.passes:
-        print("No passes found!")
+    passes = shader_parser.passes
+    if not passes:
+        print("No passes found.")
         return
 
-    # Setup output directory
+    # Prepare output directory
     shader_dir = os.path.dirname(shader_path)
     shader_name = os.path.splitext(os.path.basename(shader_path))[0]
     output_dir = os.path.join(shader_dir, shader_name)
     os.makedirs(output_dir, exist_ok=True)
 
-    # Generate model.json
-    model = build_model_json(shader_parser.passes)
+    # Build model.json
+    model = build_model_json(passes)
     model["name"] = shader_name
     with open(os.path.join(output_dir, "model.json"), "w") as f:
         json.dump(model, f, indent=2)
 
-    # Generate passes
-    for i, pinfo in enumerate(shader_parser.passes, 1):
-        # Non‑tile
-        glsl_code = generate_pass(pinfo, tile_mode=False)
-        out_path = os.path.join(output_dir, f"Pass{i}.glsl")
-        with open(out_path, "w") as f:
-            f.write(glsl_code)
-        print(f"Written {out_path}")
+    # Generate shaders
+    tile_modes = [False, True] if args.tile else [False]
+    total_passes = len(passes)
 
-        # Tile variant if requested
-        if args.tile:
-            glsl_tile = generate_pass(pinfo, tile_mode=True)
-            out_tile_path = os.path.join(output_dir, f"Pass{i}_tile.glsl")
-            with open(out_tile_path, "w") as f:
-                f.write(glsl_tile)
-            print(f"Written {out_tile_path}")
+    for pass_idx, pinfo in enumerate(passes):
+        is_last = pass_idx == total_passes - 1
+
+        # Determine output name (consistent with build_model_json)
+        if pinfo.save is None:
+            out_name = f"pass_{pass_idx}_out"
+            if is_last:
+                out_name = "output"
+        elif pinfo.save == "MAIN" and is_last:
+            out_name = "output"
+        else:
+            out_name = pinfo.save
+
+        for tile in tile_modes:
+            suffix = "_tile" if tile else ""
+
+            if pinfo.is_d2s:
+                # Only genuine depth‑to‑space passes use the specialised generator
+                code = generate_d2s_pass(pinfo, out_name, tile)
+            else:
+                # All other passes (including the final pass for non‑D2S shaders)
+                code = generate_intermediate_pass(pinfo, out_name, tile)
+
+            out_file = os.path.join(output_dir, f"Pass{pass_idx+1}{suffix}.glsl")
+            with open(out_file, "w") as f:
+                f.write(code)
+            print(f"Written {out_file}")
 
     print(f"Done. Output in {output_dir}")
 
