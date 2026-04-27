@@ -373,13 +373,18 @@ def acquire_target_window(
 
 def _activate_window(win_handle: int) -> None:
     """
-    Activate (raise + focus) the target window.
+    Activate (raise + focus) the target window using the most reliable method.
 
-    Uses xdotool when available, because it correctly handles
-    focus-stealing prevention and XWayland quirks that pure
-    XCB/EWMH requests cannot overcome on many compositors (KWin).
-    Falls back to XCB SetInputFocus if xdotool is missing or fails.
+    - Tries ``xdotool windowactivate`` first because it respects EWMH and
+      works across all window managers, including KWin on XWayland.
+    - If ``xdotool`` is unavailable or the call fails, falls back to a
+      direct XCB ``SetInputFocus``, which at least gives keyboard focus
+      even if the window doesn't pop to the front.
+
+    The function is designed to be called from the main thread with a
+    valid X connection available.
     """
+    # Primary method: xdotool
     if shutil.which("xdotool"):
         try:
             subprocess.run(
@@ -389,24 +394,28 @@ def _activate_window(win_handle: int) -> None:
                 capture_output=True,
             )
             logger.info("Activated window %s via xdotool", hex(win_handle))
-            return  # success – nothing else needed
-        except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
-            logger.warning(
-                "xdotool failed to activate window %s: %s. Falling back to XCB focus.",
+            return  # success, nothing more to do
+        except subprocess.TimeoutExpired:
+            logger.info(
+                "xdotool timed out activating window %s; falling back to XCB focus.",
                 hex(win_handle),
-                e,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.info(
+                "xdotool failed to activate window %s (exit code %d). "
+                "Falling back to XCB focus.",
+                hex(win_handle),
+                e.returncode,
             )
         except FileNotFoundError:
-            # shutil.which already guards, but be extra safe
             pass
-    else:
-        logger.debug("xdotool not found; using XCB focus fallback.")
 
-    # Fallback: give the window input focus (no raise, but keyboard works)
+    # Fallback: just give the window input focus
     conn = open_xcb_connection()
-    if not conn:
-        logger.error("Cannot focus window: XCB connection unavailable.")
+    if conn is None:
+        logger.info("Cannot focus window: XCB connection unavailable.")
         return
+
     try:
         conn.core.SetInputFocus(
             revert_to=xcffib.xproto.InputFocus.Parent,
@@ -414,10 +423,8 @@ def _activate_window(win_handle: int) -> None:
             time=xcffib.xproto.Time.CurrentTime,
         )
         conn.flush()
-        logger.info(
-            "Focused window %s (fallback, raise not guaranteed)", hex(win_handle)
-        )
-    except Exception as e:
-        logger.error("Failed to focus window %s: %s", hex(win_handle), e, exc_info=True)
+        logger.info("Focused window %s (raise not guaranteed)", hex(win_handle))
+    except Exception:
+        logger.info("Failed to focus window %s via XCB", hex(win_handle))
     finally:
         close_xcb_connection(conn)
