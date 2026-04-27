@@ -521,7 +521,7 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
  * Copy a list of rectangular regions from this image to slices of a 2D array.
  *
  * The source image must be a 2D image (single slice) in
- * VK_IMAGE_LAYOUT_GENERAL. The destination must be a 2D array image.  All
+ * VK_IMAGE_LAYOUT_GENERAL. The destination must be a 2D array image. All
  * copies are executed in a single command buffer with appropriate image layout
  * transitions.
  *
