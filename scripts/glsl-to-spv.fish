@@ -10,7 +10,7 @@ if not test (which glslc)
 end
 
 set root_dir (dirname (dirname (status --current-filename)))
-set project_dir "$dir/src/upscaler"
+set project_dir "$root_dir/src/upscaler"
 
 function glsl_to_spv -a glsl
     set spv (echo "$glsl" | sed 's/\.glsl/\.spv/')
@@ -24,5 +24,6 @@ for glsl in (
         -not -path '*/[@.]*' \
         -name '*.glsl'
 )
+    echo "Converting '$glsl'..."
     glsl_to_spv "$glsl"
 end

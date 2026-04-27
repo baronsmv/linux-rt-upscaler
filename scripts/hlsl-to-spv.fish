@@ -10,7 +10,7 @@ if not test (which dxc)
 end
 
 set root_dir (dirname (dirname (status --current-filename)))
-set project_dir "$dir/src/upscaler"
+set project_dir "$root_dir/src/upscaler"
 
 function hlsl_to_spv -a hlsl
     set spv (echo "$hlsl" | sed 's/\.hlsl/\.spv/')
@@ -31,5 +31,6 @@ for hlsl in (
         -not -path '*/[@.]*' \
         -name '*.hlsl'
 )
+    echo "Converting '$hlsl'..."
     hlsl_to_spv "$hlsl"
 end
