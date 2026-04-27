@@ -1,11 +1,12 @@
 #!/usr/bin/env fish
 
 # ===================================================================
-# Convert Anime4k MPV to agnostic GLSL
+# Convert Anime4k MPV GLSL to agnostic GLSL
 # ===================================================================
 
 set root_dir (dirname (dirname (status --current-filename)))
 set project_dir "$root_dir/src/upscaler"
+
 set anime4k_dir "$project_dir/srcnn/anime4k"
 set models (ls "$anime4k_dir/.originals" | sed 's/.glsl$//')
 

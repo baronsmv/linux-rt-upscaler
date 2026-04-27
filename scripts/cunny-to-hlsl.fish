@@ -1,11 +1,12 @@
 #!/usr/bin/env fish
 
 # ===================================================================
-# Convert CuNNy Magpie to agnostic HLSL
+# Convert CuNNy Magpie HLSL to agnostic HLSL
 # ===================================================================
 
 set root_dir (dirname (dirname (status --current-filename)))
 set project_dir "$root_dir/src/upscaler"
+
 set cunny_dir "$project_dir/srcnn/cunny"
 set models 3x12 4x12 4x16 4x24 4x32 8x32 fast faster veryfast
 

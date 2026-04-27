@@ -4,13 +4,13 @@
 # Convert HLSL to SPV
 # ===================================================================
 
+set root_dir (dirname (dirname (status --current-filename)))
+set project_dir "$root_dir/src/upscaler"
+
 if not test (which dxc)
     echo "'dxc' must be installed or in PATH."
     return
 end
-
-set root_dir (dirname (dirname (status --current-filename)))
-set project_dir "$root_dir/src/upscaler"
 
 function hlsl_to_spv -a hlsl
     set spv (echo "$hlsl" | sed 's/\.hlsl/\.spv/')

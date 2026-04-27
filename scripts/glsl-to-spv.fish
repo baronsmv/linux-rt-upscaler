@@ -4,13 +4,13 @@
 # Convert GLSL to SPV
 # ===================================================================
 
+set root_dir (dirname (dirname (status --current-filename)))
+set project_dir "$root_dir/src/upscaler"
+
 if not test (which glslc)
     echo "'glslc' must be installed or in PATH."
     return
 end
-
-set root_dir (dirname (dirname (status --current-filename)))
-set project_dir "$root_dir/src/upscaler"
 
 function glsl_to_spv -a glsl
     set spv (echo "$glsl" | sed 's/\.glsl/\.spv/')
