@@ -120,7 +120,7 @@ void main(uint3 id : SV_DispatchThreadID)
 {
     // -----------------------------------------------------------------------------
     //  Coordinate mapping:
-    //    The dispatch covers a *single* expanded tile.  The workgroup's (x,y)
+    //    The dispatch covers a *single* expanded tile. The workgroup's (x,y)
     //    position `id.xy` corresponds to the low-resolution feature-map pixel
     //    inside the expanded region.
     //
@@ -139,7 +139,7 @@ void main(uint3 id : SV_DispatchThreadID)
     // (3) Sampling position inside the feature map.
     //     tileParams.margin is the context margin in feature-map pixels.
     //     We offset by (margin, margin) to skip the padded border and land on
-    //     the start of the **valid interior** region.  The +0.5 ensures we sample
+    //     the start of the **valid interior** region. The +0.5 ensures we sample
     //     pixel centres.
     float2 pos = (float2(tileParams.margin, tileParams.margin)
                    + float2(id.xy) + 0.5) * pt;
