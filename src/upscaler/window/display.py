@@ -1,6 +1,7 @@
 import logging
-import xcffib
 from typing import Optional
+
+import xcffib
 
 logger = logging.getLogger(__name__)
 

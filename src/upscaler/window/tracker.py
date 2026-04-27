@@ -1,7 +1,8 @@
 import logging
+from typing import Optional
+
 import xcffib
 import xcffib.xproto
-from typing import Optional
 
 from .display import open_xcb_connection, close_xcb_connection
 from .info import AtomCache, get_window_geometry

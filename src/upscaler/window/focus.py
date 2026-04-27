@@ -1,13 +1,14 @@
 import logging
 import threading
 import time
+from typing import Optional, Callable
+
 import xcffib
 import xcffib.xproto
-from typing import Optional, Callable
 
 from .acquisition import get_active_window
 from .display import open_xcb_connection, close_xcb_connection
-from .info import WindowInfo, AtomCache
+from .info import AtomCache, WindowInfo
 
 logger = logging.getLogger(__name__)
 
