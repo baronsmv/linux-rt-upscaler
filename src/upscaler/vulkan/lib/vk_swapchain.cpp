@@ -599,14 +599,52 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
     return nullptr;
   }
 
-  if (texture->image_extent.width != self->image_extent.width ||
-      texture->image_extent.height != self->image_extent.height) {
-    PyErr_Format(PyExc_ValueError,
-                 "Texture dimensions (%ux%u) must match swapchain (%ux%u)",
-                 texture->image_extent.width, texture->image_extent.height,
-                 self->image_extent.width, self->image_extent.height);
-    return nullptr;
-  }
+/**
+ * ______________________________________________________________________________
+ *
+ *  WHY WE DO NOT ENFORCE EQUAL TEXTURE-SWAPCHAIN DIMENSIONS
+ *
+ *  On XWayland the compositor may create the Vulkan surface at a physical size
+ *  that is larger than the logical window size. For example, a 3840x2160
+ *  overlay on a 200% HiDPI display results in a 7680x4320 swapchain.
+ *
+ *  Our rendering pipeline works at the logical resolution:
+ *
+ *     - The Lanczos shader writes into a screen texture of 3840x2160 pixels.
+ *     - The swapchain is 7680x4320 pixels but we present only the logical
+ *       region (the top‑left 3840x2160) by copying a smaller texture.
+ *
+ *  After presentation the compositor down‑samples the entire swapchain buffer
+ *  back onto the logical overlay window. This gives us:
+ *
+ *     - Correct on‑screen position - the overlay stays at (0,0) at logical
+ *       size rather than expanding to the full physical surface.
+ *     - Performance - Lanczos runs at 4K instead of 8K.
+ *     - Robustness - the compositor handles any scale factor automatically.
+ *
+ *  The old behaviour (before this check was introduced) already worked this
+ *  way and is well‑tested.
+ *
+ *  If we kept the equal‑size check we would be forced to render the
+ *  screen texture at the physical swapchain resolution (e.g. 7680x4320),
+ *  which would both waste GPU resources and cause the overlay to cover
+ *  more area than intended (displacing it).
+ *
+ *  Therefore the check is intentionally removed.
+ * ______________________________________________________________________________
+ *
+ *  Removed check:
+ *
+ * if (texture->image_extent.width != self->image_extent.width ||
+ *     texture->image_extent.height != self->image_extent.height) {
+ *   PyErr_Format(PyExc_ValueError,
+ *                "Texture dimensions (%ux%u) must match swapchain (%ux%u)",
+ *                texture->image_extent.width, texture->image_extent.height,
+ *                self->image_extent.width, self->image_extent.height);
+ *   return nullptr;
+ * }
+ * ______________________________________________________________________________
+ */
 
   vk_Device *dev = self->py_device;
   VkResult res;
