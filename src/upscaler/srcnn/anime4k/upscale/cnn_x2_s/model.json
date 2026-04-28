@@ -38,7 +38,7 @@
     [
       [
         "conv2d_last_tf",
-        "conv2d_last_tf"
+        "input"
       ],
       [
         "output"

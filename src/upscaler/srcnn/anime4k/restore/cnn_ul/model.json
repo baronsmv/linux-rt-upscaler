@@ -239,7 +239,6 @@
     ],
     [
       [
-        "conv2d_7_tf2",
         "conv2d_3_tf",
         "conv2d_3_tf1",
         "conv2d_3_tf2",
@@ -254,7 +253,8 @@
         "conv2d_6_tf2",
         "conv2d_7_tf",
         "conv2d_7_tf1",
-        "conv2d_7_tf2"
+        "conv2d_7_tf2",
+        "input"
       ],
       [
         "output"

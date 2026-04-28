@@ -61,7 +61,8 @@
     [
       [
         "hooked",
-        "resampled"
+        "resampled",
+        "input"
       ],
       [
         "output"

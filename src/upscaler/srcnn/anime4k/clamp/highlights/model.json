@@ -23,7 +23,8 @@
     [
       [
         "hooked",
-        "statsmax"
+        "statsmax",
+        "input"
       ],
       [
         "output"

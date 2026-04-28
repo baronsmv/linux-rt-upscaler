@@ -30,7 +30,7 @@
     [
       [
         "conv2d_2_tf",
-        "conv2d_2_tf"
+        "input"
       ],
       [
         "output"

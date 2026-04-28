@@ -162,7 +162,8 @@
         "hooked",
         "maintempthin",
         "maintemp",
-        "mmkernel"
+        "mmkernel",
+        "input"
       ],
       [
         "output"

@@ -6,7 +6,8 @@
     [
       [
         "hooked",
-        "native"
+        "native",
+        "input"
       ],
       [
         "output"

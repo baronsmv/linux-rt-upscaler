@@ -33,7 +33,8 @@
       [
         "hooked",
         "lineluma",
-        "gauss_x2"
+        "gauss_x2",
+        "input"
       ],
       [
         "output"

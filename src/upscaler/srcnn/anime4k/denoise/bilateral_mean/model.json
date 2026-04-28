@@ -5,7 +5,8 @@
   "srv_uav": [
     [
       [
-        "hooked"
+        "hooked",
+        "input"
       ],
       [
         "output"

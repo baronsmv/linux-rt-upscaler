@@ -608,9 +608,18 @@ def build_model_json(passes: List[PassInfo], depth: str) -> Dict:
     srv_uav, sampler_list, prev_output, all_tex_names = [], [], "input", set()
     for idx, p in enumerate(passes):
         is_last = idx == len(passes) - 1
-        inputs = [
-            prev_output if name == "MAIN" else name.lower() for name in p.bindings
-        ]
+        inputs = []
+        for name in p.bindings:
+            if name == "MAIN" and is_last:
+                # MAIN for the final pass is the original input – place it last
+                continue  # we will append it after the feature maps
+            elif name == "MAIN":
+                inputs.append(prev_output)
+            else:
+                inputs.append(name.lower())
+        if is_last:
+            # Add the original image as the last SRV (shaders expect it at the highest binding)
+            inputs.append("input")
         if p.save is None:
             out_name = f"pass_{idx}_out"
             if is_last:

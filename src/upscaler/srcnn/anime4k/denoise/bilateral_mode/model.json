@@ -14,7 +14,8 @@
     [
       [
         "hooked",
-        "lineluma"
+        "lineluma",
+        "input"
       ],
       [
         "output"

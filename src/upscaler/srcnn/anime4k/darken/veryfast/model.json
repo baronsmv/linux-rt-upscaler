@@ -51,7 +51,8 @@
     [
       [
         "hooked",
-        "linekernel"
+        "linekernel",
+        "input"
       ],
       [
         "output"

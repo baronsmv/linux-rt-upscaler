@@ -275,10 +275,10 @@
     ],
     [
       [
-        "conv2d_last_tf2",
         "conv2d_last_tf",
         "conv2d_last_tf1",
-        "conv2d_last_tf2"
+        "conv2d_last_tf2",
+        "input"
       ],
       [
         "output"
