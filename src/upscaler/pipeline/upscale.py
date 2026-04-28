@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from ..config import Config
-from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
+from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_model
 from ..tiles import TileProcessor, expand_damage_rects
 from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD
 
@@ -76,8 +76,24 @@ class UpscalerManager:
 
     def _init_full_mode(self) -> None:
         """Build full-frame SRCNN pipelines (one or two stages)."""
-        model_config = load_cunny_model(self.config.model, variant="")
+        model_config = load_model(self.config.model, variant="")
         factory = PipelineFactory(model_config)
+
+        # Collect all intermediate texture names (everything that is not "output")
+        intermediate_names = {
+            name
+            for srv_list, uav_list in model_config.srv_uav
+            for name in uav_list
+            if name != "output"
+        }
+        self._intermediate_textures = {
+            name: Texture2D(
+                self.crop_width,
+                self.crop_height,
+                format=model_config.intermediate_format,
+            )
+            for name in intermediate_names
+        }
 
         in_w, in_h = self.crop_width, self.crop_height
         out_first_w, out_first_h = in_w * 2, in_h * 2
@@ -86,10 +102,9 @@ class UpscalerManager:
         self.staging = Buffer(self.input.size, heap_type=HEAP_UPLOAD)
 
         # Intermediate texture for the first stage output
-        inter_tex = Texture2D(out_first_w, out_first_h)
-        outputs1 = {"output": inter_tex}
-        for i in range(model_config.num_textures):
-            outputs1[f"t{i}"] = Texture2D(in_w, in_h)
+        inter_tex = Texture2D(out_first_w, out_first_h, format=28)
+        outputs1 = self._intermediate_textures
+        outputs1["output"] = inter_tex
 
         srnn1 = SRCNN(
             factory=factory,

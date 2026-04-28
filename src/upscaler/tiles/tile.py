@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 from ..config import Config
-from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_cunny_model
+from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_model
 from ..vulkan import Buffer, Compute, Texture2D, HEAP_UPLOAD
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class TileProcessor:
     pipeline; the final pass writes each tile’s 2x2 output block directly into the
     final 2D output texture.
 
-    Two residual textures keep the “skip connection” fed:
+    Two residual textures keep the "skip connection" fed:
     - `residual_1x` - the full low-res frame (updated by the caller).
     - `residual_2x` - (4x only) the full 2x upscaled frame, prepared by the caller
        using the first SRCNN stage.
@@ -115,7 +115,7 @@ class TileProcessor:
         # --------------------------------------------------------------------------
         # Model & pipeline factory
         # --------------------------------------------------------------------------
-        model_config = load_cunny_model(
+        model_config = load_model(
             config.model, variant=model_variant, push_constant_size=push_constant_size
         )
         self.push_constant_size = push_constant_size

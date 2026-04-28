@@ -8,7 +8,7 @@
  *   - Bound resources (constant buffers, SRVs, UAVs, samplers).
  *   - Methods for single dispatches, dispatch sequences with optional
  *     buffer-to-image copy and timestamp queries, and an efficient
- *     “tile batch” execution mode for processing multiple small regions
+ *     "tile batch" execution mode for processing multiple small regions
  *     in one command buffer.
  *
  * Descriptor set management is split between this file and `vk_utils.cpp`,
