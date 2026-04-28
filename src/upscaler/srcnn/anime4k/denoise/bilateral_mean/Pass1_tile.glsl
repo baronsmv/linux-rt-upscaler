@@ -67,8 +67,7 @@ layout(set = 0, binding = 0) uniform Constants {
     float out_dy;
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler pointSampler;
-layout(set = 0, binding = 2) uniform sampler linearSampler;
+layout(set = 0, binding = 3072) uniform sampler pointSampler;
 
 // global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
 vec2 pos;
@@ -82,8 +81,8 @@ layout(push_constant) uniform TileParams {
     uvec2 tileOutExtent;
 } tile;
 
-layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
-layout(set = 0, binding = 4, rgba8) uniform image2D img_output;
+layout(set = 0, binding = 1024) uniform texture2DArray tex_HOOKED;
+layout(set = 0, binding = 2048, rgba8) uniform image2D img_output;
 #define INTENSITY_SIGMA 0.1 //Intensity window size, higher is stronger denoise, must be a positive real number
 #define SPATIAL_SIGMA 1.0 //Spatial window size, higher is stronger denoise, must be a positive real number.
 #define INTENSITY_POWER_CURVE 1.0 //Intensity window power curve. Setting it to 0 will make the intensity window treat all intensities equally, while increasing it will make the window narrower in darker intensities and wider in brighter intensities.

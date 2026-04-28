@@ -55,15 +55,14 @@ layout(set = 0, binding = 0) uniform Constants {
     float out_dy;
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler pointSampler;
-layout(set = 0, binding = 2) uniform sampler linearSampler;
+layout(set = 0, binding = 3072) uniform sampler pointSampler;
 
 // global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
 vec2 pos;
 
-layout(set = 0, binding = 3) uniform texture2D tex_HOOKED;
-layout(set = 0, binding = 4) uniform texture2D tex_LINELUMA;
-layout(set = 0, binding = 5, rgba8) uniform image2D img_output;
+layout(set = 0, binding = 1024) uniform texture2D tex_HOOKED;
+layout(set = 0, binding = 1025) uniform texture2D tex_LINELUMA;
+layout(set = 0, binding = 2048, rgba8) uniform image2D img_output;
 #define INTENSITY_SIGMA 0.1 //Intensity window size, higher is stronger denoise, must be a positive real number
 #define SPATIAL_SIGMA 1.0 //Spatial window size, higher is stronger denoise, must be a positive real number.
 #define HISTOGRAM_REGULARIZATION 0.2 //Histogram regularization window size, higher values approximate a bilateral "closest-to-mean" filter.

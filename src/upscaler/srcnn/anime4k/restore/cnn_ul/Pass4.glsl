@@ -55,16 +55,15 @@ layout(set = 0, binding = 0) uniform Constants {
     float out_dy;
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler pointSampler;
-layout(set = 0, binding = 2) uniform sampler linearSampler;
+layout(set = 0, binding = 3072) uniform sampler pointSampler;
 
 // global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
 vec2 pos;
 
-layout(set = 0, binding = 3) uniform texture2D tex_conv2d_tf;
-layout(set = 0, binding = 4) uniform texture2D tex_conv2d_tf1;
-layout(set = 0, binding = 5) uniform texture2D tex_conv2d_tf2;
-layout(set = 0, binding = 6, rgba16f) uniform image2D img_conv2d_1_tf;
+layout(set = 0, binding = 1024) uniform texture2D tex_conv2d_tf;
+layout(set = 0, binding = 1025) uniform texture2D tex_conv2d_tf1;
+layout(set = 0, binding = 1026) uniform texture2D tex_conv2d_tf2;
+layout(set = 0, binding = 2048, rgba16f) uniform image2D img_conv2d_1_tf;
 #define go_0(x_off, y_off) (max((texture(sampler2D(tex_conv2d_tf, pointSampler), pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy))), 0.0))
 #define go_1(x_off, y_off) (max((texture(sampler2D(tex_conv2d_tf1, pointSampler), pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy))), 0.0))
 #define go_2(x_off, y_off) (max((texture(sampler2D(tex_conv2d_tf2, pointSampler), pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy))), 0.0))

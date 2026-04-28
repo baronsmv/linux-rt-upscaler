@@ -55,15 +55,14 @@ layout(set = 0, binding = 0) uniform Constants {
     float out_dy;
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler pointSampler;
-layout(set = 0, binding = 2) uniform sampler linearSampler;
+layout(set = 0, binding = 3072) uniform sampler pointSampler;
 
 // global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
 vec2 pos;
 
-layout(set = 0, binding = 3) uniform texture2D tex_HOOKED;
-layout(set = 0, binding = 4) uniform texture2D tex_LINEKERNEL;
-layout(set = 0, binding = 5, rgba16f) uniform image2D img_LINEKERNEL;
+layout(set = 0, binding = 1024) uniform texture2D tex_HOOKED;
+layout(set = 0, binding = 1025) uniform texture2D tex_LINEKERNEL;
+layout(set = 0, binding = 2048, rgba16f) uniform image2D img_LINEKERNEL;
 #define SPATIAL_SIGMA (0.5 * float(vec2(float(ubo.in_width), float(ubo.in_height)).y) / 1080.0) //Spatial window size, must be a positive real number.
 #define KERNELSIZE (max(int(ceil(SPATIAL_SIGMA * 2.0)), 1) * 2 + 1) //Kernel size, must be an positive odd integer.
 #define KERNELHALFSIZE (int(KERNELSIZE/2)) //Half of the kernel size without remainder. Must be equal to trunc(KERNELSIZE/2).

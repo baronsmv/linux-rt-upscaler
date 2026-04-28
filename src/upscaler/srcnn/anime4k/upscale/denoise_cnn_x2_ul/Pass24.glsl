@@ -55,28 +55,27 @@ layout(set = 0, binding = 0) uniform Constants {
     float out_dy;
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler pointSampler;
-layout(set = 0, binding = 2) uniform sampler linearSampler;
+layout(set = 0, binding = 3072) uniform sampler pointSampler;
 
 // global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
 vec2 pos;
 
-layout(set = 0, binding = 3) uniform texture2D tex_conv2d_2_tf;
-layout(set = 0, binding = 4) uniform texture2D tex_conv2d_2_tf1;
-layout(set = 0, binding = 5) uniform texture2D tex_conv2d_2_tf2;
-layout(set = 0, binding = 6) uniform texture2D tex_conv2d_3_tf;
-layout(set = 0, binding = 7) uniform texture2D tex_conv2d_3_tf1;
-layout(set = 0, binding = 8) uniform texture2D tex_conv2d_3_tf2;
-layout(set = 0, binding = 9) uniform texture2D tex_conv2d_4_tf;
-layout(set = 0, binding = 10) uniform texture2D tex_conv2d_4_tf1;
-layout(set = 0, binding = 11) uniform texture2D tex_conv2d_4_tf2;
-layout(set = 0, binding = 12) uniform texture2D tex_conv2d_5_tf;
-layout(set = 0, binding = 13) uniform texture2D tex_conv2d_5_tf1;
-layout(set = 0, binding = 14) uniform texture2D tex_conv2d_5_tf2;
-layout(set = 0, binding = 15) uniform texture2D tex_conv2d_6_tf;
-layout(set = 0, binding = 16) uniform texture2D tex_conv2d_6_tf1;
-layout(set = 0, binding = 17) uniform texture2D tex_conv2d_6_tf2;
-layout(set = 0, binding = 18, rgba16f) uniform image2D img_conv2d_last_tf2;
+layout(set = 0, binding = 1024) uniform texture2D tex_conv2d_2_tf;
+layout(set = 0, binding = 1025) uniform texture2D tex_conv2d_2_tf1;
+layout(set = 0, binding = 1026) uniform texture2D tex_conv2d_2_tf2;
+layout(set = 0, binding = 1027) uniform texture2D tex_conv2d_3_tf;
+layout(set = 0, binding = 1028) uniform texture2D tex_conv2d_3_tf1;
+layout(set = 0, binding = 1029) uniform texture2D tex_conv2d_3_tf2;
+layout(set = 0, binding = 1030) uniform texture2D tex_conv2d_4_tf;
+layout(set = 0, binding = 1031) uniform texture2D tex_conv2d_4_tf1;
+layout(set = 0, binding = 1032) uniform texture2D tex_conv2d_4_tf2;
+layout(set = 0, binding = 1033) uniform texture2D tex_conv2d_5_tf;
+layout(set = 0, binding = 1034) uniform texture2D tex_conv2d_5_tf1;
+layout(set = 0, binding = 1035) uniform texture2D tex_conv2d_5_tf2;
+layout(set = 0, binding = 1036) uniform texture2D tex_conv2d_6_tf;
+layout(set = 0, binding = 1037) uniform texture2D tex_conv2d_6_tf1;
+layout(set = 0, binding = 1038) uniform texture2D tex_conv2d_6_tf2;
+layout(set = 0, binding = 2048, rgba16f) uniform image2D img_conv2d_last_tf2;
 #define g_0 (max((texture(sampler2D(tex_conv2d_2_tf, pointSampler), pos)), 0.0))
 #define g_1 (max((texture(sampler2D(tex_conv2d_2_tf1, pointSampler), pos)), 0.0))
 #define g_2 (max((texture(sampler2D(tex_conv2d_2_tf2, pointSampler), pos)), 0.0))

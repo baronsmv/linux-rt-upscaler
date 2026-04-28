@@ -348,8 +348,7 @@ layout(set = 0, binding = 0) uniform Constants {
     float out_dy;
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler pointSampler;
-layout(set = 0, binding = 2) uniform sampler linearSampler;
+layout(set = 0, binding = 3072) uniform sampler pointSampler;
 
 // global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
 vec2 pos;
@@ -377,7 +376,7 @@ def generate_intermediate_pass(
     intermediate_fmt: str = "rgba16f",
 ) -> str:
     tex_mappings = {}
-    bind_start = 3
+    bind_start = 1024
     lines = []
 
     lines.append(header_comment)
@@ -402,7 +401,7 @@ def generate_intermediate_pass(
     if "MAIN" not in tex_mappings and pinfo.bindings:
         tex_mappings["MAIN"] = tex_mappings[pinfo.bindings[0]]
 
-    out_binding = bind_start + len(pinfo.bindings)
+    out_binding = 2048
     out_safe = tex_name_safe(out_name) if out_name != "output" else "output"
 
     # Intermediate passes use the custom format; final pass (depth‑to‑space) uses rgba8.
@@ -472,13 +471,14 @@ def generate_intermediate_pass(
 
 def generate_d2s_pass(pinfo: PassInfo, tile_mode: bool, header_comment: str) -> str:
     tex_mappings = {}
-    bind_start = 3
+    bind_start = 1024
     lines = []
     lines.append(header_comment)
     lines.append("")
     lines.append(common_header())
     if tile_mode:
         lines.append(push_constant_block())
+    lines.append("layout(set = 0, binding = 3073) uniform sampler linearSampler;")
 
     main_tex = None
     feature_bindings = []
@@ -503,14 +503,14 @@ def generate_d2s_pass(pinfo: PassInfo, tile_mode: bool, header_comment: str) -> 
             )
         tex_mappings[name] = f"tex_{safe}"
 
-    main_binding = bind_start + len(feature_bindings)
+    main_binding = 1024 + len(feature_bindings)
     safe_main = tex_name_safe(main_tex)
     lines.append(
         f"layout(set = 0, binding = {main_binding}) uniform texture2D tex_{safe_main};"
     )
     tex_mappings[main_tex] = f"tex_{safe_main}"
 
-    out_binding = main_binding + 1
+    out_binding = 2048
     lines.append(
         f"layout(set = 0, binding = {out_binding}, rgba8) uniform image2D img_output;"
     )

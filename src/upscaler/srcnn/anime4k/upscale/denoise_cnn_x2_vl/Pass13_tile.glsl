@@ -67,8 +67,7 @@ layout(set = 0, binding = 0) uniform Constants {
     float out_dy;
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler pointSampler;
-layout(set = 0, binding = 2) uniform sampler linearSampler;
+layout(set = 0, binding = 3072) uniform sampler pointSampler;
 
 // global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
 vec2 pos;
@@ -82,9 +81,9 @@ layout(push_constant) uniform TileParams {
     uvec2 tileOutExtent;
 } tile;
 
-layout(set = 0, binding = 3) uniform texture2DArray tex_conv2d_5_tf;
-layout(set = 0, binding = 4) uniform texture2DArray tex_conv2d_5_tf1;
-layout(set = 0, binding = 5, rgba16f) uniform image2DArray img_conv2d_6_tf;
+layout(set = 0, binding = 1024) uniform texture2DArray tex_conv2d_5_tf;
+layout(set = 0, binding = 1025) uniform texture2DArray tex_conv2d_5_tf1;
+layout(set = 0, binding = 2048, rgba16f) uniform image2DArray img_conv2d_6_tf;
 #define go_0(x_off, y_off) (max((texture(sampler2DArray(tex_conv2d_5_tf, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))), 0.0))
 #define go_1(x_off, y_off) (max((texture(sampler2DArray(tex_conv2d_5_tf1, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))), 0.0))
 #define go_2(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv2d_5_tf, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))), 0.0))

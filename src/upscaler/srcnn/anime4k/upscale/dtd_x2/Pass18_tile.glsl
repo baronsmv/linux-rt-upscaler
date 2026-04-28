@@ -67,8 +67,7 @@ layout(set = 0, binding = 0) uniform Constants {
     float out_dy;
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler pointSampler;
-layout(set = 0, binding = 2) uniform sampler linearSampler;
+layout(set = 0, binding = 3072) uniform sampler pointSampler;
 
 // global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
 vec2 pos;
@@ -82,11 +81,11 @@ layout(push_constant) uniform TileParams {
     uvec2 tileOutExtent;
 } tile;
 
-layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
-layout(set = 0, binding = 4) uniform texture2DArray tex_MAINTEMPTHIN;
-layout(set = 0, binding = 5) uniform texture2DArray tex_MAINTEMP;
-layout(set = 0, binding = 6) uniform texture2DArray tex_MMKERNEL;
-layout(set = 0, binding = 7, rgba8) uniform image2D img_output;
+layout(set = 0, binding = 1024) uniform texture2DArray tex_HOOKED;
+layout(set = 0, binding = 1025) uniform texture2DArray tex_MAINTEMPTHIN;
+layout(set = 0, binding = 1026) uniform texture2DArray tex_MAINTEMP;
+layout(set = 0, binding = 1027) uniform texture2DArray tex_MMKERNEL;
+layout(set = 0, binding = 2048, rgba8) uniform image2D img_output;
 #define STRENGTH 0.5 //De-blur proportional strength, higher is sharper. However, it is better to tweak BLUR_CURVE instead to avoid ringing.
 #define BLUR_CURVE 0.8 //De-blur power curve, lower is sharper. Good values are between 0.3 - 1. Values greater than 1 softens the image;
 #define BLUR_THRESHOLD 0.1 //Value where curve kicks in, used to not de-blur already sharp edges. Only de-blur values that fall below this threshold.

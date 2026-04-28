@@ -67,8 +67,7 @@ layout(set = 0, binding = 0) uniform Constants {
     float out_dy;
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler pointSampler;
-layout(set = 0, binding = 2) uniform sampler linearSampler;
+layout(set = 0, binding = 3072) uniform sampler pointSampler;
 
 // global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
 vec2 pos;
@@ -82,9 +81,9 @@ layout(push_constant) uniform TileParams {
     uvec2 tileOutExtent;
 } tile;
 
-layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
-layout(set = 0, binding = 4) uniform texture2DArray tex_LUMAD2;
-layout(set = 0, binding = 5, rgba16f) uniform image2DArray img_LUMAD2;
+layout(set = 0, binding = 1024) uniform texture2DArray tex_HOOKED;
+layout(set = 0, binding = 1025) uniform texture2DArray tex_LUMAD2;
+layout(set = 0, binding = 2048, rgba16f) uniform image2DArray img_LUMAD2;
 
 vec4 hook() {
 vec2 d = vec2(ubo.in_dx, ubo.in_dy);
