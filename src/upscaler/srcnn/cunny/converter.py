@@ -189,6 +189,7 @@ class ModelJsonBuilder:
             "num_textures": self.num_textures,
             "srv_uav": srv_uav,
             "samplers": samplers_per_pass,
+            "depth": "rgba8",
         }
 
     def _get_filter(self, filter_type: str) -> Optional[str]:

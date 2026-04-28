@@ -19,6 +19,7 @@ class ModelConfig:
         entry_point: Entry point name for all shaders (usually "main").
         push_constant_size: Size of push constant block in bytes (0 if not used).
         output_names: Names of textures that should be treated as final output.
+        intermediate_format: Format of intermediate textures (RGBA8, RGBA16, ...).
     """
 
     passes: int
@@ -29,3 +30,4 @@ class ModelConfig:
     entry_point: str = "main"
     push_constant_size: int = 0
     output_names: Optional[List[str]] = None
+    intermediate_format: int = 28

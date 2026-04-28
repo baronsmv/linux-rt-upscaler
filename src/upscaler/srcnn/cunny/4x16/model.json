@@ -103,5 +103,6 @@
       "point",
       "linear"
     ]
-  ]
+  ],
+  "depth": "rgba8"
 }
