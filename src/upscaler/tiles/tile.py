@@ -191,7 +191,6 @@ class TileProcessor:
     # ======================================================================
     #  Stage creation
     # ======================================================================
-
     def _create_stages(self) -> None:
         """Create the SRCNN stages (one for 2x, two for 4x) using array textures."""
         lr = self.expanded_tile_size  # low-res feature map size

@@ -364,17 +364,6 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
                         new_core.append(line)
                 core_lines = new_core
 
-                # 3. Convert INPUT.SampleLevel to array texture:
-                #    - change * opt to * full_opt
-                #    - wrap coordinate in float3(..., tileParams.inputLayer)
-                core_lines = [
-                    re.sub(
-                        r"INPUT\.SampleLevel\(SL,\s*(fpos\s*\+\s*float2\([^)]+\))\s*\*\s*opt\s*,\s*0\)",
-                        r"INPUT.SampleLevel(SL, float3(\1 * full_opt, 0), 0)",
-                        line,
-                    )
-                    for line in core_lines
-                ]
                 # Also catch cases where opt was already replaced
                 core_lines = [
                     re.sub(
@@ -457,9 +446,9 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
     ) -> List[str]:
         """Return SRV and UAV declaration lines with registers."""
         lines = []
-        suffix = "Array" if tile else ""
         # Input textures: for tile modes, use arrays for all passes
         for idx, tex in enumerate(in_textures):
+            suffix = "" if not tile or (is_final and tex == "INPUT") else "Array"
             lines.append(f"Texture2D{suffix}<float4> {tex} : register(t{idx});")
         if in_textures and out_textures:
             lines.append("")
