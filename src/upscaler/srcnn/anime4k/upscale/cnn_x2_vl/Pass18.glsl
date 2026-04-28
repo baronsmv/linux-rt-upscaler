@@ -2,8 +2,7 @@
 // Generated for linux-rt-upscaler - https://github.com/baronsmv/linux-rt-upscaler
 //
 // Compile with:
-//    glslc -fshader-stage=compute --target-env=vulkan1.2 \
-//          <this_file> -o <output.spv>
+//    glslc -fshader-stage=compute --target-env=vulkan1.2 <this_file> -o <output.spv>
 //
 // -----------------------------------------------------------------------------
 //
@@ -62,28 +61,46 @@ layout(set = 0, binding = 2) uniform sampler linearSampler;
 // global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
 vec2 pos;
 
-layout(set = 0, binding = 3) uniform texture2D tex_conv2d_last_tf;
-layout(set = 0, binding = 4) uniform texture2D tex_conv2d_last_tf1;
-layout(set = 0, binding = 5) uniform texture2D tex_conv2d_last_tf2;
+layout(push_constant) uniform TileParams {
+    uint inputLayer;
+    uvec2 dstOffset;
+    uint fullOutWidth;
+    uint fullOutHeight;
+    uint margin;
+    uvec2 tileOutExtent;
+} tile;
+
+layout(set = 0, binding = 3) uniform texture2DArray tex_conv2d_last_tf;
+layout(set = 0, binding = 4) uniform texture2DArray tex_conv2d_last_tf1;
+layout(set = 0, binding = 5) uniform texture2DArray tex_conv2d_last_tf2;
 layout(set = 0, binding = 6) uniform texture2D tex_MAIN;
 layout(set = 0, binding = 7, rgba8) uniform image2D img_output;
 
 void main() {
-    ivec2 gxy = ivec2(gl_GlobalInvocationID.xy) * 2;
-    pos = ((vec2(gxy) / 2.0) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);
-    vec2 full_opt = vec2(ubo.out_dx, ubo.out_dy);
+    ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 base_out = (interior_xy * 2) + ivec2(tile.dstOffset);
+    pos = (vec2(interior_xy + tile.margin) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);
+    vec2 full_opt = vec2(1.0 / tile.fullOutWidth, 1.0 / tile.fullOutHeight);
     vec2 f0 = fract(pos * vec2(ubo.in_width, ubo.in_height));
     ivec2 i0 = ivec2(f0 * 2.0);
-    float c0 = texture(sampler2D(tex_conv2d_last_tf, pointSampler), (vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos)[i0.y * 2 + i0.x];
-    float c1 = texture(sampler2D(tex_conv2d_last_tf1, pointSampler), (vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos)[i0.y * 2 + i0.x];
-    float c2 = texture(sampler2D(tex_conv2d_last_tf2, pointSampler), (vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos)[i0.y * 2 + i0.x];
+    float c0 = texture(sampler2DArray(tex_conv2d_last_tf, pointSampler), vec3((vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos, tile.inputLayer))[i0.y * 2 + i0.x];
+    float c1 = texture(sampler2DArray(tex_conv2d_last_tf1, pointSampler), vec3((vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos, tile.inputLayer))[i0.y * 2 + i0.x];
+    float c2 = texture(sampler2DArray(tex_conv2d_last_tf2, pointSampler), vec3((vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos, tile.inputLayer))[i0.y * 2 + i0.x];
     float c3 = c2;
-    vec3 rgb_0 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(0.5, 0.5)) * full_opt).rgb;
-    imageStore(img_output, gxy + ivec2(0, 0), vec4(rgb_0 + c0, 1.0));
-    vec3 rgb_1 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(1.5, 0.5)) * full_opt).rgb;
-    imageStore(img_output, gxy + ivec2(1, 0), vec4(rgb_1 + c1, 1.0));
-    vec3 rgb_2 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(0.5, 1.5)) * full_opt).rgb;
-    imageStore(img_output, gxy + ivec2(0, 1), vec4(rgb_2 + c2, 1.0));
-    vec3 rgb_3 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(1.5, 1.5)) * full_opt).rgb;
-    imageStore(img_output, gxy + ivec2(1, 1), vec4(rgb_3 + c3, 1.0));
+    if ((base_out.x + 0) < int(tile.dstOffset.x + tile.tileOutExtent.x) && (base_out.y + 0) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {
+        vec3 rgb_0 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(0.5, 0.5)) * full_opt).rgb;
+        imageStore(img_output, ivec2(base_out) + ivec2(0, 0), vec4(rgb_0 + c0, 1.0));
+    }
+    if ((base_out.x + 1) < int(tile.dstOffset.x + tile.tileOutExtent.x) && (base_out.y + 0) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {
+        vec3 rgb_1 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(1.5, 0.5)) * full_opt).rgb;
+        imageStore(img_output, ivec2(base_out) + ivec2(1, 0), vec4(rgb_1 + c1, 1.0));
+    }
+    if ((base_out.x + 0) < int(tile.dstOffset.x + tile.tileOutExtent.x) && (base_out.y + 1) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {
+        vec3 rgb_2 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(0.5, 1.5)) * full_opt).rgb;
+        imageStore(img_output, ivec2(base_out) + ivec2(0, 1), vec4(rgb_2 + c2, 1.0));
+    }
+    if ((base_out.x + 1) < int(tile.dstOffset.x + tile.tileOutExtent.x) && (base_out.y + 1) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {
+        vec3 rgb_3 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(1.5, 1.5)) * full_opt).rgb;
+        imageStore(img_output, ivec2(base_out) + ivec2(1, 1), vec4(rgb_3 + c3, 1.0));
+    }
 }

@@ -262,8 +262,7 @@ def _license_block(license_text: str) -> str:
 def _compile_instructions() -> str:
     return """//
 // Compile with:
-//    glslc -fshader-stage=compute --target-env=vulkan1.2 \\
-//          <this_file> -o <output.spv>
+//    glslc -fshader-stage=compute --target-env=vulkan1.2 <this_file> -o <output.spv>
 //"""
 
 

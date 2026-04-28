@@ -2,8 +2,7 @@
 // Generated for linux-rt-upscaler - https://github.com/baronsmv/linux-rt-upscaler
 //
 // Compile with:
-//    glslc -fshader-stage=compute --target-env=vulkan1.2 \
-//          <this_file> -o <output.spv>
+//    glslc -fshader-stage=compute --target-env=vulkan1.2 <this_file> -o <output.spv>
 //
 // -----------------------------------------------------------------------------
 //
