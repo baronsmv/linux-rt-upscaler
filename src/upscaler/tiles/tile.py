@@ -61,6 +61,16 @@ class TileSpec:
         return cls(tx, ty, valid_x, valid_y, dst_out_x, dst_out_y, extent_w, extent_h)
 
 
+def _collect_intermediate_names(model_config):
+    """Return a set of all UAV names used by the model, excluding 'output'."""
+    return {
+        name
+        for srv_list, uav_list in model_config.srv_uav
+        for name in uav_list
+        if name != "output"
+    }
+
+
 class TileProcessor:
     """
     Direct tile-based upscaling (2x or 4x).
@@ -118,8 +128,13 @@ class TileProcessor:
         model_config = load_model(
             config.model, variant=model_variant, push_constant_size=push_constant_size
         )
+        self.model_config = model_config
+        self.intermediate_format = model_config.intermediate_format
         self.push_constant_size = push_constant_size
         self.factory = PipelineFactory(model_config)
+
+        # All UAV names used by the model (except "output")
+        self.intermediate_names = _collect_intermediate_names(model_config)
 
         # --------------------------------------------------------------------------
         # Residual textures (updated by UpscalerManager before tile processing)
@@ -160,8 +175,23 @@ class TileProcessor:
         )
 
     # ======================================================================
+    #  Internal factory helpers
+    # ======================================================================
+
+    def _make_array_tex(self, width: int, height: int, slices: int) -> Texture2D:
+        """Return a 2D‑array texture with the model’s intermediate format."""
+        return Texture2D(
+            width,
+            height,
+            slices=slices,
+            format=self.intermediate_format,
+            force_array_view=True,
+        )
+
+    # ======================================================================
     #  Stage creation
     # ======================================================================
+
     def _create_stages(self) -> None:
         """Create the SRCNN stages (one for 2x, two for 4x) using array textures."""
         lr = self.expanded_tile_size  # low-res feature map size
@@ -169,22 +199,22 @@ class TileProcessor:
         full = lr * 4  # after second 2x upscale (4x total)
 
         # Input array texture - one slice per concurrent tile
-        input_tex = Texture2D(lr, lr, slices=self.max_layers, force_array_view=True)
+        input_tex = self._make_array_tex(lr, lr, self.max_layers)
 
         # ---- Stage 1: low-res to 2x --------------------------------------------
-        inter_tex = Texture2D(half, half, slices=self.max_layers, force_array_view=True)
-        out1 = {"output": inter_tex}
-        for i in range(self.factory.config.num_textures):
-            out1[f"t{i}"] = Texture2D(
-                lr, lr, slices=self.max_layers, force_array_view=True
-            )
+        stage1_textures = {
+            name: self._make_array_tex(lr, lr, self.max_layers)
+            for name in self.intermediate_names
+        }
+        inter_tex = self._make_array_tex(half, half, self.max_layers)
+        stage1_textures["output"] = inter_tex
 
         srnn1 = SRCNN(
             factory=self.factory,
             width=lr,
             height=lr,
             input_texture=input_tex,
-            output_textures=out1,
+            output_textures=stage1_textures,
             push_constant_size=self.push_constant_size,
         )
         self.stages.append(srnn1)
@@ -192,36 +222,34 @@ class TileProcessor:
 
         if self.double_upscale:
             # Stage 2: 2x to 4x
-            final_out_array = Texture2D(
-                full, full, slices=self.max_layers, force_array_view=True
-            )
-            out2 = {"output": final_out_array}
-            for i in range(self.factory.config.num_textures):
-                out2[f"t{i}"] = Texture2D(
-                    half, half, slices=self.max_layers, force_array_view=True
-                )
+            stage2_textures = {
+                name: self._make_array_tex(half, half, self.max_layers)
+                for name in self.intermediate_names
+            }
+            final_out_array = self._make_array_tex(full, full, self.max_layers)
+            stage2_textures["output"] = final_out_array
 
             srnn2 = SRCNN(
                 factory=self.factory,
                 width=half,
                 height=half,
                 input_texture=inter_tex,
-                output_textures=out2,
+                output_textures=stage2_textures,
                 push_constant_size=self.push_constant_size,
             )
             self.stages.append(srnn2)
             self.groups_per_stage.append(dispatch_groups(half, half, last_pass=False))
         else:
             # Single stage: reuse the same array layout
-            out1["output"] = Texture2D(
-                half, half, slices=self.max_layers, force_array_view=True
+            stage1_textures["output"] = self._make_array_tex(
+                half, half, self.max_layers
             )
             self.stages[0] = SRCNN(
                 factory=self.factory,
                 width=lr,
                 height=lr,
                 input_texture=input_tex,
-                output_textures=out1,
+                output_textures=stage1_textures,
                 push_constant_size=self.push_constant_size,
             )
             self.groups_per_stage[0] = dispatch_groups(lr, lr, last_pass=False)
@@ -230,7 +258,7 @@ class TileProcessor:
         self.output_texture = Texture2D(self.full_out_w, self.full_out_h)
 
     # ======================================================================
-    #  Custom final pipeline
+    #  Custom final pipeline (replaces the built-in last pass)
     # ======================================================================
     def _finalize_pipeline(self) -> None:
         """
@@ -247,17 +275,16 @@ class TileProcessor:
           - out_dx / out_dy: 1 / (full upscaled size).
         These match the `Constants` cbuffer in `Pass4_tile.hlsl`.
         """
-        final_pass_idx = self.factory.config.passes - 1
-        final_shader = self.factory.config.shaders[final_pass_idx]
+        final_pass_idx = self.model_config.passes - 1
+        final_shader = self.model_config.shaders[final_pass_idx]
 
-        # Feature-map size for the last intermediate stage
-        if self.double_upscale:
-            feat_size = self.expanded_tile_size * 2  # after first 2x
-            last_stage = self.stages[-1]
-        else:
-            feat_size = self.expanded_tile_size  # low-res
-            last_stage = self.stages[0]
+        last_stage = self.stages[-1] if self.double_upscale else self.stages[0]
+        last_stage_outputs = last_stage.outputs
 
+        # Feature-map size for the last pass (e.g. expanded_tile_size * scale)
+        feat_size = self.expanded_tile_size * (2 if self.double_upscale else 1)
+
+        # Constant buffer (in_width, in_height, out_width, out_height, recip.)
         cb_data = struct.pack(
             "IIIIffff",
             feat_size,  # in_width
@@ -272,18 +299,27 @@ class TileProcessor:
         final_cb = Buffer(len(cb_data))
         final_cb.upload(cb_data)
 
-        # Pick the appropriate residual texture
+        # Residual texture (input for the last pass)
         residual = self.residual_2x if self.double_upscale else self.residual_1x
 
-        # SRV: residual + all feature maps of the last stage
-        srv_list = [residual]
-        for i in range(self.factory.config.num_textures):
-            srv_list.append(last_stage.outputs[f"t{i}"])
+        # SRV list - respect the order defined in model.json
+        final_srvs_spec, _ = self.model_config.srv_uav[final_pass_idx]
+        srv_list = []
+        for name in final_srvs_spec:
+            if name == "input":
+                srv_list.append(residual)
+            else:
+                if name not in last_stage_outputs:
+                    raise KeyError(f"Feature map '{name}' not in stage outputs")
+                srv_list.append(last_stage_outputs[name])
 
+        # UAV list – plain 2D output
         uav_list = [self.output_texture]
+
+        # Samplers for the final pass
         sampler_list = [
             self.factory.get_sampler(t)
-            for t in self.factory.config.samplers[final_pass_idx]
+            for t in self.model_config.samplers[final_pass_idx]
         ]
 
         final_pipe = Compute(
@@ -295,9 +331,8 @@ class TileProcessor:
             push_size=self.push_constant_size,
         )
 
-        # Replace the original pipeline for the last pass
-        target = self.stages[-1] if self.double_upscale else self.stages[0]
-        target.pipelines[-1] = final_pipe
+        # Replace the last pipeline in the appropriate stage
+        last_stage.pipelines[-1] = final_pipe
 
     # ======================================================================
     #  Tile processing (CPU extraction + upload)
@@ -422,7 +457,7 @@ class TileProcessor:
 
     def _dispatch_double(self, specs: List[TileSpec]) -> None:
         """4x upscale: two stages submitted separately to ensure barriers."""
-        #  Stage 1
+        # Stage 1
         gx1, gy1 = self.groups_per_stage[0]
         s1 = []
         for i, spec in enumerate(specs):
