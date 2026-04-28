@@ -17,6 +17,7 @@ UPSCALING_MODELS = (
     "veryfast",
     # Anime4K models (sub-directories under srcnn/anime4k/)
     "anime4k/upscale/cnn_x2_ul",
+    "anime4k/upscale/cnn_x2_s",
 )
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
 ZOOM_LEVELS = ("50%", "75%", "100%", "150%", "200%", "300%", "400%")

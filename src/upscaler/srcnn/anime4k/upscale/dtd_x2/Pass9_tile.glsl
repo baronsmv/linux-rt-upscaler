@@ -123,5 +123,5 @@ void main() {
     ivec2 valid_xy = interior_xy + ivec2(tile.margin);
     pos = (vec2(valid_xy) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);
     vec4 result = hook();
-    imageStore(img_LUMAD, ivec3(valid_xy, 0), result);
+    imageStore(img_LUMAD, ivec3(valid_xy, tile.inputLayer), result);
 }

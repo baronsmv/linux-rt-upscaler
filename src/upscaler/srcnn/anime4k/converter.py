@@ -510,7 +510,7 @@ layout(push_constant) uniform TileParams {
             else:
                 # Tile mode, intermediate 2D-array output
                 lines.append(
-                    f"    imageStore(img_{out_safe}, ivec3(valid_xy, 0), result);"
+                    f"    imageStore(img_{out_safe}, ivec3(valid_xy, tile.inputLayer), result);"
                 )
         else:
             # Full-frame (2D image) - always use gxy
