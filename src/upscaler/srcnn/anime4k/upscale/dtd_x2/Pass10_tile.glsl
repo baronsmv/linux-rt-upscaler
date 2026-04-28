@@ -85,7 +85,7 @@ layout(push_constant) uniform TileParams {
 layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2DArray tex_LUMAD;
 layout(set = 0, binding = 5, rgba8) uniform image2DArray img_LUMADG;
-#define SIGMA (vec2(ubo.in_width, ubo.in_height).y / 1080.0) * 2.0
+#define SIGMA (vec2(float(ubo.in_width), float(ubo.in_height)).y / 1080.0) * 2.0
 #define KERNELSIZE (SIGMA * 2.0 + 1.0)
 
 float gaussian(float x, float s, float m) {

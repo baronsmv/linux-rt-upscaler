@@ -85,7 +85,7 @@ layout(push_constant) uniform TileParams {
 layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2DArray tex_LINELUMA;
 layout(set = 0, binding = 5, rgba8) uniform image2DArray img_LINEKERNEL;
-#define SPATIAL_SIGMA (1.0 * float(vec2(ubo.in_width, ubo.in_height).y) / 1080.0) //Spatial window size, must be a positive real number.
+#define SPATIAL_SIGMA (1.0 * float(vec2(float(ubo.in_width), float(ubo.in_height)).y) / 1080.0) //Spatial window size, must be a positive real number.
 #define KERNELSIZE (max(int(ceil(SPATIAL_SIGMA * 2.0)), 1) * 2 + 1) //Kernel size, must be an positive odd integer.
 #define KERNELHALFSIZE (int(KERNELSIZE/2)) //Half of the kernel size without remainder. Must be equal to trunc(KERNELSIZE/2).
 #define KERNELLEN (KERNELSIZE * KERNELSIZE) //Total area of kernel. Must be equal to KERNELSIZE * KERNELSIZE.

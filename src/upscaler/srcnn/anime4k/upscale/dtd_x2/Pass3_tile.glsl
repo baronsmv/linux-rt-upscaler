@@ -93,7 +93,7 @@ float gaussian(float x, float s, float m) {
 }
 
 float lumGaussian(vec2 pos, vec2 d) {
-	float s = SIGMA * vec2(ubo.in_width, ubo.in_height).y / 1080.0;
+	float s = SIGMA * vec2(float(ubo.in_width), float(ubo.in_height)).y / 1080.0;
 	float kernel_size = s * 2.0 + 1.0;
 	
 	float g = (texture(sampler2DArray(tex_MMKERNEL, pointSampler), vec3(pos, tile.inputLayer)).x) * gaussian(0.0, s, 0.0);

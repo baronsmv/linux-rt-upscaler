@@ -70,7 +70,7 @@ layout(set = 0, binding = 5, rgba8) uniform image2D img_output;
 vec4 hook() {
 vec2 d = vec2(ubo.in_dx, ubo.in_dy);
 	
-	float relstr = vec2(ubo.in_width, ubo.in_height).y / 1080.0 * STRENGTH;
+	float relstr = vec2(float(ubo.in_width), float(ubo.in_height)).y / 1080.0 * STRENGTH;
 	
 	vec2 pos = pos;
 	for (int i=0; i<ITERATIONS; i++) {

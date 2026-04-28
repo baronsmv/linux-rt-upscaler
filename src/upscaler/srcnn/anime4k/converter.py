@@ -154,7 +154,9 @@ def tex_name_safe(name: str) -> str:
 
 
 def replace_mpv_globals(code: str) -> str:
-    code = code.replace("HOOKED_size", "vec2(ubo.in_width, ubo.in_height)")
+    code = code.replace(
+        "HOOKED_size", "vec2(float(ubo.in_width), float(ubo.in_height))"
+    )
     code = code.replace("HOOKED_pt", "vec2(ubo.in_dx, ubo.in_dy)")
     code = code.replace("HOOKED_pos", "pos")
     code = code.replace("MAIN_pos", "pos")
