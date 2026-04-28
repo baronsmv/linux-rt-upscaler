@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Anime4K mpv shader → Vulkan GLSL compute shaders + model.json
+Anime4K mpv shader -> Vulkan GLSL compute shaders + model.json
 
 Features:
 - Detects multiple passes (//!DESC) and extracts hook() logic.
 - Translates mpv texture macros (*_texOff, *_tex, *_pos, etc.).
-- Handles tile‑mode (2D Arrays) and full‑frame (2D) textures.
+- Handles tile-mode (2D Arrays) and full-frame (2D) textures.
 - Resolves #define aliases.
-- Correctly generates the depth‑to‑space (final shuffle) pass.
-- Outputs model.json for the CuNNy‑compatible pipeline.
+- Correctly generates the depth-to-space (final shuffle) pass.
+- Outputs model.json for the CuNNy-compatible pipeline.
 - Adds a detailed header comment (license, compile instructions, constant layout).
 """
 
@@ -261,14 +261,10 @@ def _license_block(license_text: str) -> str:
 
 def _compile_instructions() -> str:
     return """//
-// Compile with glslangValidator:
-//    glslangValidator -V --target-env vulkan1.2 -o <output.spv> <this_file>
-//
-// Compile with glslc (shaderc):
-//    glslc -fshader-stage=compute --target-env=vulkan1.2 -o <output.spv> <this_file>
-//
-// Note: The constant buffer and push constant layout must match the
-//       structs in the host application (see pipeline/factory.py)."""
+// Compile with:
+//    glslc -fshader-stage=compute --target-env=vulkan1.2 \\
+//          <this_file> -o <output.spv>
+//"""
 
 
 def _constant_buffer_doc() -> str:
@@ -290,13 +286,13 @@ def _constant_buffer_doc() -> str:
 def _push_constant_doc() -> str:
     return """//
 // -----------------------------------------------------------------------------
-//  Push constants (only in tile‑mode shaders)
+//  Push constants (only in tile-mode shaders)
 //    layout(push_constant) uniform TileParams {
-//        uint  inputLayer;      // array slice to read (0‑based)
+//        uint  inputLayer;      // array slice to read (0-based)
 //        uvec2 dstOffset;       // output pixel offset in the full upscaled frame
 //        uint  fullOutWidth;    // upscaled frame width
 //        uint  fullOutHeight;   // upscaled frame height
-//        uint  margin;          // context margin (pixels in feature‑map space)
+//        uint  margin;          // context margin (pixels in feature-map space)
 //        uvec2 tileOutExtent;   // width & height of this tile’s output region
 //    } tile;
 // -----------------------------------------------------------------------------"""
@@ -313,17 +309,15 @@ def generate_header_comment(
     lines = [
         f"// {model_name} - Pass {pass_index + 1} of {total_passes} - https://github.com/bloc97/Anime4K",
         "// Generated for linux-rt-upscaler - https://github.com/baronsmv/linux-rt-upscaler",
+        _compile_instructions(),
+        "// " + "-" * 77,
     ]
 
     lic = _license_block(license_text)
     if lic:
         lines.append("//")
         lines.append(lic)
-        lines.append("//")
 
-    lines.append("// " + "=" * 77)
-    lines.append(_compile_instructions())
-    lines.append("//")
     lines.append(_constant_buffer_doc())
     if tile_mode:
         lines.append(_push_constant_doc())
@@ -344,10 +338,10 @@ def common_header() -> str:
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) uniform Constants {
-    float in_width;
-    float in_height;
-    float out_width;
-    float out_height;
+    uint in_width;
+    uint in_height;
+    uint out_width;
+    uint out_height;
     float in_dx;
     float in_dy;
     float out_dx;
@@ -494,7 +488,7 @@ def generate_d2s_pass(
         else:
             feature_bindings.append(name)
     if not main_tex:
-        raise ValueError("Depth‑to‑space pass missing MAIN binding")
+        raise ValueError("Depth-to-space pass missing MAIN binding")
 
     for idx, name in enumerate(feature_bindings):
         binding = bind_start + idx
@@ -651,7 +645,7 @@ def main():
     parser = argparse.ArgumentParser(description="Anime4K mpv to Vulkan compute")
     parser.add_argument("shader_path", help="Path to .glsl file")
     parser.add_argument(
-        "-t", "--tile", action="store_true", help="Generate tile‑mode variants"
+        "-t", "--tile", action="store_true", help="Generate tile-mode variants"
     )
     args = parser.parse_args()
 

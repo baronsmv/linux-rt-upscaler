@@ -14,7 +14,7 @@ end
 
 function glsl_to_spv -a glsl
     set spv (echo "$glsl" | sed 's/\.glsl/\.spv/')
-    glslc -fshader-stage=compute "$glsl" -o "$spv"
+    glslc -fshader-stage=compute --target-env=vulkan1.2 "$glsl" -o "$spv"
 end
 
 for glsl in (
