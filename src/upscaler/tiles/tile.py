@@ -139,13 +139,9 @@ class TileProcessor:
         # --------------------------------------------------------------------------
         # Residual textures (updated by UpscalerManager before tile processing)
         # --------------------------------------------------------------------------
-        self.residual_1x = Texture2D(
-            crop_width, crop_height, slices=1, force_array_view=True
-        )
+        self.residual_1x = Texture2D(crop_width, crop_height)
         self.residual_2x = (
-            Texture2D(crop_width * 2, crop_height * 2, force_array_view=True)
-            if self.double_upscale
-            else None
+            Texture2D(crop_width * 2, crop_height * 2) if self.double_upscale else None
         )
         # Persistent staging buffer for residual uploads (reused every frame)
         self.residual_staging = Buffer(
