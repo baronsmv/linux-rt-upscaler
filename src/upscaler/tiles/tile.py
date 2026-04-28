@@ -141,7 +141,9 @@ class TileProcessor:
         # --------------------------------------------------------------------------
         self.residual_1x = Texture2D(crop_width, crop_height)
         self.residual_2x = (
-            Texture2D(crop_width * 2, crop_height * 2) if self.double_upscale else None
+            Texture2D(crop_width * 2, crop_height * 2, format=self.intermediate_format)
+            if self.double_upscale
+            else None
         )
         # Persistent staging buffer for residual uploads (reused every frame)
         self.residual_staging = Buffer(
@@ -193,8 +195,8 @@ class TileProcessor:
         half = lr * 2  # after first 2x upscale
         full = lr * 4  # after second 2x upscale (4x total)
 
-        # Input array texture - one slice per concurrent tile
-        input_tex = self._make_array_tex(lr, lr, self.max_layers)
+        # Input array texture - always RGBA8 (captured frame data)
+        input_tex = Texture2D(lr, lr, slices=self.max_layers, force_array_view=True)
 
         # ---- Stage 1: low-res to 2x --------------------------------------------
         stage1_textures = {
