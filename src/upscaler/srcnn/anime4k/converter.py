@@ -693,7 +693,7 @@ def main():
                 license_text=license_text,
             )
             if pinfo.is_d2s:
-                code = generate_d2s_pass(pinfo, out_name, header)
+                code = generate_d2s_pass(pinfo, tile, header)
             else:
                 code = generate_intermediate_pass(
                     pinfo, out_name, is_last, tile, header
