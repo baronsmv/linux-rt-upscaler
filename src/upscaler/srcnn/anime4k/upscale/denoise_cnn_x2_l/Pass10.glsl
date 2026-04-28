@@ -77,12 +77,12 @@ void main() {
     float c1 = texture(sampler2D(tex_conv2d_last_tf1, pointSampler), (vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos)[i0.y * 2 + i0.x];
     float c2 = texture(sampler2D(tex_conv2d_last_tf2, pointSampler), (vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos)[i0.y * 2 + i0.x];
     float c3 = c2;
-    vec3 rgb_0 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(0.5, 0.5)) * full_opt).rgb;
-    imageStore(img_output, gxy + ivec2(0, 0), vec4(rgb_0 + c0, 1.0));
-    vec3 rgb_1 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(1.5, 0.5)) * full_opt).rgb;
-    imageStore(img_output, gxy + ivec2(1, 0), vec4(rgb_1 + c1, 1.0));
-    vec3 rgb_2 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(0.5, 1.5)) * full_opt).rgb;
-    imageStore(img_output, gxy + ivec2(0, 1), vec4(rgb_2 + c2, 1.0));
-    vec3 rgb_3 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(1.5, 1.5)) * full_opt).rgb;
-    imageStore(img_output, gxy + ivec2(1, 1), vec4(rgb_3 + c3, 1.0));
+    vec3 rgb_0_0 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(0.5, 0.5)) * full_opt).rgb;
+    imageStore(img_output, gxy + ivec2(0, 0), vec4(rgb_0_0 + c0, 1.0));
+    vec3 rgb_1_0 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(1.5, 0.5)) * full_opt).rgb;
+    imageStore(img_output, gxy + ivec2(1, 0), vec4(rgb_1_0 + c1, 1.0));
+    vec3 rgb_0_1 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(0.5, 1.5)) * full_opt).rgb;
+    imageStore(img_output, gxy + ivec2(0, 1), vec4(rgb_0_1 + c2, 1.0));
+    vec3 rgb_1_1 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(gxy) + vec2(1.5, 1.5)) * full_opt).rgb;
+    imageStore(img_output, gxy + ivec2(1, 1), vec4(rgb_1_1 + c3, 1.0));
 }

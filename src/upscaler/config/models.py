@@ -15,7 +15,7 @@ UPSCALING_MODELS = (
     "fast",
     "faster",
     "veryfast",
-    # Anime4K models (sub‑directories under srcnn/anime4k/)
+    # Anime4K models (sub-directories under srcnn/anime4k/)
     "anime4k/upscale/cnn_x2_s",
 )
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")

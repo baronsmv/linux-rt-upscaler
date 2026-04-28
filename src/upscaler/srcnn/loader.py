@@ -20,7 +20,7 @@ _DEPTH_FORMAT_MAP: Dict[str, int] = {
 }
 
 # ---------------------------------------------------------------------------
-# Global cache – keyed by (model_path, variant)
+# Global cache - keyed by (model_path, variant)
 # ---------------------------------------------------------------------------
 _MODEL_CACHE: Dict[Tuple[str, str], ModelConfig] = {}
 
@@ -39,9 +39,9 @@ def load_model(
         Path relative to the ``srcnn/`` directory, e.g. ``"fast"`` or
         ``"anime4k/upscale/x2"``.
     variant : str
-        Shader variant suffix: ``""`` for full‑frame, ``"_tile"`` for tile mode.
+        Shader variant suffix: ``""`` for full-frame, ``"_tile"`` for tile mode.
     push_constant_size : int
-        Size of the push‑constant block used by tile‑mode shaders.
+        Size of the push-constant block used by tile-mode shaders.
 
     Returns
     -------
@@ -52,7 +52,7 @@ def load_model(
     Raises
     ------
     FileNotFoundError
-        If the model directory or required SPIR‑V files are missing.
+        If the model directory or required SPIR-V files are missing.
     ValueError
         If ``model.json`` is malformed.
     json.JSONDecodeError
@@ -109,7 +109,7 @@ def load_model(
     intermediate_format = _DEPTH_FORMAT_MAP[depth_str]
 
     # ------------------------------------------------------------------
-    # Load SPIR‑V shaders
+    # Load SPIR-V shaders
     # ------------------------------------------------------------------
     shaders: List[bytes] = []
     for pass_idx in range(1, passes + 1):

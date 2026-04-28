@@ -96,19 +96,19 @@ void main() {
     float c0 = texture(sampler2DArray(tex_conv2d_last_tf, pointSampler), vec3((vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos, tile.inputLayer))[i0.y * 2 + i0.x];
     float c1 = c0; float c2 = c0; float c3 = c0;
     if ((base_out.x + 0) < int(tile.dstOffset.x + tile.tileOutExtent.x) && (base_out.y + 0) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {
-        vec3 rgb_0 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(0.5, 0.5)) * full_opt).rgb;
-        imageStore(img_output, ivec2(base_out) + ivec2(0, 0), vec4(rgb_0 + c0, 1.0));
+        vec3 rgb_0_0 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(0.5, 0.5)) * full_opt).rgb;
+        imageStore(img_output, ivec2(base_out) + ivec2(0, 0), vec4(rgb_0_0 + c0, 1.0));
     }
     if ((base_out.x + 1) < int(tile.dstOffset.x + tile.tileOutExtent.x) && (base_out.y + 0) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {
-        vec3 rgb_1 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(1.5, 0.5)) * full_opt).rgb;
-        imageStore(img_output, ivec2(base_out) + ivec2(1, 0), vec4(rgb_1 + c1, 1.0));
+        vec3 rgb_1_0 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(1.5, 0.5)) * full_opt).rgb;
+        imageStore(img_output, ivec2(base_out) + ivec2(1, 0), vec4(rgb_1_0 + c1, 1.0));
     }
     if ((base_out.x + 0) < int(tile.dstOffset.x + tile.tileOutExtent.x) && (base_out.y + 1) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {
-        vec3 rgb_2 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(0.5, 1.5)) * full_opt).rgb;
-        imageStore(img_output, ivec2(base_out) + ivec2(0, 1), vec4(rgb_2 + c2, 1.0));
+        vec3 rgb_0_1 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(0.5, 1.5)) * full_opt).rgb;
+        imageStore(img_output, ivec2(base_out) + ivec2(0, 1), vec4(rgb_0_1 + c2, 1.0));
     }
     if ((base_out.x + 1) < int(tile.dstOffset.x + tile.tileOutExtent.x) && (base_out.y + 1) < int(tile.dstOffset.y + tile.tileOutExtent.y)) {
-        vec3 rgb_3 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(1.5, 1.5)) * full_opt).rgb;
-        imageStore(img_output, ivec2(base_out) + ivec2(1, 1), vec4(rgb_3 + c3, 1.0));
+        vec3 rgb_1_1 = texture(sampler2D(tex_MAIN, linearSampler), (vec2(base_out) + vec2(1.5, 1.5)) * full_opt).rgb;
+        imageStore(img_output, ivec2(base_out) + ivec2(1, 1), vec4(rgb_1_1 + c3, 1.0));
     }
 }
