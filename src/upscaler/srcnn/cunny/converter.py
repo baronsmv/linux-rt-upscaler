@@ -283,7 +283,11 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
         return header
 
     def generate(
-        self, pass_info: PassInfo, sampler_order: List[str], original_license: str = ""
+        self,
+        pass_info: PassInfo,
+        sampler_order: List[str],
+        total_passes: int,
+        original_license: str = "",
     ) -> str:
         pass_num = pass_info.pass_num
         in_textures = pass_info.in_textures
@@ -396,7 +400,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
 
         # Assemble everything
         lines = [
-            f"// {self.model_name} - Pass {pass_num} - https://github.com/funnyplanter/CuNNy",
+            f"// {self.model_name} - Pass {pass_num} of {total_passes} - https://github.com/funnyplanter/CuNNy",
             "// Generated for linux-rt-upscaler - https://github.com/baronsmv/linux-rt-upscaler",
             "//",
             "// Compile with:",
@@ -900,11 +904,13 @@ def main() -> None:
     sampler_order = [s.name for s in parser.samplers]
 
     suffix = "_tile" if config.tile else ""
+    total_passes = len(parser.passes)
 
     for pinfo in parser.passes:
         hlsl = hlsl_gen.generate(
             pinfo,
             sampler_order,
+            total_passes,
             extract_license(content),
         )
         out_path = os.path.join(output_dir, f"Pass{pinfo.pass_num}{suffix}.hlsl")

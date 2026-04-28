@@ -1,4 +1,4 @@
-// CuNNy-4x12-NVL - Pass 3 - https://github.com/funnyplanter/CuNNy
+// CuNNy-4x12-NVL - Pass 3 of 6 - https://github.com/funnyplanter/CuNNy
 // Generated for linux-rt-upscaler - https://github.com/baronsmv/linux-rt-upscaler
 //
 // Compile with:

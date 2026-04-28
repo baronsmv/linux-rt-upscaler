@@ -9,6 +9,7 @@ Features:
 - Resolves #define aliases.
 - Correctly generates the depth‑to‑space (final shuffle) pass.
 - Outputs model.json for the CuNNy‑compatible pipeline.
+- Adds a detailed header comment (license, compile instructions, constant layout).
 """
 
 import argparse
@@ -50,9 +51,24 @@ class PassInfo:
 class Anime4KParser:
     def __init__(self, content: str):
         self.passes: List[PassInfo] = []
+        self.license = ""
         self._parse(content)
 
     def _parse(self, content: str) -> None:
+        # Extract license block (everything before the first //!DESC)
+        first_desc = content.find("//!DESC")
+        if first_desc != -1:
+            pre = content[:first_desc].strip()
+            # Keep only non-empty lines, stripping leading '// ' if present
+            license_lines = []
+            for line in pre.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("//"):
+                    stripped = stripped[2:].strip()
+                if stripped:
+                    license_lines.append(stripped)
+            self.license = "\n".join(license_lines)
+
         blocks = re.split(r"^//!DESC\s+", content, flags=re.MULTILINE)[1:]
         for block in blocks:
             lines = block.splitlines()
@@ -232,6 +248,92 @@ def resolve_defines_as_aliases(
 
 
 # ----------------------------------------------------------------------
+# Header comment generation
+# ----------------------------------------------------------------------
+
+
+def _license_block(license_text: str) -> str:
+    if not license_text:
+        return ""
+    lines = license_text.strip().splitlines()
+    return "\n".join(f"// {line}" for line in lines)
+
+
+def _compile_instructions() -> str:
+    return """//
+// Compile with glslangValidator:
+//    glslangValidator -V --target-env vulkan1.2 -o <output.spv> <this_file>
+//
+// Compile with glslc (shaderc):
+//    glslc -fshader-stage=compute --target-env=vulkan1.2 -o <output.spv> <this_file>
+//
+// Note: The constant buffer and push constant layout must match the
+//       structs in the host application (see pipeline/factory.py)."""
+
+
+def _constant_buffer_doc() -> str:
+    return """//
+// -----------------------------------------------------------------------------
+//  Constant buffer (binding = 0, set = 0)
+//    Packed as 4 uint32 + 4 float:
+//      [0] in_width    (uint)  - width of feature map for this pass
+//      [1] in_height   (uint)  - height of feature map
+//      [2] out_width   (uint)  - full output width (final pass only)
+//      [3] out_height  (uint)  - full output height (final pass only)
+//      [4] in_dx       (float) - 1.0 / in_width
+//      [5] in_dy       (float) - 1.0 / in_height
+//      [6] out_dx      (float) - 1.0 / out_width
+//      [7] out_dy      (float) - 1.0 / out_height
+// -----------------------------------------------------------------------------"""
+
+
+def _push_constant_doc() -> str:
+    return """//
+// -----------------------------------------------------------------------------
+//  Push constants (only in tile‑mode shaders)
+//    layout(push_constant) uniform TileParams {
+//        uint  inputLayer;      // array slice to read (0‑based)
+//        uvec2 dstOffset;       // output pixel offset in the full upscaled frame
+//        uint  fullOutWidth;    // upscaled frame width
+//        uint  fullOutHeight;   // upscaled frame height
+//        uint  margin;          // context margin (pixels in feature‑map space)
+//        uvec2 tileOutExtent;   // width & height of this tile’s output region
+//    } tile;
+// -----------------------------------------------------------------------------"""
+
+
+def generate_header_comment(
+    model_name: str,
+    pass_index: int,
+    total_passes: int,
+    is_last: bool,
+    tile_mode: bool,
+    license_text: str,
+) -> str:
+    lines = [
+        f"// {model_name} - Pass {pass_index + 1} of {total_passes} - https://github.com/bloc97/Anime4K",
+        "// Generated for linux-rt-upscaler - https://github.com/baronsmv/linux-rt-upscaler",
+    ]
+
+    lic = _license_block(license_text)
+    if lic:
+        lines.append("//")
+        lines.append(lic)
+        lines.append("//")
+
+    lines.append("// " + "=" * 77)
+    lines.append(_compile_instructions())
+    lines.append("//")
+    lines.append(_constant_buffer_doc())
+    if tile_mode:
+        lines.append(_push_constant_doc())
+    lines.append("//")
+    # separator
+    lines.append("// " + "=" * 77)
+    return "\n".join(lines)
+
+
+# ----------------------------------------------------------------------
 # Shader generation
 # ----------------------------------------------------------------------
 
@@ -242,14 +344,14 @@ def common_header() -> str:
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) uniform Constants {
-    uint   in_width;
-    uint   in_height;
-    uint   out_width;
-    uint   out_height;
-    float  in_dx;
-    float  in_dy;
-    float  out_dx;
-    float  out_dy;
+    float in_width;
+    float in_height;
+    float out_width;
+    float out_height;
+    float in_dx;
+    float in_dy;
+    float out_dx;
+    float out_dy;
 } ubo;
 
 layout(set = 0, binding = 1) uniform sampler pointSampler;
@@ -273,12 +375,18 @@ def push_constant_block() -> str:
 
 
 def generate_intermediate_pass(
-    pinfo: PassInfo, out_name: str, is_final: bool, tile_mode: bool
+    pinfo: PassInfo,
+    out_name: str,
+    is_final: bool,
+    tile_mode: bool,
+    header_comment: str,
 ) -> str:
     tex_mappings = {}
     bind_start = 3
     lines = []
 
+    lines.append(header_comment)
+    lines.append("")
     lines.append(common_header())
     if tile_mode:
         lines.append(push_constant_block())
@@ -363,11 +471,17 @@ def generate_intermediate_pass(
 
 
 def generate_d2s_pass(
-    pinfo: PassInfo, out_name: str, is_final: bool, tile_mode: bool
+    pinfo: PassInfo,
+    out_name: str,
+    is_final: bool,
+    tile_mode: bool,
+    header_comment: str,
 ) -> str:
     tex_mappings = {}
     bind_start = 3
     lines = []
+    lines.append(header_comment)
+    lines.append("")
     lines.append(common_header())
     if tile_mode:
         lines.append(push_constant_block())
@@ -550,6 +664,7 @@ def main():
 
     shader_parser = Anime4KParser(content)
     passes = shader_parser.passes
+    license_text = shader_parser.license
     if not passes:
         print("No passes found.")
         return
@@ -565,8 +680,10 @@ def main():
         json.dump(model, f, indent=2)
 
     tile_modes = [False, True] if args.tile else [False]
+    total = len(passes)
+
     for pass_idx, pinfo in enumerate(passes):
-        is_last = pass_idx == len(passes) - 1
+        is_last = pass_idx == total - 1
         if pinfo.save is None:
             out_name = f"pass_{pass_idx}_out"
             if is_last:
@@ -578,10 +695,20 @@ def main():
 
         for tile in tile_modes:
             suffix = "_tile" if tile else ""
+            header = generate_header_comment(
+                model_name=shader_name,
+                pass_index=pass_idx,
+                total_passes=total,
+                is_last=is_last,
+                tile_mode=tile,
+                license_text=license_text,
+            )
             if pinfo.is_d2s:
-                code = generate_d2s_pass(pinfo, out_name, is_last, tile)
+                code = generate_d2s_pass(pinfo, out_name, is_last, tile, header)
             else:
-                code = generate_intermediate_pass(pinfo, out_name, is_last, tile)
+                code = generate_intermediate_pass(
+                    pinfo, out_name, is_last, tile, header
+                )
             out_file = os.path.join(output_dir, f"Pass{pass_idx+1}{suffix}.glsl")
             with open(out_file, "w") as f:
                 f.write(code)
