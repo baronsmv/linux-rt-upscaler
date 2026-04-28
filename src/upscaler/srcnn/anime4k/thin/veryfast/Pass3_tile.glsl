@@ -83,7 +83,7 @@ layout(push_constant) uniform TileParams {
 } tile;
 
 layout(set = 0, binding = 3) uniform texture2DArray tex_LINESOBEL;
-layout(set = 0, binding = 4, rgba8) uniform image2DArray img_LINESOBEL;
+layout(set = 0, binding = 4, rgba16f) uniform image2DArray img_LINESOBEL;
 
 vec4 hook() {
 float tx = texture(sampler2DArray(tex_LINESOBEL, pointSampler), vec3(pos + (vec2(0.0, -0.25)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer)).x;

@@ -83,7 +83,7 @@ layout(push_constant) uniform TileParams {
 } tile;
 
 layout(set = 0, binding = 3) uniform texture2DArray tex_conv2d_4_tf;
-layout(set = 0, binding = 4, rgba8) uniform image2DArray img_conv2d_5_tf;
+layout(set = 0, binding = 4, rgba16f) uniform image2DArray img_conv2d_5_tf;
 #define go_0(x_off, y_off) (max((texture(sampler2DArray(tex_conv2d_4_tf, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))), 0.0))
 #define go_1(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv2d_4_tf, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))), 0.0))
 

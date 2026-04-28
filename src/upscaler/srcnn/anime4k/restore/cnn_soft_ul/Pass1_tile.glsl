@@ -83,7 +83,7 @@ layout(push_constant) uniform TileParams {
 } tile;
 
 layout(set = 0, binding = 3) uniform texture2DArray tex_MAIN;
-layout(set = 0, binding = 4, rgba8) uniform image2DArray img_conv2d_tf;
+layout(set = 0, binding = 4, rgba16f) uniform image2DArray img_conv2d_tf;
 #define go_0(x_off, y_off) (texture(sampler2DArray(tex_MAIN, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer)))
 
 vec4 hook() {

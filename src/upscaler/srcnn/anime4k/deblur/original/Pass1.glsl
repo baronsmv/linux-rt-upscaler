@@ -62,7 +62,7 @@ layout(set = 0, binding = 2) uniform sampler linearSampler;
 vec2 pos;
 
 layout(set = 0, binding = 3) uniform texture2D tex_HOOKED;
-layout(set = 0, binding = 4, rgba8) uniform image2D img_LINELUMA;
+layout(set = 0, binding = 4, rgba16f) uniform image2D img_LINELUMA;
 
 float get_luma(vec4 rgba) {
 	return dot(vec4(0.299, 0.587, 0.114, 0.0), rgba);

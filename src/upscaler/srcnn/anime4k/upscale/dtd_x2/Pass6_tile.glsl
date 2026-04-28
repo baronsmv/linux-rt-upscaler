@@ -84,7 +84,7 @@ layout(push_constant) uniform TileParams {
 
 layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2DArray tex_MMKERNEL;
-layout(set = 0, binding = 5, rgba8) uniform image2DArray img_pass_5_out;
+layout(set = 0, binding = 5, rgba16f) uniform image2DArray img_pass_5_out;
 #define STRENGTH 1.8 //Line darken proportional strength, higher is darker.
 
 vec4 hook() {

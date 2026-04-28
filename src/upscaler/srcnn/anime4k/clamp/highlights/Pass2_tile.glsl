@@ -84,7 +84,7 @@ layout(push_constant) uniform TileParams {
 
 layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2DArray tex_STATSMAX;
-layout(set = 0, binding = 5, rgba8) uniform image2DArray img_STATSMAX;
+layout(set = 0, binding = 5, rgba16f) uniform image2DArray img_STATSMAX;
 #define KERNELSIZE 5 //Kernel size, must be an positive odd integer.
 #define KERNELHALFSIZE 2 //Half of the kernel size without remainder. Must be equal to trunc(KERNELSIZE/2).
 

@@ -84,7 +84,7 @@ layout(push_constant) uniform TileParams {
 
 layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2DArray tex_LUMAD;
-layout(set = 0, binding = 5, rgba8) uniform image2DArray img_LUMAD;
+layout(set = 0, binding = 5, rgba16f) uniform image2DArray img_LUMAD;
 #define REFINE_STRENGTH 1.0
 #define REFINE_BIAS 0.0
 #define P5 ( 11.68129591)

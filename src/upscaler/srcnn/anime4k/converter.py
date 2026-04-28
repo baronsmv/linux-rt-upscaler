@@ -5,11 +5,12 @@ Anime4K mpv shader -> Vulkan GLSL compute shaders + model.json
 Features:
 - Detects multiple passes (//!DESC) and extracts hook() logic.
 - Translates mpv texture macros (*_texOff, *_tex, *_pos, etc.).
-- Handles tile-mode (2D Arrays) and full-frame (2D) textures.
+- Handles tile‑mode (2D Arrays) and full‑frame (2D) textures.
 - Resolves #define aliases.
-- Correctly generates the depth-to-space (final shuffle) pass.
-- Outputs model.json for the CuNNy-compatible pipeline.
+- Correctly generates the depth‑to‑space (final shuffle) pass.
+- Outputs model.json for the CuNNy‑compatible pipeline.
 - Adds a detailed header comment (license, compile instructions, constant layout).
+- Uses rgba16f for intermediate textures, rgba8 for final output.
 """
 
 import argparse
@@ -59,7 +60,6 @@ class Anime4KParser:
         first_desc = content.find("//!DESC")
         if first_desc != -1:
             pre = content[:first_desc].strip()
-            # Keep only non-empty lines, stripping leading '// ' if present
             license_lines = []
             for line in pre.splitlines():
                 stripped = line.strip()
@@ -323,7 +323,6 @@ def generate_header_comment(
     if tile_mode:
         lines.append(_push_constant_doc())
     lines.append("//")
-    # separator
     lines.append("// " + "=" * 77)
     return "\n".join(lines)
 
@@ -375,6 +374,7 @@ def generate_intermediate_pass(
     is_final: bool,
     tile_mode: bool,
     header_comment: str,
+    intermediate_fmt: str = "rgba16f",
 ) -> str:
     tex_mappings = {}
     bind_start = 3
@@ -404,13 +404,18 @@ def generate_intermediate_pass(
 
     out_binding = bind_start + len(pinfo.bindings)
     out_safe = tex_name_safe(out_name) if out_name != "output" else "output"
+
+    # Intermediate passes use the custom format; final pass (depth‑to‑space) uses rgba8.
+    # is_final is True only for the depth‑to‑space pass, which is handled separately.
+    fmt = "rgba8" if is_final else intermediate_fmt
+
     if tile_mode and not is_final:
         lines.append(
-            f"layout(set = 0, binding = {out_binding}, rgba8) uniform image2DArray img_{out_safe};"
+            f"layout(set = 0, binding = {out_binding}, {fmt}) uniform image2DArray img_{out_safe};"
         )
     else:
         lines.append(
-            f"layout(set = 0, binding = {out_binding}, rgba8) uniform image2D img_{out_safe};"
+            f"layout(set = 0, binding = {out_binding}, {fmt}) uniform image2D img_{out_safe};"
         )
 
     filtered_defines, extra_mappings = resolve_defines_as_aliases(
@@ -516,9 +521,7 @@ def generate_d2s_pass(pinfo: PassInfo, tile_mode: bool, header_comment: str) -> 
     tex_mappings.update(extra_mappings)
     for d in filtered_defines:
         d_clean = replace_mpv_globals(d)
-        d_clean = replace_texture_macros(
-            d_clean, tex_mappings, "pointSampler", False
-        )  # MAIN is 2D
+        d_clean = replace_texture_macros(d_clean, tex_mappings, "pointSampler", False)
         lines.append(d_clean)
     if pinfo.prologue:
         lines.append("")
@@ -601,7 +604,7 @@ def generate_d2s_pass(pinfo: PassInfo, tile_mode: bool, header_comment: str) -> 
 # ----------------------------------------------------------------------
 
 
-def build_model_json(passes: List[PassInfo]) -> Dict:
+def build_model_json(passes: List[PassInfo], depth: str) -> Dict:
     srv_uav, sampler_list, prev_output, all_tex_names = [], [], "input", set()
     for idx, p in enumerate(passes):
         is_last = idx == len(passes) - 1
@@ -628,6 +631,7 @@ def build_model_json(passes: List[PassInfo]) -> Dict:
         "num_textures": num_textures,
         "srv_uav": srv_uav,
         "samplers": sampler_list,
+        "depth": depth,
     }
 
 
@@ -641,6 +645,13 @@ def main():
     parser.add_argument("shader_path", help="Path to .glsl file")
     parser.add_argument(
         "-t", "--tile", action="store_true", help="Generate tile-mode variants"
+    )
+    parser.add_argument(
+        "-d",
+        "--depth",
+        choices=["rgba8", "rgba16"],
+        default="rgba16",
+        help="Intermediate texture format (default: %(default)s)",
     )
     args = parser.parse_args()
 
@@ -663,13 +674,16 @@ def main():
     output_dir = os.path.join(shader_dir, shader_name)
     os.makedirs(output_dir, exist_ok=True)
 
-    model = build_model_json(passes)
+    model = build_model_json(passes, args.depth)
     model["name"] = shader_name
     with open(os.path.join(output_dir, "model.json"), "w") as f:
         json.dump(model, f, indent=2)
 
     tile_modes = [False, True] if args.tile else [False]
     total = len(passes)
+
+    # Determine intermediate GLSL format string
+    intermediate_glsl = "rgba16f" if args.depth == "rgba16" else "rgba8"
 
     for pass_idx, pinfo in enumerate(passes):
         is_last = pass_idx == total - 1
@@ -688,7 +702,7 @@ def main():
                 model_name=shader_name,
                 pass_index=pass_idx,
                 total_passes=total,
-                is_last=is_last,
+                is_last=is_last and not pinfo.is_d2s,
                 tile_mode=tile,
                 license_text=license_text,
             )
@@ -696,7 +710,12 @@ def main():
                 code = generate_d2s_pass(pinfo, tile, header)
             else:
                 code = generate_intermediate_pass(
-                    pinfo, out_name, is_last, tile, header
+                    pinfo,
+                    out_name,
+                    is_last,
+                    tile,
+                    header,
+                    intermediate_fmt=intermediate_glsl,
                 )
             out_file = os.path.join(output_dir, f"Pass{pass_idx+1}{suffix}.glsl")
             with open(out_file, "w") as f:

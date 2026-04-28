@@ -62,7 +62,7 @@ layout(set = 0, binding = 2) uniform sampler linearSampler;
 vec2 pos;
 
 layout(set = 0, binding = 3) uniform texture2D tex_LINESOBEL;
-layout(set = 0, binding = 4, rgba8) uniform image2D img_LINESOBEL;
+layout(set = 0, binding = 4, rgba16f) uniform image2D img_LINESOBEL;
 
 vec4 hook() {
 float l = texture(sampler2D(tex_LINESOBEL, pointSampler), pos + (vec2(-0.25, 0.0)) * vec2(ubo.in_dx, ubo.in_dy)).x;

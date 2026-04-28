@@ -63,7 +63,7 @@ vec2 pos;
 
 layout(set = 0, binding = 3) uniform texture2D tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2D tex_LUMAD;
-layout(set = 0, binding = 5, rgba8) uniform image2D img_LUMAMM;
+layout(set = 0, binding = 5, rgba16f) uniform image2D img_LUMAMM;
 
 vec4 hook() {
 vec2 d = vec2(ubo.in_dx, ubo.in_dy);

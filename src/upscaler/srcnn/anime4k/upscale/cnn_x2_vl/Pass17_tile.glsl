@@ -96,7 +96,7 @@ layout(set = 0, binding = 13) uniform texture2DArray tex_conv2d_5_tf;
 layout(set = 0, binding = 14) uniform texture2DArray tex_conv2d_5_tf1;
 layout(set = 0, binding = 15) uniform texture2DArray tex_conv2d_6_tf;
 layout(set = 0, binding = 16) uniform texture2DArray tex_conv2d_6_tf1;
-layout(set = 0, binding = 17, rgba8) uniform image2DArray img_conv2d_last_tf2;
+layout(set = 0, binding = 17, rgba16f) uniform image2DArray img_conv2d_last_tf2;
 #define g_0 (max((texture(sampler2DArray(tex_conv2d_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
 #define g_1 (max((texture(sampler2DArray(tex_conv2d_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
 #define g_2 (max(-(texture(sampler2DArray(tex_conv2d_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))

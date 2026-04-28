@@ -63,7 +63,7 @@ vec2 pos;
 
 layout(set = 0, binding = 3) uniform texture2D tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2D tex_LUMAD;
-layout(set = 0, binding = 5, rgba8) uniform image2D img_LUMADG;
+layout(set = 0, binding = 5, rgba16f) uniform image2D img_LUMADG;
 #define SIGMA (vec2(float(ubo.in_width), float(ubo.in_height)).y / 1080.0) * 2.0
 #define KERNELSIZE (SIGMA * 2.0 + 1.0)
 

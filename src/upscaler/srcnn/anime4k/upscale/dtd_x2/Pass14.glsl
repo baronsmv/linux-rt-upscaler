@@ -64,7 +64,7 @@ vec2 pos;
 layout(set = 0, binding = 3) uniform texture2D tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2D tex_LUMAD;
 layout(set = 0, binding = 5) uniform texture2D tex_LUMAD2;
-layout(set = 0, binding = 6, rgba8) uniform image2D img_MAINTEMPTHIN;
+layout(set = 0, binding = 6, rgba16f) uniform image2D img_MAINTEMPTHIN;
 #define STRENGTH 0.4 //Strength of warping for each iteration
 #define ITERATIONS 1 //Number of iterations for the forwards solver, decreasing strength and increasing iterations improves quality at the cost of speed.
 

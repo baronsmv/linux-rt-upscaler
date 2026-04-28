@@ -76,7 +76,7 @@ layout(set = 0, binding = 14) uniform texture2D tex_conv2d_5_tf2;
 layout(set = 0, binding = 15) uniform texture2D tex_conv2d_6_tf;
 layout(set = 0, binding = 16) uniform texture2D tex_conv2d_6_tf1;
 layout(set = 0, binding = 17) uniform texture2D tex_conv2d_6_tf2;
-layout(set = 0, binding = 18, rgba8) uniform image2D img_conv2d_last_tf1;
+layout(set = 0, binding = 18, rgba16f) uniform image2D img_conv2d_last_tf1;
 #define g_0 (max((texture(sampler2D(tex_conv2d_2_tf, pointSampler), pos)), 0.0))
 #define g_1 (max((texture(sampler2D(tex_conv2d_2_tf1, pointSampler), pos)), 0.0))
 #define g_2 (max((texture(sampler2D(tex_conv2d_2_tf2, pointSampler), pos)), 0.0))

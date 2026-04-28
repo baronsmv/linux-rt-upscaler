@@ -84,7 +84,7 @@ layout(push_constant) uniform TileParams {
 
 layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2DArray tex_LINELUMA;
-layout(set = 0, binding = 5, rgba8) uniform image2DArray img_MMKERNEL;
+layout(set = 0, binding = 5, rgba16f) uniform image2DArray img_MMKERNEL;
 
 float max3v(float a, float b, float c) {
 	return max(max(a, b), c);

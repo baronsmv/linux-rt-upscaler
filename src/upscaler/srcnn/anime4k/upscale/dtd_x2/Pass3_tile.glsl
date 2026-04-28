@@ -85,7 +85,7 @@ layout(push_constant) uniform TileParams {
 layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2DArray tex_LINELUMA;
 layout(set = 0, binding = 5) uniform texture2DArray tex_MMKERNEL;
-layout(set = 0, binding = 6, rgba8) uniform image2DArray img_MMKERNEL;
+layout(set = 0, binding = 6, rgba16f) uniform image2DArray img_MMKERNEL;
 #define SIGMA 1.0
 
 float gaussian(float x, float s, float m) {

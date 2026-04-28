@@ -63,7 +63,7 @@ vec2 pos;
 
 layout(set = 0, binding = 3) uniform texture2D tex_conv2d_4_tf;
 layout(set = 0, binding = 4) uniform texture2D tex_conv2d_4_tf1;
-layout(set = 0, binding = 5, rgba8) uniform image2D img_conv2d_5_tf1;
+layout(set = 0, binding = 5, rgba16f) uniform image2D img_conv2d_5_tf1;
 #define go_0(x_off, y_off) (max((texture(sampler2D(tex_conv2d_4_tf, pointSampler), pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy))), 0.0))
 #define go_1(x_off, y_off) (max((texture(sampler2D(tex_conv2d_4_tf1, pointSampler), pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy))), 0.0))
 #define go_2(x_off, y_off) (max(-(texture(sampler2D(tex_conv2d_4_tf, pointSampler), pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy))), 0.0))

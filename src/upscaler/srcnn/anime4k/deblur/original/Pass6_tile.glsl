@@ -85,7 +85,7 @@ layout(push_constant) uniform TileParams {
 layout(set = 0, binding = 3) uniform texture2DArray tex_HOOKED;
 layout(set = 0, binding = 4) uniform texture2DArray tex_LUMAD;
 layout(set = 0, binding = 5) uniform texture2DArray tex_LUMAMM;
-layout(set = 0, binding = 6, rgba8) uniform image2DArray img_RESAMPLED;
+layout(set = 0, binding = 6, rgba16f) uniform image2DArray img_RESAMPLED;
 
 vec4 hook() {
 vec2 d = vec2(ubo.in_dx, ubo.in_dy);
