@@ -464,13 +464,7 @@ def generate_intermediate_pass(
     return "\n".join(lines)
 
 
-def generate_d2s_pass(
-    pinfo: PassInfo,
-    out_name: str,
-    is_final: bool,
-    tile_mode: bool,
-    header_comment: str,
-) -> str:
+def generate_d2s_pass(pinfo: PassInfo, tile_mode: bool, header_comment: str) -> str:
     tex_mappings = {}
     bind_start = 3
     lines = []
@@ -698,7 +692,7 @@ def main():
                 license_text=license_text,
             )
             if pinfo.is_d2s:
-                code = generate_d2s_pass(pinfo, out_name, is_last, tile, header)
+                code = generate_d2s_pass(pinfo, out_name, header)
             else:
                 code = generate_intermediate_pass(
                     pinfo, out_name, is_last, tile, header

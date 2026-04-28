@@ -1,0 +1,58 @@
+{
+  "name": "Anime4K_Deblur_DoG",
+  "passes": 4,
+  "num_textures": 3,
+  "srv_uav": [
+    [
+      [
+        "hooked"
+      ],
+      [
+        "lineluma"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lineluma"
+      ],
+      [
+        "mmkernel"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "mmkernel"
+      ],
+      [
+        "mmkernel"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lineluma",
+        "mmkernel"
+      ],
+      [
+        "output"
+      ]
+    ]
+  ],
+  "samplers": [
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point",
+      "linear"
+    ]
+  ]
+}

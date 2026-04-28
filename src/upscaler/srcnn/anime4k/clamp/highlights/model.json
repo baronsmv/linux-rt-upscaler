@@ -1,0 +1,45 @@
+{
+  "name": "Anime4K_Clamp_Highlights",
+  "passes": 3,
+  "num_textures": 2,
+  "srv_uav": [
+    [
+      [
+        "hooked"
+      ],
+      [
+        "statsmax"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "statsmax"
+      ],
+      [
+        "statsmax"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "statsmax"
+      ],
+      [
+        "output"
+      ]
+    ]
+  ],
+  "samplers": [
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point",
+      "linear"
+    ]
+  ]
+}

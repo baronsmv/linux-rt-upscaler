@@ -1,0 +1,33 @@
+{
+  "name": "Anime4K_Denoise_Bilateral_Median",
+  "passes": 2,
+  "num_textures": 2,
+  "srv_uav": [
+    [
+      [
+        "hooked"
+      ],
+      [
+        "lineluma"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lineluma"
+      ],
+      [
+        "output"
+      ]
+    ]
+  ],
+  "samplers": [
+    [
+      "point"
+    ],
+    [
+      "point",
+      "linear"
+    ]
+  ]
+}

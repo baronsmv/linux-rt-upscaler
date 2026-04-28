@@ -1,0 +1,21 @@
+{
+  "name": "Anime4K_Denoise_Bilateral_Mean",
+  "passes": 1,
+  "num_textures": 1,
+  "srv_uav": [
+    [
+      [
+        "hooked"
+      ],
+      [
+        "output"
+      ]
+    ]
+  ],
+  "samplers": [
+    [
+      "point",
+      "linear"
+    ]
+  ]
+}

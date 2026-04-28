@@ -1,0 +1,82 @@
+{
+  "name": "Anime4K_Darken_VeryFast",
+  "passes": 6,
+  "num_textures": 3,
+  "srv_uav": [
+    [
+      [
+        "hooked"
+      ],
+      [
+        "lineluma"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lineluma"
+      ],
+      [
+        "linekernel"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lineluma",
+        "linekernel"
+      ],
+      [
+        "linekernel"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "linekernel"
+      ],
+      [
+        "linekernel"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "linekernel"
+      ],
+      [
+        "linekernel"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "linekernel"
+      ],
+      [
+        "output"
+      ]
+    ]
+  ],
+  "samplers": [
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point",
+      "linear"
+    ]
+  ]
+}

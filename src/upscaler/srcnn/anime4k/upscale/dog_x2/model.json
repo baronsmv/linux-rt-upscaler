@@ -1,0 +1,58 @@
+{
+  "name": "Anime4K_Upscale_DoG_x2",
+  "passes": 4,
+  "num_textures": 3,
+  "srv_uav": [
+    [
+      [
+        "hooked"
+      ],
+      [
+        "lineluma"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lineluma"
+      ],
+      [
+        "gauss_x2"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "gauss_x2"
+      ],
+      [
+        "gauss_x2"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lineluma",
+        "gauss_x2"
+      ],
+      [
+        "output"
+      ]
+    ]
+  ],
+  "samplers": [
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point",
+      "linear"
+    ]
+  ]
+}

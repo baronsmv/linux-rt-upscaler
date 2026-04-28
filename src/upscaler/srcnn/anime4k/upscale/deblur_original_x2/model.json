@@ -1,0 +1,83 @@
+{
+  "name": "Anime4K_Upscale_Deblur_Original_x2",
+  "passes": 6,
+  "num_textures": 4,
+  "srv_uav": [
+    [
+      [
+        "hooked"
+      ],
+      [
+        "lineluma"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lineluma"
+      ],
+      [
+        "lumad"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lumad"
+      ],
+      [
+        "lumad"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lumad"
+      ],
+      [
+        "lumamm"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lumad",
+        "lumamm"
+      ],
+      [
+        "lumamm"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lumad",
+        "lumamm"
+      ],
+      [
+        "output"
+      ]
+    ]
+  ],
+  "samplers": [
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point",
+      "linear"
+    ]
+  ]
+}

@@ -1,0 +1,169 @@
+// Anime4K_Upscale_Denoise_CNN_x2_VL - Pass 16 of 18 - https://github.com/bloc97/Anime4K
+// Generated for linux-rt-upscaler - https://github.com/baronsmv/linux-rt-upscaler
+//
+// Compile with:
+//    glslc -fshader-stage=compute --target-env=vulkan1.2 \
+//          <this_file> -o <output.spv>
+//
+// -----------------------------------------------------------------------------
+//
+// MIT License
+// Copyright (c) 2019-2021 bloc97
+// All rights reserved.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+// -----------------------------------------------------------------------------
+//  Constant buffer (binding = 0, set = 0)
+//    Packed as 4 uint32 + 4 float:
+//      [0] in_width    (uint)  - width of feature map for this pass
+//      [1] in_height   (uint)  - height of feature map
+//      [2] out_width   (uint)  - full output width (final pass only)
+//      [3] out_height  (uint)  - full output height (final pass only)
+//      [4] in_dx       (float) - 1.0 / in_width
+//      [5] in_dy       (float) - 1.0 / in_height
+//      [6] out_dx      (float) - 1.0 / out_width
+//      [7] out_dy      (float) - 1.0 / out_height
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+//  Push constants (only in tile-mode shaders)
+//    layout(push_constant) uniform TileParams {
+//        uint  inputLayer;      // array slice to read (0-based)
+//        uvec2 dstOffset;       // output pixel offset in the full upscaled frame
+//        uint  fullOutWidth;    // upscaled frame width
+//        uint  fullOutHeight;   // upscaled frame height
+//        uint  margin;          // context margin (pixels in feature-map space)
+//        uvec2 tileOutExtent;   // width & height of this tile’s output region
+//    } tile;
+// -----------------------------------------------------------------------------
+//
+// =============================================================================
+
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform Constants {
+    uint in_width;
+    uint in_height;
+    uint out_width;
+    uint out_height;
+    float in_dx;
+    float in_dy;
+    float out_dx;
+    float out_dy;
+} ubo;
+
+layout(set = 0, binding = 1) uniform sampler pointSampler;
+layout(set = 0, binding = 2) uniform sampler linearSampler;
+
+// global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
+vec2 pos;
+
+layout(push_constant) uniform TileParams {
+    uint inputLayer;
+    uvec2 dstOffset;
+    uint fullOutWidth;
+    uint fullOutHeight;
+    uint margin;
+    uvec2 tileOutExtent;
+} tile;
+
+layout(set = 0, binding = 3) uniform texture2DArray tex_conv2d_tf;
+layout(set = 0, binding = 4) uniform texture2DArray tex_conv2d_tf1;
+layout(set = 0, binding = 5) uniform texture2DArray tex_conv2d_1_tf;
+layout(set = 0, binding = 6) uniform texture2DArray tex_conv2d_1_tf1;
+layout(set = 0, binding = 7) uniform texture2DArray tex_conv2d_2_tf;
+layout(set = 0, binding = 8) uniform texture2DArray tex_conv2d_2_tf1;
+layout(set = 0, binding = 9) uniform texture2DArray tex_conv2d_3_tf;
+layout(set = 0, binding = 10) uniform texture2DArray tex_conv2d_3_tf1;
+layout(set = 0, binding = 11) uniform texture2DArray tex_conv2d_4_tf;
+layout(set = 0, binding = 12) uniform texture2DArray tex_conv2d_4_tf1;
+layout(set = 0, binding = 13) uniform texture2DArray tex_conv2d_5_tf;
+layout(set = 0, binding = 14) uniform texture2DArray tex_conv2d_5_tf1;
+layout(set = 0, binding = 15) uniform texture2DArray tex_conv2d_6_tf;
+layout(set = 0, binding = 16) uniform texture2DArray tex_conv2d_6_tf1;
+layout(set = 0, binding = 17, rgba8) uniform image2DArray img_conv2d_last_tf1;
+#define g_0 (max((texture(sampler2DArray(tex_conv2d_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_1 (max((texture(sampler2DArray(tex_conv2d_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_2 (max(-(texture(sampler2DArray(tex_conv2d_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_3 (max(-(texture(sampler2DArray(tex_conv2d_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_4 (max((texture(sampler2DArray(tex_conv2d_1_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_5 (max((texture(sampler2DArray(tex_conv2d_1_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_6 (max(-(texture(sampler2DArray(tex_conv2d_1_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_7 (max(-(texture(sampler2DArray(tex_conv2d_1_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_8 (max((texture(sampler2DArray(tex_conv2d_2_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_9 (max((texture(sampler2DArray(tex_conv2d_2_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_10 (max(-(texture(sampler2DArray(tex_conv2d_2_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_11 (max(-(texture(sampler2DArray(tex_conv2d_2_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_12 (max((texture(sampler2DArray(tex_conv2d_3_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_13 (max((texture(sampler2DArray(tex_conv2d_3_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_14 (max(-(texture(sampler2DArray(tex_conv2d_3_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_15 (max(-(texture(sampler2DArray(tex_conv2d_3_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_16 (max((texture(sampler2DArray(tex_conv2d_4_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_17 (max((texture(sampler2DArray(tex_conv2d_4_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_18 (max(-(texture(sampler2DArray(tex_conv2d_4_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_19 (max(-(texture(sampler2DArray(tex_conv2d_4_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_20 (max((texture(sampler2DArray(tex_conv2d_5_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_21 (max((texture(sampler2DArray(tex_conv2d_5_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_22 (max(-(texture(sampler2DArray(tex_conv2d_5_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_23 (max(-(texture(sampler2DArray(tex_conv2d_5_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_24 (max((texture(sampler2DArray(tex_conv2d_6_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_25 (max((texture(sampler2DArray(tex_conv2d_6_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_26 (max(-(texture(sampler2DArray(tex_conv2d_6_tf, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+#define g_27 (max(-(texture(sampler2DArray(tex_conv2d_6_tf1, pointSampler), vec3(pos, tile.inputLayer))), 0.0))
+
+vec4 hook() {
+vec4 result = mat4(-0.009000901, -0.018048609, 0.013095594, 0.002321373, 0.0004716619, 0.00504148, -0.016826658, -0.014922383, 0.15059204, 0.16593806, 0.115392484, 0.12520894, 0.05049829, 0.060210057, 0.086421266, 0.07242362) * g_0;
+    result += mat4(0.06268658, 0.030466434, 0.07876877, 0.04129863, 0.04142328, 0.009963961, 0.051785357, 0.012811113, 0.1295883, 0.139931, 0.07733839, 0.08014211, 0.07156476, 0.0342396, 0.051614303, 0.043559864) * g_1;
+    result += mat4(0.00041542648, 0.016051646, -0.011512418, 0.013076814, 0.03734479, 0.02791584, 0.012426691, 0.022044811, -0.034128398, -0.027107332, -0.021998279, -0.012139807, -0.033177473, -0.016310865, -0.078221664, -0.041203145) * g_2;
+    result += mat4(-0.008398536, -0.010332053, -0.050231732, -0.039691273, -0.042082537, -0.030281143, -0.014039778, -0.0020190612, -0.11956351, -0.13638765, -0.09794402, -0.10228069, -0.08344795, -0.07944541, -0.004189214, -0.028206991) * g_3;
+    result += mat4(0.0002908945, -0.00831185, -0.06870294, -0.083311856, -0.024992501, 0.0038247898, -0.049389005, -0.020098582, -0.0135326125, -0.040408995, -0.012083491, -0.042174604, 0.16112538, 0.13720983, 0.13937058, 0.10870099) * g_4;
+    result += mat4(0.078961425, 0.082619205, 0.06910667, 0.06579004, -0.0077012256, -0.00038692637, 0.00015553503, -0.012561662, 0.00053048285, -0.01461681, 0.02600344, 0.024862211, -0.06958201, -0.048246548, 0.058762506, 0.036662634) * g_5;
+    result += mat4(-0.023527982, -0.0028001352, 0.047800142, 0.09616409, 0.049143843, 0.030836122, 0.057244994, 0.025672587, 0.027565151, 0.039868724, 0.045296676, 0.04623187, -0.124759234, -0.14106254, -0.06337279, -0.076839216) * g_6;
+    result += mat4(-0.0911771, -0.064436875, -0.05308137, -0.022082496, -0.0040269364, 0.0014464161, -0.0029555515, 0.016098293, -0.026650434, -0.014081368, -0.06747348, -0.05481826, 0.097423114, 0.08620988, -0.01607732, -0.015440677) * g_7;
+    result += mat4(-0.014001735, -0.015001655, -0.013250577, -0.009930805, 0.04885879, 0.07092224, 0.025783395, 0.03792237, -0.04332465, -0.06244993, -0.046748653, -0.07132349, -0.0053951666, -0.016514057, 0.023807624, 0.044013456) * g_8;
+    result += mat4(-0.009097996, -0.016898679, -0.05043909, -0.063178614, -0.016210863, -0.02157998, -0.02654472, -0.042961173, 0.012103852, 0.019015301, 0.02492281, 0.03389976, 0.015276502, 0.009577683, 0.04132527, -0.00070621347) * g_9;
+    result += mat4(-0.0057500796, 0.00728164, -0.003422421, 0.0038979584, -0.03127353, -0.019125199, -0.012988815, -0.031890683, 0.09352588, 0.019210607, 0.09824038, 0.016637104, 0.010692808, 0.022393884, 0.008312123, 0.014120716) * g_10;
+    result += mat4(0.013895599, 0.023097904, 0.009370535, 0.014099512, 0.0124661345, -0.015076684, 0.03287286, 0.005912471, -0.03944815, -0.020340785, -0.06822037, -0.059383288, 0.03634978, 0.007832939, -0.007142306, -0.0061968984) * g_11;
+    result += mat4(0.033002097, 0.0516016, -0.021056438, 0.005715988, -0.02223013, -0.007962324, -0.024417123, -0.0014790733, 0.002167189, 0.00043749413, -0.007284963, -0.0027283782, 0.026238248, 0.01756047, 0.008969755, 0.014201024) * g_12;
+    result += mat4(0.011576685, 0.02087598, 0.0026766327, -0.0041780816, -0.05277701, -0.05412841, -0.05958835, -0.050426245, -0.00662945, -0.021645393, 0.03423904, -0.0064581474, -0.030403355, 0.018391011, -0.026089542, -0.0051510665) * g_13;
+    result += mat4(-0.046202097, -0.0066081425, -0.03698851, 0.0034165455, -0.011859245, -0.020945566, -0.0028196946, -0.010053285, -0.011400397, 0.030595876, -0.018915813, 0.006780077, -0.060040582, -0.009586898, -0.004477886, 0.011279908) * g_14;
+    result += mat4(-0.028692413, -0.032535568, 0.0017473884, 0.02207169, 0.0192618, 0.008956797, -0.0033381556, 0.006326402, 0.0169569, 0.041449737, -0.02611751, 0.0006410355, 0.006233776, 0.0008467914, 0.011884985, 0.009222136) * g_15;
+    result += mat4(0.017076496, -0.0045380928, 0.03444613, -0.009804047, -0.004829834, -0.004889702, 0.0057807956, 0.0015014127, 0.03458368, -0.0035773432, -0.007769679, -0.032449644, -0.021396799, -0.017612215, -0.012764735, -0.025224172) * g_16;
+    result += mat4(-0.011824532, 0.02335273, 0.00764845, 0.019215155, 0.022186808, 0.0066053392, 0.0071694753, -0.0036117272, 0.032144524, 0.05025988, 0.03982363, 0.052400436, -0.10555114, -0.03809396, -0.05334183, -0.05524487) * g_17;
+    result += mat4(-0.024599254, 0.058805298, 0.00069874676, 0.06263439, -0.018460508, -0.053566024, -0.0022889362, -0.035818785, -0.0135854995, -0.015712813, 0.0012080368, 0.005957637, 0.009450094, 0.03186346, 0.059969924, 0.057706963) * g_18;
+    result += mat4(0.026783831, 0.05475865, 0.027565574, 0.06032707, -0.0015639095, 0.024381682, -0.010199071, 0.037544634, 0.039889377, 0.03318851, -0.016529158, -0.0343188, 0.045666486, 0.021665907, 0.042189375, 0.02444145) * g_19;
+    result += mat4(0.03791853, 0.043746054, 0.056224477, 0.05098111, 0.075256795, 0.074653305, 0.116220035, 0.01853866, -0.04133627, -0.009134169, -0.0420953, -0.05210053, -0.021748418, 0.004422131, -0.05422814, -0.035721727) * g_20;
+    result += mat4(0.013814317, 0.03149986, -0.004971173, 0.04782029, -0.01693027, -0.017984565, 0.019328078, 0.008521426, 0.0845641, -0.027555496, 0.08150416, -0.04623306, 0.16494128, 0.09300831, 0.074097835, 0.0627848) * g_21;
+    result += mat4(-0.10307174, -0.112654425, -0.005589254, -0.0062108496, -0.012491583, 0.011512013, -0.03142282, -0.023683488, -0.099848576, -0.031290524, -0.07236223, -0.037460987, 0.008760208, 0.1473594, -0.009216949, 0.07251379) * g_22;
+    result += mat4(-0.04915367, -0.07121096, -0.06572174, -0.10967046, 0.019548079, 0.023992533, -0.019842865, 0.012366459, -0.07207817, -0.04237792, -0.054463565, -0.015374731, -0.092071235, -0.020860313, -0.054475963, -0.02303954) * g_23;
+    result += mat4(0.04160816, -0.118427366, -0.08661791, 0.12787233, -0.01990174, 0.0012960634, -0.016121056, 0.031429946, -0.06830865, -0.057132352, -0.0022302791, 0.03845933, -0.026981276, -0.063532256, 0.011805961, -0.009616678) * g_24;
+    result += mat4(0.07094465, -0.022284096, 0.060676746, 0.042626668, 0.011207256, -0.14960343, 0.05866539, -0.12742221, -0.021092903, -0.039463162, -0.07879986, -0.10232898, -0.026127055, -0.038111385, 0.019167708, 0.032637425) * g_25;
+    result += mat4(-0.014270794, 0.07157703, 0.013714203, -0.047801998, 0.0060221693, 0.022788104, 0.10630103, -0.09606649, 0.12690987, -0.017079826, -0.0077072172, -0.082584485, 0.13256006, 0.16012523, -0.10966099, -0.07927409) * g_26;
+    result += mat4(-0.17171615, 0.12114435, -0.10746857, -0.0074188868, 0.07854815, 0.07759372, 0.04310874, 0.051465522, -0.05963588, -0.014506484, 0.15522978, 0.18746643, -0.03845241, -0.0489534, 0.05837339, 0.032978524) * g_27;
+    result += vec4(0.05825913, 0.051491056, 0.038389463, 0.03321517);
+    return result;
+}
+
+void main() {
+    ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 valid_xy = interior_xy + ivec2(tile.margin);
+    pos = (vec2(valid_xy) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);
+    vec4 result = hook();
+    imageStore(img_conv2d_last_tf1, ivec3(valid_xy, 0), result);
+}

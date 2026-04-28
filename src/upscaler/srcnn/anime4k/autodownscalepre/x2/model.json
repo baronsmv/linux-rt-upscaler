@@ -1,0 +1,22 @@
+{
+  "name": "Anime4K_AutoDownscalePre_x2",
+  "passes": 1,
+  "num_textures": 2,
+  "srv_uav": [
+    [
+      [
+        "hooked",
+        "native"
+      ],
+      [
+        "output"
+      ]
+    ]
+  ],
+  "samplers": [
+    [
+      "point",
+      "linear"
+    ]
+  ]
+}

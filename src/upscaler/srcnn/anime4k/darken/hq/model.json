@@ -1,0 +1,70 @@
+{
+  "name": "Anime4K_Darken_HQ",
+  "passes": 5,
+  "num_textures": 3,
+  "srv_uav": [
+    [
+      [
+        "hooked"
+      ],
+      [
+        "lineluma"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lineluma"
+      ],
+      [
+        "linekernel"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "lineluma",
+        "linekernel"
+      ],
+      [
+        "linekernel"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "linekernel"
+      ],
+      [
+        "linekernel"
+      ]
+    ],
+    [
+      [
+        "hooked",
+        "linekernel"
+      ],
+      [
+        "output"
+      ]
+    ]
+  ],
+  "samplers": [
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point"
+    ],
+    [
+      "point",
+      "linear"
+    ]
+  ]
+}
