@@ -79,19 +79,20 @@ class UpscalerManager:
         model_config = load_model(self.config.model, variant="")
         factory = PipelineFactory(model_config)
 
-        # Collect all intermediate texture names (everything that is not "output")
+        # Intermediate texture format from the model (e.g. rgba16f)
+        fmt = model_config.intermediate_format
+
+        # Collect all intermediate UAV names from every pass (excluding "output")
         intermediate_names = {
             name
             for srv_list, uav_list in model_config.srv_uav
             for name in uav_list
             if name != "output"
         }
+
+        # Create the textures for the *first* stage (native resolution)
         self._intermediate_textures = {
-            name: Texture2D(
-                self.crop_width,
-                self.crop_height,
-                format=model_config.intermediate_format,
-            )
+            name: Texture2D(self.crop_width, self.crop_height, format=fmt)
             for name in intermediate_names
         }
 
@@ -101,8 +102,8 @@ class UpscalerManager:
         self.input = Texture2D(in_w, in_h)
         self.staging = Buffer(self.input.size, heap_type=HEAP_UPLOAD)
 
-        # Intermediate texture for the first stage output
-        inter_tex = Texture2D(out_first_w, out_first_h, format=28)
+        # First stage output (2x)
+        inter_tex = Texture2D(out_first_w, out_first_h, format=fmt)
         outputs1 = self._intermediate_textures
         outputs1["output"] = inter_tex
 
@@ -121,9 +122,12 @@ class UpscalerManager:
             out_final_w, out_final_h = out_first_w * 2, out_first_h * 2
             self.output = Texture2D(out_final_w, out_final_h)
 
-            outputs2 = {"output": self.output}
-            for i in range(model_config.num_textures):
-                outputs2[f"t{i}"] = Texture2D(out_first_w, out_first_h)
+            # Second stage intermediate textures - same names, but at 2x resolution
+            outputs2 = {
+                name: Texture2D(out_first_w, out_first_h, format=fmt)
+                for name in intermediate_names
+            }
+            outputs2["output"] = self.output  # final output at 4x
 
             srnn2 = SRCNN(
                 factory=factory,
@@ -326,7 +330,7 @@ class UpscalerManager:
             return
 
         # ------------------------------------------------------------------
-        # Fallback check - do this *before* extraction to avoid wasted work
+        # Fallback check (before extraction to avoid wasted work)
         # ------------------------------------------------------------------
         if self._should_fallback(rects):
             logger.debug("Fallback to full-frame (threshold exceeded)")

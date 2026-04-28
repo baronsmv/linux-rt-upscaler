@@ -508,12 +508,12 @@ layout(push_constant) uniform TileParams {
                     f"ivec2(valid_xy) + ivec2(tile.dstOffset), result);"
                 )
             else:
-                # Tile mode, intermediate 2D‑array output
+                # Tile mode, intermediate 2D-array output
                 lines.append(
                     f"    imageStore(img_{out_safe}, ivec3(valid_xy, 0), result);"
                 )
         else:
-            # Full‑frame (2D image) - always use gxy
+            # Full-frame (2D image) - always use gxy
             lines.append(f"    imageStore(img_{out_safe}, gxy, result);")
         lines.append("}")
         return "\n".join(lines)
