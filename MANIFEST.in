@@ -6,6 +6,7 @@ recursive-include src/upscaler/srcnn *.json
 recursive-include src/upscaler/capture/lib *.c *.h
 recursive-include src/upscaler/vulkan/lib *.cpp *.h
 prune docs
+prune scripts
 prune src/upscaler/srcnn/**/*.hlsl
 prune src/upscaler/srcnn/**/*.glsl
 prune src/upscaler/shaders/**/*.hlsl
