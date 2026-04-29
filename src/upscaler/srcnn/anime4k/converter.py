@@ -15,6 +15,7 @@ Features:
     full-frame (plain 2D textures).
   - Resolves #define aliases and removes unused helpers.
   - Generates proper depth-to-space (final shuffle) passes.
+  - Generates GAN‑style final passes (convolution at output resolution).
   - Outputs model.json matching the CuNNy-compatible pipeline.
   - Uses binding numbers compatible with the SRCNN framework:
       • Constant buffer    -> binding 0
@@ -650,6 +651,211 @@ layout(push_constant) uniform TileParams {
         lines.append("}")
         return "\n".join(lines)
 
+    # ----------------------------------------------------------------------
+    # GAN final pass generators
+    # ----------------------------------------------------------------------
+    @staticmethod
+    def generate_gan_final_pass(
+        pinfo: PassInfo,
+        model_name: str,
+        pass_index: int,
+        total_passes: int,
+        header_comment: str,
+    ) -> str:
+        tex_mappings: Dict[str, str] = {}
+        lines = [header_comment, "", ShaderGenerator._common_header(tile_mode=False)]
+
+        # Bind input textures (2D)
+        for idx, name in enumerate(pinfo.bindings):
+            binding = SRV_BINDING_START + idx
+            safe = MacroTranslator.safe_tex_name(name)
+            lines.append(
+                f"layout(set = 0, binding = {binding}) uniform texture2D tex_{safe};"
+            )
+            tex_mappings[name] = f"tex_{safe}"
+        if "MAIN" not in tex_mappings and pinfo.bindings:
+            tex_mappings["MAIN"] = tex_mappings[pinfo.bindings[0]]
+
+        out_safe = MacroTranslator.safe_tex_name("output")
+        lines.append(
+            f"layout(set = 0, binding = {UAV_BINDING}, rgba8) uniform image2D img_{out_safe};"
+        )
+
+        # Resolve alias defines
+        filtered_defines, extra = MacroTranslator.resolve_defines_as_aliases(
+            pinfo.defines, tex_mappings
+        )
+        tex_mappings.update(extra)
+
+        for d in filtered_defines:
+            d_clean = MacroTranslator.replace_mpv_globals(d)
+            d_clean = MacroTranslator.replace_texture_macros(
+                d_clean, tex_mappings, "pointSampler", False
+            )
+            lines.append(d_clean)
+
+        if pinfo.prologue:
+            lines.append("")
+            prologue = MacroTranslator.replace_mpv_globals(pinfo.prologue)
+            prologue = MacroTranslator.replace_texture_macros(
+                prologue, tex_mappings, "pointSampler", False
+            )
+            lines.append(prologue)
+
+        # Hook function
+        lines.append("")
+        lines.append("vec4 hook() {")
+        body = MacroTranslator.replace_mpv_globals(pinfo.body)
+        body = MacroTranslator.replace_texture_macros(
+            body, tex_mappings, "pointSampler", False
+        )
+        lines.append(body)
+        lines.append("}")
+
+        # ---- Custom main() for GAN final pass ----
+        lines.append("")
+        lines.append("void main() {")
+        lines.append("    ivec2 gxy = ivec2(gl_GlobalInvocationID.xy);")
+        lines.append("    float feat_dx = 2.0 / float(ubo.out_width);")
+        lines.append("    float feat_dy = 2.0 / float(ubo.out_height);")
+        lines.append("    pos = (vec2(gxy) + 0.5) * vec2(feat_dx, feat_dy);")
+        lines.append(
+            "    vec2 out_pos = (vec2(gxy) + 0.5) * vec2(ubo.out_dx, ubo.out_dy);"
+        )
+        lines.append("    vec4 result = hook();")
+        lines.append(f"    imageStore(img_{out_safe}, gxy, result);")
+        lines.append("}")
+
+        full_code = "\n".join(lines)
+
+        # Replace offset factor * vec2(ubo.in_dx, ubo.in_dy) with * vec2(feat_dx, feat_dy)
+        full_code = full_code.replace(
+            " * vec2(ubo.in_dx, ubo.in_dy)", " * vec2(feat_dx, feat_dy)"
+        )
+
+        # Fix MAIN texture sample coordinate
+        full_code = full_code.replace(
+            "texture(sampler2D(tex_MAIN, pointSampler), pos)",
+            "texture(sampler2D(tex_MAIN, pointSampler), out_pos)",
+        )
+
+        return full_code
+
+    @staticmethod
+    def generate_gan_final_pass_tile(
+        pinfo: PassInfo,
+        model_name: str,
+        pass_index: int,
+        total_passes: int,
+        header_comment: str,
+    ) -> str:
+        """
+        Generate the tile‑mode variant of the GAN final pass.
+
+        The shader writes one pixel per thread at the output resolution.
+        Feature maps are 2D‑array textures (one slice per tile); the
+        MAIN residual (original input) is a plain 2D texture.
+        """
+        tex_mappings: Dict[str, str] = {}
+        lines = [header_comment, "", ShaderGenerator._common_header(tile_mode=True)]
+
+        # MAIN residual is a plain 2D texture – always at the first binding
+        lines.append(
+            f"layout(set = 0, binding = {SRV_BINDING_START}) uniform texture2D tex_MAIN;"
+        )
+        tex_mappings["MAIN"] = "tex_MAIN"
+
+        # Feature maps are 2D array textures – bind them after MAIN
+        for idx, name in enumerate(pinfo.bindings):
+            if name == "MAIN":
+                continue
+            binding = SRV_BINDING_START + idx
+            safe = MacroTranslator.safe_tex_name(name)
+            lines.append(
+                f"layout(set = 0, binding = {binding}) uniform texture2DArray tex_{safe};"
+            )
+            tex_mappings[name] = f"tex_{safe}"
+
+        # Output image
+        lines.append(
+            f"layout(set = 0, binding = {UAV_BINDING}, rgba8) uniform image2D img_output;"
+        )
+
+        # Resolve alias defines
+        filtered_defines, extra = MacroTranslator.resolve_defines_as_aliases(
+            pinfo.defines, tex_mappings
+        )
+        tex_mappings.update(extra)
+
+        for d in filtered_defines:
+            d_clean = MacroTranslator.replace_mpv_globals(d)
+            d_clean = MacroTranslator.replace_texture_macros(
+                d_clean,
+                tex_mappings,
+                "pointSampler",
+                True,  # array mode for feature maps
+            )
+            lines.append(d_clean)
+
+        if pinfo.prologue:
+            lines.append("")
+            prologue = MacroTranslator.replace_mpv_globals(pinfo.prologue)
+            prologue = MacroTranslator.replace_texture_macros(
+                prologue, tex_mappings, "pointSampler", True
+            )
+            lines.append(prologue)
+
+        # Hook function, translate with array_mode=True for feature maps.
+        # The MAIN macro will be replaced later, but for now the translator
+        # will produce texture(sampler2D(tex_MAIN, ...), ...) because we mapped
+        # MAIN to a 2D texture
+        lines.append("")
+        lines.append("vec4 hook() {")
+        body = MacroTranslator.replace_mpv_globals(pinfo.body)
+        body = MacroTranslator.replace_texture_macros(
+            body, tex_mappings, "pointSampler", True
+        )
+        lines.append(body)
+        lines.append("}")
+
+        # Custom main() for tile mode GAN final pass
+        lines.append("")
+        lines.append("void main() {")
+        lines.append("    ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);")
+        lines.append(
+            "    ivec2 valid_xy = interior_xy;  // no margin needed for final output"
+        )
+        lines.append("    ivec2 global_xy = valid_xy + ivec2(tile.dstOffset);")
+        lines.append("    float feat_dx = 2.0 / float(ubo.out_width);")
+        lines.append("    float feat_dy = 2.0 / float(ubo.out_height);")
+        lines.append("    pos = (vec2(global_xy) + 0.5) * vec2(feat_dx, feat_dy);")
+        lines.append(
+            "    vec2 out_pos = (vec2(global_xy) + 0.5) * vec2(1.0 / tile.fullOut.x, 1.0 / tile.fullOut.y);"
+        )
+        lines.append("    vec4 result = hook();")
+        lines.append("    imageStore(img_output, global_xy, result);")
+        lines.append("}")
+
+        full_code = "\n".join(lines)
+
+        # Fix offset scaling: replace ubo.in_dx/in_dy with feat_dx/feat_dy
+        full_code = full_code.replace(
+            " * vec2(ubo.in_dx, ubo.in_dy)", " * vec2(feat_dx, feat_dy)"
+        )
+
+        full_code = full_code.replace(
+            "texture(sampler2DArray(tex_MAIN, pointSampler), vec3(pos, tile.inputLayer))",
+            "texture(sampler2D(tex_MAIN, pointSampler), out_pos)",
+        )
+
+        # Fix MAIN texture sample coordinate: use out_pos instead of pos
+        full_code = full_code.replace(
+            "texture(sampler2D(tex_MAIN, pointSampler), pos)",
+            "texture(sampler2D(tex_MAIN, pointSampler), out_pos)",
+        )
+
+        return full_code
+
 
 # ----------------------------------------------------------------------
 # model.json builder
@@ -711,6 +917,7 @@ class ModelJSONBuilder:
             "depth": depth,
             "passes": len(passes),
             "last_pass_upscale": "_GAN_" not in model_name,
+            "tile_supported": True,
             "num_textures": num_textures,
             "srv_uav": srv_uav,
             "samplers": sampler_list,
@@ -766,6 +973,7 @@ def main():
     tile_modes = [False, True] if args.tile else [False]
     total = len(passes)
     intermediate_glsl = "rgba16f" if args.depth == "rgba16" else "rgba8"
+    is_gan = "_GAN_" in shader_name.upper()
 
     for idx, pinfo in enumerate(passes):
         is_last = idx == total - 1
@@ -778,6 +986,42 @@ def main():
             out_name = "output"
         else:
             out_name = pinfo.save
+
+        # Determine if this is the GAN final pass
+        if is_gan and is_last and not pinfo.is_d2s:
+            # GAN final pass – generate only full-frame variant, no tile
+            header = ShaderGenerator._header_comment(
+                shader_name,
+                idx,
+                total,
+                is_last=False,
+                tile_mode=False,
+                license_text=parser_obj.license,
+            )
+            code_ff = ShaderGenerator.generate_gan_final_pass(
+                pinfo, shader_name, idx, total, header
+            )
+            with open(os.path.join(output_dir, f"Pass{idx+1}.glsl"), "w") as f:
+                f.write(code_ff)
+            print(f"Written GAN final pass (full-frame): Pass{idx+1}.glsl")
+
+            if args.tile:
+                # Tile-mode variant
+                header_tile = ShaderGenerator._header_comment(
+                    shader_name,
+                    idx,
+                    total,
+                    is_last=False,
+                    tile_mode=True,
+                    license_text=parser_obj.license,
+                )
+                code_tile = ShaderGenerator.generate_gan_final_pass_tile(
+                    pinfo, shader_name, idx, total, header_tile
+                )
+                with open(os.path.join(output_dir, f"Pass{idx+1}_tile.glsl"), "w") as f:
+                    f.write(code_tile)
+                print(f"Written GAN final pass (tile): Pass{idx+1}_tile.glsl")
+            continue
 
         for tile in tile_modes:
             suffix = "_tile" if tile else ""
