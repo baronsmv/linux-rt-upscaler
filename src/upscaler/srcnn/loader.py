@@ -91,6 +91,8 @@ def load_model(
     num_textures = cfg["num_textures"]
     srv_uav_raw = cfg["srv_uav"]
     samplers_raw = cfg["samplers"]
+    scale = cfg["scale"]
+    last_pass_upscale = cfg["last_pass_upscale"]
 
     if not isinstance(srv_uav_raw, list) or len(srv_uav_raw) != passes:
         raise ValueError(f"srv_uav must be a list of length {passes}")
@@ -134,6 +136,8 @@ def load_model(
         push_constant_size=push_constant_size,
         output_names=["output"],
         intermediate_format=intermediate_format,
+        scale=scale,
+        last_pass_upscale=last_pass_upscale,
     )
 
     _MODEL_CACHE[cache_key] = config
