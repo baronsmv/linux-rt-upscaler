@@ -177,7 +177,7 @@ class TileProcessor:
     # ======================================================================
 
     def _make_array_tex(self, width: int, height: int, slices: int) -> Texture2D:
-        """Return a 2D‑array texture with the model’s intermediate format."""
+        """Return a 2D-array texture with the model’s intermediate format."""
         return Texture2D(
             width,
             height,
@@ -310,7 +310,7 @@ class TileProcessor:
                     raise KeyError(f"Feature map '{name}' not in stage outputs")
                 srv_list.append(last_stage_outputs[name])
 
-        # UAV list – plain 2D output
+        # UAV list - plain 2D output
         uav_list = [self.output_texture]
 
         # Samplers for the final pass

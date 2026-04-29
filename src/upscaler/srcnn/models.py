@@ -22,7 +22,7 @@ class ModelConfig:
         intermediate_format: Format of intermediate textures (RGBA8, RGBA16, ...).
         scale: Upscaling factor (1 for effects, 2 for 2x upscalers, etc.). Defaults to 2.
         last_pass_upscale: If False, the final shader pass does not perform
-            depth‑to‑space upscaling and must be dispatched at the output resolution
+            depth-to-space upscaling and must be dispatched at the output resolution
             (used by GAN models). Defaults to True.
     """
 
@@ -37,3 +37,4 @@ class ModelConfig:
     intermediate_format: int = 28
     scale: int = 2
     last_pass_upscale: bool = True
+    tile_supported: bool = True
