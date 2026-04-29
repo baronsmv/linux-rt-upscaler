@@ -185,11 +185,13 @@ class ModelJsonBuilder:
 
         return {
             "name": None,  # will be filled later with the shader name
+            "scale": 2,
+            "depth": "rgba8",
             "passes": len(self.passes),
+            "last_pass_upscale": True,
             "num_textures": self.num_textures,
             "srv_uav": srv_uav,
             "samplers": samplers_per_pass,
-            "depth": "rgba8",
         }
 
     def _get_filter(self, filter_type: str) -> Optional[str]:

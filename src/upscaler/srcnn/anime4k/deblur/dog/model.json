@@ -1,6 +1,9 @@
 {
   "name": "Anime4K_Deblur_DoG",
+  "scale": 1,
+  "depth": "rgba16",
   "passes": 4,
+  "last_pass_upscale": true,
   "num_textures": 3,
   "srv_uav": [
     [
@@ -55,6 +58,5 @@
       "point",
       "linear"
     ]
-  ],
-  "depth": "rgba16"
+  ]
 }

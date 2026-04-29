@@ -1,6 +1,9 @@
 {
   "name": "CuNNy-4x16-NVL",
+  "scale": 2,
+  "depth": "rgba8",
   "passes": 6,
+  "last_pass_upscale": true,
   "num_textures": 8,
   "srv_uav": [
     [
@@ -103,6 +106,5 @@
       "point",
       "linear"
     ]
-  ],
-  "depth": "rgba8"
+  ]
 }

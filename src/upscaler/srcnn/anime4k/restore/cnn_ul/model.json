@@ -1,6 +1,9 @@
 {
   "name": "Anime4K_Restore_CNN_UL",
+  "scale": 1,
+  "depth": "rgba16",
   "passes": 25,
+  "last_pass_upscale": true,
   "num_textures": 24,
   "srv_uav": [
     [
@@ -338,6 +341,5 @@
       "point",
       "linear"
     ]
-  ],
-  "depth": "rgba16"
+  ]
 }

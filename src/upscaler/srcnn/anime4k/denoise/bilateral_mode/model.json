@@ -1,6 +1,9 @@
 {
   "name": "Anime4K_Denoise_Bilateral_Mode",
+  "scale": 1,
+  "depth": "rgba16",
   "passes": 2,
+  "last_pass_upscale": true,
   "num_textures": 2,
   "srv_uav": [
     [
@@ -30,6 +33,5 @@
       "point",
       "linear"
     ]
-  ],
-  "depth": "rgba16"
+  ]
 }

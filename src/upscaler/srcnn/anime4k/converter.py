@@ -697,13 +697,23 @@ class ModelJSONBuilder:
             prev_output = out_name
 
         num_textures = len(all_tex - {"input", "output"})
+        scale = next(
+            (
+                int(p[1:])
+                for p in model_name.split("_")
+                if p.startswith("x") and p[1:].isdigit()
+            ),
+            1,
+        )
         return {
             "name": model_name,
+            "scale": scale,
+            "depth": depth,
             "passes": len(passes),
+            "last_pass_upscale": "_GAN_" not in model_name,
             "num_textures": num_textures,
             "srv_uav": srv_uav,
             "samplers": sampler_list,
-            "depth": depth,
         }
 
 

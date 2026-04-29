@@ -1,6 +1,9 @@
 {
   "name": "CuNNy-veryfast-NVL",
+  "scale": 2,
+  "depth": "rgba8",
   "passes": 4,
+  "last_pass_upscale": true,
   "num_textures": 4,
   "srv_uav": [
     [
@@ -55,6 +58,5 @@
       "point",
       "linear"
     ]
-  ],
-  "depth": "rgba8"
+  ]
 }

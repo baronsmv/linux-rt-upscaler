@@ -1,6 +1,9 @@
 {
   "name": "Anime4K_Upscale_Denoise_CNN_x2_S",
+  "scale": 2,
+  "depth": "rgba16",
   "passes": 5,
+  "last_pass_upscale": true,
   "num_textures": 4,
   "srv_uav": [
     [
@@ -62,6 +65,5 @@
       "point",
       "linear"
     ]
-  ],
-  "depth": "rgba16"
+  ]
 }

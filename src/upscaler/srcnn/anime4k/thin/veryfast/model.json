@@ -1,6 +1,9 @@
 {
   "name": "Anime4K_Thin_VeryFast",
+  "scale": 1,
+  "depth": "rgba16",
   "passes": 8,
+  "last_pass_upscale": true,
   "num_textures": 3,
   "srv_uav": [
     [
@@ -98,6 +101,5 @@
       "point",
       "linear"
     ]
-  ],
-  "depth": "rgba16"
+  ]
 }

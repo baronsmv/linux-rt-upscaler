@@ -1,6 +1,9 @@
 {
   "name": "Anime4K_Darken_VeryFast",
+  "scale": 1,
+  "depth": "rgba16",
   "passes": 6,
+  "last_pass_upscale": true,
   "num_textures": 3,
   "srv_uav": [
     [
@@ -79,6 +82,5 @@
       "point",
       "linear"
     ]
-  ],
-  "depth": "rgba16"
+  ]
 }
