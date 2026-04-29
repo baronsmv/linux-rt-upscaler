@@ -241,24 +241,25 @@ cbuffer Constants : register(b0) {
 // Layout must match the struct.pack("I"*8, ...) in TileProcessor.
 // -----------------------------------------------------------------------------
 struct TileParams {
-    // ---- Layer selection (only for array textures) ----
-    uint inputLayer;               // which slice of the 2D array to read
-
     // ---- Output location in the full upscaled frame ----
     uint2 dstOffset;               // top-left corner of this tile’s
                                    // output rectangle (in upscaled pixels)
-
-    // ---- Size of the *full* output frame ----
-    uint fullOutWidth;             // overall width  (upscaled pixels)
-    uint fullOutHeight;            // overall height (upscaled pixels)
-
-    // ---- Context margin (pixels in the *current* feature-map space) ----
-    uint margin;                   // for stage 1 = context_margin, for stage 2 = context_margin * 2
 
     // ---- Dimensions of the tile’s output region ----
     uint2 tileOutExtent;           // width and height that this tile
                                    // actually writes to (may be smaller
                                    // at right/bottom edges)
+
+    // ---- Size of the *full* output frame ----
+    uint fullOutWidth;             // overall width  (upscaled pixels)
+    uint fullOutHeight;            // overall height (upscaled pixels)
+
+    // ---- Layer selection (only for array textures) ----
+    uint inputLayer;               // which slice of the 2D array to read
+
+    // ---- Context margin (pixels in the *current* feature-map space) ----
+    uint margin;                   // for stage 1 = context_margin, for stage 2 = context_margin * 2
+
 };
 [[vk::push_constant]] TileParams tileParams;
 

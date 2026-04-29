@@ -41,12 +41,12 @@
 // -----------------------------------------------------------------------------
 //  Push constants (only in tile-mode shaders)
 //    layout(push_constant) uniform TileParams {
-//        uint  inputLayer;      // array slice to read (0-based)
 //        uvec2 dstOffset;       // output pixel offset in the full upscaled frame
+//        uvec2 tileOutExtent;   // width & height of this tile’s output region
 //        uint  fullOutWidth;    // upscaled frame width
 //        uint  fullOutHeight;   // upscaled frame height
+//        uint  inputLayer;      // array slice to read (0-based)
 //        uint  margin;          // context margin (pixels in feature-map space)
-//        uvec2 tileOutExtent;   // width & height of this tile’s output region
 //    } tile;
 // -----------------------------------------------------------------------------
 //
@@ -73,12 +73,11 @@ layout(set = 0, binding = 3072) uniform sampler pointSampler;
 vec2 pos;
 
 layout(push_constant) uniform TileParams {
-    uint inputLayer;
     uvec2 dstOffset;
-    uint fullOutWidth;
-    uint fullOutHeight;
-    uint margin;
     uvec2 tileOutExtent;
+    uvec2 fullOut;
+    uint inputLayer;
+    uint margin;
 } tile;
 
 layout(set = 0, binding = 1024) uniform texture2DArray tex_LINESOBEL;

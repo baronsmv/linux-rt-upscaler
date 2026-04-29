@@ -368,12 +368,12 @@ class ShaderGenerator:
                 """// -----------------------------------------------------------------------------
 //  Push constants (only in tile-mode shaders)
 //    layout(push_constant) uniform TileParams {
-//        uint  inputLayer;      // array slice to read (0-based)
 //        uvec2 dstOffset;       // output pixel offset in the full upscaled frame
+//        uvec2 tileOutExtent;   // width & height of this tile’s output region
 //        uint  fullOutWidth;    // upscaled frame width
 //        uint  fullOutHeight;   // upscaled frame height
+//        uint  inputLayer;      // array slice to read (0-based)
 //        uint  margin;          // context margin (pixels in feature-map space)
-//        uvec2 tileOutExtent;   // width & height of this tile’s output region
 //    } tile;
 // -----------------------------------------------------------------------------
 //"""
@@ -410,12 +410,11 @@ vec2 pos;
         if tile_mode:
             header += """
 layout(push_constant) uniform TileParams {
-    uint inputLayer;
     uvec2 dstOffset;
-    uint fullOutWidth;
-    uint fullOutHeight;
-    uint margin;
     uvec2 tileOutExtent;
+    uvec2 fullOut;
+    uint inputLayer;
+    uint margin;
 } tile;
 """
         return header
@@ -586,7 +585,7 @@ layout(push_constant) uniform TileParams {
                 "    pos = (vec2(interior_xy + tile.margin) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);"
             )
             lines.append(
-                "    vec2 full_opt = vec2(1.0 / tile.fullOutWidth, 1.0 / tile.fullOutHeight);"
+                "    vec2 full_opt = vec2(1.0 / tile.fullOut.x, 1.0 / tile.fullOut.y);"
             )
         else:
             lines.append("    ivec2 gxy = ivec2(gl_GlobalInvocationID.xy) * 2;")

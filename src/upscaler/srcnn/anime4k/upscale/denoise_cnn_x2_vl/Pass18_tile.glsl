@@ -41,12 +41,12 @@
 // -----------------------------------------------------------------------------
 //  Push constants (only in tile-mode shaders)
 //    layout(push_constant) uniform TileParams {
-//        uint  inputLayer;      // array slice to read (0-based)
 //        uvec2 dstOffset;       // output pixel offset in the full upscaled frame
+//        uvec2 tileOutExtent;   // width & height of this tile’s output region
 //        uint  fullOutWidth;    // upscaled frame width
 //        uint  fullOutHeight;   // upscaled frame height
+//        uint  inputLayer;      // array slice to read (0-based)
 //        uint  margin;          // context margin (pixels in feature-map space)
-//        uvec2 tileOutExtent;   // width & height of this tile’s output region
 //    } tile;
 // -----------------------------------------------------------------------------
 //
@@ -73,12 +73,11 @@ layout(set = 0, binding = 3072) uniform sampler pointSampler;
 vec2 pos;
 
 layout(push_constant) uniform TileParams {
-    uint inputLayer;
     uvec2 dstOffset;
-    uint fullOutWidth;
-    uint fullOutHeight;
-    uint margin;
     uvec2 tileOutExtent;
+    uvec2 fullOut;
+    uint inputLayer;
+    uint margin;
 } tile;
 
 layout(set = 0, binding = 3073) uniform sampler linearSampler;
@@ -92,7 +91,7 @@ void main() {
     ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);
     ivec2 base_out = (interior_xy * 2) + ivec2(tile.dstOffset);
     pos = (vec2(interior_xy + tile.margin) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);
-    vec2 full_opt = vec2(1.0 / tile.fullOutWidth, 1.0 / tile.fullOutHeight);
+    vec2 full_opt = vec2(1.0 / tile.fullOut.x, 1.0 / tile.fullOut.y);
     vec2 f0 = fract(pos * vec2(ubo.in_width, ubo.in_height));
     ivec2 i0 = ivec2(f0 * 2.0);
     float c0 = texture(sampler2DArray(tex_conv2d_last_tf, pointSampler), vec3((vec2(0.5) - f0) * vec2(ubo.in_dx, ubo.in_dy) + pos, tile.inputLayer))[i0.y * 2 + i0.x];

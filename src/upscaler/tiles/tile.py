@@ -406,16 +406,16 @@ class TileProcessor:
         ┌─────────────────┬──────────────────────────────────────────┐
         │ Field           │ Description                              │
         ├─────────────────┼──────────────────────────────────────────┤
-        │ inputLayer      │ Array slice of the tile input data       │
         │ dstOffset.x     │ Top-left X of the output rectangle       │
         │ dstOffset.y     │ Top-left Y of the output rectangle       │
-        │ fullOutWidth    │ Width of the final upscaled frame        │
-        │ fullOutHeight   │ Height of the final upscaled frame       │
+        │ tileOutExtent.w │ Width of the tile’s output region        │
+        │ tileOutExtent.h │ Height of the tile’s output region       │
+        │ fullOut.w       │ Width of the final upscaled frame        │
+        │ fullOut.h       │ Height of the final upscaled frame       │
+        │ inputLayer      │ Array slice of the tile input data       │
         │ margin          │ Context margin (in feature-map pixels)   │
         │                 │ Stage 1 = self.margin                    │
         │                 │ Stage 2 = self.margin * 2                │
-        │ tileOutExtent.w │ Width of the tile’s output region        │
-        │ tileOutExtent.h │ Height of the tile’s output region       │
         └─────────────────┴──────────────────────────────────────────┘
 
         Parameters:
@@ -428,14 +428,14 @@ class TileProcessor:
         """
         return struct.pack(
             "I" * 8,
-            layer,
             spec.dst_out_px_x,
             spec.dst_out_px_y,
-            self.full_out_w,
-            self.full_out_h,
-            margin,
             spec.tile_out_extent_w,
             spec.tile_out_extent_h,
+            self.full_out_w,
+            self.full_out_h,
+            layer,
+            margin,
         )
 
     # ======================================================================
