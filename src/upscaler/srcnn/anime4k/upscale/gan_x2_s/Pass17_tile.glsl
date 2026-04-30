@@ -80,6 +80,7 @@ layout(push_constant) uniform TileParams {
     uint margin;
 } tile;
 
+layout(set = 0, binding = 3073) uniform sampler linearSampler;
 layout(set = 0, binding = 1024) uniform texture2D tex_MAIN;
 layout(set = 0, binding = 1025) uniform texture2DArray tex_conv0ups;
 layout(set = 0, binding = 1026) uniform texture2DArray tex_conv0ups1;
@@ -88,6 +89,9 @@ layout(set = 0, binding = 2048, rgba8) uniform image2D img_output;
 #define go_1(x_off, y_off) (max((texture(sampler2DArray(tex_conv0ups1, pointSampler), vec3(pos + (vec2(x_off, y_off) * 0.5) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
 #define go_2(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv0ups, pointSampler), vec3(pos + (vec2(x_off, y_off) * 0.5) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
 #define go_3(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv0ups1, pointSampler), vec3(pos + (vec2(x_off, y_off) * 0.5) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
+
+float feat_dx, feat_dy;
+vec2 out_pos;
 
 vec4 hook() {
 vec4 result = mat4(0.03277269, -0.005261106, 0.017171703, 0.0, 0.07399743, 0.06816794, 0.09821277, 0.0, -0.013628815, -0.09454006, -0.2801339, 0.0, -0.020518344, -0.008617738, -0.010507532, 0.0) * go_0(-1.0, -1.0);
@@ -132,12 +136,12 @@ vec4 result = mat4(0.03277269, -0.005261106, 0.017171703, 0.0, 0.07399743, 0.068
 
 void main() {
     ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 valid_xy = interior_xy;  // no margin needed for final output
+    ivec2 valid_xy = interior_xy;
     ivec2 global_xy = valid_xy + ivec2(tile.dstOffset);
-    float feat_dx = 2.0 / float(ubo.out_width);
-    float feat_dy = 2.0 / float(ubo.out_height);
+    feat_dx = float(2) / float(ubo.out_width);
+    feat_dy = float(2) / float(ubo.out_height);
     pos = (vec2(global_xy) + 0.5) * vec2(feat_dx, feat_dy);
-    vec2 out_pos = (vec2(global_xy) + 0.5) * vec2(1.0 / tile.fullOut.x, 1.0 / tile.fullOut.y);
+    out_pos = (vec2(global_xy) + 0.5) * vec2(1.0 / tile.fullOut.x, 1.0 / tile.fullOut.y);
     vec4 result = hook();
     imageStore(img_output, global_xy, result);
 }

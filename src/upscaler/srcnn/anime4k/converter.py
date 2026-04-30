@@ -662,8 +662,21 @@ layout(push_constant) uniform TileParams {
         total_passes: int,
         header_comment: str,
     ) -> str:
+        # Extract scale factor from model name (e.g., "gan_x3_vl" → 3)
+        scale = next(
+            (
+                int(p[1:])
+                for p in model_name.split("_")
+                if p.startswith("x") and p[1:].isdigit()
+            ),
+            2,
+        )
+
         tex_mappings: Dict[str, str] = {}
         lines = [header_comment, "", ShaderGenerator._common_header(tile_mode=False)]
+        lines.append(
+            f"layout(set = 0, binding = {SAMPLER_LINEAR_BINDING}) uniform sampler linearSampler;"
+        )
 
         # Bind input textures (2D)
         for idx, name in enumerate(pinfo.bindings):
@@ -702,7 +715,12 @@ layout(push_constant) uniform TileParams {
             )
             lines.append(prologue)
 
-        # Hook function
+        # Declare global variables used inside hook() via macros
+        lines.append("")
+        lines.append("float feat_dx, feat_dy;")
+        lines.append("vec2 out_pos;")
+
+        # hook function
         lines.append("")
         lines.append("vec4 hook() {")
         body = MacroTranslator.replace_mpv_globals(pinfo.body)
@@ -712,28 +730,31 @@ layout(push_constant) uniform TileParams {
         lines.append(body)
         lines.append("}")
 
-        # ---- Custom main() for GAN final pass ----
+        # Custom main()
         lines.append("")
         lines.append("void main() {")
         lines.append("    ivec2 gxy = ivec2(gl_GlobalInvocationID.xy);")
-        lines.append("    float feat_dx = 2.0 / float(ubo.out_width);")
-        lines.append("    float feat_dy = 2.0 / float(ubo.out_height);")
+        lines.append(f"    feat_dx = float({scale}) / float(ubo.out_width);")
+        lines.append(f"    feat_dy = float({scale}) / float(ubo.out_height);")
         lines.append("    pos = (vec2(gxy) + 0.5) * vec2(feat_dx, feat_dy);")
-        lines.append(
-            "    vec2 out_pos = (vec2(gxy) + 0.5) * vec2(ubo.out_dx, ubo.out_dy);"
-        )
+        lines.append("    out_pos = (vec2(gxy) + 0.5) * vec2(ubo.out_dx, ubo.out_dy);")
         lines.append("    vec4 result = hook();")
         lines.append(f"    imageStore(img_{out_safe}, gxy, result);")
         lines.append("}")
 
         full_code = "\n".join(lines)
 
-        # Replace offset factor * vec2(ubo.in_dx, ubo.in_dy) with * vec2(feat_dx, feat_dy)
+        # Replace offset scaling factor in translated macros
         full_code = full_code.replace(
             " * vec2(ubo.in_dx, ubo.in_dy)", " * vec2(feat_dx, feat_dy)"
         )
 
-        # Fix MAIN texture sample coordinate
+        full_code = full_code.replace(
+            "texture(sampler2D(tex_MAIN, pointSampler), out_pos)",
+            "texture(sampler2D(tex_MAIN, linearSampler), out_pos)",
+        )
+
+        # Replace MAIN texture sample coordinate
         full_code = full_code.replace(
             "texture(sampler2D(tex_MAIN, pointSampler), pos)",
             "texture(sampler2D(tex_MAIN, pointSampler), out_pos)",
@@ -749,23 +770,28 @@ layout(push_constant) uniform TileParams {
         total_passes: int,
         header_comment: str,
     ) -> str:
-        """
-        Generate the tile‑mode variant of the GAN final pass.
+        scale = next(
+            (
+                int(p[1:])
+                for p in model_name.split("_")
+                if p.startswith("x") and p[1:].isdigit()
+            ),
+            2,
+        )
 
-        The shader writes one pixel per thread at the output resolution.
-        Feature maps are 2D‑array textures (one slice per tile); the
-        MAIN residual (original input) is a plain 2D texture.
-        """
         tex_mappings: Dict[str, str] = {}
         lines = [header_comment, "", ShaderGenerator._common_header(tile_mode=True)]
+        lines.append(
+            f"layout(set = 0, binding = {SAMPLER_LINEAR_BINDING}) uniform sampler linearSampler;"
+        )
 
-        # MAIN residual is a plain 2D texture – always at the first binding
+        # MAIN residual as plain 2D texture
         lines.append(
             f"layout(set = 0, binding = {SRV_BINDING_START}) uniform texture2D tex_MAIN;"
         )
         tex_mappings["MAIN"] = "tex_MAIN"
 
-        # Feature maps are 2D array textures – bind them after MAIN
+        # Feature maps as 2D arrays
         for idx, name in enumerate(pinfo.bindings):
             if name == "MAIN":
                 continue
@@ -776,12 +802,10 @@ layout(push_constant) uniform TileParams {
             )
             tex_mappings[name] = f"tex_{safe}"
 
-        # Output image
         lines.append(
             f"layout(set = 0, binding = {UAV_BINDING}, rgba8) uniform image2D img_output;"
         )
 
-        # Resolve alias defines
         filtered_defines, extra = MacroTranslator.resolve_defines_as_aliases(
             pinfo.defines, tex_mappings
         )
@@ -790,10 +814,7 @@ layout(push_constant) uniform TileParams {
         for d in filtered_defines:
             d_clean = MacroTranslator.replace_mpv_globals(d)
             d_clean = MacroTranslator.replace_texture_macros(
-                d_clean,
-                tex_mappings,
-                "pointSampler",
-                True,  # array mode for feature maps
+                d_clean, tex_mappings, "pointSampler", True
             )
             lines.append(d_clean)
 
@@ -805,10 +826,10 @@ layout(push_constant) uniform TileParams {
             )
             lines.append(prologue)
 
-        # Hook function, translate with array_mode=True for feature maps.
-        # The MAIN macro will be replaced later, but for now the translator
-        # will produce texture(sampler2D(tex_MAIN, ...), ...) because we mapped
-        # MAIN to a 2D texture
+        lines.append("")
+        lines.append("float feat_dx, feat_dy;")
+        lines.append("vec2 out_pos;")
+
         lines.append("")
         lines.append("vec4 hook() {")
         body = MacroTranslator.replace_mpv_globals(pinfo.body)
@@ -818,19 +839,16 @@ layout(push_constant) uniform TileParams {
         lines.append(body)
         lines.append("}")
 
-        # Custom main() for tile mode GAN final pass
         lines.append("")
         lines.append("void main() {")
         lines.append("    ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);")
-        lines.append(
-            "    ivec2 valid_xy = interior_xy;  // no margin needed for final output"
-        )
+        lines.append("    ivec2 valid_xy = interior_xy;")
         lines.append("    ivec2 global_xy = valid_xy + ivec2(tile.dstOffset);")
-        lines.append("    float feat_dx = 2.0 / float(ubo.out_width);")
-        lines.append("    float feat_dy = 2.0 / float(ubo.out_height);")
+        lines.append(f"    feat_dx = float({scale}) / float(ubo.out_width);")
+        lines.append(f"    feat_dy = float({scale}) / float(ubo.out_height);")
         lines.append("    pos = (vec2(global_xy) + 0.5) * vec2(feat_dx, feat_dy);")
         lines.append(
-            "    vec2 out_pos = (vec2(global_xy) + 0.5) * vec2(1.0 / tile.fullOut.x, 1.0 / tile.fullOut.y);"
+            "    out_pos = (vec2(global_xy) + 0.5) * vec2(1.0 / tile.fullOut.x, 1.0 / tile.fullOut.y);"
         )
         lines.append("    vec4 result = hook();")
         lines.append("    imageStore(img_output, global_xy, result);")
@@ -838,19 +856,18 @@ layout(push_constant) uniform TileParams {
 
         full_code = "\n".join(lines)
 
-        # Fix offset scaling: replace ubo.in_dx/in_dy with feat_dx/feat_dy
         full_code = full_code.replace(
             " * vec2(ubo.in_dx, ubo.in_dy)", " * vec2(feat_dx, feat_dy)"
         )
 
         full_code = full_code.replace(
-            "texture(sampler2DArray(tex_MAIN, pointSampler), vec3(pos, tile.inputLayer))",
             "texture(sampler2D(tex_MAIN, pointSampler), out_pos)",
+            "texture(sampler2D(tex_MAIN, linearSampler), out_pos)",
         )
 
-        # Fix MAIN texture sample coordinate: use out_pos instead of pos
+        # Handle the tile‑specific MAIN sampling (array version)
         full_code = full_code.replace(
-            "texture(sampler2D(tex_MAIN, pointSampler), pos)",
+            "texture(sampler2DArray(tex_MAIN, pointSampler), vec3(pos, tile.inputLayer))",
             "texture(sampler2D(tex_MAIN, pointSampler), out_pos)",
         )
 

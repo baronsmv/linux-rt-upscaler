@@ -104,10 +104,7 @@ class UpscalerManager:
 
         # Tile mode is only possible for standard 2x depth-to-space models
         self.use_tile = (
-            config.use_tile_processing
-            and self.tile_supported
-            and self.last_pass_upscale
-            and self.scale == 2
+            config.use_tile_processing and self.tile_supported and self.scale == 2
         )
 
         # Grid size for fallback decisions (used even if tile disabled)

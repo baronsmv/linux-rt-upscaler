@@ -80,14 +80,18 @@ layout(push_constant) uniform TileParams {
     uint margin;
 } tile;
 
-layout(set = 0, binding = 1024) uniform texture2DArray tex_MAIN;
+layout(set = 0, binding = 3073) uniform sampler linearSampler;
+layout(set = 0, binding = 1024) uniform texture2D tex_MAIN;
 layout(set = 0, binding = 1025) uniform texture2DArray tex_conv1ups;
 layout(set = 0, binding = 1026) uniform texture2DArray tex_conv1ups1;
 layout(set = 0, binding = 2048, rgba8) uniform image2D img_output;
-#define go_0(x_off, y_off) (max((texture(sampler2DArray(tex_conv1ups, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))), 0.0))
-#define go_1(x_off, y_off) (max((texture(sampler2DArray(tex_conv1ups1, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))), 0.0))
-#define go_2(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv1ups, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))), 0.0))
-#define go_3(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv1ups1, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(ubo.in_dx, ubo.in_dy), tile.inputLayer))), 0.0))
+#define go_0(x_off, y_off) (max((texture(sampler2DArray(tex_conv1ups, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
+#define go_1(x_off, y_off) (max((texture(sampler2DArray(tex_conv1ups1, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
+#define go_2(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv1ups, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
+#define go_3(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv1ups1, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
+
+float feat_dx, feat_dy;
+vec2 out_pos;
 
 vec4 hook() {
 vec4 result = mat4(-0.009692998, -0.008524317, 0.0010432196, 0.0, 0.00057165127, -0.011818117, 0.0014487396, 0.0, 0.0049518407, -0.001888361, -0.013262905, 0.0, 0.05004511, 0.023134997, -0.016969386, 0.0) * go_0(-1.0, -1.0);
@@ -127,13 +131,17 @@ vec4 result = mat4(-0.009692998, -0.008524317, 0.0010432196, 0.0, 0.00057165127,
     result += mat4(0.024352267, 0.03303334, 0.02903438, 0.0, 0.0062978864, 0.014672455, 0.0043003284, 0.0, -0.0017531263, -0.0032476797, 0.001345206, 0.0, -0.20736417, -0.1745426, -0.32957983, 0.0) * go_3(1.0, 0.0);
     result += mat4(0.027512033, 0.029760962, 0.033007182, 0.0, 9.0356014e-05, 0.0061743665, 0.0036443318, 0.0, -0.016802983, -0.019364875, -0.014311061, 0.0, 0.021530075, 0.059616566, 0.07120056, 0.0) * go_3(1.0, 1.0);
     result += vec4(-0.0007544955, -0.0007692414, 0.00032997545, 0.0);
-    return result + texture(sampler2DArray(tex_MAIN, pointSampler), vec3(pos, tile.inputLayer));
+    return result + texture(sampler2D(tex_MAIN, pointSampler), out_pos);
 }
 
 void main() {
     ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 valid_xy = interior_xy + ivec2(tile.margin);
-    pos = (vec2(valid_xy) + 0.5) * vec2(ubo.in_dx, ubo.in_dy);
+    ivec2 valid_xy = interior_xy;
+    ivec2 global_xy = valid_xy + ivec2(tile.dstOffset);
+    feat_dx = float(3) / float(ubo.out_width);
+    feat_dy = float(3) / float(ubo.out_height);
+    pos = (vec2(global_xy) + 0.5) * vec2(feat_dx, feat_dy);
+    out_pos = (vec2(global_xy) + 0.5) * vec2(1.0 / tile.fullOut.x, 1.0 / tile.fullOut.y);
     vec4 result = hook();
-    imageStore(img_output, ivec2(valid_xy) + ivec2(tile.dstOffset), result);
+    imageStore(img_output, global_xy, result);
 }

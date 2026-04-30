@@ -8,7 +8,11 @@ set root_dir (dirname (dirname (status --current-filename)))
 set project_dir "$root_dir/src/upscaler"
 
 set anime4k_dir "$project_dir/srcnn/anime4k"
-set models (ls "$anime4k_dir/.originals" | sed 's/.glsl$//')
+set models (
+    ls "$anime4k_dir/.originals" \
+    | sed 's/.glsl$//' \
+    | grep "$argv"
+)
 
 for model in $models
     set original_model "$anime4k_dir/.originals/$model"

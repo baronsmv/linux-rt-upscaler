@@ -4,6 +4,7 @@
   "depth": "rgba16",
   "passes": 23,
   "last_pass_upscale": false,
+  "tile_supported": true,
   "num_textures": 22,
   "srv_uav": [
     [

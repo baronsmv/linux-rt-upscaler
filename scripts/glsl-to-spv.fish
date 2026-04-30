@@ -19,10 +19,11 @@ end
 
 for glsl in (
     find "$project_dir" \
-        -mindepth 3 \
-        -type f \
-        -not -path '*/[@.]*' \
-        -name '*.glsl'
+         -mindepth 3 \
+         -type f \
+         -not -path '*/[@.]*' \
+         -name '*.glsl' \
+    | grep "$argv"
 )
     echo "Converting '$glsl'..."
     glsl_to_spv "$glsl"
