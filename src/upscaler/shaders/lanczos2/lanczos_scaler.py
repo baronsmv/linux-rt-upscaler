@@ -7,8 +7,8 @@ from ...vulkan import Buffer, Compute, Sampler, Texture2D, SAMPLER_FILTER_POINT
 
 logger = logging.getLogger(__name__)
 
-# Constant buffer layout: 4 floats (bgColor), 4 uint, 4 int, 1 float (blur)
-CB_FORMAT = "ffffIIIIiiiif"
+# Constant buffer layout
+CB_FORMAT = "ffffIIIIiiiifff"
 CB_SIZE = struct.calcsize(CB_FORMAT)
 
 DEFAULT_SHADER_PATH = os.path.join(os.path.dirname(__file__), "lanczos2.spv")
@@ -156,6 +156,8 @@ class LanczosScaler:
         dst_w: int,
         dst_h: int,
         blur: float = 1.0,
+        antiring_strength: float = 1.0,
+        linear_light: bool = True,
     ) -> None:
         """
         Update the constant buffer with scaling parameters.
@@ -180,6 +182,8 @@ class LanczosScaler:
             dst_w,
             dst_h,
             blur,
+            antiring_strength,
+            1 if linear_light else 0,
         )
         self._cb.upload(self._push_data)
 

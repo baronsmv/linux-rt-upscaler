@@ -29,7 +29,8 @@ for hlsl in (
         -mindepth 3 \
         -type f \
         -not -path '*/[@.]*' \
-        -name '*.hlsl'
+        -name '*.hlsl' \
+    | grep "$argv"
 )
     echo "Converting '$hlsl'..."
     hlsl_to_spv "$hlsl"
