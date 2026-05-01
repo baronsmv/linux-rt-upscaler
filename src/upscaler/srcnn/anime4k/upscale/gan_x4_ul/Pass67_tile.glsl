@@ -82,19 +82,59 @@ layout(push_constant) uniform TileParams {
 
 layout(set = 0, binding = 3073) uniform sampler linearSampler;
 layout(set = 0, binding = 1024) uniform texture2D tex_MAIN;
-layout(set = 0, binding = 1025) uniform texture2DArray tex_conv1ups;
-layout(set = 0, binding = 1026) uniform texture2DArray tex_conv1ups1;
-layout(set = 0, binding = 1027) uniform texture2DArray tex_conv1ups2;
 layout(set = 0, binding = 2048, rgba8) uniform image2D img_output;
-#define go_0(x_off, y_off) (max((texture(sampler2DArray(tex_conv1ups, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
-#define go_1(x_off, y_off) (max((texture(sampler2DArray(tex_conv1ups1, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
-#define go_2(x_off, y_off) (max((texture(sampler2DArray(tex_conv1ups2, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
-#define go_3(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv1ups, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
-#define go_4(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv1ups1, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
-#define go_5(x_off, y_off) (max(-(texture(sampler2DArray(tex_conv1ups2, pointSampler), vec3(pos + (vec2(x_off, y_off)) * vec2(feat_dx, feat_dy), tile.inputLayer))), 0.0))
-
-float feat_dx, feat_dy;
+layout(set = 0, binding = 2049, rgba16f) uniform readonly image2DArray img_conv1ups;
+layout(set = 0, binding = 2050, rgba16f) uniform readonly image2DArray img_conv1ups1;
+layout(set = 0, binding = 2051, rgba16f) uniform readonly image2DArray img_conv1ups2;
+//
+// * Note *
+//   This is the final pass of a GAN‑based upscaler. Unlike standard
+//   depth‑to‑space upscalers, the last pass does not perform a pixel
+//   shuffle. Instead it reads pre‑computed feature maps (conv0ups
+//   and conv0ups1) at the low‑res resolution, computes a residual
+//   via a fully‑connected convolution (the hook() function), and adds
+//   that residual to the original low‑res input image (tex_MAIN).
+//   The result is written directly into the upscaled output image.
+//
+// * ImageLoad instead of a sampler *
+//   The feature maps are written by earlier compute passes as storage
+//   images. Sampling them via a texture sampler can lead to stale
+//   data from the texture cache, even after a pipeline barrier.
+//   To avoid this, we bind the feature maps as **read‑only storage
+//   images** and fetch them with `imageLoad`. This guarantees we
+//   see the exact values written by the previous passes.
+//
+// * Coordinate spaces *
+//   - `gxy`         : integer output pixel coordinate,
+//                     range [0, out_width‑1] × [0, out_height‑1].
+//   - `pos`         : continuous coordinate in feature‑map texels.
+//                     The feature map is half the output size, so
+//                     pos runs from ~0 to 2 (i.e. the low‑res extent).
+//   - `out_pos`     : normalised UV (0‑1) for sampling the original
+//                     low‑res input image (tex_MAIN).
+//
+// * Binding layout *
+//   set = 0
+//     binding = 0     : uniform Constants
+//     binding = 1024  : texture2D     tex_MAIN   (original image)
+//     binding = 2048  : image2D       img_output (output, rgba8)
+//     binding = 2049  : image2D       img_conv0ups  (feature map, rgba16f, readonly)
+//     binding = 2050  : image2D       img_conv0ups1 (feature map, rgba16f, readonly)
+//     binding = 3072  : sampler       pointSampler
+//     binding = 3073  : sampler       linearSampler (for MAIN)
+//
 vec2 out_pos;
+
+ivec2 texel_coord(vec2 p) {
+    return clamp(ivec2(floor(p)), ivec2(0), ivec2(ubo.in_width - 1, ubo.in_height - 1));
+}
+
+#define go_0(dx, dy)   max(imageLoad(img_conv1ups,  ivec3(texel_coord(pos + vec2(dx, dy) * 0.5), tile.inputLayer)), 0.0)
+#define go_1(dx, dy) max(-imageLoad(img_conv1ups,  ivec3(texel_coord(pos + vec2(dx, dy) * 0.5), tile.inputLayer)), 0.0)
+#define go_2(dx, dy)   max(imageLoad(img_conv1ups1,  ivec3(texel_coord(pos + vec2(dx, dy) * 0.5), tile.inputLayer)), 0.0)
+#define go_3(dx, dy) max(-imageLoad(img_conv1ups1,  ivec3(texel_coord(pos + vec2(dx, dy) * 0.5), tile.inputLayer)), 0.0)
+#define go_4(dx, dy)   max(imageLoad(img_conv1ups2,  ivec3(texel_coord(pos + vec2(dx, dy) * 0.5), tile.inputLayer)), 0.0)
+#define go_5(dx, dy) max(-imageLoad(img_conv1ups2,  ivec3(texel_coord(pos + vec2(dx, dy) * 0.5), tile.inputLayer)), 0.0)
 
 vec4 hook() {
 vec4 result = mat4(0.013777687, 0.008274202, 0.015532511, 0.0, 0.023658138, 0.021084072, 0.023679586, 0.0, -0.012574975, -0.0014938707, 0.00061928877, 0.0, -0.026688136, -0.0131240375, -0.029466102, 0.0) * go_0(-1.0, -1.0);
@@ -157,12 +197,9 @@ vec4 result = mat4(0.013777687, 0.008274202, 0.015532511, 0.0, 0.023658138, 0.02
 
 void main() {
     ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 valid_xy = interior_xy;
-    ivec2 global_xy = valid_xy + ivec2(tile.dstOffset);
-    feat_dx = float(4) / float(ubo.out_width);
-    feat_dy = float(4) / float(ubo.out_height);
-    pos = (vec2(global_xy) + 0.5) * vec2(feat_dx, feat_dy);
-    out_pos = (vec2(global_xy) + 0.5) * vec2(1.0 / tile.fullOut.x, 1.0 / tile.fullOut.y);
+    ivec2 global_xy = interior_xy + ivec2(tile.dstOffset);
+    pos = (vec2(global_xy) + 0.5) * vec2(ubo.out_dx) * 2.0;
+    out_pos = (vec2(global_xy) + 0.5) * vec2(ubo.out_dx, ubo.out_dy);
     vec4 result = hook();
     imageStore(img_output, global_xy, result);
 }

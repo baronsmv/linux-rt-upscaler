@@ -319,10 +319,7 @@ class UpscalerManager:
 
             self.output = Texture2D(out_w, out_h)
 
-            sampler_list = [
-                PipelineFactory.get_sampler(inter_factory, t)
-                for t in self.model_cfg.samplers[-1]
-            ]
+            sampler_list = [PipelineFactory.get_sampler(inter_factory, "point")]
 
             uav_list = [
                 self.output,
@@ -444,19 +441,41 @@ class UpscalerManager:
 
     def process_full_frame(self) -> None:
         """
-        Execute all full-frame compute dispatches.
+        Execute all full-frame compute dispatches with minimal submission overhead.
 
-        For GAN-style models this runs the intermediate stage(s) and
-        then the custom final pipeline.  For standard models it simply
-        dispatches every stage in order.
+        For standard models each SRCNN stage’s passes are submitted in one batch;
+        for GAN-style models the intermediate passes and the final pass are
+        submitted together. This reduces driver/CPU work compared to dispatching
+        every pass individually.
         """
         if self._gan_final_pipe is not None:
-            for stage, (gx, gy) in zip(self.full_stages, self.full_groups):
-                stage.dispatch(gx, gy, 1)
-            self._gan_final_pipe.dispatch(*self._gan_final_groups, 1)
+            # GAN-style: one intermediate SRCNN stage followed by a custom final
+            # pipeline. We sequence them all into a single command buffer.
+            stage = self.full_stages[0]
+            gx, gy = self.full_groups[0]
+
+            # Build the dispatch list: all intermediate passes first, then the
+            # final GAN pass. Push constants are not used for full-frame (b'').
+            seq = [(pipe, gx, gy, 1, b"") for pipe in stage.pipelines]
+            seq.append(
+                (
+                    self._gan_final_pipe,
+                    self._gan_final_groups[0],
+                    self._gan_final_groups[1],
+                    1,
+                    b"",
+                )
+            )
+
+            # The first pipeline in the stage owns the queue; we can call
+            # dispatch_sequence on any of its pipelines.
+            stage.pipelines[0].dispatch_sequence(sequence=seq)
+
         else:
+            # Standard depth-to-space models (single or double-upscale).
             for stage, (gx, gy) in zip(self.full_stages, self.full_groups):
-                stage.dispatch(gx, gy, 1)
+                seq = [(pipe, gx, gy, 1, b"") for pipe in stage.pipelines]
+                stage.pipelines[0].dispatch_sequence(sequence=seq)
 
     # ==================================================================
     #  Fallback decision (rect-based)
