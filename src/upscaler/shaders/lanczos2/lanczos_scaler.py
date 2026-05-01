@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # the HLSL shader (`lanczos2.hlsl`). Any mismatch will cause undefined
 # behaviour or visual corruption.
 # ---------------------------------------------------------------------------
-CB_FORMAT = "ffffIIIIiiiifffI"
+CB_FORMAT = "ffffIIIIiiiiffI"
 CB_SIZE = struct.calcsize(CB_FORMAT)
 
 # Default location of the compiled SPIR-V shader binary.
