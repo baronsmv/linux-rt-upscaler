@@ -12,6 +12,38 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONFIG: Config = Config()
 
 
+class FilteredHelpAction(argparse._HelpAction):
+    """Print help with optional filtering of advanced argument groups."""
+
+    def __init__(
+        self,
+        option_strings,
+        dest=argparse.SUPPRESS,
+        default=argparse.SUPPRESS,
+        show_all=False,
+        help=None,
+    ):
+        super().__init__(
+            option_strings=option_strings, dest=dest, default=default, help=help
+        )
+        self.show_all = show_all
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if self.show_all:
+            # Print everything (used for --help-all)
+            parser.print_help()
+        else:
+            # Temporarily replace groups with the non-advanced ones
+            original_groups = parser._action_groups
+            essential = [
+                g for g in original_groups if not getattr(g, "advanced", False)
+            ]
+            parser._action_groups = essential
+            parser.print_help()
+            parser._action_groups = original_groups
+        parser.exit()
+
+
 def _get_version() -> str:
     """Return the package version, with a fallback for development."""
     try:
@@ -29,11 +61,25 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
     """Parse command line arguments and return (args, profile_name, config_path)."""
     parser = argparse.ArgumentParser(
         description="Real-Time Upscaler for Linux",
+        add_help=False,
         epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser._positionals.title = "POSITIONAL ARGUMENTS"
     parser._optionals.title = "GENERAL OPTIONS"
+    parser.add_argument(
+        "-h",
+        "--help",
+        action=FilteredHelpAction,
+        show_all=False,
+        help="show a short help message and exit",
+    )
+    parser.add_argument(
+        "--help-all",
+        action=FilteredHelpAction,
+        show_all=True,
+        help="Show full help with all advanced options and exit",
+    )
     parser.add_argument(
         "-v", "--version", action="version", version=f"%(prog)s {_get_version()}"
     )
@@ -335,10 +381,10 @@ but colors could lose saturation when downscaling.""",
     # ----------------------------------------------------------------------
     # Post-processing options
     # ----------------------------------------------------------------------
-    post_group = parser.add_argument_group("POST-PROCESSING OPTIONS")
+    post_processing_group = parser.add_argument_group("POST-PROCESSING OPTIONS")
 
     # --- Debanding ---
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--enable-deband",
         action="store_true",
         default=DEFAULT_CONFIG.deband_enabled,
@@ -351,7 +397,7 @@ fog, or smooth backgrounds.
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--deband-strength",
         type=float,
         default=DEFAULT_CONFIG.deband_strength,
@@ -366,7 +412,7 @@ Recommended range: 0.1 - 0.5. Default: %(default)s
     )
 
     # --- CAS (Contrast Adaptive Sharpening) ---
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--enable-cas",
         action="store_true",
         default=DEFAULT_CONFIG.cas_enabled,
@@ -378,7 +424,7 @@ traditional unsharp masks.
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--cas-strength",
         type=float,
         default=DEFAULT_CONFIG.cas_strength,
@@ -395,7 +441,7 @@ Recommended range: 0.2 - 0.5. Default: %(default)s
     )
 
     # --- Bloom ---
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--enable-bloom",
         action="store_true",
         default=DEFAULT_CONFIG.bloom_enabled,
@@ -410,7 +456,7 @@ midtones.
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--bloom-strength",
         type=float,
         default=DEFAULT_CONFIG.bloom_strength,
@@ -424,7 +470,7 @@ Recommended range: 0.02 - 0.08. Default: %(default)s
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--bloom-threshold",
         type=float,
         default=DEFAULT_CONFIG.bloom_threshold,
@@ -439,7 +485,7 @@ Default: %(default)s
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--bloom-radius",
         type=int,
         default=DEFAULT_CONFIG.bloom_radius,
@@ -454,7 +500,7 @@ Recommended range: 2 - 8. Default: %(default)s
     )
 
     # --- Vignette ---
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--enable-vignette",
         action="store_true",
         default=DEFAULT_CONFIG.vignette_enabled,
@@ -466,7 +512,7 @@ screen and can simulate the look of a camera lens.
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--vignette-strength",
         type=float,
         default=DEFAULT_CONFIG.vignette_strength,
@@ -479,7 +525,7 @@ Recommended range: 0.3 - 0.6. Default: %(default)s
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--vignette-radius",
         type=float,
         default=DEFAULT_CONFIG.vignette_radius,
@@ -494,7 +540,7 @@ Default: %(default)s
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--vignette-falloff",
         type=float,
         default=DEFAULT_CONFIG.vignette_falloff,
@@ -509,7 +555,7 @@ Recommended range: 1.0 - 4.0. Default: %(default)s
     )
 
     # --- Film Grain ---
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--enable-grain",
         action="store_true",
         default=DEFAULT_CONFIG.grain_enabled,
@@ -523,7 +569,7 @@ feel like a static overlay.
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--grain-strength",
         type=float,
         default=DEFAULT_CONFIG.grain_strength,
@@ -539,7 +585,7 @@ Recommended range: 0.005 - 0.03. Default: %(default)s
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--grain-size",
         type=float,
         default=DEFAULT_CONFIG.grain_size,
@@ -552,7 +598,7 @@ Default: %(default)s""",
     )
 
     # --- Colour Grading (3D LUT) ---
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--enable-lut",
         action="store_true",
         default=DEFAULT_CONFIG.lut_enabled,
@@ -567,7 +613,7 @@ texture detail.
 
 """,
     )
-    post_group.add_argument(
+    post_processing_group.add_argument(
         "--lut-intensity",
         type=float,
         default=DEFAULT_CONFIG.lut_intensity,
@@ -803,6 +849,23 @@ Recommended range: 0.15-0.5, default: %(default)s
         "--log-file",
         help="Write logs to this file (parent directories are created)",
     )
+
+    # ----------------------------------------------------------------------
+    # Advanced groups
+    # ----------------------------------------------------------------------
+    advanced_groups = [
+        lanczos_group,
+        post_processing_group,
+        vulkan_group,
+        tile_group,
+        window_detection_group,
+    ]
+    for grp in advanced_groups:
+        grp.advanced = True
+
+    # ----------------------------------------------------------------------
+    # Argument parse and map
+    # ----------------------------------------------------------------------
 
     # Build a mapping from every option string to its destination name
     opt_to_dest = {
