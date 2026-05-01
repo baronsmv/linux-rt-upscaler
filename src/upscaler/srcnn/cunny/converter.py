@@ -188,7 +188,6 @@ class ModelJsonBuilder:
             "scale": 2,
             "depth": "rgba8",
             "passes": len(self.passes),
-            "last_pass_upscale": True,
             "num_textures": self.num_textures,
             "srv_uav": srv_uav,
             "samplers": samplers_per_pass,
