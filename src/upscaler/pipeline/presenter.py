@@ -65,7 +65,6 @@ class Presenter:
 
         # --- Saved objects ----------------------------------------------------
         self.config = config
-        print(config)
         self.osd = osd_manager
         self.swapchain = swapchain_manager
 
