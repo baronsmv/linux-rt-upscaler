@@ -15,7 +15,7 @@ Features:
     full-frame (plain 2D textures).
   - Resolves #define aliases and removes unused helpers.
   - Generates proper depth-to-space (final shuffle) passes.
-  - Generates GAN‑style final passes (convolution at output resolution).
+  - Generates GAN-style final passes (convolution at output resolution).
   - Outputs model.json matching the CuNNy-compatible pipeline.
   - Uses binding numbers compatible with the SRCNN framework:
       • Constant buffer    -> binding 0
@@ -662,7 +662,7 @@ layout(push_constant) uniform TileParams {
         total_passes: int,
         header_comment: str,
     ) -> str:
-        # Extract scale factor from model name (e.g., "gan_x3_vl" → 3)
+        # Extract scale factor from model name (e.g., "gan_x3_vl" -> 3)
         scale = next(
             (
                 int(p[1:])
@@ -734,9 +734,7 @@ layout(push_constant) uniform TileParams {
         lines.append("")
         lines.append("void main() {")
         lines.append("    ivec2 gxy = ivec2(gl_GlobalInvocationID.xy);")
-        lines.append(f"    feat_dx = float({scale}) / float(ubo.out_width);")
-        lines.append(f"    feat_dy = float({scale}) / float(ubo.out_height);")
-        lines.append("    pos = (vec2(gxy) + 0.5) * vec2(feat_dx, feat_dy);")
+        lines.append("    pos = (vec2(gxy) / 2.0 + 0.5) * vec2(ubo.in_dx, ubo.in_dy);")
         lines.append("    out_pos = (vec2(gxy) + 0.5) * vec2(ubo.out_dx, ubo.out_dy);")
         lines.append("    vec4 result = hook();")
         lines.append(f"    imageStore(img_{out_safe}, gxy, result);")
@@ -840,19 +838,16 @@ layout(push_constant) uniform TileParams {
         lines.append("}")
 
         lines.append("")
-        lines.append("void main() {")
-        lines.append("    ivec2 interior_xy = ivec2(gl_GlobalInvocationID.xy);")
-        lines.append("    ivec2 valid_xy = interior_xy;")
-        lines.append("    ivec2 global_xy = valid_xy + ivec2(tile.dstOffset);")
-        lines.append(f"    feat_dx = float({scale}) / float(ubo.out_width);")
-        lines.append(f"    feat_dy = float({scale}) / float(ubo.out_height);")
-        lines.append("    pos = (vec2(global_xy) + 0.5) * vec2(feat_dx, feat_dy);")
         lines.append(
-            "    out_pos = (vec2(global_xy) + 0.5) * vec2(1.0 / tile.fullOut.x, 1.0 / tile.fullOut.y);"
+            """void main() {
+    ivec2 gxy = ivec2(gl_GlobalInvocationID.xy);
+    pos = (vec2(gxy) * 0.5 + 0.5) * vec2(ubo.in_dx, ubo.in_dy);
+    vec2 orig_pos = vec2(gxy) * vec2(ubo.out_dx, ubo.out_dy);
+    vec4 result = hook();
+    vec4 original = texture(sampler2D(tex_MAIN, pointSampler), orig_pos);
+    imageStore(img_output, gxy, result + original);
+}"""
         )
-        lines.append("    vec4 result = hook();")
-        lines.append("    imageStore(img_output, global_xy, result);")
-        lines.append("}")
 
         full_code = "\n".join(lines)
 
@@ -865,7 +860,7 @@ layout(push_constant) uniform TileParams {
             "texture(sampler2D(tex_MAIN, linearSampler), out_pos)",
         )
 
-        # Handle the tile‑specific MAIN sampling (array version)
+        # Handle the tile-specific MAIN sampling (array version)
         full_code = full_code.replace(
             "texture(sampler2DArray(tex_MAIN, pointSampler), vec3(pos, tile.inputLayer))",
             "texture(sampler2D(tex_MAIN, pointSampler), out_pos)",
@@ -1006,7 +1001,7 @@ def main():
 
         # Determine if this is the GAN final pass
         if is_gan and is_last and not pinfo.is_d2s:
-            # GAN final pass – generate only full-frame variant, no tile
+            # GAN final pass - generate only full-frame variant, no tile
             header = ShaderGenerator._header_comment(
                 shader_name,
                 idx,

@@ -55,26 +55,39 @@ layout(set = 0, binding = 0) uniform Constants {
     float out_dy;
 } ubo;
 
-layout(set = 0, binding = 3072) uniform sampler pointSampler;
-
-// global coordinate variable (replaces mpv's HOOKED_pos / MAIN_pos)
-vec2 pos;
-
-layout(set = 0, binding = 3073) uniform sampler linearSampler;
+// Original image (sampler, because we’ll keep using a sampler for it)
 layout(set = 0, binding = 1024) uniform texture2D tex_MAIN;
-layout(set = 0, binding = 1025) uniform texture2D tex_conv0ups;
-layout(set = 0, binding = 1026) uniform texture2D tex_conv0ups1;
-layout(set = 0, binding = 2048, rgba8) uniform image2D img_output;
-#define go_0(x_off, y_off) (max((texture(sampler2D(tex_conv0ups, pointSampler), pos + (vec2(x_off, y_off) * 0.5) * vec2(feat_dx, feat_dy))), 0.0))
-#define go_1(x_off, y_off) (max((texture(sampler2D(tex_conv0ups1, pointSampler), pos + (vec2(x_off, y_off) * 0.5) * vec2(feat_dx, feat_dy))), 0.0))
-#define go_2(x_off, y_off) (max(-(texture(sampler2D(tex_conv0ups, pointSampler), pos + (vec2(x_off, y_off) * 0.5) * vec2(feat_dx, feat_dy))), 0.0))
-#define go_3(x_off, y_off) (max(-(texture(sampler2D(tex_conv0ups1, pointSampler), pos + (vec2(x_off, y_off) * 0.5) * vec2(feat_dx, feat_dy))), 0.0))
+layout(set = 0, binding = 3072) uniform sampler pointSampler;
+layout(set = 0, binding = 3073) uniform sampler linearSampler;
 
-float feat_dx, feat_dy;
-vec2 out_pos;
+// Output (write-only)
+layout(set = 0, binding = 2048, rgba8) uniform image2D img_output;
+
+// Feature maps as read-only storage images
+layout(set = 0, binding = 2049, rgba16f) uniform readonly image2D img_conv0ups;
+layout(set = 0, binding = 2050, rgba16f) uniform readonly image2D img_conv0ups1;
+
+// Global coordinate for the current output pixel (set in main)
+vec2 pos;     // continuous coordinate in feature-map texels (range ~0-2)
+vec2 out_pos; // continuous coordinate for the original image
+
+// Convert a continuous coordinate (in texels, where [0, in_width]) to an integer
+// texel index for imageLoad, with clamping.
+ivec2 texel_coord(vec2 p) {
+    return clamp(ivec2(floor(p)), ivec2(0), ivec2(ubo.in_width - 1, ubo.in_height - 1));
+}
+
+// Macros that replicate point-sampled lookups from the feature maps.
+// Each offset (dx, dy) is in units of 0.5 feature-map texels, exactly as in the
+// original GAN shader.
+#define go_0(dx, dy)  max(imageLoad(img_conv0ups, texel_coord(pos + vec2(dx, dy) * 0.5)), 0.0)
+#define go_1(dx, dy)  max(imageLoad(img_conv0ups1, texel_coord(pos + vec2(dx, dy) * 0.5)), 0.0)
+#define go_2(dx, dy)  max(-imageLoad(img_conv0ups, texel_coord(pos + vec2(dx, dy) * 0.5)), 0.0)
+#define go_3(dx, dy)  max(-imageLoad(img_conv0ups1, texel_coord(pos + vec2(dx, dy) * 0.5)), 0.0)
 
 vec4 hook() {
-vec4 result = mat4(0.03277269, -0.005261106, 0.017171703, 0.0, 0.07399743, 0.06816794, 0.09821277, 0.0, -0.013628815, -0.09454006, -0.2801339, 0.0, -0.020518344, -0.008617738, -0.010507532, 0.0) * go_0(-1.0, -1.0);
+    // ----------- original matrix code, completely unchanged -----------
+    vec4 result = mat4(0.03277269, -0.005261106, 0.017171703, 0.0, 0.07399743, 0.06816794, 0.09821277, 0.0, -0.013628815, -0.09454006, -0.2801339, 0.0, -0.020518344, -0.008617738, -0.010507532, 0.0) * go_0(-1.0, -1.0);
     result += mat4(-0.0728787, -0.05837346, -0.06754399, 0.0, -0.14260155, -0.11570593, -0.156841, 0.0, -0.0050546993, 0.22888114, 0.21504444, 0.0, 9.040898e-05, -0.023274591, -0.013553191, 0.0) * go_0(-1.0, 0.0);
     result += mat4(0.051917054, 0.05906303, 0.06952429, 0.0, 0.0525386, 0.088182524, 0.058972485, 0.0, -0.089566976, -0.11995993, -0.060805317, 0.0, -0.0016516607, 0.014582383, 0.0018667864, 0.0) * go_0(-1.0, 1.0);
     result += mat4(-0.010195044, -0.0016970673, -0.007473783, 0.0, 0.0048292056, 0.00090277405, -0.018349117, 0.0, 0.33494812, 0.21826924, 0.07975424, 0.0, 0.0313906, 0.023605483, 0.019729096, 0.0) * go_0(0.0, -1.0);
@@ -116,10 +129,13 @@ vec4 result = mat4(0.03277269, -0.005261106, 0.017171703, 0.0, 0.07399743, 0.068
 
 void main() {
     ivec2 gxy = ivec2(gl_GlobalInvocationID.xy);
-    feat_dx = float(2) / float(ubo.out_width);
-    feat_dy = float(2) / float(ubo.out_height);
-    pos = (vec2(gxy) + 0.5) * vec2(feat_dx, feat_dy);
+
+    // Continuous feature-map position (in texels, where 1 unit = 1 pixel)
+    // This matches the original (pos = (gxy+0.5) * 2 / out_width) because
+    // 2 / out_width = 1 / in_width.
+    pos = (vec2(gxy) + 0.5) * vec2(ubo.out_dx) * 2.0;
     out_pos = (vec2(gxy) + 0.5) * vec2(ubo.out_dx, ubo.out_dy);
+
     vec4 result = hook();
     imageStore(img_output, gxy, result);
 }

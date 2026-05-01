@@ -312,11 +312,9 @@ class UpscalerManager:
             final_cb.upload(_pack_cb(self.crop_width, self.crop_height, out_w, out_h))
 
             # Build SRV list for the final pass (respect order in model.json)
-            final_srv_list: list = []
+            final_srv_list = [self.input]  # binding 1024
             for name in self.model_cfg.srv_uav[-1][0]:
-                if name == "input":
-                    final_srv_list.append(self.input)
-                else:
+                if name != "input":
                     final_srv_list.append(inter_textures[name])
 
             self.output = Texture2D(out_w, out_h)
@@ -326,11 +324,16 @@ class UpscalerManager:
                 for t in self.model_cfg.samplers[-1]
             ]
 
+            uav_list = [
+                self.output,
+                inter_textures["conv0ups"],
+                inter_textures["conv0ups1"],
+            ]
             self._gan_final_pipe = Compute(
                 final_shader,
                 cbv=[final_cb],
                 srv=final_srv_list,
-                uav=[self.output],
+                uav=uav_list,
                 samplers=sampler_list,
                 push_size=0,
             )
