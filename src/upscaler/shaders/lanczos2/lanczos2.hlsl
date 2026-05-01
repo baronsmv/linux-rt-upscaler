@@ -1,13 +1,13 @@
 // =============================================================================
-// Ironclad Adaptive Lanczos - Stability First Version
-// Uses discrete integer offsets and hardware Gather to eliminate pixelation.
-// Optimized for VN line art and high-contrast text.
+// Anisotropic Adaptive Lanczos - The Final Refinement
+//  - Independent X/Y scaling for perfect aspect-ratio preservation
+//  - Clamped integer-precision mapping (No pixelation)
+//  - Enhanced Anti-Ringing for Visual Novel text boxes
 // =============================================================================
 
 Texture2D<float4> InputTex : register(t0);
 [[vk::image_format("rgba8")]]
 RWTexture2D<float4> OutputTex : register(u0);
-SamplerState PointSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
@@ -20,12 +20,14 @@ cbuffer Constants : register(b0)
     bool linearLight;
 }
 
+// Optimized Lanczos math with pre-calculated PI
+#define PI 3.14159265358979
 float lanczos(float x, float r)
 {
-    float s = r / blur;
-    float kx = 3.1415926535 * s * x;
-    float wx = 0.5 * kx;
-    return x < 1e-5 ? 1.0 : sin(kx) * sin(wx) / (x * x);
+    if (x < 1e-4) return 1.0;
+    if (x >= r) return 0.0;
+    float pi_x = PI * x;
+    return (r * sin(pi_x) * sin(pi_x / r)) / (pi_x * pi_x);
 }
 
 [numthreads(16, 16, 1)]
@@ -34,63 +36,66 @@ void main(uint3 dtid : SV_DispatchThreadID)
     uint2 outPos = dtid.xy;
     if (outPos.x >= dstTotalWidth || outPos.y >= dstTotalHeight) return;
 
+    // Scissor test
     if (int(outPos.x) < dstX || int(outPos.x) >= dstX + dstW ||
         int(outPos.y) < dstY || int(outPos.y) >= dstY + dstH) {
         OutputTex[outPos] = bgColor;
         return;
     }
 
-    // 1. Calculate Scale and Adaptive Radius
-    float2 scale = float2(dstW, dstH) / float2(srcWidth, srcHeight);
-    float minScale = min(scale.x, scale.y);
+    // 1. Calculate Anisotropic Scale Factors
+    float scaleX = float(dstW) / float(srcWidth);
+    float scaleY = float(dstH) / float(srcHeight);
 
-    // Radius 2 for upscaling (4x4), Radius 3 for downscaling (6x6)
-    int radius = (minScale >= 1.0) ? 2 : 3;
+    // Adaptive radius per axis: prevents blur on one axis and jaggies on the other
+    float rx = (scaleX >= 1.0) ? 2.0 : ceil(2.0 / scaleX);
+    float ry = (scaleY >= 1.0) ? 2.0 : ceil(2.0 / scaleY);
 
-    // 2. Precise Pixel Mapping (Integer-based)
+    int irx = int(rx);
+    int iry = int(ry);
+
+    // 2. Map coordinates with half-pixel offset correction
     float2 uv = (float2(outPos.x - dstX, outPos.y - dstY) + 0.5) / float2(dstW, dstH);
     float2 inputPos = uv * float2(srcWidth, srcHeight);
-    float2 pt = 1.0 / float2(srcWidth, srcHeight);
-
     float2 pp = inputPos - 0.5;
     int2 p0 = int2(floor(pp));
-    float2 f = pp - float2(p0); // Fractional offset [0, 1]
+    float2 f = pp - float2(p0);
 
     float3 accum = 0.0;
     float weightSum = 0.0;
+
+    // Anti-ringing bounds (initialize to very high/low)
     float3 vmin = 1e6, vmax = -1e6;
 
-    // 3. The Sampling Loop
-    // We sample from -(radius-1) to +radius
-    // For radius 2: -1 to 2 (4 pixels)
-    // For radius 3: -2 to 3 (6 pixels)
-    for (int iy = -radius + 1; iy <= radius; iy++)
+    // 3. Anisotropic Sampling Loop
+    for (int iy = -iry + 1; iy <= iry; iy++)
     {
-        for (int ix = -radius + 1; ix <= radius; ix++)
+        float wy = lanczos(abs(float(iy) - f.y), ry);
+
+        for (int ix = -irx + 1; ix <= irx; ix++)
         {
             int2 sc = clamp(p0 + int2(ix, iy), int2(0, 0), int2(srcWidth - 1, srcHeight - 1));
             float3 color = InputTex.Load(int3(sc, 0)).rgb;
 
             float3 val = linearLight ? color * color : color;
-
-            // Separate weights for X and Y (The "Separable" path is more stable)
-            float wx = lanczos(abs(float(ix) - f.x), float(radius));
-            float wy = lanczos(abs(float(iy) - f.y), float(radius));
+            float wx = lanczos(abs(float(ix) - f.x), rx);
             float w = wx * wy;
 
             accum += val * w;
             weightSum += w;
 
-            // Track min/max for anti-ringing
-            vmin = min(vmin, val);
-            vmax = max(vmax, val);
+            // Only use the core 2x2 for ringing constraints (Keeps text sharper)
+            if (abs(ix) <= 1 && abs(iy) <= 1) {
+                vmin = min(vmin, val);
+                vmax = max(vmax, val);
+            }
         }
     }
 
-    // 4. Final Color Assembly
-    float3 v = accum / weightSum;
+    // 4. Final Assembly
+    float3 v = accum / (weightSum + 1e-7);
 
-    // Antiringing
+    // Soft Anti-Ringing (Magpie Style)
     v = clamp(v, lerp(v, vmin, antiringStrength), lerp(v, vmax, antiringStrength));
 
     if (linearLight) v = sqrt(max(v, 0.0));
