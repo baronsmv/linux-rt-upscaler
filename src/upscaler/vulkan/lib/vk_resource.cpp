@@ -10,7 +10,7 @@
  *   - `download()`             - device to host (texture only).
  *   - `copy_to()`              - device to device (buffer or image).
  *   - `batch_copy_to_array()`  - copy tiles to Texture2DArray slices.
- *   - `clear_color()`          - fill an image with a solid RGBA colour.
+ *   - `clear_color()`          - fill an image with a solid RGBA color.
  *
  * All methods are **synchronous**: they record, submit, and wait for a
  * command buffer, so Python execution blocks until the GPU operation
@@ -651,11 +651,11 @@ PyObject *vk_Resource_batch_copy_to_array(vk_Resource *self, PyObject *args) {
 }
 
 // =============================================================================
-//  Clear colour
+//  Clear color
 // =============================================================================
 
 /**
- * Fill the entire image with a constant RGBA colour.
+ * Fill the entire image with a constant RGBA color.
  *
  * The image is temporarily transitioned to `TRANSFER_DST_OPTIMAL`,
  * cleared, and returned to `GENERAL` layout.
@@ -742,7 +742,7 @@ static PyMethodDef vk_Resource_methods[] = {
      "(src_x,src_y,dst_slice,w,h))"},
 
     {"clear_color", (PyCFunction)vk_Resource_clear_color, METH_VARARGS,
-     "Clear the entire image to a solid RGBA colour.\n\n"
+     "Clear the entire image to a solid RGBA color.\n\n"
      "Args: r, g, b, a (floats, 0.0-1.0)."},
 
     {nullptr, nullptr, 0, nullptr}};

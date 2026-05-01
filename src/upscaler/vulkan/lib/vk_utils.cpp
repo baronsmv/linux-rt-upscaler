@@ -127,7 +127,7 @@ VkResult vk_execute_command_buffer(vk_Device *dev, VkCommandBuffer cmd,
  * Insert a pipeline barrier that performs an image layout transition.
  *
  * All parameters are passed directly to `VkImageMemoryBarrier`; this is
- * a thin wrapper that simplifies the common case of colour images.
+ * a thin wrapper that simplifies the common case of color images.
  *
  * @param cmd         Command buffer being recorded.
  * @param image       Image to transition.
