@@ -102,6 +102,20 @@ void main(uint3 dtid : SV_DispatchThreadID)
     uint2 outPos = dtid.xy;
 
     // ----------------------------------------------------------------
+    //  0. Early‑out: perfect 1:1 copy (no scaling, no offset).
+    //     This is the fastest path - no shared memory, no weights.
+    // ----------------------------------------------------------------
+    if (srcWidth == dstW && srcHeight == dstH && dstX == 0 && dstY == 0)
+    {
+        if (outPos.x < dstTotalWidth && outPos.y < dstTotalHeight)
+        {
+            float3 color = InputTex.Load(int3(outPos.x, outPos.y, 0)).rgb;
+            OutputTex[outPos] = float4(color, 1.0);
+        }
+        return;
+    }
+
+    // ----------------------------------------------------------------
     //  1. Determine whether we can use the shared-memory path.
     //     We need the bounding box of required source texels for the
     //     entire thread group. If it fits in CACHE_DIMxCACHE_DIM,
