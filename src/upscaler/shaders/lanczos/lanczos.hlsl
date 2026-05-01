@@ -20,7 +20,8 @@
 //    groupsX = ceil(dstTotalWidth  / 16)
 //    groupsY = ceil(dstTotalHeight / 16)
 //
-//  Based on Magpie effect by funnyplanter (CC0-1.0)
+//  Based on Magpie effect by funnyplanter (CC0-1.0).
+//  Optimised for linux-rt-upscaler pipeline.
 // =============================================================================
 
 Texture2D<float4>   InputTex    : register(t0);
