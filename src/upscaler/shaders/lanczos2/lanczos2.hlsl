@@ -102,7 +102,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     uint2 outPos = dtid.xy;
 
     // ----------------------------------------------------------------
-    //  0. Early‑out: perfect 1:1 copy (no scaling, no offset).
+    //  0. Early-out: perfect 1:1 copy (no scaling, no offset).
     //     This is the fastest path - no shared memory, no weights.
     // ----------------------------------------------------------------
     if (srcWidth == dstW && srcHeight == dstH && dstX == 0 && dstY == 0)

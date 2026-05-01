@@ -69,6 +69,8 @@ class Presenter:
         self.offset_x = config.offset_x
         self.offset_y = config.offset_y
         self.lanczos_blur = config.lanczos_blur
+        self.lanczos_antiring_strength = config.lanczos_antiring_strength
+        self.lanczos_linear_light = config.lanczos_linear_light
         self.osd = osd_manager
         self.swapchain = swapchain_manager
 
@@ -136,7 +138,9 @@ class Presenter:
             dst_y,
             r_w,
             r_h,
-            blur=self.lanczos_blur,  # blur factor (1.0 = standard Lanczos2)
+            blur=self.lanczos_blur,
+            antiring_strength=self.lanczos_antiring_strength,
+            linear_light=self.lanczos_linear_light,
         )
 
     def present(self, wait_for_fence: bool = False) -> None:

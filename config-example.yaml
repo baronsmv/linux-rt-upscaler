@@ -31,14 +31,6 @@ model: fast
 # Default: false
 double_upscale: false
 
-# Lanczos kernel blur factor used during the final scaling pass.
-# - 1.0 is the standard Lanczos-2 (sharp, mild ringing).
-# - Values below 1.0 increase sharpness and ringing.
-# - Values above 1.0 produce a smoother, softer image.
-# Recommended range: 0.8 - 1.2
-# Default: 1.0
-lanczos_blur: 1.0
-
 # ------------------------------------------------------------------------------
 # Monitor / Display
 # ------------------------------------------------------------------------------
@@ -163,6 +155,34 @@ show_osd: true
 osd_duration: 1.5
 
 # ------------------------------------------------------------------------------
+# Lanczos Scaler / Resampling Options
+# ------------------------------------------------------------------------------
+
+# Kernel width (blur factor) for the final Lanczos resampling pass.
+# - 1.0 is the standard Lanczos-2 (sharp, mild ringing).
+# - Values below 1.0 increase sharpness and ringing.
+# - Values above 1.0 produce a smoother, softer image.
+# Recommended range: 0.8 - 1.2
+# Default: 1.0
+lanczos_blur: 1.0
+
+# Anti-ringing strength (0 = off, 1 = full hard clamp).
+# A value of 1.0 eliminates ringing artifacts entirely, which is ideal
+# for text and UI. Lower values (0.7-0.9) preserve more fine detail
+# on illustrations but may allow faint halos.
+# Recommended range: 0.7 - 1.0
+# Default: 1.0
+lanczos_antiring_strength: 1.0
+
+# Enable linear-light resampling (sRGB-linear-sRGB).
+# This is the mathematically correct way to resample colors.
+# Disabling it (false) may make thin white text on dark backgrounds
+# appear slightly fatter, but can improve perceived text clarity
+# on some content.
+# Default: true
+lanczos_linear_light: true
+
+# ------------------------------------------------------------------------------
 # Vulkan Performance Options (Advanced)
 # ------------------------------------------------------------------------------
 
@@ -225,7 +245,7 @@ use_damage_tracking: true
 tile_size: 64
 
 # Extra border pixels added around each tile before processing. Provides the
-# neural network with surrounding context, preventing artefacts at tile
+# neural network with surrounding context, preventing artifacts at tile
 # boundaries. Larger margins improve boundary quality but increase the amount
 # of data processed per tile. More complex models benefit from higher values
 # because their receptive field is larger.

@@ -104,14 +104,6 @@ Default: %(default)s""",
         help="""Perform two 2x passes (total 4x) for higher resolution
 screens (4k, 1440p) or low-resolution sources""",
     )
-    upscaling_group.add_argument(
-        "--lanczos-blur",
-        type=float,
-        default=DEFAULT_CONFIG.lanczos_blur,
-        help="""Lanczos kernel blur factor. Values below 1.0 increase
-sharpness and ringing; values above 1.0 smooth the result.
-Recommended range: 0.8 - 1.2, default: %(default)s""",
-    )
 
     # ----------------------------------------------------------------------
     # Display section
@@ -299,6 +291,36 @@ saves to "fast/14-30-22.png"
         type=float,
         default=DEFAULT_CONFIG.osd_duration,
         help="How long (seconds) OSD messages stay visible. Default: %(default)s",
+    )
+
+    # ----------------------------------------------------------------------
+    # Lanczos Scaler Options
+    # ----------------------------------------------------------------------
+    lanczos_group = parser.add_argument_group("LANCZOS SCALER OPTIONS")
+    lanczos_group.add_argument(
+        "--lanczos-blur",
+        type=float,
+        default=DEFAULT_CONFIG.lanczos_blur,
+        help="""Kernel width for the final resampling step. Lower values
+increase sharpness/ringing; higher values smooth the result.
+Recommended range: 0.8 - 1.2, default: %(default)s""",
+    )
+    lanczos_group.add_argument(
+        "--lanczos-antiring-strength",
+        type=float,
+        default=DEFAULT_CONFIG.lanczos_antiring_strength,
+        help="""Anti-ringing strength (0 = off, 1 = full hard clamp).
+Lower values soften the clamp, preserving more detail at
+the cost of possible ringing.
+Recommended range: 0.7 - 1.0, default: %(default)s""",
+    )
+    # Also add a negation flag to allow disabling from shell:
+    lanczos_group.add_argument(
+        "--no-lanczos-linear-light",
+        action="store_false",
+        dest="lanczos_linear_light",
+        help="""Disable linear-light processing (sRGB-linear-sRGB).
+Disabling it may improve text clarity on some content.""",
     )
 
     # ----------------------------------------------------------------------

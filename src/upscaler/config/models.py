@@ -73,7 +73,6 @@ class Config:
     # Upscaling
     model: str = "fast"
     double_upscale: bool = False
-    lanczos_blur: float = 1.0
 
     # Output geometry
     output_geometry: str = "fit"
@@ -92,6 +91,11 @@ class Config:
     # OSD
     show_osd: bool = True
     osd_duration: float = 1.5
+
+    # Lanczos
+    lanczos_blur: float = 1.0
+    lanczos_antiring_strength: float = 1.0
+    lanczos_linear_light: bool = True
 
     # Vulkan
     vulkan_present_mode: str = VulkanPresentMode.FIFO.value
