@@ -172,14 +172,14 @@ class UpscalerManager:
             inter_tex = Texture2D(stage1_out_w, stage1_out_h, format=fmt)
             stage1_textures["output"] = inter_tex
 
-            srnn1 = SRCNN(
+            srcnn1 = SRCNN(
                 factory,
                 stage1_in_w,
                 stage1_in_h,
                 self.input,
                 stage1_textures,
             )
-            self.full_stages.append(srnn1)
+            self.full_stages.append(srcnn1)
             self.full_groups.append(
                 dispatch_groups(stage1_in_w, stage1_in_h, last_pass=False)
             )
@@ -192,14 +192,14 @@ class UpscalerManager:
             self.output = Texture2D(stage2_out_w, stage2_out_h)
             stage2_textures["output"] = self.output
 
-            srnn2 = SRCNN(
+            srcnn2 = SRCNN(
                 factory,
                 stage1_out_w,
                 stage1_out_h,
                 inter_tex,
                 stage2_textures,
             )
-            self.full_stages.append(srnn2)
+            self.full_stages.append(srcnn2)
             self.full_groups.append(
                 dispatch_groups(stage1_out_w, stage1_out_h, last_pass=False)
             )
@@ -216,14 +216,14 @@ class UpscalerManager:
             self.output = Texture2D(out_w, out_h)
             stage_textures["output"] = self.output
 
-            srnn = SRCNN(
+            srcnn = SRCNN(
                 factory,
                 self.crop_width,
                 self.crop_height,
                 self.input,
                 stage_textures,
             )
-            self.full_stages.append(srnn)
+            self.full_stages.append(srcnn)
             self.full_groups.append(
                 dispatch_groups(self.crop_width, self.crop_height, last_pass=False)
             )
