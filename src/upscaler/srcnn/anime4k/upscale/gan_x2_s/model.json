@@ -163,12 +163,12 @@
     ],
     [
       [
-        "conv0ups",
-        "conv0ups1",
         "input"
       ],
       [
-        "output"
+        "output",
+        "conv0ups",
+        "conv0ups1"
       ]
     ]
   ],

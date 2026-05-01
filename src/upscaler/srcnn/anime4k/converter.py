@@ -787,7 +787,7 @@ ivec2 texel_coord(vec2 p) {
         lines.append("")
         lines.append("void main() {")
         lines.append("    ivec2 gxy = ivec2(gl_GlobalInvocationID.xy);")
-        lines.append("    pos = (vec2(gxy) + 0.5) * vec2(ubo.out_dx) * 2.0;")
+        lines.append("        pos = (vec2(gxy) + 0.5) * vec2(ubo.out_dx, ubo.out_dy);")
         lines.append("    out_pos = (vec2(gxy) + 0.5) * vec2(ubo.out_dx, ubo.out_dy);")
         lines.append("    vec4 result = hook();")
         lines.append("    imageStore(img_output, gxy, result);")
