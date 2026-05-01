@@ -45,10 +45,10 @@
 //      linear sampler at s1. An identity LUT (R,G,B -> R,G,B) should be
 //      loaded by default so that the effect can be toggled without missing
 //      resources.
-//    • The Python handler (`LUTPass`) automatically creates an identity LUT
+//    - The Python handler (`LUTPass`) automatically creates an identity LUT
 //      and exposes methods to upload custom LUT data.
 //
-//  Based on Resolve 3D LUTs colour grading for linux‑rt‑upscaler.
+//  Based on Resolve 3D LUTs colour grading for linux-rt-upscaler.
 // =============================================================================
 
 Texture2D<float4>         InputTex   : register(t0);
@@ -59,7 +59,7 @@ SamplerState               LUTSampler : register(s1);
 
 cbuffer Constants : register(b0)
 {
-    float intensity;        // 0.0 – 1.0
+    float intensity;        // 0.0 - 1.0
     uint  lutSize;          // e.g., 32
     uint  dstWidth;
     uint  dstHeight;
@@ -78,7 +78,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     // ---- 1. Load original colour --------------------------------------------
     float4 color = InputTex.Load(int3(pos, 0));
 
-    // Early exit – no grading applied. This skips all remaining work.
+    // Early exit - no grading applied. This skips all remaining work.
     if (intensity <= 0.0f)
     {
         OutputTex[pos] = color;
@@ -89,7 +89,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     float3 rgb = saturate(color.rgb);
     float  fSize = float(lutSize);
 
-    // ---- 3. Compute LUT UV coordinates with texel‑centre alignment -----------
+    // ---- 3. Compute LUT UV coordinates with texel-centre alignment -----------
     //  The LUT texture is indexed so that input 0.0 lands on the centre of
     //  texel 0 and input 1.0 lands on the centre of texel (lutSize-1).
     //  Formula:   (r * (fSize - 1) + 0.5) / fSize

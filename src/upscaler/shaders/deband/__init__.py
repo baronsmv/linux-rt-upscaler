@@ -66,6 +66,15 @@ class DebandPass(ShaderPass):
         return [self.source_texture], [self.target_texture], []
 
     # ------------------------------------------------------------------
+    #  Rebuild compute
+    # ------------------------------------------------------------------
+    def _rebuild_compute(self) -> None:
+        """Only create the compute pipeline when both textures are set."""
+        if self.target_texture is None or self.source_texture is None:
+            return
+        super()._rebuild_compute()
+
+    # ------------------------------------------------------------------
     #  Source texture (the AI-upscaled image to be debanded)
     # ------------------------------------------------------------------
     def set_source_texture(self, tex: Texture2D) -> None:

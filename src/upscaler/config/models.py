@@ -97,6 +97,36 @@ class Config:
     lanczos_antiring_strength: float = 1.0
     lanczos_linear_light: bool = True
 
+    # Debanding
+    deband_enabled: bool = False
+    deband_strength: float = 0.3
+
+    # Contrast Adaptive Sharpening
+    cas_enabled: bool = False
+    cas_strength: float = 0.4
+
+    # Bloom
+    bloom_enabled: bool = False
+    bloom_strength: float = 0.0
+    bloom_threshold: float = 0.85
+    bloom_radius: int = 4
+
+    # Vignette
+    vignette_enabled: bool = False
+    vignette_strength: float = 0.0
+    vignette_radius: float = 0.8
+    vignette_falloff: float = 2.0
+
+    # Color Grading (3D LUT)
+    lut_enabled: bool = False
+    lut_intensity: float = 0.0
+    # TODO: LUT file path, for now we use identity LUT built-in
+
+    # Film Grain
+    grain_enabled: bool = False
+    grain_strength: float = 0.0
+    grain_size: float = 1.0
+
     # Vulkan
     vulkan_present_mode: str = VulkanPresentMode.FIFO.value
     vulkan_buffer_pool_size: int = 8

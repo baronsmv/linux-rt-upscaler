@@ -20,7 +20,7 @@ _SHADER_DIR = os.path.dirname(__file__)
 DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "cas.spv")
 
 
-class CASScaler(ShaderPass):
+class CASPass(ShaderPass):
     """
     Contrast Adaptive Sharpening - single-pass screen-space sharpening.
 

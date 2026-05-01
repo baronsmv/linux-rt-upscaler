@@ -58,7 +58,7 @@ class FilmGrainPass(ShaderPass):
         Pack and upload grain parameters.
 
         Args:
-            strength: Grain intensity (0.0 - 0.10).  0 = off.
+            strength: Grain intensity (0.0 - 0.10). 0 = off.
             grain_size: 1.0 (fine) to 2.0+ (coarse).
             frame_index: An increasing frame counter (0, 1, 2, ...).
                 Must be incremented each frame for temporal variation.

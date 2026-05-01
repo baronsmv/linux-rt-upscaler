@@ -287,8 +287,7 @@ class Pipeline:
                 src_tex = self.upscaler_mgr.get_output_texture()
 
         # --- 4. Present ----------------------------------------------------
-        self.presenter.set_source_texture(src_tex)
-        self.presenter.update_lanczos_constants(src_tex.width, src_tex.height)
+        self.presenter.set_upscaled_source(src_tex)
         self.presenter.present()
 
         # --- 5. Update mouse mapping for event forwarding -------------------

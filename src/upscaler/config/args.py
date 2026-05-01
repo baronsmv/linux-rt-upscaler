@@ -301,8 +301,11 @@ saves to "fast/14-30-22.png"
         "--lanczos-blur",
         type=float,
         default=DEFAULT_CONFIG.lanczos_blur,
-        help="""Kernel width for the final resampling step. Lower values
-increase sharpness/ringing; higher values smooth the result.
+        help="""Kernel width for the final resampling step.
+        
+Lower values increase sharpness/ringing; higher values
+smooth the result.
+
 Recommended range: 0.8 - 1.2, default: %(default)s""",
     )
     lanczos_group.add_argument(
@@ -310,9 +313,13 @@ Recommended range: 0.8 - 1.2, default: %(default)s""",
         type=float,
         default=DEFAULT_CONFIG.lanczos_antiring_strength,
         help="""Anti-ringing strength (0 = off, 1 = full hard clamp).
+
 Lower values soften the clamp, preserving more detail at
 the cost of possible ringing.
-Recommended range: 0.7 - 1.0, default: %(default)s""",
+
+Recommended range: 0.7 - 1.0, default: %(default)s
+
+""",
     )
     # Also add a negation flag to allow disabling from shell:
     lanczos_group.add_argument(
@@ -320,8 +327,257 @@ Recommended range: 0.7 - 1.0, default: %(default)s""",
         action="store_false",
         dest="lanczos_linear_light",
         help="""Disable linear-light processing (sRGB-linear-sRGB).
+
 Disabling it may improve text clarity on some content,
 but colors could lose saturation when downscaling.""",
+    )
+
+    # ----------------------------------------------------------------------
+    # Post-processing options
+    # ----------------------------------------------------------------------
+    post_group = parser.add_argument_group("POST-PROCESSING OPTIONS")
+
+    # --- Debanding ---
+    post_group.add_argument(
+        "--enable-deband",
+        action="store_true",
+        default=DEFAULT_CONFIG.deband_enabled,
+        dest="deband_enabled",
+        help="""Apply a stochastic debanding pass before scaling.
+
+Debanding smooths out harsh colour steps (banding) that can
+appear in gradients after AI upscaling, especially in skies,
+fog, or smooth backgrounds.
+
+""",
+    )
+    post_group.add_argument(
+        "--deband-strength",
+        type=float,
+        default=DEFAULT_CONFIG.deband_strength,
+        help="""Debanding intensity (0.0 = off, 1.0 = maximum blur).
+
+Low values (0.1-0.3) are sufficient for most content.
+Higher values risk softening fine details.
+
+Recommended range: 0.1 - 0.5. Default: %(default)s
+
+""",
+    )
+
+    # --- CAS (Contrast Adaptive Sharpening) ---
+    post_group.add_argument(
+        "--enable-cas",
+        action="store_true",
+        default=DEFAULT_CONFIG.cas_enabled,
+        dest="cas_enabled",
+        help="""Enable Contrast Adaptive Sharpening (CAS) after scaling.
+CAS adds a subtle, perceptually-based sharpening that
+enhances text and line art without the halos common in
+traditional unsharp masks.
+
+""",
+    )
+    post_group.add_argument(
+        "--cas-strength",
+        type=float,
+        default=DEFAULT_CONFIG.cas_strength,
+        help="""CAS sharpening amount (0.0 = none, 1.0 = maximum).
+
+0.0 passes through the original image unchanged.
+Values between 0.2 and 0.5 provide a pleasant crispness
+without visible artifacts. Above 0.6, some ringing may
+become noticeable on high-contrast edges.
+
+Recommended range: 0.2 - 0.5. Default: %(default)s
+
+""",
+    )
+
+    # --- Bloom ---
+    post_group.add_argument(
+        "--enable-bloom",
+        action="store_true",
+        default=DEFAULT_CONFIG.bloom_enabled,
+        dest="bloom_enabled",
+        help="""Enable a soft bloom (glow) effect around bright regions.
+
+Bloom creates a cinematic, dreamy look by feeding bright
+pixels through a wide blur and screen-blending the result
+back onto the image. Only pixels above a configurable
+threshold contribute to the glow, preserving shadows and
+midtones.
+
+""",
+    )
+    post_group.add_argument(
+        "--bloom-strength",
+        type=float,
+        default=DEFAULT_CONFIG.bloom_strength,
+        help="""Bloom intensity (0.0 = off, 0.15 = very strong glow).
+
+Subtle values (0.02-0.06) add a gentle, polished look.
+Strength above 0.1 may cause bright UI elements to halo
+noticeably.
+
+Recommended range: 0.02 - 0.08. Default: %(default)s
+
+""",
+    )
+    post_group.add_argument(
+        "--bloom-threshold",
+        type=float,
+        default=DEFAULT_CONFIG.bloom_threshold,
+        help="""Brightness cutoff for bloom (0.0 - 1.0).
+
+Only pixels whose blurred brightness exceeds this value
+will contribute. Lower thresholds (e.g., 0.7) include more
+of the scene; higher thresholds (0.9-0.95) restrict the
+glow to pure highlights like glowing embers or bright sky.
+
+Default: %(default)s
+
+""",
+    )
+    post_group.add_argument(
+        "--bloom-radius",
+        type=int,
+        default=DEFAULT_CONFIG.bloom_radius,
+        help="""Blur radius in pixels for the bloom core.
+
+Larger radii spread the glow further, creating a softer,
+more ethereal look. Smaller radii keep the effect tight.
+
+Recommended range: 2 - 8. Default: %(default)s
+
+""",
+    )
+
+    # --- Vignette ---
+    post_group.add_argument(
+        "--enable-vignette",
+        action="store_true",
+        default=DEFAULT_CONFIG.vignette_enabled,
+        dest="vignette_enabled",
+        help="""Enable a radial vignette that darkens screen edges.
+
+A vignette naturally draws attention to the centre of the
+screen and can simulate the look of a camera lens.
+
+""",
+    )
+    post_group.add_argument(
+        "--vignette-strength",
+        type=float,
+        default=DEFAULT_CONFIG.vignette_strength,
+        help="""Intensity of edge darkening (0.0 = off, 1.0 = black corners).
+
+Moderate values (0.3-0.6) give a subtle framing effect
+without overwhelming the image.
+
+Recommended range: 0.3 - 0.6. Default: %(default)s
+
+""",
+    )
+    post_group.add_argument(
+        "--vignette-radius",
+        type=float,
+        default=DEFAULT_CONFIG.vignette_radius,
+        help="""Distance from centre where darkening begins.
+
+0.0 starts immediately, affecting most of the screen.
+Values around 0.7-0.8 keep the centre bright and only
+darken the far edges. At 1.0+ the vignette is confined
+to extreme corners.
+
+Default: %(default)s
+
+""",
+    )
+    post_group.add_argument(
+        "--vignette-falloff",
+        type=float,
+        default=DEFAULT_CONFIG.vignette_falloff,
+        help="""Softness of the vignette transition.
+
+Low values (1.0) create a gentle, wide-rolloff effect.
+Higher values (3.0-4.0) produce a sharp, distinct ring.
+
+Recommended range: 1.0 - 4.0. Default: %(default)s
+
+""",
+    )
+
+    # --- Film Grain ---
+    post_group.add_argument(
+        "--enable-grain",
+        action="store_true",
+        default=DEFAULT_CONFIG.grain_enabled,
+        dest="grain_enabled",
+        help="""Enable simulated film grain (temporal noise) on the final image.
+
+Grain adds a subtle organic texture that can make digital
+art feel more like a high-quality scan or print. The noise
+varies every frame (using a frame counter) so it does not
+feel like a static overlay.
+
+""",
+    )
+    post_group.add_argument(
+        "--grain-strength",
+        type=float,
+        default=DEFAULT_CONFIG.grain_strength,
+        help="""Grain intensity (0.0 = off, 0.10 = very noisy).
+
+Extremely low values (0.005-0.02) mimic fine photochemical
+grain; 0.03-0.05 give a more noticeable vintage film look.
+
+For visual-novel art, a very light touch is recommended
+to avoid obscuring text.
+
+Recommended range: 0.005 - 0.03. Default: %(default)s
+
+""",
+    )
+    post_group.add_argument(
+        "--grain-size",
+        type=float,
+        default=DEFAULT_CONFIG.grain_size,
+        help="""Apparent particle size of the grain (1.0 = fine, 2.0+ = coarse).
+
+Larger values produce more visible, clumpier grain typical
+of older film stocks.
+
+Default: %(default)s""",
+    )
+
+    # --- Colour Grading (3D LUT) ---
+    post_group.add_argument(
+        "--enable-lut",
+        action="store_true",
+        default=DEFAULT_CONFIG.lut_enabled,
+        dest="lut_enabled",
+        help="""Apply a cinematic 3D colour-lookup table (LUT) at the end of
+the pipeline.
+
+A LUT remaps all colours through a pre-computed table,
+enabling instant film-stock emulation, colour-grading
+presets, or any global colour transform without touching
+texture detail.
+
+""",
+    )
+    post_group.add_argument(
+        "--lut-intensity",
+        type=float,
+        default=DEFAULT_CONFIG.lut_intensity,
+        help="""Blend between original and graded image.
+
+0.0 = original image (no effect).
+1.0 = full colour transform applied.
+
+Default: %(default)s
+""",
     )
 
     # ----------------------------------------------------------------------

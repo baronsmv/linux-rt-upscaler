@@ -1,8 +1,16 @@
 import logging
-from typing import List, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from ..config import Config
-from ..shaders import LanczosScaler
+from ..shaders import (
+    LanczosScaler,
+    CASPass,
+    BloomPass,
+    VignettePass,
+    FilmGrainPass,
+    LUTPass,
+    DebandPass,
+)
 from ..utils import calculate_scaling_rect
 from ..vulkan import Texture2D
 
@@ -14,27 +22,24 @@ logger = logging.getLogger(__name__)
 
 class Presenter:
     """
-    Handles final scaling (Lanczos), OSD overlay, and swapchain presentation.
+    Manages the screen texture and all post-processing passes.
 
-    The presenter maintains a screen-sized texture that serves as the render
-    target. It uses a LanczosScaler to scale the upscaled source into the
-    appropriate destination rectangle, then optionally blends an OSD message
-    on top.
+    The processing chain (executed in :meth:`present`):
+        1. Optional debanding (uses a temporary texture).
+        2. Lanczos scaling.
+        3. Optional contrast adaptive sharpening (CAS).
+        4. Optional bloom.
+        5. Optional vignette.
+        6. Optional color grading (3D LUT).
+        7. Optional film grain.
+        8. OSD blending.
+        9. Swapchain presentation.
 
-    Attributes:
-        screen_width (int): Physical overlay width in pixels.
-        screen_height (int): Physical overlay height in pixels.
-        content_width (int): Logical content width (before scaling).
-        content_height (int): Logical content height (before scaling).
-        scale_mode (str): Scaling mode ("fit", "fill", "stretch").
-        background_color (BackgroundColor): RGBA clear color for unused areas.
-        offset_x (int): Horizontal offset for the content rectangle.
-        offset_y (int): Vertical offset for the content rectangle.
-        osd (OSDManager): OSD manager for status messages.
-        swapchain (SwapchainManager): Presentation swapchain.
-        screen_tex (Texture2D): Render target texture.
-        lanczos (LanczosScaler): Lanczos2 scaling pipeline.
-        groups_x, groups_y (int): Dispatch groups for Lanczos.
+    All passes that operate on the final screen image (CAS through grain) work
+    in-place on `self.screen_tex`. Debanding uses a dedicated intermediate
+    texture because read-after-write would be unsafe.
+
+    Effect parameters are taken directly from the :class:`Config` instance.
     """
 
     def __init__(
@@ -48,18 +53,7 @@ class Presenter:
         osd_manager: "OSDManager",
         swapchain_manager,
     ) -> None:
-        """
-        Initialize the presenter.
-
-        Args:
-            screen_width, screen_height: Overlay window dimensions.
-            content_width, content_height: Logical content dimensions.
-            scale_mode: One of "fit", "fill", "stretch".
-            background_color: RGBA tuple for background areas.
-            offset_x, offset_y: Additional offset for the content rectangle.
-            osd_manager: OSD manager instance.
-            swapchain_manager: Swapchain manager for presentation.
-        """
+        # --- dimensions & layout ------------------------------------------------
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.content_width = content_width
@@ -68,108 +62,133 @@ class Presenter:
         self.background_color = config.background_color
         self.offset_x = config.offset_x
         self.offset_y = config.offset_y
-        self.lanczos_blur = config.lanczos_blur
-        self.lanczos_antiring_strength = config.lanczos_antiring_strength
-        self.lanczos_linear_light = config.lanczos_linear_light
+
+        # --- Saved objects ----------------------------------------------------
+        self.config = config
+        print(config)
         self.osd = osd_manager
         self.swapchain = swapchain_manager
 
-        # Screen texture (render target)
+        # --- Screen texture (rendered by Lanczos and all post-FX) ---------------
         self.screen_tex = Texture2D(screen_width, screen_height)
 
-        # Lanczos scaler
+        # --- Lanczos scaler -----------------------------------------------------
         self.lanczos = LanczosScaler()
         self.lanczos.set_target_texture(self.screen_tex)
 
-        # Dispatch groups for Lanczos (16x16 threads per group)
-        self.groups_x = (screen_width + 15) // 16
-        self.groups_y = (screen_height + 15) // 16
+        # --- Post-processing passes (only created if config enables them) ------
+        # Debanding (needs separate textures)
+        self._deband: Optional[DebandPass] = None
+        self._deband_tex: Optional[Texture2D] = None  # temp debanded output
+        if config.deband_enabled:
+            self._deband = DebandPass()
+            logger.debug("Deband pass created")
 
-    # ----------------------------------------------------------------------
-    # Public API
-    # ----------------------------------------------------------------------
+        # CAS (in-place)
+        self._cas: Optional[CASPass] = None
+        if config.cas_enabled:
+            self._cas = CASPass()
+            self._cas.set_target_texture(self.screen_tex)
+            logger.debug("CAS pass created")
 
-    def set_source_texture(self, texture: Texture2D) -> None:
+        # Bloom (in-place)
+        self._bloom: Optional[BloomPass] = None
+        if config.bloom_enabled:
+            self._bloom = BloomPass()
+            self._bloom.set_target_texture(self.screen_tex)
+            logger.debug("Bloom pass created")
+
+        # Vignette (in-place)
+        self._vignette: Optional[VignettePass] = None
+        if config.vignette_enabled:
+            self._vignette = VignettePass()
+            self._vignette.set_target_texture(self.screen_tex)
+            logger.debug("Vignette pass created")
+
+        # LUT (in-place)
+        self._lut: Optional[LUTPass] = None
+        if config.lut_enabled:
+            self._lut = LUTPass()
+            self._lut.set_target_texture(self.screen_tex)
+            logger.debug("LUT pass created")
+
+        # Film grain (in-place)
+        self._grain: Optional[FilmGrainPass] = None
+        if config.grain_enabled:
+            self._grain = FilmGrainPass()
+            self._grain.set_target_texture(self.screen_tex)
+            logger.debug("Film grain pass created")
+
+        # Frame counter - incremented each frame for temporal effects
+        self._frame_counter: int = 0
+
+    # ------------------------------------------------------------------
+    #  Public API - called from Pipeline
+    # ------------------------------------------------------------------
+
+    def set_upscaled_source(self, texture: Texture2D) -> None:
         """
-        Set the upscaled source texture for Lanczos scaling.
+        Store the raw upscaled texture (before any post-processing).
 
-        Args:
-            texture: The fully upscaled texture (output of UpscalerManager).
+        This texture will be used as the starting point in the next
+        :meth:`present` call; it may be optionally debanded before
+        scaling.
         """
-        self.lanczos.set_source_texture(texture)
-
-    def update_lanczos_constants(self, src_width: int, src_height: int) -> None:
-        """
-        Calculate destination rectangle and update Lanczos constants.
-
-        This must be called whenever the source texture dimensions change
-        (e.g., after crop resize or model switch).
-
-        Args:
-            src_width: Width of the source texture.
-            src_height: Height of the source texture.
-        """
-        # Calculate the rectangle within content area where the scaled image will go
-        r_x, r_y, r_w, r_h = calculate_scaling_rect(
-            src_width,
-            src_height,
-            self.content_width,
-            self.content_height,
-            self.scale_mode,
-        )
-
-        # Center the content area on screen
-        canvas_x = (self.screen_width - self.content_width) // 2
-        canvas_y = (self.screen_height - self.content_height) // 2
-        dst_x = canvas_x + r_x + self.offset_x
-        dst_y = canvas_y + r_y + self.offset_y
-
-        if r_w <= 0 or r_h <= 0:
-            logger.warning(f"Invalid Lanczos rect: {r_w}x{r_h}, skipping update")
-            return
-
-        self.lanczos.update_constants(
-            self.background_color,
-            src_width,
-            src_height,
-            self.screen_width,
-            self.screen_height,
-            dst_x,
-            dst_y,
-            r_w,
-            r_h,
-            blur=self.lanczos_blur,
-            antiring_strength=self.lanczos_antiring_strength,
-            linear_light=self.lanczos_linear_light,
-        )
+        self._raw_upscaled_tex = texture
 
     def present(self, wait_for_fence: bool = False) -> None:
         """
-        Execute Lanczos scaling, blend OSD, and present to swapchain.
+        Run the entire post-processing chain and present to the swapchain.
 
-        Args:
-            wait_for_fence: If True, block until presentation completes.
+        Steps:
+          1. Deband (if enabled) -> writes to `_deband_tex`.
+          2. Lanczos scaling.
+          3. CAS -> bloom -> vignette -> LUT -> grain (each only if enabled).
+          4. OSD overlay blend.
+          5. Swapchain present.
+          6. Increment frame counter.
         """
-        # 1. Dispatch Lanczos
+        src = self._raw_upscaled_tex
+        if src is None:
+            logger.warning("No source texture set - skipping present.")
+            return
+
+        # ---- 1. Debanding (optional) -----------------------------------------
+        src = self._apply_deband_if_enabled(src)
+
+        # ---- 2. Lanczos scaling ---------------------------------------------
+        self.lanczos.set_source_texture(src)
+        self._update_lanczos_constants(src.width, src.height)
         self.lanczos.dispatch_auto()
 
-        # 2. Blend OSD (if active) - modifies self.screen_tex in place
+        # ---- 3. CAS ----------------------------------------------------------
+        self._apply_cas_if_enabled()
+
+        # ---- 4. Bloom --------------------------------------------------------
+        self._apply_bloom_if_enabled()
+
+        # ---- 5. Vignette -----------------------------------------------------
+        self._apply_vignette_if_enabled()
+
+        # ---- 6. LUT ----------------------------------------------------------
+        self._apply_lut_if_enabled()
+
+        # ---- 7. Film grain ---------------------------------------------------
+        self._apply_grain_if_enabled()
+
+        # ---- 8. OSD blend (always) -------------------------------------------
         self.osd.blend_active(self.screen_tex)
 
-        # 3. Present to swapchain
+        # ---- 9. Swapchain present --------------------------------------------
         self.swapchain.present(self.screen_tex, wait_for_fence=wait_for_fence)
+
+        # ---- 10. Advance frame counter ---------------------------------------
+        self._frame_counter += 1
 
     def get_scaling_rect(self, scale_factor: float) -> List[float]:
         """
-        Return the rectangle (in overlay coordinates) where content is drawn.
-
-        Used by the overlay window to map mouse events.
-
-        Args:
-            scale_factor: Scale factor from logical to physical pixels.
-
-        Returns:
-            List [x, y, width, height] in overlay widget coordinates.
+        Return the rectangle (in overlay widget coordinates) where content is
+        drawn. Used by the overlay window for mouse-event mapping.
         """
         src_tex = self.lanczos.source_texture
         if src_tex is None:
@@ -198,17 +217,114 @@ class Presenter:
     def resize(self, new_width: int, new_height: int) -> None:
         """
         Handle overlay window resize.
-
-        Args:
-            new_width: New overlay width in pixels.
-            new_height: New overlay height in pixels.
+        Re-creates the screen texture and rebinds it to every in-place pass.
         """
         self.screen_width = new_width
         self.screen_height = new_height
         self.screen_tex = Texture2D(new_width, new_height)
-        self.lanczos.set_target_texture(self.screen_tex)
-        self.groups_x = (new_width + 15) // 16
-        self.groups_y = (new_height + 15) // 16
 
-        # Clear OSD compute cache since screen texture changed
+        # Rebind screen texture to all passes
+        self.lanczos.set_target_texture(self.screen_tex)
+        for pass_ in (self._cas, self._bloom, self._vignette, self._lut, self._grain):
+            if pass_ is not None:
+                pass_.set_target_texture(self.screen_tex)
+
         self.osd.clear_compute_cache()
+
+    # ------------------------------------------------------------------
+    #  Internal helpers - one per effect, to keep `present()` clean
+    # ------------------------------------------------------------------
+
+    def _apply_deband_if_enabled(self, src: Texture2D) -> Texture2D:
+        """Run the debanding pass if enabled; return the (possibly debanded) texture."""
+        if self._deband is None or not self.config.deband_enabled:
+            return src
+
+        # Ensure we have a compatible target texture
+        if (
+            self._deband_tex is None
+            or self._deband_tex.width != src.width
+            or self._deband_tex.height != src.height
+        ):
+            self._deband_tex = Texture2D(src.width, src.height)
+
+        # Set source first, then target (order doesn't matter with the guard)
+        self._deband.set_source_texture(src)
+        self._deband.set_target_texture(self._deband_tex)
+
+        self._deband.update_constants(
+            strength=self.config.deband_strength,
+            frame_index=self._frame_counter,  # temporal dither
+        )
+        self._deband.dispatch_auto()
+        return self._deband_tex
+
+    def _apply_cas_if_enabled(self) -> None:
+        if self._cas is not None and self.config.cas_enabled:
+            self._cas.update_constants(strength=self.config.cas_strength)
+            self._cas.dispatch_auto()
+
+    def _apply_bloom_if_enabled(self) -> None:
+        if self._bloom is not None and self.config.bloom_enabled:
+            self._bloom.update_constants(
+                strength=self.config.bloom_strength,
+                threshold=self.config.bloom_threshold,
+                radius=self.config.bloom_radius,
+            )
+            self._bloom.dispatch_auto()
+
+    def _apply_vignette_if_enabled(self) -> None:
+        if self._vignette is not None and self.config.vignette_enabled:
+            self._vignette.update_constants(
+                strength=self.config.vignette_strength,
+                radius=self.config.vignette_radius,
+                falloff=self.config.vignette_falloff,
+            )
+            self._vignette.dispatch_auto()
+
+    def _apply_lut_if_enabled(self) -> None:
+        if self._lut is not None and self.config.lut_enabled:
+            self._lut.update_constants(intensity=self.config.lut_intensity)
+            self._lut.dispatch_auto()
+
+    def _apply_grain_if_enabled(self) -> None:
+        if self._grain is not None and self.config.grain_enabled:
+            self._grain.update_constants(
+                strength=self.config.grain_strength,
+                grain_size=self.config.grain_size,
+                frame_index=self._frame_counter,
+            )
+            self._grain.dispatch_auto()
+
+    def _update_lanczos_constants(self, src_width: int, src_height: int) -> None:
+        """Compute destination rectangle and upload Lanczos constants."""
+        r_x, r_y, r_w, r_h = calculate_scaling_rect(
+            src_width,
+            src_height,
+            self.content_width,
+            self.content_height,
+            self.scale_mode,
+        )
+        canvas_x = (self.screen_width - self.content_width) // 2
+        canvas_y = (self.screen_height - self.content_height) // 2
+        dst_x = canvas_x + r_x + self.offset_x
+        dst_y = canvas_y + r_y + self.offset_y
+
+        if r_w <= 0 or r_h <= 0:
+            logger.warning(f"Invalid Lanczos rect: {r_w}x{r_h}, skipping update")
+            return
+
+        self.lanczos.update_constants(
+            self.background_color,
+            src_width,
+            src_height,
+            self.screen_width,
+            self.screen_height,
+            dst_x,
+            dst_y,
+            r_w,
+            r_h,
+            blur=self.config.lanczos_blur,
+            antiring_strength=self.config.lanczos_antiring_strength,
+            linear_light=self.config.lanczos_linear_light,
+        )

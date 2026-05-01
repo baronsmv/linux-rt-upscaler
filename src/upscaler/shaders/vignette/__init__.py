@@ -25,7 +25,7 @@ class VignettePass(ShaderPass):
     """
     Radial vignette - soft darkening at screen edges.
 
-    Works in-place on the screen texture.  Zero-cost when `strength` is 0.0.
+    Works in-place on the screen texture. Zero-cost when `strength` is 0.0.
 
     Tuning:
         strength = 0.0 (off)   to   1.0 (fully black corners)
@@ -57,7 +57,7 @@ class VignettePass(ShaderPass):
         Pack and upload vignette parameters.
 
         Args:
-            strength: 0.0 (off) to 1.0 (fully black).  Default 0.0.
+            strength: 0.0 (off) to 1.0 (fully black). Default 0.0.
             radius: 0.0 to 1.5. 0.0 = centre, 0.8 = moderate crop.
             falloff: 1.0 (gentle) to 4.0 (sharp).
         """
