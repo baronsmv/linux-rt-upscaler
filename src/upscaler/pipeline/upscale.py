@@ -143,7 +143,7 @@ class UpscalerManager:
         Build the compute pipelines for the full-frame path.
 
         The model is always a standard depth-to-space upscaler. For
-        ``scale >= 4`` and when ``config.double_upscale`` is enabled,
+        `scale >= 4` and when `config.double_upscale` is enabled,
         two chained 2x SRCNN stages are created; otherwise a single
         stage handles the entire upscale.
         """
@@ -252,8 +252,8 @@ class UpscalerManager:
 
     def _rebind_full_frame_output(self) -> None:
         """
-        Re-route the last full-frame stage’s ``"output"`` UAV to
-        ``self.output``.
+        Re-route the last full-frame stage’s `"output"` UAV to
+        `self.output`.
 
         This is necessary when tile mode owns the final output texture
         and the full-frame fallback (or the seeding first frame) must
@@ -291,7 +291,7 @@ class UpscalerManager:
         margin: int,
     ) -> None:
         """
-        Upload the current frame (or damage regions) to ``self.input``.
+        Upload the current frame (or damage regions) to `self.input`.
 
         When damage-tracking is enabled and the total expanded damage area
         is small, only the affected sub-rectangles are uploaded. Otherwise
@@ -352,12 +352,12 @@ class UpscalerManager:
 
     def _should_fallback(self, rects: List[Tuple[int, int, int, int, int]]) -> bool:
         """
-        Return ``True`` if tile processing should be skipped in
+        Return `True` if tile processing should be skipped in
         favour of a full-frame pass.
 
         The decision is based on two criteria:
-        * The number of dirty tile cells exceeds ``max_tile_layers``.
-        * The total expanded pixel area exceeds ``area_threshold`` of
+        * The number of dirty tile cells exceeds `max_tile_layers`.
+        * The total expanded pixel area exceeds `area_threshold` of
           the crop area.
         """
         if self._count_dirty_tile_cells(rects) >= self.config.max_tile_layers:
@@ -374,7 +374,7 @@ class UpscalerManager:
         return total_area > threshold
 
     def should_use_tile_mode(self, rects: List[Tuple[int, int, int, int, int]]) -> bool:
-        """Return ``True`` if tile mode should be attempted for this frame."""
+        """Return `True` if tile mode should be attempted for this frame."""
         return bool(rects) and not self._should_fallback(rects)
 
     # ==================================================================

@@ -36,10 +36,10 @@ def load_model(
     Parameters
     ----------
     model_name : str
-        Path relative to the ``srcnn/`` directory, e.g. ``"fast"`` or
-        ``"anime4k/upscale/x2"``.
+        Path relative to the `srcnn/` directory, e.g. `"fast"` or
+        `"anime4k/upscale/x2"`.
     variant : str
-        Shader variant suffix: ``""`` for full-frame, ``"_tile"`` for tile mode.
+        Shader variant suffix: `""` for full-frame, `"_tile"` for tile mode.
     push_constant_size : int
         Size of the push-constant block used by tile-mode shaders.
 
@@ -54,7 +54,7 @@ def load_model(
     FileNotFoundError
         If the model directory or required SPIR-V files are missing.
     ValueError
-        If ``model.json`` is malformed.
+        If `model.json` is malformed.
     json.JSONDecodeError
         If the JSON is invalid.
     """

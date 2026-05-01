@@ -76,7 +76,7 @@ def extract_expanded_tiles(
 
     When `skip_interior` is True and a tile lies entirely inside the crop
     (no clamping required), no CPU extraction is performed and the tile’s
-    pixel data is returned as ``None``. In that case the caller must
+    pixel data is returned as `None`. In that case the caller must
     supply the tile data by another means (e.g. a GPU copy).
 
     Args:
@@ -87,12 +87,12 @@ def extract_expanded_tiles(
         tile_size: Nominal interior size of a tile in pixels.
         margin: Context margin to add on all sides.
         skip_interior: If True, interior tiles are not extracted - their
-            returned pixel data will be ``None``.
+            returned pixel data will be `None`.
 
     Returns:
         List of (tx, ty, data, valid_x, valid_y) tuples.
         - tx, ty: Tile grid indices (0-based).
-        - data: Raw BGRA bytes of the expanded tile, or ``None`` if
+        - data: Raw BGRA bytes of the expanded tile, or `None` if
                 `skip_interior` was True and the tile is interior.
         - valid_x, valid_y: Offset within the expanded buffer where the
           interior `tile_size x tile_size` region begins. Equals `margin`
