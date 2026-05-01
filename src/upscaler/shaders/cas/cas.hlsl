@@ -73,7 +73,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
 
     // ---- 1. Sample 5-tap neighbourhood (centre + N/S/E/W) --------------------
     //  Using only the axial neighbours keeps the kernel compact while preserving
-    //  edge features.  The local contrast is measured in these 5 values.
+    //  edge features. The local contrast is measured in these 5 values.
     float3 c  = LoadPixel(int2(pos.x,     pos.y));     // centre
     float3 n  = LoadPixel(int2(pos.x,     pos.y - 1)); // north
     float3 s  = LoadPixel(int2(pos.x,     pos.y + 1)); // south
@@ -82,7 +82,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
 
     // ---- 2. Convert to approximate linear light -------------------------------
     //  Sharpening in linear space yields a more natural, perceptually uniform
-    //  result.  We use a simple squaring from sRGB - accurate enough for this
+    //  result. We use a simple squaring from sRGB - accurate enough for this
     //  post-effect and zero extra texture reads.
     c *= c;
     n *= n;
@@ -91,7 +91,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     w *= w;
 
     // ---- 3. Local min / max for anti-ringing ---------------------------------
-    //  Compute the min and max of the 5 taps.  The final sharpened value will
+    //  Compute the min and max of the 5 taps. The final sharpened value will
     //  be clamped to this range, guaranteeing no overshoot beyond the local
     //  luminance extremes.
     float3 minRGB = min(c, min(min(n, s), min(e, w)));
@@ -116,8 +116,8 @@ void main(uint3 dtid : SV_DispatchThreadID)
 
     // ---- 4a. Map user `sharpeningStrength` to peak sharpening offset ----------
     //  The peak value controls how much the centre pixel deviates from the
-    //  neighbourhood average.  AMD’s range is roughly -0.125 (mild) to -0.25
-    //  (strong).  We interpolate between 1/8 and 1/5 based on the strength
+    //  neighbourhood average. AMD’s range is roughly -0.125 (mild) to -0.25
+    //  (strong). We interpolate between 1/8 and 1/5 based on the strength
     //  slider.
     //
     //    peak = -1.0 / lerp(8.0, 5.0, sharpeningStrength)

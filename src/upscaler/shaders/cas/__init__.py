@@ -24,7 +24,7 @@ class CASScaler(ShaderPass):
     """
     Contrast Adaptive Sharpening - single-pass screen-space sharpening.
 
-    Operates directly on the screen texture (read and write).  The
+    Operates directly on the screen texture (read and write). The
     sharpening strength is adjustable via `update_constants(strength)`.
 
     Thread-group size: 16x16.

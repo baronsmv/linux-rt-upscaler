@@ -8,30 +8,29 @@ logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constant buffer layout - must match HLSL `cbuffer Constants`
-#   float grainStrength;    // 0.0 - 0.10
+#   float vignetteStrength;   // 0.0 - 1.0
 #   uint  dstWidth;
 #   uint  dstHeight;
-#   uint  frameIndex;
-#   float grainSize;        // 1.0 = fine, >1.0 = coarser
+#   float vignetteRadius;     // where darkening starts (0.0 - 1.5)
+#   float vignetteFalloff;    // edge softness (1.0 - 4.0)
 # ---------------------------------------------------------------------------
-CB_FORMAT = "fIII f"  # note: float after uint preserves alignment
+CB_FORMAT = "fII f f"
 CB_SIZE = struct.calcsize(CB_FORMAT)
 
 _SHADER_DIR = os.path.dirname(__file__)
-DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "grain.spv")
+DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "vignette.spv")
 
 
-class FilmGrainPass(ShaderPass):
+class VignettePass(ShaderPass):
     """
-    Film-like aesthetic grain overlay.
+    Radial vignette - soft darkening at screen edges.
 
-    Applies a temporally varying, luminance-masked, soft-light blended
-    grain texture to the final image. Operates in-place on the screen
-    texture.
+    Works in-place on the screen texture.  Zero-cost when `strength` is 0.0.
 
     Tuning:
-        strength  = 0.0  (off)   to  0.10 (gritty)     [default 0.0]
-        grainSize = 1.0  (fine)  to  2.0+  (coarse)    [default 1.0]
+        strength = 0.0 (off)   to   1.0 (fully black corners)
+        radius   = 0.0 - 1.5   (default 0.8 - keeps centre bright)
+        falloff  = 1.0 - 4.0   (default 2.0 - higher = sharper transition)
     """
 
     def __init__(self, shader_path: str = DEFAULT_SHADER_PATH) -> None:
@@ -45,28 +44,28 @@ class FilmGrainPass(ShaderPass):
         super()._create_persistent_resources()
 
     def _get_bindings(self):
-        # Read and write the same texture (in-place)
+        # In-place: read and write the same texture
         return [self.target_texture], [self.target_texture], []
 
     def update_constants(
         self,
         strength: float = 0.0,
-        grain_size: float = 1.0,
-        frame_index: int = 0,
+        radius: float = 0.8,
+        falloff: float = 2.0,
     ) -> None:
         """
-        Pack and upload grain parameters.
+        Pack and upload vignette parameters.
 
         Args:
-            strength: Grain intensity (0.0 - 0.10).  0 = off.
-            grain_size: 1.0 (fine) to 2.0+ (coarse).
-            frame_index: An increasing frame counter (0, 1, 2, ...).
-                Must be incremented each frame for temporal variation.
+            strength: 0.0 (off) to 1.0 (fully black).  Default 0.0.
+            radius: 0.0 to 1.5. 0.0 = centre, 0.8 = moderate crop.
+            falloff: 1.0 (gentle) to 4.0 (sharp).
         """
         strength = max(0.0, min(strength, 1.0))
-        grain_size = max(1.0, grain_size)
+        radius = max(0.0, min(radius, 2.0))
+        falloff = max(0.1, min(falloff, 10.0))
         w = self.target_texture.width if self.target_texture else 0
         h = self.target_texture.height if self.target_texture else 0
 
-        data = struct.pack(CB_FORMAT, strength, w, h, frame_index, grain_size)
+        data = struct.pack(CB_FORMAT, strength, w, h, radius, falloff)
         self._cb.upload(data)

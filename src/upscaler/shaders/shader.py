@@ -57,7 +57,7 @@ class ShaderPass(ABC):
         Pack pass-specific parameters into the constant buffer and upload.
 
         Implementations must call `self._cb.upload(data)` with the packed
-        bytes.  The method signature is free-form; subclasses should
+        bytes. The method signature is free-form; subclasses should
         document each keyword argument.
 
         Raises:
@@ -83,7 +83,7 @@ class ShaderPass(ABC):
         Create Vulkan resources that survive texture changes.
 
         The default implementation creates a constant buffer of the
-        size returned by :meth:`_cb_size`.  Subclasses that need a
+        size returned by :meth:`_cb_size`. Subclasses that need a
         sampler should call `super()._create_persistent_resources()`
         and then create their sampler(s).
         """
@@ -91,7 +91,7 @@ class ShaderPass(ABC):
 
     def set_source_texture(self, tex: Texture2D) -> None:
         """
-        Set a separate **source** texture (SRV).  Not all passes
+        Set a separate **source** texture (SRV). Not all passes
         need a distinct source; those that do should override this
         method to store the texture and rebuild the pipeline.
 
@@ -141,7 +141,7 @@ class ShaderPass(ABC):
 
     def set_target_texture(self, tex: Texture2D) -> None:
         """
-        Bind the output texture (UAV).  Rebuilds the compute pipeline
+        Bind the output texture (UAV). Rebuilds the compute pipeline
         if the texture object changes.
 
         Args:

@@ -21,7 +21,7 @@
 //      for perceptually uniform smoothing.
 //    - Dynamic 4-tap sampling - breaks band structures statistically.
 //    - Edge-preserving threshold - line art and text remain sharp.
-//    - Grain / dither injection - eliminates “shimmer” or static patterns
+//    - Grain / dither injection - eliminates "shimmer" or static patterns
 //      when strength is high.
 //    - Frame-index parameter - to avoid static noise, pass an increasing
 //      integer each frame (e.g., frame count).
@@ -118,8 +118,8 @@ void main(uint3 dtid : SV_DispatchThreadID)
     float3 tap4 = LoadPixelLinear(pos - int2(float2(-dir.y, dir.x) * dist));
 
     // ---- 6. Edge-aware blend weights -----------------------------------------
-    //  The threshold separates “banding” (small difference) from “real edge”
-    //  (large difference).  The formula is scaled by strength, with a
+    //  The threshold separates "banding" (small difference) from "real edge"
+    //  (large difference). The formula is scaled by strength, with a
     //  minimum safety margin of 2/255 (≈0.0078 in linear).
     float3 diff1 = abs(center - tap1);
     float3 diff2 = abs(center - tap2);

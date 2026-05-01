@@ -32,7 +32,7 @@ class DebandPass(ShaderPass):
     output pipeline from re-banding.
 
     Requires separate source and target textures (cannot safely operate
-    in-place).  The `frame_index` parameter should be incremented
+    in-place). The `frame_index` parameter should be incremented
     each frame to avoid static noise patterns.
 
     Strength:
@@ -88,8 +88,8 @@ class DebandPass(ShaderPass):
         Pack and upload debanding parameters.
 
         Args:
-            strength: 0.0 (off) to 1.0 (maximum).  Default 0.3.
-            frame_index: An increasing frame counter (0, 1, 2, …).
+            strength: 0.0 (off) to 1.0 (maximum). Default 0.3.
+            frame_index: An increasing frame counter (0, 1, 2, ...).
                 Provides unique dither per frame; the caller must
                 increment it on each call.
         """
