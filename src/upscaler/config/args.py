@@ -320,7 +320,8 @@ Recommended range: 0.7 - 1.0, default: %(default)s""",
         action="store_false",
         dest="lanczos_linear_light",
         help="""Disable linear-light processing (sRGB-linear-sRGB).
-Disabling it may improve text clarity on some content.""",
+Disabling it may improve text clarity on some content,
+but colors could lose saturation when downscaling.""",
     )
 
     # ----------------------------------------------------------------------

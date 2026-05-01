@@ -8,91 +8,90 @@ from ...vulkan import Buffer, Compute, Sampler, Texture2D, SAMPLER_FILTER_POINT
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Constant buffer layout for the Lanczos compute shader.
+# Constant buffer layout for the adaptive Lanczos compute shader.
 #
-# The buffer contains the following fields, in order:
+# The buffer must exactly match the `cbuffer Constants` declaration in the
+# HLSL shader.  It contains (in order):
 #   - 4 floats: background colour (RGBA)
 #   - 4 uint32: srcWidth, srcHeight, dstTotalWidth, dstTotalHeight
 #   - 4 int32:  dstX, dstY, dstW, dstH
-#   - 1 float:  blur (kernel width, 1.0 = standard Lanczos2)
+#   - 1 float:  blur (kernel softness, 1.0 = standard Lanczos2)
 #   - 1 float:  antiringStrength (0 = off, 1 = full hard clamp)
 #   - 1 uint32: linearLight (1 = true, 0 = false)
 #
-# This layout must exactly match the `cbuffer Constants` declaration in
-# the HLSL shader (`lanczos2.hlsl`). Any mismatch will cause undefined
-# behaviour or visual corruption.
+# Any mismatch will cause undefined behaviour or visual corruption.
 # ---------------------------------------------------------------------------
 CB_FORMAT = "ffffIIIIiiiiffI"
 CB_SIZE = struct.calcsize(CB_FORMAT)
 
 # Default location of the compiled SPIR-V shader binary.
-DEFAULT_SHADER_PATH = os.path.join(os.path.dirname(__file__), "lanczos2.spv")
+_SHADER_DIR = os.path.dirname(__file__)
+DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "lanczos2.spv")
 
 
 class LanczosScaler:
     """
-    Lanczos2 scaling via an optimized compute shader.
+    Adaptive Lanczos resampler - single-pass, high-quality 2D convolution.
 
-    Translates an upscaled source texture onto a screen-sized destination
-    texture with a high-quality Lanczos2 filter. The destination rectangle
-    can be arbitrarily placed and sized within the output, allowing
-    “fit” / “fill” / “stretch” layout modes. Areas outside the destination
-    are filled with a solid background color.
+    Maps an upscaled source texture onto a screen-sized destination texture
+    using a window-sinc (Lanczos) filter.  The filter radius automatically
+    adapts to the scaling factor:
 
-    The shader used by this class is an improved version of the original
-    Magpie Lanczos2 effect. It includes:
+    * **Upscaling** (scale ≥ 1.0) - radius 2, sharp Lanczos2.
+    * **Downscaling** (scale < 1.0) - radius = ceil(2.0 / min(scale)),
+      capped at 6, providing proper anti-aliasing.
 
-    * **Thread-group shared memory** - drastically reduces texture
-      bandwidth by loading each source texel only once per workgroup.
-    * **Adaptive kernel** - automatically switches to Catmull-Rom when
-      the scale factor is below 1.6x, reducing overshoot for near-1:1
-      scaling.
-    * **Soft anti-ringing** - controlled via `antiring_strength` (0 = no
-      clamp, 1 = hard clamp like the original).
-    * **Linear-light toggle** - the sRGB-linear-sRGB processing can be
-      disabled via `linear_light = False`, which can improve the look of
-      UI text.
+    Quality controls are exposed via constant buffer parameters:
+
+    * ``blur`` - kernel softness (1.0 = standard).
+    * ``antiringStrength`` - soft clamping (0 = off, 1 = full hard clamp).
+    * ``linearLight`` - enable linear-light resampling (sRGB -> linear -> sRGB).
 
     **Lifecycle**::
-        1. Create a `LanczosScaler` instance.
-        2. Call `set_source_texture` / `set_target_texture` (or `resize_target`).
-        3. Every frame, call `update_constants` to set the destination
+
+        1. Create a ``LanczosScaler`` instance.
+        2. Set source and target textures via ``set_source_texture`` /
+           ``set_target_texture`` (or ``resize_target``).
+        3. Every frame, call ``update_constants`` with the destination
            rectangle and quality parameters.
-        4. Dispatch the compute pipeline via `self.compute.dispatch(x, y, z)`.
+        4. Call ``dispatch_auto()`` (or ``dispatch(gx, gy)``).
+
+    .. note::
+
+        The shader uses a 16x16 thread-group shared-memory cache for
+        radius-2 upscaling, and a direct per-pixel convolution for
+        larger downscaling radii.  This balances quality and speed.
 
     Attributes:
         source_texture (Texture2D | None): The input texture to scale
             (the fully upscaled SRCNN output).
-        target_texture (Texture2D | None): The output texture that will be
-            written to (usually the screen-sized render target).
-        compute (Compute | None): The Vulkan compute pipeline, created
-            automatically when both textures are set.
+        target_texture (Texture2D | None): The output texture that will
+            receive the final scaled image.
     """
 
     def __init__(self, shader_path: str = DEFAULT_SHADER_PATH) -> None:
         """
         Initialise the Lanczos scaler.
 
-        Loads the SPIR-V shader from disk and creates shared resources
-        (sampler, constant buffer). The actual compute pipeline is built
-        lazily when both source and target textures are available.
+        Loads the SPIR-V shader from disk and creates shared Vulkan
+        resources (point sampler, constant buffer).  The compute pipeline
+        is built lazily when both source and target textures are set.
 
         Args:
-            shader_path: Path to a compiled SPIR-V binary for the
-                Lanczos2 compute shader. Defaults to lanczos2.spv
-                in the same directory as this module.
+            shader_path: Path to the compiled ``lanczos2.spv`` file.
+                Defaults to the one next to this module.
         """
         self._shader_path = shader_path
         self._shader: Optional[bytes] = None
         self._sampler: Optional[Sampler] = None
         self._cb: Optional[Buffer] = None
+        self._compute: Optional[Compute] = None
 
-        self.compute: Optional[Compute] = None
         self.source_texture: Optional[Texture2D] = None
         self.target_texture: Optional[Texture2D] = None
 
-        # Cached serialized constant data - updated once per frame and
-        # uploaded to the GPU buffer just before dispatch.
+        # Serialised constant data - updated once per frame and uploaded
+        # to the GPU buffer before dispatch.
         self._push_data: bytes = b""
 
         self._load_shader()
@@ -124,11 +123,13 @@ class LanczosScaler:
 
     def _create_resources(self) -> None:
         """
-        Create long-lived Vulkan resources that do not depend on the
-        source / target textures.
+        Create long-lived Vulkan resources that are independent of
+        the source or target textures.
 
-        * A point-filtering sampler (required for the `Gather` calls).
-        * A constant buffer sized to hold the full `Constants` block.
+        * A point-filtering sampler (used for hardware Gather calls
+          in the shader).
+        * A constant buffer large enough to hold the ``Constants``
+          block.
         """
         self._sampler = Sampler(
             filter_min=SAMPLER_FILTER_POINT,
@@ -146,10 +147,10 @@ class LanczosScaler:
         Set or replace the source (upscaled) texture.
 
         If the texture object changes, the compute pipeline is rebuilt
-        so that the new descriptor set points to the correct image.
+        so that the descriptor set points to the new image.
 
         Args:
-            tex: The upscaled output from the SRCNN stage.
+            tex: The fully upscaled output from the SRCNN stage.
         """
         if tex is self.source_texture:
             return
@@ -164,7 +165,7 @@ class LanczosScaler:
         If the texture object changes, the compute pipeline is rebuilt.
 
         Args:
-            tex: The render texture (must be rgba8 and match the
+            tex: The render texture (must be ``rgba8`` and match the
                 overlay dimensions).
         """
         if tex is self.target_texture:
@@ -177,8 +178,8 @@ class LanczosScaler:
         """
         Resize the target texture, creating a new one.
 
-        This is a convenience method that replaces set_target_texture
-        when you only need a plain rgba8 texture of the given size.
+        This convenience method replaces ``set_target_texture`` when
+        you only need a plain ``rgba8`` texture of the given size.
         The compute pipeline is automatically rebuilt.
 
         Args:
@@ -215,28 +216,26 @@ class LanczosScaler:
         linear_light: bool = True,
     ) -> None:
         """
-        Serialize scaling parameters into the constant buffer.
+        Serialise scaling parameters into the constant buffer.
 
         This must be called once per frame (or whenever the layout
         changes) before dispatching the compute shader.
 
         Args:
-            background_color: RGBA color used for areas outside the
-                destination rectangle (e.g., letterboxing).
+            background_color: RGBA colour for areas outside the
+                destination rectangle (letterbox / pillarbox).
             src_width, src_height: Dimensions of the upscaled source.
             dst_total_width, dst_total_height: Full output (screen)
                 texture dimensions.
             dst_x, dst_y: Top-left corner of the destination rectangle
-                within the screen texture.
+                inside the screen texture.
             dst_w, dst_h: Width and height of the destination rectangle.
-            blur: Kernel width (1.0 = standard Lanczos2). Larger values
-                produce softer results.
-            antiring_strength: 0.0 disables anti-ringing entirely;
+            blur: Kernel softness (1.0 = standard Lanczos2).
+            antiring_strength: 0.0 disables anti-ringing;
                 1.0 (default) applies the full hard clamp.
-            linear_light: If True (default), the shader squares the
-                source samples before convolution and takes the square
-                root of the result, preserving luminance energy.
-                Disabling this can improve text clarity on some content.
+            linear_light: If ``True`` (default), the shader processes
+                in linear light (sRGB -> linear -> sRGB).  Disabling
+                this can improve text clarity on some content.
         """
         self._push_data = struct.pack(
             CB_FORMAT,
@@ -265,14 +264,15 @@ class LanczosScaler:
 
         Called automatically whenever the source or target texture changes.
         The pipeline binds:
-        - InputTex (SRV): source texture
-        - OutputTex (UAV): target texture
-        - Constants (CBV): constant buffer
-        - PointSampler (sampler): point-sampler
+
+        * ``InputTex``  (SRV / t0) - the source texture
+        * ``OutputTex`` (UAV / u0) - the target texture
+        * ``Constants`` (CBV / b0) - the constant buffer
+        * ``PointSampler`` (sampler / s0) - a point filter
         """
         if self.source_texture is None or self.target_texture is None:
             return
-        self.compute = Compute(
+        self._compute = Compute(
             self._shader,
             srv=[self.source_texture],
             uav=[self.target_texture],
@@ -281,3 +281,41 @@ class LanczosScaler:
             push_size=0,
         )
         logger.debug("Lanczos compute pipeline rebuilt")
+
+    # ------------------------------------------------------------------
+    # Public dispatch interface
+    # ------------------------------------------------------------------
+
+    def dispatch_auto(self) -> None:
+        """
+        Convenience dispatch that automatically computes the required
+        workgroup counts from the target texture dimensions.
+
+        Equivalent to::
+
+            scaler.dispatch(
+                (target.width  + 15) // 16,
+                (target.height + 15) // 16,
+            )
+        """
+        if self.target_texture is None:
+            raise RuntimeError("No target texture set")
+        w, h = self.target_texture.width, self.target_texture.height
+        self.dispatch((w + 15) // 16, (h + 15) // 16)
+
+    def dispatch(self, groups_x: int, groups_y: int, groups_z: int = 1) -> None:
+        """
+        Execute the Lanczos compute pass.
+
+        The shader uses a 16x16 thread group.  The caller must provide
+        enough groups to cover the full target texture (e.g., those
+        computed by ``dispatch_auto``).
+
+        Args:
+            groups_x: Number of workgroups in X.
+            groups_y: Number of workgroups in Y.
+            groups_z: Number of workgroups in Z (always 1).
+        """
+        if self._compute is None:
+            raise RuntimeError("Compute pipeline not ready")
+        self._compute.dispatch(groups_x, groups_y, groups_z)

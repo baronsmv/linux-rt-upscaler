@@ -150,8 +150,8 @@ class Presenter:
         Args:
             wait_for_fence: If True, block until presentation completes.
         """
-        # 1. Dispatch Lanczos (writes to self.screen_tex)
-        self.lanczos.compute.dispatch(self.groups_x, self.groups_y, 1)
+        # 1. Dispatch Lanczos
+        self.lanczos.dispatch_auto()
 
         # 2. Blend OSD (if active) - modifies self.screen_tex in place
         self.osd.blend_active(self.screen_tex)
