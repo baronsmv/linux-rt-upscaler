@@ -52,21 +52,21 @@ def _collect_intermediate_names(model_cfg: ModelConfig) -> set:
 # ======================================================================
 class UpscalerManager:
     """
-    Orchestrates full‑frame or tile‑based SRCNN upscaling for a single
-    standard depth‑to‑space model.
+    Orchestrates full-frame or tile-based SRCNN upscaling for a single
+    standard depth-to-space model.
 
     All supported models must have a scale factor of at least 2. The
-    manager handles both a single 2× upscale and a double‑upscale (two
-    chained 2× stages) for 4× output. Tile processing is available for
-    2× upscaling when enabled in the configuration.
+    manager handles both a single 2x upscale and a double-upscale (two
+    chained 2x stages) for 4x output. Tile processing is available for
+    2x upscaling when enabled in the configuration.
 
     Attributes:
-        use_tile: Whether tile‑based processing is currently active.
+        use_tile: Whether tile-based processing is currently active.
         tiles_x, tiles_y: Tile grid dimensions (used for fallback decisions).
-        input: Full low‑res frame texture (uploaded every frame).
-        staging: Persistent staging buffer for full‑frame uploads.
+        input: Full low-res frame texture (uploaded every frame).
+        staging: Persistent staging buffer for full-frame uploads.
         output: Final upscaled image texture.
-        full_stages: List of :class:`SRCNN` stages for the full‑frame path.
+        full_stages: List of :class:`SRCNN` stages for the full-frame path.
         full_groups: Corresponding dispatch group sizes for each stage.
         tile_processor: Active :class:`TileProcessor` when tile mode is on.
     """
@@ -91,24 +91,24 @@ class UpscalerManager:
         self.model_cfg = model_cfg
         self.scale = model_cfg.scale
 
-        # Tile mode can only be enabled for 2× upscalers (the tile shaders
-        # are designed for a single 2× stage; for 4× we chain two 2× tile
+        # Tile mode can only be enabled for 2x upscalers (the tile shaders
+        # are designed for a single 2x stage; for 4x we chain two 2x tile
         # stages internally, so it's also valid).
         self.use_tile = config.use_tile_processing and self.scale == 2
 
-        # Pre‑compute tile grid size for fallback decisions.
+        # Pre-compute tile grid size for fallback decisions.
         self.tiles_x = (crop_width + config.tile_size - 1) // config.tile_size
         self.tiles_y = (crop_height + config.tile_size - 1) // config.tile_size
         self.total_tiles = self.tiles_x * self.tiles_y
 
-        # Full‑frame resources (always created)
+        # Full-frame resources (always created)
         self.staging: Optional[Buffer] = None
         self.input: Optional[Texture2D] = None
         self.output: Optional[Texture2D] = None
         self.full_stages: List[SRCNN] = []
         self.full_groups: List[Tuple[int, int]] = []
 
-        # References for double‑upscale tile mode
+        # References for double-upscale tile mode
         self._residual_upscale_groups: Optional[Tuple[int, int]] = None
         self._residual_dst_tex: Optional[Texture2D] = None
 
@@ -140,11 +140,11 @@ class UpscalerManager:
 
     def _init_full_mode(self) -> None:
         """
-        Build the compute pipelines for the full‑frame path.
+        Build the compute pipelines for the full-frame path.
 
-        The model is always a standard depth‑to‑space upscaler.  For
+        The model is always a standard depth-to-space upscaler. For
         ``scale >= 4`` and when ``config.double_upscale`` is enabled,
-        two chained 2× SRCNN stages are created; otherwise a single
+        two chained 2x SRCNN stages are created; otherwise a single
         stage handles the entire upscale.
         """
         out_w = self.crop_width * self.scale
@@ -159,12 +159,12 @@ class UpscalerManager:
         intermediate_names = _collect_intermediate_names(self.model_cfg)
 
         if self.config.double_upscale and self.scale >= 4:
-            # ---- Two‑stage 2× → 4× upscaling ----
+            # ---- Two-stage 2x -> 4x upscaling ----
             stage1_in_w, stage1_in_h = self.crop_width, self.crop_height
             stage1_out_w, stage1_out_h = stage1_in_w * 2, stage1_in_h * 2
             stage2_out_w, stage2_out_h = stage1_out_w * 2, stage1_out_h * 2
 
-            # Stage 1: low‑res → 2× intermediate
+            # Stage 1: low-res -> 2x intermediate
             stage1_textures: Dict[str, Texture2D] = {
                 name: Texture2D(stage1_in_w, stage1_in_h, format=fmt)
                 for name in intermediate_names
@@ -184,7 +184,7 @@ class UpscalerManager:
                 dispatch_groups(stage1_in_w, stage1_in_h, last_pass=False)
             )
 
-            # Stage 2: 2× → 4× final output
+            # Stage 2: 2x -> 4x final output
             stage2_textures = {
                 name: Texture2D(stage1_out_w, stage1_out_h, format=fmt)
                 for name in intermediate_names
@@ -204,11 +204,11 @@ class UpscalerManager:
                 dispatch_groups(stage1_out_w, stage1_out_h, last_pass=False)
             )
 
-            # Cache the 2× intermediate for tile‑mode residual generation.
+            # Cache the 2x intermediate for tile-mode residual generation.
             self._residual_dst_tex = inter_tex
 
         else:
-            # ---- Single‑stage upscaling (e.g., 2×) ----
+            # ---- Single-stage upscaling (e.g., 2x) ----
             stage_textures = {
                 name: Texture2D(self.crop_width, self.crop_height, format=fmt)
                 for name in intermediate_names
@@ -230,7 +230,7 @@ class UpscalerManager:
 
     def _init_tile_mode(self) -> None:
         """
-        Create the tile processor and ensure full‑frame fallback writes
+        Create the tile processor and ensure full-frame fallback writes
         to the same output texture.
         """
         self.tile_processor = TileProcessor(
@@ -241,7 +241,7 @@ class UpscalerManager:
         self.output = self.tile_processor.output_texture
         self._rebind_full_frame_output()
 
-        # For double‑upscale, store references needed to generate the 2×
+        # For double-upscale, store references needed to generate the 2x
         # residual before tile processing.
         if self.config.double_upscale and len(self.full_stages) >= 2:
             self._residual_upscale_groups = self.full_groups[0]
@@ -252,19 +252,19 @@ class UpscalerManager:
 
     def _rebind_full_frame_output(self) -> None:
         """
-        Re‑route the last full‑frame stage’s ``"output"`` UAV to
+        Re-route the last full-frame stage’s ``"output"`` UAV to
         ``self.output``.
 
         This is necessary when tile mode owns the final output texture
-        and the full‑frame fallback (or the seeding first frame) must
+        and the full-frame fallback (or the seeding first frame) must
         write to that same texture.
         """
         if not self.full_stages:
             return
 
         # The stage that writes the final output:
-        #   – second stage for double‑upscale,
-        #   – first (only) stage for single‑upscale.
+        #   - second stage for double-upscale,
+        #   - first (only) stage for single-upscale.
         stage_idx = -1 if self.config.double_upscale else 0
         old_stage = self.full_stages[stage_idx]
         new_outputs = dict(old_stage.outputs)
@@ -277,10 +277,10 @@ class UpscalerManager:
             output_textures=new_outputs,
             push_constant_size=old_stage.push_constant_size,
         )
-        logger.debug("Full‑frame output rebound to tile processor output")
+        logger.debug("Full-frame output rebound to tile processor output")
 
     # ==================================================================
-    #  Full‑frame helpers
+    #  Full-frame helpers
     # ==================================================================
 
     def upload_full_frame(
@@ -293,8 +293,8 @@ class UpscalerManager:
         """
         Upload the current frame (or damage regions) to ``self.input``.
 
-        When damage‑tracking is enabled and the total expanded damage area
-        is small, only the affected sub‑rectangles are uploaded.  Otherwise
+        When damage-tracking is enabled and the total expanded damage area
+        is small, only the affected sub-rectangles are uploaded. Otherwise
         the entire frame is uploaded via the staging buffer.
         """
         if use_damage_tracking and rects:
@@ -323,7 +323,7 @@ class UpscalerManager:
 
     def process_full_frame(self) -> None:
         """
-        Execute all full‑frame compute dispatches in a single command
+        Execute all full-frame compute dispatches in a single command
         buffer per SRCNN stage, reducing submission overhead.
         """
         for stage, (gx, gy) in zip(self.full_stages, self.full_groups):
@@ -331,7 +331,7 @@ class UpscalerManager:
             stage.pipelines[0].dispatch_sequence(sequence=seq)
 
     # ==================================================================
-    #  Fallback decision (rect‑based)
+    #  Fallback decision (rect-based)
     # ==================================================================
 
     def _count_dirty_tile_cells(
@@ -353,7 +353,7 @@ class UpscalerManager:
     def _should_fallback(self, rects: List[Tuple[int, int, int, int, int]]) -> bool:
         """
         Return ``True`` if tile processing should be skipped in
-        favour of a full‑frame pass.
+        favour of a full-frame pass.
 
         The decision is based on two criteria:
         * The number of dirty tile cells exceeds ``max_tile_layers``.
@@ -378,7 +378,7 @@ class UpscalerManager:
         return bool(rects) and not self._should_fallback(rects)
 
     # ==================================================================
-    #  Tile‑frame processing
+    #  Tile-frame processing
     # ==================================================================
 
     def process_tile_frame(
@@ -390,18 +390,18 @@ class UpscalerManager:
         """
         Process one frame through the tile processor.
 
-        On the very first tile frame a full‑frame pass seeds the output.
-        Subsequent frames either fall back to full‑frame (if the damage
-        area is too large) or process the dirty tiles.  For double‑upscale
-        the 2× residual is refreshed from a freshly computed low‑res → 2×
+        On the very first tile frame a full-frame pass seeds the output.
+        Subsequent frames either fall back to full-frame (if the damage
+        area is too large) or process the dirty tiles. For double-upscale
+        the 2x residual is refreshed from a freshly computed low-res -> 2x
         pass.
         """
         if not self.use_tile:
             raise RuntimeError("process_tile_frame called when tile mode is disabled")
 
-        # ---- First tile frame – seed with a full‑frame pass ----
+        # ---- First tile frame - seed with a full-frame pass ----
         if self._first_tile_frame:
-            logger.debug("First tile frame – performing full capture")
+            logger.debug("First tile frame - performing full capture")
             payload = bytes(frame_data)
             self.tile_processor.residual_1x.upload_subresources(
                 [(payload, 0, 0, self.crop_width, self.crop_height, 0)]
@@ -418,7 +418,7 @@ class UpscalerManager:
 
         # ---- Fallback check ----
         if self._should_fallback(rects):
-            logger.debug("Fallback to full‑frame (threshold exceeded)")
+            logger.debug("Fallback to full-frame (threshold exceeded)")
             payload = bytes(frame_data)
             self.tile_processor.residual_1x.upload_subresources(
                 [(payload, 0, 0, self.crop_width, self.crop_height, 0)]
@@ -436,7 +436,7 @@ class UpscalerManager:
         max_layers = self.config.max_tile_layers
         if len(dirty_tiles) > max_layers:
             logger.warning(
-                "Extracted %d tiles > capacity %d – falling back to full‑frame",
+                "Extracted %d tiles > capacity %d - falling back to full-frame",
                 len(dirty_tiles),
                 max_layers,
             )
@@ -451,7 +451,7 @@ class UpscalerManager:
 
         # ---- Actual tile processing ----
         if self.config.double_upscale:
-            # Upload low‑res frame and compute the 2× residual.
+            # Upload low-res frame and compute the 2x residual.
             self.upload_full_frame(
                 frame_data,
                 rects,
@@ -468,7 +468,7 @@ class UpscalerManager:
                     height=self.crop_height * 2,
                 )
         else:
-            # Single‑upscale: update the full low‑res residual.
+            # Single-upscale: update the full low-res residual.
             self.upload_full_frame(
                 frame_data,
                 rects,
@@ -489,5 +489,5 @@ class UpscalerManager:
     # ==================================================================
 
     def get_output_texture(self) -> Texture2D:
-        """Return the final upscaled texture (tile‑processor or full‑frame)."""
+        """Return the final upscaled texture (tile-processor or full-frame)."""
         return self.output

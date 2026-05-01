@@ -3,7 +3,6 @@
   "scale": 2,
   "depth": "rgba8",
   "passes": 5,
-  "last_pass_upscale": true,
   "num_textures": 6,
   "srv_uav": [
     [
