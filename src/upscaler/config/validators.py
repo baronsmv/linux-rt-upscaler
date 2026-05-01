@@ -131,7 +131,6 @@ def validate_color(color_str: str, _: str) -> None:
 
 _VALIDATORS: Dict[str, Tuple] = {
     "focus_poll_interval": (validate_number, "focus_poll_interval", 0.05),
-    "lanczos_blur": (validate_number, "lanczos_blur", 0),
     "scale_factor": (validate_number, "scale_factor", 0, None, False),
     "output_geometry": (validate_geometry, "output_geometry"),
     "background_color": (validate_color, "background_color"),
@@ -142,9 +141,11 @@ _VALIDATORS: Dict[str, Tuple] = {
     "offset_x": (validate_number, "offset_x"),
     "offset_y": (validate_number, "offset_y"),
     "osd_duration": (validate_number, "osd_duration", 0),
+    "lanczos_blur": (validate_number, "lanczos_blur", 0, 2, False),
+    "lanczos_antiring_strength": (validate_number, "lanczos_antiring_strength", 0, 1),
     "vulkan_buffer_pool_size": (validate_number, "vulkan_buffer_pool_size", 0),
-    "frame_timeout_ns": (validate_number, "frame_timeout_ns", 0),
-    "tile_size": (validate_number, "tile_size", 0, None, False),
+    "frame_timeout": (validate_number, "frame_timeout", 0),
+    "tile_size": (validate_number, "tile_size", 1),
     "tile_context_margin": (validate_number, "tile_context_margin", 0),
     "max_tile_layers": (validate_number, "max_tile_layers", 0),
     "area_threshold": (validate_number, "area_threshold", 0, 1),
