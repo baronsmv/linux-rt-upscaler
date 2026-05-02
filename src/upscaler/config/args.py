@@ -33,14 +33,37 @@ class FilteredHelpAction(argparse._HelpAction):
             # Print everything (used for --help-all)
             parser.print_help()
         else:
-            # Temporarily replace groups with the non-advanced ones
+            # Build a list of only essential actions
+            essential_actions = [
+                a
+                for a in parser._actions
+                if not getattr(a.container, "advanced", False)
+            ]
+
+            # Filter argument groups
             original_groups = parser._action_groups
-            essential = [
+            essential_groups = [
                 g for g in original_groups if not getattr(g, "advanced", False)
             ]
-            parser._action_groups = essential
+
+            # Save originals and swap
+            original_actions = parser._actions
+            parser._actions = essential_actions
+            parser._action_groups = essential_groups
+
+            # Suppress epilog for short help
+            original_epilog = parser.epilog
+            parser.epilog = None
+
+            # Print help message, now clean
             parser.print_help()
+
+            # Restore everything
+            parser._actions = original_actions
             parser._action_groups = original_groups
+            parser.epilog = original_epilog
+
+            print("\nFor advanced and tuning options, see --help-all")
         parser.exit()
 
 
@@ -66,6 +89,10 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser._positionals.title = "POSITIONAL ARGUMENTS"
+
+    # ----------------------------------------------------------------------
+    # General section
+    # ----------------------------------------------------------------------
     parser._optionals.title = "GENERAL OPTIONS"
     parser.add_argument(
         "-h",
@@ -78,7 +105,7 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
         "--help-all",
         action=FilteredHelpAction,
         show_all=True,
-        help="Show full help with all advanced options and exit",
+        help="show full help with all advanced options and exit",
     )
     parser.add_argument(
         "-v", "--version", action="version", version=f"%(prog)s {_get_version()}"
@@ -99,7 +126,7 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'""",
     parser.add_argument("program", nargs="*", help="Program to launch and scale")
 
     # ----------------------------------------------------------------------
-    # General section
+    # Interaction section
     # ----------------------------------------------------------------------
     interaction_group = parser.add_argument_group("INTERACTION OPTIONS")
     interaction_group.add_argument(
@@ -115,7 +142,26 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'""",
         help="""Follow the currently focused window (automatically switch
 when focus changes)""",
     )
-    interaction_group.add_argument(
+
+    # ----------------------------------------------------------------------
+    # Advanced Interaction section
+    # ----------------------------------------------------------------------
+    advanced_interaction_group = parser.add_argument_group(
+        "ADVANCED INTERACTION OPTIONS"
+    )
+    advanced_interaction_group.add_argument(
+        "--no-focus-pause",
+        action="store_false",
+        dest="pause_on_focus_loss",
+        help="""Do not pause/hide overlay when target window loses focus
+(pause is enabled by default)""",
+    )
+
+    # ----------------------------------------------------------------------
+    # Timing section
+    # ----------------------------------------------------------------------
+    timing_group = parser.add_argument_group("TIMING OPTIONS")
+    timing_group.add_argument(
         "--focus-poll-interval",
         type=float,
         default=DEFAULT_CONFIG.focus_poll_interval,
@@ -123,12 +169,41 @@ when focus changes)""",
 changes when --follow-focus is activated.
 Minimum is 0.05. Default: %(default)s""",
     )
-    interaction_group.add_argument(
-        "--no-focus-pause",
-        action="store_false",
-        dest="pause_on_focus_loss",
-        help="""Do not pause/hide overlay when target window loses focus
-(pause is enabled by default)""",
+
+    # ----------------------------------------------------------------------
+    # Timeout / window detection section
+    # ----------------------------------------------------------------------
+    window_detection_group = parser.add_argument_group("WINDOW DETECTION OPTIONS")
+    window_detection_group.add_argument(
+        "--target-delay",
+        type=float,
+        default=DEFAULT_CONFIG.target_delay,
+        help="Seconds to wait before capturing active window",
+    )
+    window_detection_group.add_argument(
+        "--pid-timeout",
+        type=float,
+        default=DEFAULT_CONFIG.pid_timeout,
+        help="Seconds to try PID-based window detection",
+    )
+    window_detection_group.add_argument(
+        "--class-timeout",
+        type=float,
+        default=DEFAULT_CONFIG.class_timeout,
+        help="Seconds to try class-based window detection",
+    )
+    window_detection_group.add_argument(
+        "--total-timeout",
+        type=float,
+        default=DEFAULT_CONFIG.total_timeout,
+        help="Total seconds before giving up",
+    )
+    window_detection_group.add_argument(
+        "--starting-phase",
+        type=int,
+        choices=[1, 2],
+        default=DEFAULT_CONFIG.starting_phase,
+        help="Start with phase 1 (PID) or 2 (class)",
     )
 
     # ----------------------------------------------------------------------
@@ -152,6 +227,298 @@ screens (4k, 1440p) or low-resolution sources""",
     )
 
     # ----------------------------------------------------------------------
+    # Lanczos Scaler Options
+    # ----------------------------------------------------------------------
+    lanczos_group = parser.add_argument_group("LANCZOS SCALER OPTIONS")
+    lanczos_group.add_argument(
+        "--lanczos-blur",
+        type=float,
+        default=DEFAULT_CONFIG.lanczos_blur,
+        help="""Kernel width for the final resampling step.
+
+Lower values increase sharpness/ringing; higher values
+smooth the result.
+
+Recommended range: 0.8 - 1.2, default: %(default)s""",
+    )
+    lanczos_group.add_argument(
+        "--lanczos-antiring-strength",
+        type=float,
+        default=DEFAULT_CONFIG.lanczos_antiring_strength,
+        help="""Anti-ringing strength (0 = off, 1 = full hard clamp).
+
+Lower values soften the clamp, preserving more detail at
+the cost of possible ringing.
+
+Recommended range: 0.7 - 1.0, default: %(default)s
+
+    """,
+    )
+    # Also add a negation flag to allow disabling from shell:
+    lanczos_group.add_argument(
+        "--no-lanczos-linear-light",
+        action="store_false",
+        dest="lanczos_linear_light",
+        help="""Disable linear-light processing (sRGB-linear-sRGB).
+
+Disabling it may improve text clarity on some content,
+but colors could lose saturation when downscaling.""",
+    )
+
+    # ----------------------------------------------------------------------
+    # Pre-processing options
+    # ----------------------------------------------------------------------
+    pre_processing_group = parser.add_argument_group("PRE-PROCESSING OPTIONS")
+
+    # --- Debanding ---
+    pre_processing_group.add_argument(
+        "--enable-deband",
+        action="store_true",
+        default=DEFAULT_CONFIG.deband_enabled,
+        dest="deband_enabled",
+        help="""Apply a stochastic debanding pass before scaling.
+
+Debanding smooths out harsh colour steps (banding) that can
+appear in gradients after AI upscaling, especially in skies,
+fog, or smooth backgrounds.
+
+    """,
+    )
+    pre_processing_group.add_argument(
+        "--deband-strength",
+        type=float,
+        default=DEFAULT_CONFIG.deband_strength,
+        help="""Debanding intensity (0.0 = off, 1.0 = maximum blur).
+
+Low values (0.1-0.3) are sufficient for most content.
+Higher values risk softening fine details.
+
+Recommended range: 0.1 - 0.5. Default: %(default)s
+
+    """,
+    )
+
+    # ----------------------------------------------------------------------
+    # Post-processing options
+    # ----------------------------------------------------------------------
+    post_processing_group = parser.add_argument_group("POST-PROCESSING OPTIONS")
+
+    # --- CAS (Contrast Adaptive Sharpening) ---
+    post_processing_group.add_argument(
+        "--enable-cas",
+        action="store_true",
+        default=DEFAULT_CONFIG.cas_enabled,
+        dest="cas_enabled",
+        help="""Enable Contrast Adaptive Sharpening (CAS) after scaling.
+CAS adds a subtle, perceptually-based sharpening that
+enhances text and line art without the halos common in
+traditional unsharp masks.
+
+    """,
+    )
+    post_processing_group.add_argument(
+        "--cas-strength",
+        type=float,
+        default=DEFAULT_CONFIG.cas_strength,
+        help="""CAS sharpening amount (0.0 = none, 1.0 = maximum).
+
+0.0 passes through the original image unchanged.
+Values between 0.2 and 0.5 provide a pleasant crispness
+without visible artifacts. Above 0.6, some ringing may
+become noticeable on high-contrast edges.
+
+Recommended range: 0.2 - 0.5. Default: %(default)s
+
+    """,
+    )
+
+    # --- Bloom ---
+    post_processing_group.add_argument(
+        "--enable-bloom",
+        action="store_true",
+        default=DEFAULT_CONFIG.bloom_enabled,
+        dest="bloom_enabled",
+        help="""Enable a soft bloom (glow) effect around bright regions.
+
+Bloom creates a cinematic, dreamy look by feeding bright
+pixels through a wide blur and screen-blending the result
+back onto the image. Only pixels above a configurable
+threshold contribute to the glow, preserving shadows and
+midtones.
+
+    """,
+    )
+    post_processing_group.add_argument(
+        "--bloom-strength",
+        type=float,
+        default=DEFAULT_CONFIG.bloom_strength,
+        help="""Bloom intensity (0.0 = off, 0.15 = very strong glow).
+
+Subtle values (0.02-0.06) add a gentle, polished look.
+Strength above 0.1 may cause bright UI elements to halo
+noticeably.
+
+Recommended range: 0.02 - 0.08. Default: %(default)s
+
+    """,
+    )
+    post_processing_group.add_argument(
+        "--bloom-threshold",
+        type=float,
+        default=DEFAULT_CONFIG.bloom_threshold,
+        help="""Brightness cutoff for bloom (0.0 - 1.0).
+
+Only pixels whose blurred brightness exceeds this value
+will contribute. Lower thresholds (e.g., 0.7) include more
+of the scene; higher thresholds (0.9-0.95) restrict the
+glow to pure highlights like glowing embers or bright sky.
+
+Default: %(default)s
+
+    """,
+    )
+    post_processing_group.add_argument(
+        "--bloom-radius",
+        type=int,
+        default=DEFAULT_CONFIG.bloom_radius,
+        help="""Blur radius in pixels for the bloom core.
+
+Larger radii spread the glow further, creating a softer,
+more ethereal look. Smaller radii keep the effect tight.
+
+Recommended range: 2 - 8. Default: %(default)s
+
+    """,
+    )
+
+    # --- Vignette ---
+    post_processing_group.add_argument(
+        "--enable-vignette",
+        action="store_true",
+        default=DEFAULT_CONFIG.vignette_enabled,
+        dest="vignette_enabled",
+        help="""Enable a radial vignette that darkens screen edges.
+
+A vignette naturally draws attention to the centre of the
+screen and can simulate the look of a camera lens.
+
+    """,
+    )
+    post_processing_group.add_argument(
+        "--vignette-strength",
+        type=float,
+        default=DEFAULT_CONFIG.vignette_strength,
+        help="""Intensity of edge darkening (0.0 = off, 1.0 = black corners).
+
+Moderate values (0.3-0.6) give a subtle framing effect
+without overwhelming the image.
+
+Recommended range: 0.3 - 0.6. Default: %(default)s
+
+    """,
+    )
+    post_processing_group.add_argument(
+        "--vignette-radius",
+        type=float,
+        default=DEFAULT_CONFIG.vignette_radius,
+        help="""Distance from centre where darkening begins.
+
+0.0 starts immediately, affecting most of the screen.
+Values around 0.7-0.8 keep the centre bright and only
+darken the far edges. At 1.0+ the vignette is confined
+to extreme corners.
+
+Default: %(default)s
+
+    """,
+    )
+    post_processing_group.add_argument(
+        "--vignette-falloff",
+        type=float,
+        default=DEFAULT_CONFIG.vignette_falloff,
+        help="""Softness of the vignette transition.
+
+Low values (1.0) create a gentle, wide-rolloff effect.
+Higher values (3.0-4.0) produce a sharp, distinct ring.
+
+Recommended range: 1.0 - 4.0. Default: %(default)s
+
+    """,
+    )
+
+    # --- Film Grain ---
+    post_processing_group.add_argument(
+        "--enable-grain",
+        action="store_true",
+        default=DEFAULT_CONFIG.grain_enabled,
+        dest="grain_enabled",
+        help="""Enable simulated film grain (temporal noise) on the final image.
+
+Grain adds a subtle organic texture that can make digital
+art feel more like a high-quality scan or print. The noise
+varies every frame (using a frame counter) so it does not
+feel like a static overlay.
+
+    """,
+    )
+    post_processing_group.add_argument(
+        "--grain-strength",
+        type=float,
+        default=DEFAULT_CONFIG.grain_strength,
+        help="""Grain intensity (0.0 = off, 0.10 = very noisy).
+
+Extremely low values (0.005-0.02) mimic fine photochemical
+grain; 0.03-0.05 give a more noticeable vintage film look.
+
+For visual-novel art, a very light touch is recommended
+to avoid obscuring text.
+
+Recommended range: 0.005 - 0.03. Default: %(default)s
+
+    """,
+    )
+    post_processing_group.add_argument(
+        "--grain-size",
+        type=float,
+        default=DEFAULT_CONFIG.grain_size,
+        help="""Apparent particle size of the grain (1.0 = fine, 2.0+ = coarse).
+
+Larger values produce more visible, clumpier grain typical
+of older film stocks.
+
+Default: %(default)s""",
+    )
+
+    # --- Colour Grading (3D LUT) ---
+    post_processing_group.add_argument(
+        "--enable-lut",
+        action="store_true",
+        default=DEFAULT_CONFIG.lut_enabled,
+        dest="lut_enabled",
+        help="""Apply a cinematic 3D colour-lookup table (LUT) at the end of
+the pipeline.
+
+A LUT remaps all colours through a pre-computed table,
+enabling instant film-stock emulation, colour-grading
+presets, or any global colour transform without touching
+texture detail.
+
+    """,
+    )
+    post_processing_group.add_argument(
+        "--lut-intensity",
+        type=float,
+        default=DEFAULT_CONFIG.lut_intensity,
+        help="""Blend between original and graded image.
+
+0.0 = original image (no effect).
+1.0 = full colour transform applied.
+
+Default: %(default)s
+    """,
+    )
+
+    # ----------------------------------------------------------------------
     # Display section
     # ----------------------------------------------------------------------
     display_group = parser.add_argument_group("DISPLAY OPTIONS")
@@ -162,9 +529,17 @@ screens (4k, 1440p) or low-resolution sources""",
         help="""Monitor to cover: 'primary', 'all' (to cover all
 multi-monitor space), or monitor name/index
 (e.g., 'HDMI-1', 0).
-Default: %(default)s""",
+Default: %(default)s
+
+Note: using 'all' requires a manual scale factor
+(see --help-all).""",
     )
-    display_group.add_argument(
+
+    # ----------------------------------------------------------------------
+    # Advanced Display section
+    # ----------------------------------------------------------------------
+    advanced_display_group = parser.add_argument_group("ADVANCED DISPLAY OPTIONS")
+    advanced_display_group.add_argument(
         "--scale-factor",
         type=float,
         default=DEFAULT_CONFIG.scale_factor,
@@ -183,54 +558,19 @@ required when --monitor is set to 'all'.""",
         "-o",
         "--output-geometry",
         default=DEFAULT_CONFIG.output_geometry,
-        help="""Specify the output window size and scaling behaviour.
+        help="""Output window sizing and scaling behaviour.
 Default: %(default)s
 
-Examples:
-  fit          - Fit to full monitor/window (letterbox)
-  stretch      - Stretch to full monitor/window (aspect
-                 ratio not preserved)
-  cover        - Cover full monitor/window
+Common modes:
+  fit      - Letterbox, preserve aspect ratio
+  stretch  - Fill, ignore aspect ratio
+  cover    - Fill and crop to fit
 
-  1920x1080    - Fit content to 1920x1080
-  1920x1080!   - Stretch content to 1920x1080
-  1920x1080^   - Cover 1920x1080 (crop)
+Advanced: use WIDTHxHEIGHT, WIDTHxHEIGHT!, WIDTHxHEIGHT^,
+percentage (50%%), or fixed-axis (1920x, x1080) with
+optional ! for stretch. Full examples in the config file.
 
-  50%%          - 50%% of monitor, content fitted
-  50%%!         - 50%% of monitor, content stretched
-
-  1920x        - Fixed width 1920, height proportional
-                 (fit)
-  1920x!       - Fixed width 1920, height proportional
-                 (stretch)
-
-  x1080        - Fixed height 1080, width proportional
-                 (fit)
-  x1080!       - Fixed height 1080, width proportional
-                 (stretch)
-    """,
-    )
-    overlay_group.add_argument(
-        "--overlay-mode",
-        choices=[e.value for e in OverlayMode],
-        default=DEFAULT_CONFIG.overlay_mode,
-        help="""Overlay window behaviour.
-Default: %(default)s
-
-Note: Keyboard events are NOT forwarded, so it's best to
-keep the target window focused (if on a single monitor,
-always-on-top works well for this).
-
-Modes:
-  always-on-top    - Floating overlay above all windows
-                     and not focusable (bypasses WM).
-  top-transparent  - Same as above but click-through
-                     (mouse passes to window below).
-  fullscreen       - Fullscreen window without decorations
-                     (covers entire monitor).
-  windowed         - Normal window with decorations, fixed
-                     size.
-    """,
+""",
     )
     overlay_group.add_argument(
         "--crop-top",
@@ -293,6 +633,33 @@ Note: RGB values must be integers 0-255.""",
     )
 
     # ----------------------------------------------------------------------
+    # Advanced Overlay options
+    # ----------------------------------------------------------------------
+    advanced_overlay_group = parser.add_argument_group("ADVANCED OVERLAY OPTIONS")
+    advanced_overlay_group.add_argument(
+        "--overlay-mode",
+        choices=[e.value for e in OverlayMode],
+        default=DEFAULT_CONFIG.overlay_mode,
+        help="""Overlay window behaviour.
+Default: %(default)s
+
+Note: Keyboard events are NOT forwarded, so it's best to
+keep the target window focused (if on a single monitor,
+always-on-top works well for this).
+
+Modes:
+  always-on-top    - Floating overlay above all windows
+                     and not focusable (bypasses WM).
+  top-transparent  - Same as above but click-through
+                     (mouse passes to window below).
+  fullscreen       - Fullscreen window without decorations
+                     (covers entire monitor).
+  windowed         - Normal window with decorations, fixed
+                     size.
+""",
+    )
+
+    # ----------------------------------------------------------------------
     # Screenshot section
     # ----------------------------------------------------------------------
     screenshot_group = parser.add_argument_group("SCREENSHOT OPTIONS")
@@ -337,293 +704,6 @@ saves to "fast/14-30-22.png"
         type=float,
         default=DEFAULT_CONFIG.osd_duration,
         help="How long (seconds) OSD messages stay visible. Default: %(default)s",
-    )
-
-    # ----------------------------------------------------------------------
-    # Lanczos Scaler Options
-    # ----------------------------------------------------------------------
-    lanczos_group = parser.add_argument_group("LANCZOS SCALER OPTIONS")
-    lanczos_group.add_argument(
-        "--lanczos-blur",
-        type=float,
-        default=DEFAULT_CONFIG.lanczos_blur,
-        help="""Kernel width for the final resampling step.
-        
-Lower values increase sharpness/ringing; higher values
-smooth the result.
-
-Recommended range: 0.8 - 1.2, default: %(default)s""",
-    )
-    lanczos_group.add_argument(
-        "--lanczos-antiring-strength",
-        type=float,
-        default=DEFAULT_CONFIG.lanczos_antiring_strength,
-        help="""Anti-ringing strength (0 = off, 1 = full hard clamp).
-
-Lower values soften the clamp, preserving more detail at
-the cost of possible ringing.
-
-Recommended range: 0.7 - 1.0, default: %(default)s
-
-""",
-    )
-    # Also add a negation flag to allow disabling from shell:
-    lanczos_group.add_argument(
-        "--no-lanczos-linear-light",
-        action="store_false",
-        dest="lanczos_linear_light",
-        help="""Disable linear-light processing (sRGB-linear-sRGB).
-
-Disabling it may improve text clarity on some content,
-but colors could lose saturation when downscaling.""",
-    )
-
-    # ----------------------------------------------------------------------
-    # Post-processing options
-    # ----------------------------------------------------------------------
-    post_processing_group = parser.add_argument_group("POST-PROCESSING OPTIONS")
-
-    # --- Debanding ---
-    post_processing_group.add_argument(
-        "--enable-deband",
-        action="store_true",
-        default=DEFAULT_CONFIG.deband_enabled,
-        dest="deband_enabled",
-        help="""Apply a stochastic debanding pass before scaling.
-
-Debanding smooths out harsh colour steps (banding) that can
-appear in gradients after AI upscaling, especially in skies,
-fog, or smooth backgrounds.
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--deband-strength",
-        type=float,
-        default=DEFAULT_CONFIG.deband_strength,
-        help="""Debanding intensity (0.0 = off, 1.0 = maximum blur).
-
-Low values (0.1-0.3) are sufficient for most content.
-Higher values risk softening fine details.
-
-Recommended range: 0.1 - 0.5. Default: %(default)s
-
-""",
-    )
-
-    # --- CAS (Contrast Adaptive Sharpening) ---
-    post_processing_group.add_argument(
-        "--enable-cas",
-        action="store_true",
-        default=DEFAULT_CONFIG.cas_enabled,
-        dest="cas_enabled",
-        help="""Enable Contrast Adaptive Sharpening (CAS) after scaling.
-CAS adds a subtle, perceptually-based sharpening that
-enhances text and line art without the halos common in
-traditional unsharp masks.
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--cas-strength",
-        type=float,
-        default=DEFAULT_CONFIG.cas_strength,
-        help="""CAS sharpening amount (0.0 = none, 1.0 = maximum).
-
-0.0 passes through the original image unchanged.
-Values between 0.2 and 0.5 provide a pleasant crispness
-without visible artifacts. Above 0.6, some ringing may
-become noticeable on high-contrast edges.
-
-Recommended range: 0.2 - 0.5. Default: %(default)s
-
-""",
-    )
-
-    # --- Bloom ---
-    post_processing_group.add_argument(
-        "--enable-bloom",
-        action="store_true",
-        default=DEFAULT_CONFIG.bloom_enabled,
-        dest="bloom_enabled",
-        help="""Enable a soft bloom (glow) effect around bright regions.
-
-Bloom creates a cinematic, dreamy look by feeding bright
-pixels through a wide blur and screen-blending the result
-back onto the image. Only pixels above a configurable
-threshold contribute to the glow, preserving shadows and
-midtones.
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--bloom-strength",
-        type=float,
-        default=DEFAULT_CONFIG.bloom_strength,
-        help="""Bloom intensity (0.0 = off, 0.15 = very strong glow).
-
-Subtle values (0.02-0.06) add a gentle, polished look.
-Strength above 0.1 may cause bright UI elements to halo
-noticeably.
-
-Recommended range: 0.02 - 0.08. Default: %(default)s
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--bloom-threshold",
-        type=float,
-        default=DEFAULT_CONFIG.bloom_threshold,
-        help="""Brightness cutoff for bloom (0.0 - 1.0).
-
-Only pixels whose blurred brightness exceeds this value
-will contribute. Lower thresholds (e.g., 0.7) include more
-of the scene; higher thresholds (0.9-0.95) restrict the
-glow to pure highlights like glowing embers or bright sky.
-
-Default: %(default)s
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--bloom-radius",
-        type=int,
-        default=DEFAULT_CONFIG.bloom_radius,
-        help="""Blur radius in pixels for the bloom core.
-
-Larger radii spread the glow further, creating a softer,
-more ethereal look. Smaller radii keep the effect tight.
-
-Recommended range: 2 - 8. Default: %(default)s
-
-""",
-    )
-
-    # --- Vignette ---
-    post_processing_group.add_argument(
-        "--enable-vignette",
-        action="store_true",
-        default=DEFAULT_CONFIG.vignette_enabled,
-        dest="vignette_enabled",
-        help="""Enable a radial vignette that darkens screen edges.
-
-A vignette naturally draws attention to the centre of the
-screen and can simulate the look of a camera lens.
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--vignette-strength",
-        type=float,
-        default=DEFAULT_CONFIG.vignette_strength,
-        help="""Intensity of edge darkening (0.0 = off, 1.0 = black corners).
-
-Moderate values (0.3-0.6) give a subtle framing effect
-without overwhelming the image.
-
-Recommended range: 0.3 - 0.6. Default: %(default)s
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--vignette-radius",
-        type=float,
-        default=DEFAULT_CONFIG.vignette_radius,
-        help="""Distance from centre where darkening begins.
-
-0.0 starts immediately, affecting most of the screen.
-Values around 0.7-0.8 keep the centre bright and only
-darken the far edges. At 1.0+ the vignette is confined
-to extreme corners.
-
-Default: %(default)s
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--vignette-falloff",
-        type=float,
-        default=DEFAULT_CONFIG.vignette_falloff,
-        help="""Softness of the vignette transition.
-
-Low values (1.0) create a gentle, wide-rolloff effect.
-Higher values (3.0-4.0) produce a sharp, distinct ring.
-
-Recommended range: 1.0 - 4.0. Default: %(default)s
-
-""",
-    )
-
-    # --- Film Grain ---
-    post_processing_group.add_argument(
-        "--enable-grain",
-        action="store_true",
-        default=DEFAULT_CONFIG.grain_enabled,
-        dest="grain_enabled",
-        help="""Enable simulated film grain (temporal noise) on the final image.
-
-Grain adds a subtle organic texture that can make digital
-art feel more like a high-quality scan or print. The noise
-varies every frame (using a frame counter) so it does not
-feel like a static overlay.
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--grain-strength",
-        type=float,
-        default=DEFAULT_CONFIG.grain_strength,
-        help="""Grain intensity (0.0 = off, 0.10 = very noisy).
-
-Extremely low values (0.005-0.02) mimic fine photochemical
-grain; 0.03-0.05 give a more noticeable vintage film look.
-
-For visual-novel art, a very light touch is recommended
-to avoid obscuring text.
-
-Recommended range: 0.005 - 0.03. Default: %(default)s
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--grain-size",
-        type=float,
-        default=DEFAULT_CONFIG.grain_size,
-        help="""Apparent particle size of the grain (1.0 = fine, 2.0+ = coarse).
-
-Larger values produce more visible, clumpier grain typical
-of older film stocks.
-
-Default: %(default)s""",
-    )
-
-    # --- Colour Grading (3D LUT) ---
-    post_processing_group.add_argument(
-        "--enable-lut",
-        action="store_true",
-        default=DEFAULT_CONFIG.lut_enabled,
-        dest="lut_enabled",
-        help="""Apply a cinematic 3D colour-lookup table (LUT) at the end of
-the pipeline.
-
-A LUT remaps all colours through a pre-computed table,
-enabling instant film-stock emulation, colour-grading
-presets, or any global colour transform without touching
-texture detail.
-
-""",
-    )
-    post_processing_group.add_argument(
-        "--lut-intensity",
-        type=float,
-        default=DEFAULT_CONFIG.lut_intensity,
-        help="""Blend between original and graded image.
-
-0.0 = original image (no effect).
-1.0 = full colour transform applied.
-
-Default: %(default)s
-""",
     )
 
     # ----------------------------------------------------------------------
@@ -795,42 +875,6 @@ Recommended range: 0.15-0.5, default: %(default)s
     )
 
     # ----------------------------------------------------------------------
-    # Timeout / window detection section
-    # ----------------------------------------------------------------------
-    window_detection_group = parser.add_argument_group("WINDOW DETECTION OPTIONS")
-    window_detection_group.add_argument(
-        "--target-delay",
-        type=float,
-        default=DEFAULT_CONFIG.target_delay,
-        help="Seconds to wait before capturing active window",
-    )
-    window_detection_group.add_argument(
-        "--pid-timeout",
-        type=float,
-        default=DEFAULT_CONFIG.pid_timeout,
-        help="Seconds to try PID-based window detection",
-    )
-    window_detection_group.add_argument(
-        "--class-timeout",
-        type=float,
-        default=DEFAULT_CONFIG.class_timeout,
-        help="Seconds to try class-based window detection",
-    )
-    window_detection_group.add_argument(
-        "--total-timeout",
-        type=float,
-        default=DEFAULT_CONFIG.total_timeout,
-        help="Total seconds before giving up",
-    )
-    window_detection_group.add_argument(
-        "--starting-phase",
-        type=int,
-        choices=[1, 2],
-        default=DEFAULT_CONFIG.starting_phase,
-        help="Start with phase 1 (PID) or 2 (class)",
-    )
-
-    # ----------------------------------------------------------------------
     # Logging section
     # ----------------------------------------------------------------------
     log_group = parser.add_argument_group("LOGGING OPTIONS")
@@ -854,11 +898,18 @@ Recommended range: 0.15-0.5, default: %(default)s
     # Advanced groups
     # ----------------------------------------------------------------------
     advanced_groups = [
+        advanced_interaction_group,
+        timing_group,
+        window_detection_group,
         lanczos_group,
+        pre_processing_group,
         post_processing_group,
+        advanced_display_group,
+        advanced_overlay_group,
+        screenshot_group,
+        osd_group,
         vulkan_group,
         tile_group,
-        window_detection_group,
     ]
     for grp in advanced_groups:
         grp.advanced = True
