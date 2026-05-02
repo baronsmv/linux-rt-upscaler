@@ -102,7 +102,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     //
     //    contrast  = maxRGB - minRGB
     //
-    //    weight = saturate( min(minRGB, 1.0 - maxRGB) / (contrast + epsilon) )
+    //    weight = max(0.15, saturate( min(minRGB, 1.0 - maxRGB) / (contrast + epsilon) ) )
     //
     //  - For flat regions (contrast ≈ 0), weight -> 0, so no sharpening is
     //    applied, preserving smooth gradients.
@@ -110,9 +110,10 @@ void main(uint3 dtid : SV_DispatchThreadID)
     //  - The numerator `min(minRGB, 1.0 - maxRGB)` handles the case where
     //    the local values are near 0 or 1, reducing sharpening near black or
     //    white to avoid clipping artefacts.
-    //
+    // -  For 2D art we add a small minimum weight to keep the sharpening
+    //    visible on high‑contrast lines.
     float3 contrast = maxRGB - minRGB;
-    float3 weight = saturate(min(minRGB, 1.0 - maxRGB) / (contrast + 1e-5));
+    float3 weight = max(0.15, saturate(min(minRGB, 1.0 - maxRGB) / (contrast + 1e-5)));
 
     // ---- 4a. Map user `sharpeningStrength` to peak sharpening offset ----------
     //  The peak value controls how much the centre pixel deviates from the
@@ -125,7 +126,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     //  For strength = 0.0 -> peak = -1/8  = -0.125
     //  For strength = 1.0 -> peak = -1/5  = -0.2
     //
-    float peak = -1.0 / lerp(8.0, 5.0, sharpeningStrength);
+    float peak = -1.0 / lerp(8.0, 4.0, sharpeningStrength);
     float3 wRGB = weight * peak;
 
     // ---- 5. Convolve -----------------------------------------------------------
