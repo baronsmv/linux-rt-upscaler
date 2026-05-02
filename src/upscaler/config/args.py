@@ -234,12 +234,12 @@ screens (4k, 1440p) or low-resolution sources""",
         "--lanczos-blur",
         type=float,
         default=DEFAULT_CONFIG.lanczos_blur,
-        help="""Kernel width for the final resampling step.
+        help="""Kernel width for the final resampling step (0.0 - 2.0).
 
 Lower values increase sharpness/ringing; higher values
 smooth the result.
 
-Recommended range: 0.8 - 1.2, default: %(default)s
+Recommended range: 0.8 - 1.2. Default: %(default)s
 
 """,
     )
@@ -252,7 +252,7 @@ Recommended range: 0.8 - 1.2, default: %(default)s
 Lower values soften the clamp, preserving more detail at
 the cost of possible ringing.
 
-Recommended range: 0.7 - 1.0, default: %(default)s
+Recommended range: 0.7 - 1.0. Default: %(default)s
 
 """,
     )
@@ -311,6 +311,7 @@ Recommended range: 0.1 - 0.5. Default: %(default)s
         default=DEFAULT_CONFIG.cas_enabled,
         dest="cas_enabled",
         help="""Enable Contrast Adaptive Sharpening (CAS) after scaling.
+
 CAS adds a subtle, perceptually-based sharpening that
 enhances text and line art without the halos common in
 traditional unsharp masks.
@@ -323,7 +324,6 @@ traditional unsharp masks.
         default=DEFAULT_CONFIG.cas_strength,
         help="""CAS sharpening amount (0.0 = none, 1.0 = maximum).
 
-0.0 passes through the original image unchanged.
 Values between 0.2 and 0.5 provide a pleasant crispness
 without visible artifacts. Above 0.6, some ringing may
 become noticeable on high-contrast edges.
@@ -343,9 +343,7 @@ Recommended range: 0.2 - 0.5. Default: %(default)s
 
 Bloom creates a cinematic, dreamy look by feeding bright
 pixels through a wide blur and screen-blending the result
-back onto the image. Only pixels above a configurable
-threshold contribute to the glow, preserving shadows and
-midtones.
+back onto the image.
 
 """,
     )
@@ -353,7 +351,7 @@ midtones.
         "--bloom-strength",
         type=float,
         default=DEFAULT_CONFIG.bloom_strength,
-        help="""Bloom intensity (0.0 = off, 0.15 = very strong glow).
+        help="""Bloom intensity (0.0 = off, 0.16 = very strong glow).
 
 Subtle values (0.02-0.06) add a gentle, polished look.
 Strength above 0.1 may cause bright UI elements to halo
@@ -382,7 +380,7 @@ Default: %(default)s
         "--bloom-radius",
         type=int,
         default=DEFAULT_CONFIG.bloom_radius,
-        help="""Blur radius in pixels for the bloom core.
+        help="""Blur radius in pixels for the bloom core (1 - 16).
 
 Larger radii spread the glow further, creating a softer,
 more ethereal look. Smaller radii keep the effect tight.
@@ -422,14 +420,14 @@ Recommended range: 0.3 - 0.6. Default: %(default)s
         "--vignette-radius",
         type=float,
         default=DEFAULT_CONFIG.vignette_radius,
-        help="""Distance from centre where darkening begins.
+        help="""Distance from centre where darkening begins (0.0 - 2.0).
 
 0.0 starts immediately, affecting most of the screen.
 Values around 0.7-0.8 keep the centre bright and only
 darken the far edges. At 1.0+ the vignette is confined
 to extreme corners.
 
-Default: %(default)s
+Recommended range: 0.3 - 0.8. Default: %(default)s
 
 """,
     )
@@ -437,7 +435,7 @@ Default: %(default)s
         "--vignette-falloff",
         type=float,
         default=DEFAULT_CONFIG.vignette_falloff,
-        help="""Softness of the vignette transition.
+        help="""Softness of the vignette transition (0.1 - 10.0).
 
 Low values (1.0) create a gentle, wide-rolloff effect.
 Higher values (3.0-4.0) produce a sharp, distinct ring.
@@ -456,9 +454,7 @@ Recommended range: 1.0 - 4.0. Default: %(default)s
         help="""Enable simulated film grain (temporal noise) on the final image.
 
 Grain adds a subtle organic texture that can make digital
-art feel more like a high-quality scan or print. The noise
-varies every frame (using a frame counter) so it does not
-feel like a static overlay.
+art feel more like a high-quality scan or print.
 
 """,
     )
@@ -470,9 +466,6 @@ feel like a static overlay.
 
 Extremely low values (0.005-0.02) mimic fine photochemical
 grain; 0.03-0.05 give a more noticeable vintage film look.
-
-For visual-novel art, a very light touch is recommended
-to avoid obscuring text.
 
 Recommended range: 0.005 - 0.03. Default: %(default)s
 
@@ -754,7 +747,7 @@ reserves a small amount of extra VRAM.
 Raise this value if you notice stutters when many small
 regions change rapidly.
 
-Recommended range: 2-16, default: %(default)s
+Recommended range: 2-16. Default: %(default)s
 
 """,
     )
@@ -827,7 +820,7 @@ redundant data, but add CPU overhead during extraction.
 Large tiles reduce CPU work but cause more over-processing.
 
 Multiples of 32 work best with GPU workgroups.
-Recommended range: 32-128, default: %(default)s
+Recommended range: 32-128. Default: %(default)s
 
 """,
     )
@@ -846,7 +839,7 @@ amount of data processed per tile. More complex models
 benefit from higher values because their receptive field
 is larger and they use deeper convolution stacks.
 
-Recommended range: 4-24, default: %(default)s
+Recommended range: 4-24. Default: %(default)s
 
 """,
     )
@@ -865,7 +858,7 @@ Higher values tolerate more scattered changes, but each
 tile adds a GPU dispatch and may eventually hurt
 performance.
 
-Recommended range: 4-32, default: %(default)s
+Recommended range: 4-32. Default: %(default)s
 
 """,
     )
@@ -882,7 +875,7 @@ too many tiny tile dispatches. Larger values (e.g., 0.5)
 try tile mode more aggressively. 0.0 always uses full-frame
 for dirty frames; 1.0 never falls back.
 
-Recommended range: 0.15-0.5, default: %(default)s
+Recommended range: 0.15-0.5. Default: %(default)s
 """,
     )
 
