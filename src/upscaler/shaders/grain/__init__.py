@@ -23,11 +23,11 @@ DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "grain.spv")
 
 class FilmGrainPass(ShaderPass):
     """
-    Film-like aesthetic grain overlay.
+    Film-emulation grain overlay.
 
-    Applies a temporally varying, luminance-masked, soft-light blended
-    grain texture to the final image. Operates in-place on the screen
-    texture.
+    Adds an organic, isotropic noise texture with sub-pixel temporal
+    movement, blended via soft-light to mimic real photographic grain.
+    Operates in-place on the screen texture.
 
     Tuning:
         strength  = 0.0  (off)   to  0.10 (gritty)     [default 0.0]

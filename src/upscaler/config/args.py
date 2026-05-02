@@ -473,10 +473,10 @@ Recommended range: 1.0 - 4.0. Default: %(default)s
         action="store_true",
         default=DEFAULT_CONFIG.grain_enabled,
         dest="grain_enabled",
-        help="""Enable simulated film grain (temporal noise) on the final image.
+        help="""Enable simulated film grain on the final image.
 
-Grain adds a subtle organic texture that can make digital
-art feel more like a high-quality scan or print.
+An isotropic noise texture is added with a soft-light
+blend, mimicking the look of real film emulsion.
 
 """,
     )
@@ -484,10 +484,10 @@ art feel more like a high-quality scan or print.
         "--grain-strength",
         type=float,
         default=DEFAULT_CONFIG.grain_strength,
-        help="""Grain intensity (0.0 = off, 0.10 = very noisy).
+        help="""Grain intensity (0.0 - 1.0).
 
 Extremely low values (0.005-0.02) mimic fine photochemical
-grain; 0.03-0.05 give a more noticeable vintage film look.
+grain; 0.03-0.05 give a more noticeable film look.
 
 Recommended range: 0.005 - 0.03. Default: %(default)s
 
@@ -497,10 +497,10 @@ Recommended range: 0.005 - 0.03. Default: %(default)s
         "--grain-size",
         type=float,
         default=DEFAULT_CONFIG.grain_size,
-        help="""Apparent particle size of the grain (1.0 = fine, 2.0+ = coarse).
+        help="""Apparent particle size of the grain (1.0 - 10.0).
 
-Larger values produce more visible, clumpier grain typical
-of older film stocks.
+Larger values (2.0+) produce more visible, clumpier grain
+typical of older film stocks.
 
 Default: %(default)s
 
