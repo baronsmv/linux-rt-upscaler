@@ -110,13 +110,18 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
     parser.add_argument(
         "-v", "--version", action="version", version=f"%(prog)s {_get_version()}"
     )
-    parser.add_argument(
+
+    # ----------------------------------------------------------------------
+    # Configuration section
+    # ----------------------------------------------------------------------
+    configuration_group = parser.add_argument_group("CONFIGURATION OPTIONS")
+    configuration_group.add_argument(
         "-c",
         "--config",
         help="""Path to config file (YAML)
 Default: '~/.config/linux-rt-upscaler/config.yaml'""",
     )
-    parser.add_argument(
+    configuration_group.add_argument(
         "-p",
         "--profile",
         help="Name of a profile to explicitly apply from the config file",
@@ -673,7 +678,7 @@ Note: Same as above.
         type=str,
         default=DEFAULT_CONFIG.screenshot_dir,
         help="""Directory to save screenshots.
-Default: %(default)s""",
+Default: '%(default)s'""",
     )
     screenshot_group.add_argument(
         "--screenshot-filename",
