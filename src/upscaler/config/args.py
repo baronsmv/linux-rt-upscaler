@@ -63,7 +63,7 @@ class FilteredHelpAction(argparse._HelpAction):
             parser._action_groups = original_groups
             parser.epilog = original_epilog
 
-            print("\nFor additional options, see --help-all")
+            print("\nFor additional and advanced options, see: upscale --help-all")
         parser.exit()
 
 
