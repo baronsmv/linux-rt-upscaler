@@ -261,7 +261,6 @@ Recommended range: 0.7 - 1.0. Default: %(default)s
 
 """,
     )
-    # Also add a negation flag to allow disabling from shell:
     lanczos_group.add_argument(
         "--no-lanczos-linear-light",
         action="store_false",
@@ -269,7 +268,25 @@ Recommended range: 0.7 - 1.0. Default: %(default)s
         help="""Disable linear-light processing (sRGB-linear-sRGB).
 
 Disabling it may improve text clarity on some content,
-but colors could lose saturation when downscaling.""",
+but colors could lose saturation when downscaling.
+
+""",
+    )
+    lanczos_group.add_argument(
+        "--no-lanczos-tight-antiring",
+        action="store_false",
+        dest="lanczos_tight_antiring",
+        help="""Disable tight anti-ringing.
+
+When enabled (default), ringing bounds are derived only
+from the central 2x2 neighborhood, which keeps thin text
+and line art sharp. When disabled, the full filter
+footprint is used for a more conservative clamp that may
+soften edge details.
+
+Leave this enabled unless you notice distant ringing
+artifacts on high‑contrast edges.
+""",
     )
 
     # ----------------------------------------------------------------------
