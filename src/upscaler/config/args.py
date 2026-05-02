@@ -13,7 +13,7 @@ DEFAULT_CONFIG: Config = Config()
 
 
 class FilteredHelpAction(argparse._HelpAction):
-    """Print help with optional filtering of advanced argument groups."""
+    """Print help with optional filtering of additional argument groups."""
 
     def __init__(
         self,
@@ -37,13 +37,13 @@ class FilteredHelpAction(argparse._HelpAction):
             essential_actions = [
                 a
                 for a in parser._actions
-                if not getattr(a.container, "advanced", False)
+                if not getattr(a.container, "additional", False)
             ]
 
             # Filter argument groups
             original_groups = parser._action_groups
             essential_groups = [
-                g for g in original_groups if not getattr(g, "advanced", False)
+                g for g in original_groups if not getattr(g, "additional", False)
             ]
 
             # Save originals and swap
@@ -63,7 +63,7 @@ class FilteredHelpAction(argparse._HelpAction):
             parser._action_groups = original_groups
             parser.epilog = original_epilog
 
-            print("\nFor advanced and tuning options, see --help-all")
+            print("\nFor additional options, see --help-all")
         parser.exit()
 
 
@@ -99,13 +99,13 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
         "--help",
         action=FilteredHelpAction,
         show_all=False,
-        help="show a short help message and exit",
+        help="show a short help message with common options and exit",
     )
     parser.add_argument(
         "--help-all",
         action=FilteredHelpAction,
         show_all=True,
-        help="show full help with all advanced options and exit",
+        help="show a full help message with all options and exit",
     )
     parser.add_argument(
         "-v", "--version", action="version", version=f"%(prog)s {_get_version()}"
@@ -144,12 +144,12 @@ when focus changes)""",
     )
 
     # ----------------------------------------------------------------------
-    # Advanced Interaction section
+    # Additional Interaction section
     # ----------------------------------------------------------------------
-    advanced_interaction_group = parser.add_argument_group(
-        "ADVANCED INTERACTION OPTIONS"
+    additional_interaction_group = parser.add_argument_group(
+        "ADDITIONAL INTERACTION OPTIONS"
     )
-    advanced_interaction_group.add_argument(
+    additional_interaction_group.add_argument(
         "--no-focus-pause",
         action="store_false",
         dest="pause_on_focus_loss",
@@ -239,7 +239,9 @@ screens (4k, 1440p) or low-resolution sources""",
 Lower values increase sharpness/ringing; higher values
 smooth the result.
 
-Recommended range: 0.8 - 1.2, default: %(default)s""",
+Recommended range: 0.8 - 1.2, default: %(default)s
+
+""",
     )
     lanczos_group.add_argument(
         "--lanczos-antiring-strength",
@@ -252,7 +254,7 @@ the cost of possible ringing.
 
 Recommended range: 0.7 - 1.0, default: %(default)s
 
-    """,
+""",
     )
     # Also add a negation flag to allow disabling from shell:
     lanczos_group.add_argument(
@@ -282,7 +284,7 @@ Debanding smooths out harsh colour steps (banding) that can
 appear in gradients after AI upscaling, especially in skies,
 fog, or smooth backgrounds.
 
-    """,
+""",
     )
     pre_processing_group.add_argument(
         "--deband-strength",
@@ -294,8 +296,7 @@ Low values (0.1-0.3) are sufficient for most content.
 Higher values risk softening fine details.
 
 Recommended range: 0.1 - 0.5. Default: %(default)s
-
-    """,
+""",
     )
 
     # ----------------------------------------------------------------------
@@ -314,7 +315,7 @@ CAS adds a subtle, perceptually-based sharpening that
 enhances text and line art without the halos common in
 traditional unsharp masks.
 
-    """,
+""",
     )
     post_processing_group.add_argument(
         "--cas-strength",
@@ -329,7 +330,7 @@ become noticeable on high-contrast edges.
 
 Recommended range: 0.2 - 0.5. Default: %(default)s
 
-    """,
+""",
     )
 
     # --- Bloom ---
@@ -346,7 +347,7 @@ back onto the image. Only pixels above a configurable
 threshold contribute to the glow, preserving shadows and
 midtones.
 
-    """,
+""",
     )
     post_processing_group.add_argument(
         "--bloom-strength",
@@ -360,7 +361,7 @@ noticeably.
 
 Recommended range: 0.02 - 0.08. Default: %(default)s
 
-    """,
+""",
     )
     post_processing_group.add_argument(
         "--bloom-threshold",
@@ -375,7 +376,7 @@ glow to pure highlights like glowing embers or bright sky.
 
 Default: %(default)s
 
-    """,
+""",
     )
     post_processing_group.add_argument(
         "--bloom-radius",
@@ -388,7 +389,7 @@ more ethereal look. Smaller radii keep the effect tight.
 
 Recommended range: 2 - 8. Default: %(default)s
 
-    """,
+""",
     )
 
     # --- Vignette ---
@@ -402,7 +403,7 @@ Recommended range: 2 - 8. Default: %(default)s
 A vignette naturally draws attention to the centre of the
 screen and can simulate the look of a camera lens.
 
-    """,
+""",
     )
     post_processing_group.add_argument(
         "--vignette-strength",
@@ -415,7 +416,7 @@ without overwhelming the image.
 
 Recommended range: 0.3 - 0.6. Default: %(default)s
 
-    """,
+""",
     )
     post_processing_group.add_argument(
         "--vignette-radius",
@@ -430,7 +431,7 @@ to extreme corners.
 
 Default: %(default)s
 
-    """,
+""",
     )
     post_processing_group.add_argument(
         "--vignette-falloff",
@@ -443,7 +444,7 @@ Higher values (3.0-4.0) produce a sharp, distinct ring.
 
 Recommended range: 1.0 - 4.0. Default: %(default)s
 
-    """,
+""",
     )
 
     # --- Film Grain ---
@@ -459,7 +460,7 @@ art feel more like a high-quality scan or print. The noise
 varies every frame (using a frame counter) so it does not
 feel like a static overlay.
 
-    """,
+""",
     )
     post_processing_group.add_argument(
         "--grain-strength",
@@ -475,7 +476,7 @@ to avoid obscuring text.
 
 Recommended range: 0.005 - 0.03. Default: %(default)s
 
-    """,
+""",
     )
     post_processing_group.add_argument(
         "--grain-size",
@@ -486,7 +487,9 @@ Recommended range: 0.005 - 0.03. Default: %(default)s
 Larger values produce more visible, clumpier grain typical
 of older film stocks.
 
-Default: %(default)s""",
+Default: %(default)s
+
+""",
     )
 
     # --- Colour Grading (3D LUT) ---
@@ -503,7 +506,7 @@ enabling instant film-stock emulation, colour-grading
 presets, or any global colour transform without touching
 texture detail.
 
-    """,
+""",
     )
     post_processing_group.add_argument(
         "--lut-intensity",
@@ -515,7 +518,7 @@ texture detail.
 1.0 = full colour transform applied.
 
 Default: %(default)s
-    """,
+""",
     )
 
     # ----------------------------------------------------------------------
@@ -536,15 +539,16 @@ Note: using 'all' requires a manual scale factor
     )
 
     # ----------------------------------------------------------------------
-    # Advanced Display section
+    # Additional Display section
     # ----------------------------------------------------------------------
-    advanced_display_group = parser.add_argument_group("ADVANCED DISPLAY OPTIONS")
-    advanced_display_group.add_argument(
+    additional_display_group = parser.add_argument_group("ADDITIONAL DISPLAY OPTIONS")
+    additional_display_group.add_argument(
         "--scale-factor",
         type=float,
         default=DEFAULT_CONFIG.scale_factor,
         help="""Override the automatic Wayland scale factor
 (e.g., 1.5 for 150%% scaling).
+
 By default, the scale factor is detected automatically
 using physical monitor resolution. This override is
 required when --monitor is set to 'all'.""",
@@ -566,9 +570,10 @@ Common modes:
   stretch  - Fill, ignore aspect ratio
   cover    - Fill and crop to fit
 
-Advanced: use WIDTHxHEIGHT, WIDTHxHEIGHT!, WIDTHxHEIGHT^,
-percentage (50%%), or fixed-axis (1920x, x1080) with
-optional ! for stretch. Full examples in the config file.
+Other modes include WIDTHxHEIGHT, WIDTHxHEIGHT!,
+WIDTHxHEIGHT^, percentage (50%%), or fixed-axis
+(1920x, x1080) with optional ! for stretch.
+Full examples in the config file.
 
 """,
     )
@@ -597,28 +602,6 @@ optional ! for stretch. Full examples in the config file.
         help="Pixels to crop from right border of the target window",
     )
     overlay_group.add_argument(
-        "--offset-x",
-        type=int,
-        default=DEFAULT_CONFIG.offset_x,
-        help="""Horizontal offset from centered position (pixels, positive
-moves right, negative moves left)
-
-Note: To pass negative values, use --offset-x=-1 (with an
-equals sign). The form --offset-x -1 will be misinterpreted
-because the shell treats -1 as a separate option.
-    """,
-    )
-    overlay_group.add_argument(
-        "--offset-y",
-        type=int,
-        default=DEFAULT_CONFIG.offset_y,
-        help="""Vertical offset from centered position (pixels, positive
-moves down, negative moves up)
-
-Note: Same as above.
-    """,
-    )
-    overlay_group.add_argument(
         "--background-color",
         default=DEFAULT_CONFIG.background_color,
         help="""Color for letterbox bars (supports transparency).
@@ -628,15 +611,14 @@ Can be a:
   CSS color name (e.g., 'black', 'red', 'transparent')
   Hex code (e.g., '#000000', '#FF0000', '#00000080')
   Functional notation ('rgb(255,0,0)', 'rgba(255,0,0,0.5)')
-
-Note: RGB values must be integers 0-255.""",
+""",
     )
 
     # ----------------------------------------------------------------------
-    # Advanced Overlay options
+    # Additional Overlay options
     # ----------------------------------------------------------------------
-    advanced_overlay_group = parser.add_argument_group("ADVANCED OVERLAY OPTIONS")
-    advanced_overlay_group.add_argument(
+    additional_overlay_group = parser.add_argument_group("ADDITIONAL OVERLAY OPTIONS")
+    additional_overlay_group.add_argument(
         "--overlay-mode",
         choices=[e.value for e in OverlayMode],
         default=DEFAULT_CONFIG.overlay_mode,
@@ -656,6 +638,29 @@ Modes:
                      (covers entire monitor).
   windowed         - Normal window with decorations, fixed
                      size.
+""",
+    )
+    additional_overlay_group.add_argument(
+        "--offset-x",
+        type=int,
+        default=DEFAULT_CONFIG.offset_x,
+        help="""Horizontal offset from centered position (pixels, positive
+moves right, negative moves left)
+
+Note: To pass negative values, use --offset-x=-1 (with an
+equals sign). The form --offset-x -1 will be misinterpreted
+because the shell treats -1 as a separate option.
+
+""",
+    )
+    additional_overlay_group.add_argument(
+        "--offset-y",
+        type=int,
+        default=DEFAULT_CONFIG.offset_y,
+        help="""Vertical offset from centered position (pixels, positive
+moves down, negative moves up)
+
+Note: Same as above.
 """,
     )
 
@@ -895,24 +900,24 @@ Recommended range: 0.15-0.5, default: %(default)s
     )
 
     # ----------------------------------------------------------------------
-    # Advanced groups
+    # Additional groups
     # ----------------------------------------------------------------------
-    advanced_groups = [
-        advanced_interaction_group,
+    additional_groups = [
+        additional_interaction_group,
         timing_group,
         window_detection_group,
         lanczos_group,
         pre_processing_group,
         post_processing_group,
-        advanced_display_group,
-        advanced_overlay_group,
+        additional_display_group,
+        additional_overlay_group,
         screenshot_group,
         osd_group,
         vulkan_group,
         tile_group,
     ]
-    for grp in advanced_groups:
-        grp.advanced = True
+    for grp in additional_groups:
+        grp.additional = True
 
     # ----------------------------------------------------------------------
     # Argument parse and map
