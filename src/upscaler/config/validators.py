@@ -1,7 +1,7 @@
 import logging
 import re
 import sys
-from typing import Any, Optional, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 from PySide6.QtGui import QColor
 
@@ -9,10 +9,10 @@ logger = logging.getLogger(__name__)
 
 
 def validate_number(
-    value: float,
+    value: Union[int, float],
     arg_name: str,
-    left_limit: Optional[float] = None,
-    right_limit: Optional[float] = None,
+    left_limit: Optional[Union[int, float]] = None,
+    right_limit: Optional[Union[int, float]] = None,
     left_inclusive: bool = True,
     right_inclusive: bool = True,
 ) -> None:
@@ -130,29 +130,50 @@ def validate_color(color_str: str, _: str) -> None:
 
 
 _VALIDATORS: Dict[str, Tuple] = {
+    # Timing
     "focus_poll_interval": (validate_number, "focus_poll_interval", 0.05),
-    "scale_factor": (validate_number, "scale_factor", 0, None, False),
-    "output_geometry": (validate_geometry, "output_geometry"),
-    "background_color": (validate_color, "background_color"),
-    "crop_top": (validate_number, "crop_top", 0),
-    "crop_bottom": (validate_number, "crop_bottom", 0),
-    "crop_left": (validate_number, "crop_left", 0),
-    "crop_right": (validate_number, "crop_right", 0),
-    "offset_x": (validate_number, "offset_x"),
-    "offset_y": (validate_number, "offset_y"),
-    "osd_duration": (validate_number, "osd_duration", 0),
-    "lanczos_blur": (validate_number, "lanczos_blur", 0, 2, False),
-    "lanczos_antiring_strength": (validate_number, "lanczos_antiring_strength", 0, 1),
-    "vulkan_buffer_pool_size": (validate_number, "vulkan_buffer_pool_size", 0),
-    "frame_timeout": (validate_number, "frame_timeout", 0),
-    "tile_size": (validate_number, "tile_size", 1),
-    "tile_context_margin": (validate_number, "tile_context_margin", 0),
-    "max_tile_layers": (validate_number, "max_tile_layers", 0),
-    "area_threshold": (validate_number, "area_threshold", 0, 1),
+    # Window
     "target_delay": (validate_number, "target_delay", 0),
     "pid_timeout": (validate_number, "pid_timeout", 0),
     "class_timeout": (validate_number, "class_timeout", 0),
     "total_timeout": (validate_number, "total_timeout", 0),
+    # Lanczos
+    "lanczos_blur": (validate_number, "lanczos_blur", 0, 2, False),
+    "lanczos_antiring_strength": (validate_number, "lanczos_antiring_strength", 0, 1),
+    # Pre-processing
+    "deband_strength": (validate_number, "deband_strength", 0.0, 1.0),
+    # Post-processing
+    "cas_strength": (validate_number, "cas_strength", 0.0, 1.0),
+    "bloom_strength": (validate_number, "bloom_strength", 0.0, 1.0),
+    "bloom_threshold": (validate_number, "bloom_threshold", 0.0, 1.0),
+    "bloom_radius": (validate_number, "bloom_radius", 1, 16),
+    "vignette_strength": (validate_number, "vignette_strength", 0.0, 1.0),
+    "vignette_radius": (validate_number, "vignette_radius", 0.0, 2.0),
+    "vignette_falloff": (validate_number, "vignette_falloff", 0.1, 10.0),
+    "grain_strength": (validate_number, "grain_strength", 0.0, 1.0),
+    "grain_size": (validate_number, "grain_size", 1.0, 10.0),
+    "lut_intensity": (validate_number, "lut_intensity", 0.0, 1.0),
+    # Display
+    "scale_factor": (validate_number, "scale_factor", 0, None, False),
+    # Presentation
+    "output_geometry": (validate_geometry, "output_geometry"),
+    "crop_top": (validate_number, "crop_top", 0),
+    "crop_bottom": (validate_number, "crop_bottom", 0),
+    "crop_left": (validate_number, "crop_left", 0),
+    "crop_right": (validate_number, "crop_right", 0),
+    "background_color": (validate_color, "background_color"),
+    "offset_x": (validate_number, "offset_x"),
+    "offset_y": (validate_number, "offset_y"),
+    # OSD
+    "osd_duration": (validate_number, "osd_duration", 0),
+    # Vulkan
+    "vulkan_buffer_pool_size": (validate_number, "vulkan_buffer_pool_size", 0),
+    "frame_timeout": (validate_number, "frame_timeout", 0),
+    # Tile
+    "tile_size": (validate_number, "tile_size", 1),
+    "tile_context_margin": (validate_number, "tile_context_margin", 0),
+    "max_tile_layers": (validate_number, "max_tile_layers", 0),
+    "area_threshold": (validate_number, "area_threshold", 0, 1),
 }
 
 

@@ -54,48 +54,33 @@ BackgroundColor = Union[str, Tuple[float, float, float, float]]
 
 @dataclass
 class Config:
-    # General
+    # Program
     program: Optional[List[str]] = None
+
+    # Interaction
     select: bool = False
     follow_focus: bool = False
     pause_on_focus_loss: bool = True
+
+    # Timing
     focus_poll_interval: float = 0.2
 
-    # Overlay
-    overlay_mode: str = OverlayMode.ALWAYS_ON_TOP.value
-    overlay_opacity_min: float = 0.2  # Not in argparser
-    overlay_opacity_max: float = 1.0  # Not in argparser
-
-    # Display
-    monitor: str = "primary"
-    scale_factor: Optional[float] = None
+    # Window detection
+    target_delay: float = 5
+    pid_timeout: float = 5
+    class_timeout: float = 5
+    total_timeout: float = 60
+    starting_phase: int = 1
 
     # Upscaling
     model: str = "fast"
     double_upscale: bool = False
 
-    # Output geometry
-    output_geometry: str = "fit"
-    crop_top: int = 0
-    crop_bottom: int = 0
-    crop_left: int = 0
-    crop_right: int = 0
-    offset_x: int = 0
-    offset_y: int = 0
-    background_color: BackgroundColor = "black"
-
-    # Screenshots
-    screenshot_dir: str = os.path.join(user_pictures_dir(), "Screenshots")
-    screenshot_filename: str = "Screenshot_{timestamp:%Y%m%d_%H%M%S}.png"
-
-    # OSD
-    show_osd: bool = True
-    osd_duration: float = 1.5
-
     # Lanczos
     lanczos_blur: float = 1.0
     lanczos_antiring_strength: float = 1.0
     lanczos_linear_light: bool = True
+    lanczos_tight_antiring: bool = True
 
     # Debanding
     deband_enabled: bool = False
@@ -107,25 +92,52 @@ class Config:
 
     # Bloom
     bloom_enabled: bool = False
-    bloom_strength: float = 0.0
+    bloom_strength: float = 0.03
     bloom_threshold: float = 0.85
     bloom_radius: int = 4
 
     # Vignette
     vignette_enabled: bool = False
-    vignette_strength: float = 0.0
+    vignette_strength: float = 0.5
     vignette_radius: float = 0.8
-    vignette_falloff: float = 2.0
+    vignette_falloff: float = 4.0
 
     # Color Grading (3D LUT)
     lut_enabled: bool = False
-    lut_intensity: float = 0.0
+    lut_intensity: float = 1.0
     # TODO: LUT file path, for now we use identity LUT built-in
 
     # Film Grain
     grain_enabled: bool = False
-    grain_strength: float = 0.0
+    grain_strength: float = 0.2
     grain_size: float = 1.0
+
+    # Display
+    monitor: str = "primary"
+    scale_factor: Optional[float] = None
+
+    # Presentation
+    output_geometry: str = "fit"
+    crop_top: int = 0
+    crop_bottom: int = 0
+    crop_left: int = 0
+    crop_right: int = 0
+    background_color: BackgroundColor = "black"
+    offset_x: int = 0
+    offset_y: int = 0
+
+    # Overlay
+    overlay_mode: str = OverlayMode.ALWAYS_ON_TOP.value
+    overlay_opacity_min: float = 0.2  # Not in argparser
+    overlay_opacity_max: float = 1.0  # Not in argparser
+
+    # Screenshots
+    screenshot_dir: str = os.path.join(user_pictures_dir(), "Screenshots")
+    screenshot_filename: str = "Screenshot_{timestamp:%Y%m%d_%H%M%S}.png"
+
+    # OSD
+    show_osd: bool = True
+    osd_duration: float = 1.5
 
     # Vulkan
     vulkan_present_mode: str = VulkanPresentMode.FIFO.value
@@ -139,13 +151,6 @@ class Config:
     tile_context_margin: int = 16
     max_tile_layers: int = 16
     area_threshold: float = 0.3
-
-    # Window detection
-    target_delay: float = 5
-    pid_timeout: float = 5
-    class_timeout: float = 5
-    total_timeout: float = 60
-    starting_phase: int = 1
 
     # Logging (set via flags, not directly from CLI)
     log_level: str = "WARNING"

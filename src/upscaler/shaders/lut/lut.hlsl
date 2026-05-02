@@ -55,7 +55,7 @@ Texture2D<float4>         InputTex   : register(t0);
 [[vk::image_format("rgba8")]]
 RWTexture2D<float4>       OutputTex  : register(u0);
 Texture2DArray<float4>     LUTTex     : register(t1);
-SamplerState               LUTSampler : register(s1);
+SamplerState               LUTSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {

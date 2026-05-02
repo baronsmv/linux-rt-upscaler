@@ -559,66 +559,6 @@ required when --monitor is set to 'all'.""",
     # ----------------------------------------------------------------------
     overlay_group = parser.add_argument_group("OVERLAY OPTIONS")
     overlay_group.add_argument(
-        "-o",
-        "--output-geometry",
-        default=DEFAULT_CONFIG.output_geometry,
-        help="""Output window sizing and scaling behaviour.
-Default: %(default)s
-
-Common modes:
-  fit      - Letterbox, preserve aspect ratio
-  stretch  - Fill, ignore aspect ratio
-  cover    - Fill and crop to fit
-
-Other modes include WIDTHxHEIGHT, WIDTHxHEIGHT!,
-WIDTHxHEIGHT^, percentage (50%%), or fixed-axis
-(1920x, x1080) with optional ! for stretch.
-Full examples in the config file.
-
-""",
-    )
-    overlay_group.add_argument(
-        "--crop-top",
-        type=int,
-        default=DEFAULT_CONFIG.crop_top,
-        help="Pixels to crop from top border of the target window",
-    )
-    overlay_group.add_argument(
-        "--crop-bottom",
-        type=int,
-        default=DEFAULT_CONFIG.crop_bottom,
-        help="Pixels to crop from bottom border of the target window",
-    )
-    overlay_group.add_argument(
-        "--crop-left",
-        type=int,
-        default=DEFAULT_CONFIG.crop_left,
-        help="Pixels to crop from left border of the target window",
-    )
-    overlay_group.add_argument(
-        "--crop-right",
-        type=int,
-        default=DEFAULT_CONFIG.crop_right,
-        help="Pixels to crop from right border of the target window",
-    )
-    overlay_group.add_argument(
-        "--background-color",
-        default=DEFAULT_CONFIG.background_color,
-        help="""Color for letterbox bars (supports transparency).
-Default: %(default)s
-
-Can be a:
-  CSS color name (e.g., 'black', 'red', 'transparent')
-  Hex code (e.g., '#000000', '#FF0000', '#00000080')
-  Functional notation ('rgb(255,0,0)', 'rgba(255,0,0,0.5)')
-""",
-    )
-
-    # ----------------------------------------------------------------------
-    # Additional Overlay options
-    # ----------------------------------------------------------------------
-    additional_overlay_group = parser.add_argument_group("ADDITIONAL OVERLAY OPTIONS")
-    additional_overlay_group.add_argument(
         "--overlay-mode",
         choices=[e.value for e in OverlayMode],
         default=DEFAULT_CONFIG.overlay_mode,
@@ -640,7 +580,74 @@ Modes:
                      size.
 """,
     )
-    additional_overlay_group.add_argument(
+
+    # ----------------------------------------------------------------------
+    # Presentation options
+    # ----------------------------------------------------------------------
+    presentation_group = parser.add_argument_group("PRESENTATION OPTIONS")
+    presentation_group.add_argument(
+        "-o",
+        "--output-geometry",
+        default=DEFAULT_CONFIG.output_geometry,
+        help="""Output window sizing and scaling behaviour.
+Default: %(default)s
+
+Common modes:
+  fit      - Letterbox, preserve aspect ratio
+  stretch  - Fill, ignore aspect ratio
+  cover    - Fill and crop to fit
+
+Other modes include WIDTHxHEIGHT, WIDTHxHEIGHT!,
+WIDTHxHEIGHT^, percentage (50%%), or fixed-axis
+(1920x, x1080) with optional ! for stretch.
+Full examples in the config file.
+
+""",
+    )
+    presentation_group.add_argument(
+        "--crop-top",
+        type=int,
+        default=DEFAULT_CONFIG.crop_top,
+        help="Pixels to crop from top border of the target window",
+    )
+    presentation_group.add_argument(
+        "--crop-bottom",
+        type=int,
+        default=DEFAULT_CONFIG.crop_bottom,
+        help="Pixels to crop from bottom border of the target window",
+    )
+    presentation_group.add_argument(
+        "--crop-left",
+        type=int,
+        default=DEFAULT_CONFIG.crop_left,
+        help="Pixels to crop from left border of the target window",
+    )
+    presentation_group.add_argument(
+        "--crop-right",
+        type=int,
+        default=DEFAULT_CONFIG.crop_right,
+        help="Pixels to crop from right border of the target window",
+    )
+    presentation_group.add_argument(
+        "--background-color",
+        default=DEFAULT_CONFIG.background_color,
+        help="""Color for letterbox bars (supports transparency).
+Default: %(default)s
+
+Can be a:
+  CSS color name (e.g., 'black', 'red', 'transparent')
+  Hex code (e.g., '#000000', '#FF0000', '#00000080')
+  Functional notation ('rgb(255,0,0)', 'rgba(255,0,0,0.5)')
+""",
+    )
+
+    # ----------------------------------------------------------------------
+    # Additional Presentation options
+    # ----------------------------------------------------------------------
+    additional_presentation_group = parser.add_argument_group(
+        "ADDITIONAL PRESENTATION OPTIONS"
+    )
+    additional_presentation_group.add_argument(
         "--offset-x",
         type=int,
         default=DEFAULT_CONFIG.offset_x,
@@ -653,7 +660,7 @@ because the shell treats -1 as a separate option.
 
 """,
     )
-    additional_overlay_group.add_argument(
+    additional_presentation_group.add_argument(
         "--offset-y",
         type=int,
         default=DEFAULT_CONFIG.offset_y,
@@ -910,7 +917,8 @@ Recommended range: 0.15-0.5, default: %(default)s
         pre_processing_group,
         post_processing_group,
         additional_display_group,
-        additional_overlay_group,
+        additional_presentation_group,
+        overlay_group,
         screenshot_group,
         osd_group,
         vulkan_group,
