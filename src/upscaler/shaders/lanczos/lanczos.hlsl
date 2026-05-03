@@ -5,7 +5,7 @@
 //
 //  Features :
 //    - Correct variable-radius Lanczos kernel (no frequency-domain shortcuts)
-//    - Independent X/Y radii - perfectly handles non-uniform scaling
+//    - Independent X/Y radii (pre‑computed by the Python handler)
 //    - Automatic anti-aliasing when downscaling (radii grow with the inverse scale)
 //    - Hardware Gather fast path for radius-2 (4x4) upscaling
 //    - Optional linear-light processing (gamma-correct resampling)
@@ -30,14 +30,16 @@ SamplerState        PointSampler: register(s0);   // needed for Gather()
 
 cbuffer Constants : register(b0)
 {
-    float4 bgColor;          // color used outside the destination rectangle
+    float4 bgColor;                  // color used outside the destination rectangle
     uint   srcWidth, srcHeight;
     uint   dstTotalWidth, dstTotalHeight;
     int    dstX, dstY, dstW, dstH;   // destination rectangle
+    uint   radiusX;                  // pre‑computed filter radius in X
+    uint   radiusY;                  // pre‑computed filter radius in Y
     float  blur;                     // kernel softness (1.0 = standard Lanczos)
     float  antiringStrength;         // 0 = off, 1 = full clamp
-    bool   linearLight;             // process in linear light (recommended)
-    bool   tightAntiring;           // true = only central 2x2 for ringing bounds
+    bool   linearLight;              // process in linear light (recommended)
+    bool   tightAntiring;            // true = only central 2x2 for ringing bounds
 }
 
 // =============================================================================
@@ -188,20 +190,9 @@ void main(uint3 dtid : SV_DispatchThreadID)
         return;
     }
 
-    // ---- 1. Determine scale and adaptive radii ----------------------------
-    // Independent per axis - essential if the window aspect ratio stretches
-    // the content non-uniformly.
-    float scaleX = float(dstW) / float(srcWidth);
-    float scaleY = float(dstH) / float(srcHeight);
-
-    // For upscaling (scale ≥ 1): radius = 2 (Lanczos-2, sharp).
-    // For downscaling:         radius = ceil(2 / scale).
-    // This guarantees the kernel covers at least the Nyquist-required support.
-    float rx = (scaleX >= 1.0f) ? 2.0f : ceil(2.0f / scaleX);
-    float ry = (scaleY >= 1.0f) ? 2.0f : ceil(2.0f / scaleY);
-
-    int irx = int(rx);
-    int iry = int(ry);
+    // ---- 1. Radii already computed by the host ----------------------------
+    int irx = int(radiusX);
+    int iry = int(radiusY);
 
     // ---- 2. Map destination pixel to continuous source coordinate --------
     // We want the centre of the destination pixel to align with the source
@@ -242,7 +233,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     //   ix from -irx+1 to irx
     for (int iy = -iry + 1; iy <= iry; ++iy)
     {
-        float wy = lanczos(abs(float(iy) - f.y), ry);
+        float wy = lanczos(abs(float(iy) - f.y), float(iry));
 
         for (int ix = -irx + 1; ix <= irx; ++ix)
         {
@@ -254,7 +245,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
             float3 color = InputTex.Load(int3(sc, 0)).rgb;
             float3 val   = linearLight ? color * color : color;
 
-            float wx = lanczos(abs(float(ix) - f.x), rx);
+            float wx = lanczos(abs(float(ix) - f.x), float(irx));
             float w  = wx * wy;
 
             accum     += val * w;

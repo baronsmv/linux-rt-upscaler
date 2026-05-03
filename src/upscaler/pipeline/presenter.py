@@ -1,4 +1,5 @@
 import logging
+import math
 from typing import List, Optional, TYPE_CHECKING
 
 from ..config import Config
@@ -308,6 +309,10 @@ class Presenter:
         canvas_y = (self.screen_height - self.content_height) // 2
         dst_x = canvas_x + r_x + self.offset_x
         dst_y = canvas_y + r_y + self.offset_y
+        scale_x = r_w / src_width
+        scale_y = r_h / src_height
+        radius_x = 2 if scale_x >= 1.0 else math.ceil(2.0 / scale_x)
+        radius_y = 2 if scale_y >= 1.0 else math.ceil(2.0 / scale_y)
 
         if r_w <= 0 or r_h <= 0:
             logger.warning(f"Invalid Lanczos rect: {r_w}x{r_h}, skipping update")
@@ -323,6 +328,8 @@ class Presenter:
             dst_y,
             r_w,
             r_h,
+            radius_x=radius_x,
+            radius_y=radius_y,
             blur=self.config.lanczos_blur,
             antiring_strength=self.config.lanczos_antiring_strength,
             linear_light=self.config.lanczos_linear_light,

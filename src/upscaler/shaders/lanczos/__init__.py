@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # bool   linearLight;                         (1x uint32)
 # bool   tightAntiring;                       (1x uint32)
 # ---------------------------------------------------------------------------
-CB_FORMAT = "ffffIIIIiiiiffII"
+CB_FORMAT = "ffffIIIIiiiiIIffII"
 CB_SIZE = struct.calcsize(CB_FORMAT)
 
 _SHADER_DIR = os.path.dirname(__file__)
@@ -114,6 +114,8 @@ class LanczosScaler(ShaderPass):
         dst_y: int,
         dst_w: int,
         dst_h: int,
+        radius_x: int,
+        radius_y: int,
         blur: float = 1.0,
         antiring_strength: float = 1.0,
         linear_light: bool = True,
@@ -146,6 +148,8 @@ class LanczosScaler(ShaderPass):
             dst_y,
             dst_w,
             dst_h,  # 4 int32
+            radius_x,
+            radius_y,
             blur,  # float
             antiring_strength,  # float
             1 if linear_light else 0,  # uint32 (bool)
