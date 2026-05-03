@@ -105,11 +105,12 @@ class Config:
     # Color Grading (3D LUT)
     lut_enabled: bool = False
     lut_intensity: float = 1.0
+    lut_preset: str = "identity"
     # TODO: LUT file path, for now we use identity LUT built-in
 
     # Film Grain
     grain_enabled: bool = False
-    grain_strength: float = 0.2
+    grain_strength: float = 0.15
     grain_size: float = 1.0
 
     # Display

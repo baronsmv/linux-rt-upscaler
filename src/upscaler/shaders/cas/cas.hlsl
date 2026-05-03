@@ -111,7 +111,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     //    the local values are near 0 or 1, reducing sharpening near black or
     //    white to avoid clipping artefacts.
     // -  For 2D art we add a small minimum weight to keep the sharpening
-    //    visible on high‑contrast lines.
+    //    visible on high-contrast lines.
     float3 contrast = maxRGB - minRGB;
     float3 weight = max(0.15, saturate(min(minRGB, 1.0 - maxRGB) / (contrast + 1e-5)));
 

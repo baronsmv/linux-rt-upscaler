@@ -107,7 +107,7 @@ class Presenter:
         # LUT (in-place)
         self._lut: Optional[LUTPass] = None
         if config.lut_enabled:
-            self._lut = LUTPass()
+            self._lut = LUTPass(preset=config.lut_preset)
             self._lut.set_target_texture(self.screen_tex)
             logger.debug("LUT pass created")
 

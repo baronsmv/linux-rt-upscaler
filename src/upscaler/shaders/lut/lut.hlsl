@@ -77,6 +77,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
 
     // ---- 1. Load original colour --------------------------------------------
     float4 color = InputTex.Load(int3(pos, 0));
+    color.rgb = color.bgr;
 
     // Early exit - no grading applied. This skips all remaining work.
     if (intensity <= 0.0f)
@@ -114,6 +115,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     // ---- 6. Trilinear blend --------------------------------------------------
     //  Interpolate between the two sampled colours based on zLerp.
     float3 graded = lerp(col0, col1, zLerp);
+    graded.rgb = graded.bgr;
 
     // ---- 7. Apply intensity and preserve alpha -------------------------------
     color.rgb = lerp(color.rgb, graded, intensity);

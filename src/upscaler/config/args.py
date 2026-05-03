@@ -6,6 +6,7 @@ from typing import Tuple, Dict, Optional, Any
 
 from .logging import setup_logging
 from .models import Config, OverlayMode, UPSCALING_MODELS
+from ..shaders import BUILT_IN_PRESETS
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ class FilteredHelpAction(argparse._HelpAction):
             parser._action_groups = original_groups
             parser.epilog = original_epilog
 
-            print("\nFor additional and advanced options, see: upscale --help-all")
+            print("\nFor additional and advanced options, see: upscale --help-all.")
         parser.exit()
 
 
@@ -85,7 +86,7 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
     parser = argparse.ArgumentParser(
         description="Real-Time Upscaler for Linux",
         add_help=False,
-        epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler",
+        epilog="See source code for details: https://github.com/baronsmv/linux-rt-upscaler.",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser._positionals.title = "POSITIONAL ARGUMENTS"
@@ -99,16 +100,20 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
         "--help",
         action=FilteredHelpAction,
         show_all=False,
-        help="show a short help message with common options and exit",
+        help="Show a short help message with common options and exit.",
     )
     parser.add_argument(
         "--help-all",
         action=FilteredHelpAction,
         show_all=True,
-        help="show a full help message with all options and exit",
+        help="Show a full help message with all options and exit.",
     )
     parser.add_argument(
-        "-v", "--version", action="version", version=f"%(prog)s {_get_version()}"
+        "-v",
+        "--version",
+        action="version",
+        version=f"%(prog)s {_get_version()}",
+        help="Show program version and exit.",
     )
 
     # ----------------------------------------------------------------------
@@ -118,17 +123,17 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
     configuration_group.add_argument(
         "-c",
         "--config",
-        help="""Path to config file (YAML)
-Default: '~/.config/linux-rt-upscaler/config.yaml'""",
+        help="""Path to config file (YAML).
+Default: '~/.config/linux-rt-upscaler/config.yaml'.""",
     )
     configuration_group.add_argument(
         "-p",
         "--profile",
-        help="Name of a profile to explicitly apply from the config file",
+        help="Name of a profile to explicitly apply from the config file.",
     )
 
     # Program argument
-    parser.add_argument("program", nargs="*", help="Program to launch and scale")
+    parser.add_argument("program", nargs="*", help="Program to launch and scale.")
 
     # ----------------------------------------------------------------------
     # Interaction section
@@ -138,14 +143,14 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'""",
         "-s",
         "--select",
         action="store_true",
-        help="Select a window from the list of open windows",
+        help="Select a window from the list of open windows.",
     )
     interaction_group.add_argument(
         "-f",
         "--follow-focus",
         action="store_true",
         help="""Follow the currently focused window (automatically switch
-when focus changes)""",
+when focus changes).""",
     )
 
     # ----------------------------------------------------------------------
@@ -158,8 +163,8 @@ when focus changes)""",
         "--no-focus-pause",
         action="store_false",
         dest="pause_on_focus_loss",
-        help="""Do not pause/hide overlay when target window loses focus
-(pause is enabled by default)""",
+        help="""Overlay is hidden when the target loses focus by default.
+Use this flag to keep it always visible.""",
     )
 
     # ----------------------------------------------------------------------
@@ -172,7 +177,7 @@ when focus changes)""",
         default=DEFAULT_CONFIG.focus_poll_interval,
         help="""How often (seconds) the application checks for window focus
 changes when --follow-focus is activated.
-Minimum is 0.05. Default: %(default)s""",
+Minimum is 0.05. Default: %(default)s.""",
     )
 
     # ----------------------------------------------------------------------
@@ -183,32 +188,37 @@ Minimum is 0.05. Default: %(default)s""",
         "--target-delay",
         type=float,
         default=DEFAULT_CONFIG.target_delay,
-        help="Seconds to wait before capturing active window",
+        help="""Seconds to wait before capturing active window.
+Default: %(default)s.""",
     )
     window_detection_group.add_argument(
         "--pid-timeout",
         type=float,
         default=DEFAULT_CONFIG.pid_timeout,
-        help="Seconds to try PID-based window detection",
+        help="""Seconds to try PID-based window detection.
+Default: %(default)s.""",
     )
     window_detection_group.add_argument(
         "--class-timeout",
         type=float,
         default=DEFAULT_CONFIG.class_timeout,
-        help="Seconds to try class-based window detection",
+        help="""Seconds to try class-based window detection.
+Default: %(default)s.""",
     )
     window_detection_group.add_argument(
         "--total-timeout",
         type=float,
         default=DEFAULT_CONFIG.total_timeout,
-        help="Total seconds before giving up",
+        help="""Total seconds before giving up.
+Default: %(default)s.""",
     )
     window_detection_group.add_argument(
         "--starting-phase",
         type=int,
         choices=[1, 2],
         default=DEFAULT_CONFIG.starting_phase,
-        help="Start with phase 1 (PID) or 2 (class)",
+        help="""Start with phase 1 (PID) or 2 (class).
+Default: %(default)s.""",
     )
 
     # ----------------------------------------------------------------------
@@ -220,15 +230,15 @@ Minimum is 0.05. Default: %(default)s""",
         "--model",
         choices=UPSCALING_MODELS,
         default=DEFAULT_CONFIG.model,
-        help="""Upscaling model to use (ordered from best to worst quality)
-Default: %(default)s""",
+        help="""Upscaling model to use (ordered from best to worst quality).
+Default: %(default)s.""",
     )
     upscaling_group.add_argument(
         "-2",
         "--double-upscale",
         action="store_true",
         help="""Perform two 2x passes (total 4x) for higher resolution
-screens (4k, 1440p) or low-resolution sources""",
+screens (4k, 1440p) or low-resolution sources.""",
     )
 
     # ----------------------------------------------------------------------
@@ -244,7 +254,7 @@ screens (4k, 1440p) or low-resolution sources""",
 Lower values increase sharpness/ringing; higher values
 smooth the result.
 
-Recommended range: 0.8 - 1.2. Default: %(default)s
+Recommended range: 0.8 - 1.2. Default: %(default)s.
 
 """,
     )
@@ -257,7 +267,7 @@ Recommended range: 0.8 - 1.2. Default: %(default)s
 Lower values soften the clamp, preserving more detail at
 the cost of possible ringing.
 
-Recommended range: 0.7 - 1.0. Default: %(default)s
+Recommended range: 0.7 - 1.0. Default: %(default)s.
 
 """,
     )
@@ -285,7 +295,7 @@ footprint is used for a more conservative clamp that may
 soften edge details.
 
 Leave this enabled unless you notice distant ringing
-artifacts on high‑contrast edges.
+artifacts on high-contrast edges.
 """,
     )
 
@@ -314,10 +324,10 @@ fog, or smooth backgrounds.
         default=DEFAULT_CONFIG.deband_strength,
         help="""Debanding intensity (0.0 = off, 1.0 = maximum blur).
 
-Low values (0.1-0.3) are sufficient for most content.
+Low values (0.1 - 0.3) are sufficient for most content.
 Higher values risk softening fine details.
 
-Recommended range: 0.1 - 0.5. Default: %(default)s
+Recommended range: 0.1 - 0.5. Default: %(default)s.
 """,
     )
 
@@ -350,7 +360,7 @@ Values between 0.2 and 0.5 provide a pleasant crispness
 without visible artifacts. Above 0.6, some ringing may
 become noticeable on high-contrast edges.
 
-Recommended range: 0.2 - 0.5. Default: %(default)s
+Recommended range: 0.2 - 0.5. Default: %(default)s.
 
 """,
     )
@@ -375,11 +385,11 @@ back onto the image.
         default=DEFAULT_CONFIG.bloom_strength,
         help="""Bloom intensity (0.0 = off, 0.16 = very strong glow).
 
-Subtle values (0.02-0.06) add a gentle, polished look.
+Subtle values (0.02 - 0.06) add a gentle, polished look.
 Strength above 0.1 may cause bright UI elements to halo
 noticeably.
 
-Recommended range: 0.02 - 0.08. Default: %(default)s
+Recommended range: 0.02 - 0.08. Default: %(default)s.
 
 """,
     )
@@ -391,10 +401,10 @@ Recommended range: 0.02 - 0.08. Default: %(default)s
 
 Only pixels whose blurred brightness exceeds this value
 will contribute. Lower thresholds (e.g., 0.7) include more
-of the scene; higher thresholds (0.9-0.95) restrict the
+of the scene; higher thresholds (0.9 - 0.95) restrict the
 glow to pure highlights like glowing embers or bright sky.
 
-Default: %(default)s
+Default: %(default)s.
 
 """,
     )
@@ -407,7 +417,7 @@ Default: %(default)s
 Larger radii spread the glow further, creating a softer,
 more ethereal look. Smaller radii keep the effect tight.
 
-Recommended range: 2 - 8. Default: %(default)s
+Recommended range: 2 - 8. Default: %(default)s.
 
 """,
     )
@@ -431,10 +441,10 @@ screen and can simulate the look of a camera lens.
         default=DEFAULT_CONFIG.vignette_strength,
         help="""Intensity of edge darkening (0.0 = off, 1.0 = black corners).
 
-Moderate values (0.3-0.6) give a subtle framing effect
+Moderate values (0.3 - 0.6) give a subtle framing effect
 without overwhelming the image.
 
-Recommended range: 0.3 - 0.6. Default: %(default)s
+Recommended range: 0.3 - 0.6. Default: %(default)s.
 
 """,
     )
@@ -445,11 +455,11 @@ Recommended range: 0.3 - 0.6. Default: %(default)s
         help="""Distance from centre where darkening begins (0.0 - 2.0).
 
 0.0 starts immediately, affecting most of the screen.
-Values around 0.7-0.8 keep the centre bright and only
+Values around 0.7 - 0.8 keep the centre bright and only
 darken the far edges. At 1.0+ the vignette is confined
 to extreme corners.
 
-Recommended range: 0.3 - 0.8. Default: %(default)s
+Recommended range: 0.3 - 0.8. Default: %(default)s.
 
 """,
     )
@@ -460,9 +470,9 @@ Recommended range: 0.3 - 0.8. Default: %(default)s
         help="""Softness of the vignette transition (0.1 - 10.0).
 
 Low values (1.0) create a gentle, wide-rolloff effect.
-Higher values (3.0-4.0) produce a sharp, distinct ring.
+Higher values (3.0 - 4.0) produce a sharp, distinct ring.
 
-Recommended range: 1.0 - 4.0. Default: %(default)s
+Recommended range: 1.0 - 4.0. Default: %(default)s.
 
 """,
     )
@@ -486,10 +496,10 @@ blend, mimicking the look of real film emulsion.
         default=DEFAULT_CONFIG.grain_strength,
         help="""Grain intensity (0.0 - 1.0).
 
-Extremely low values (0.005-0.02) mimic fine photochemical
-grain; 0.03-0.05 give a more noticeable film look.
+Low values (0.1 - 0.2) mimic fine photochemical grain.
+Higher values (0.3+) give a more noticeable film look.
 
-Recommended range: 0.005 - 0.03. Default: %(default)s
+Recommended range: 0.1 - 0.5. Default: %(default)s.
 
 """,
     )
@@ -502,7 +512,7 @@ Recommended range: 0.005 - 0.03. Default: %(default)s
 Larger values (2.0+) produce more visible, clumpier grain
 typical of older film stocks.
 
-Default: %(default)s
+Default: %(default)s.
 
 """,
     )
@@ -532,7 +542,19 @@ texture detail.
 0.0 = original image (no effect).
 1.0 = full colour transform applied.
 
-Default: %(default)s
+Default: %(default)s.
+
+""",
+    )
+    post_processing_group.add_argument(
+        "--lut-preset",
+        type=str,
+        choices=list(BUILT_IN_PRESETS.keys()),
+        default=DEFAULT_CONFIG.lut_preset,
+        help="""Built-in LUT preset to use.
+
+Choices: %(choices)s.
+Default: %(default)s.
 """,
     )
 
@@ -547,17 +569,13 @@ Default: %(default)s
         help="""Monitor to cover: 'primary', 'all' (to cover all
 multi-monitor space), or monitor name/index
 (e.g., 'HDMI-1', 0).
-Default: %(default)s
+Default: %(default)s.
 
-Note: using 'all' requires a manual scale factor
-(see --help-all).""",
+Note: using 'all' requires a manual scale factor.
+
+""",
     )
-
-    # ----------------------------------------------------------------------
-    # Additional Display section
-    # ----------------------------------------------------------------------
-    additional_display_group = parser.add_argument_group("ADDITIONAL DISPLAY OPTIONS")
-    additional_display_group.add_argument(
+    display_group.add_argument(
         "--scale-factor",
         type=float,
         default=DEFAULT_CONFIG.scale_factor,
@@ -566,7 +584,8 @@ Note: using 'all' requires a manual scale factor
 
 By default, the scale factor is detected automatically
 using physical monitor resolution. This override is
-required when --monitor is set to 'all'.""",
+required when --monitor is set to 'all'.
+""",
     )
 
     # ----------------------------------------------------------------------
@@ -578,21 +597,21 @@ required when --monitor is set to 'all'.""",
         choices=[e.value for e in OverlayMode],
         default=DEFAULT_CONFIG.overlay_mode,
         help="""Overlay window behaviour.
-Default: %(default)s
+Default: %(default)s.
 
 Note: Keyboard events are NOT forwarded, so it's best to
 keep the target window focused (if on a single monitor,
 always-on-top works well for this).
 
 Modes:
-  always-on-top    - Floating overlay above all windows
-                     and not focusable (bypasses WM).
-  top-transparent  - Same as above but click-through
-                     (mouse passes to window below).
-  fullscreen       - Fullscreen window without decorations
-                     (covers entire monitor).
-  windowed         - Normal window with decorations, fixed
-                     size.
+  always-on-top   - Floating overlay above all windows
+                    and not focusable (bypasses WM).
+  top-transparent - Same as above but click-through
+                    (mouse passes to window below).
+  fullscreen      - Fullscreen window without decorations
+                    (covers entire monitor).
+  windowed        - Normal window with decorations, fixed
+                    size.
 """,
     )
 
@@ -605,17 +624,14 @@ Modes:
         "--output-geometry",
         default=DEFAULT_CONFIG.output_geometry,
         help="""Output window sizing and scaling behaviour.
-Default: %(default)s
+Default: %(default)s.
 
 Common modes:
-  fit      - Letterbox, preserve aspect ratio
-  stretch  - Fill, ignore aspect ratio
-  cover    - Fill and crop to fit
+  fit     - Letterbox, preserve aspect ratio
+  stretch - Fill, ignore aspect ratio
+  cover   - Fill and crop to fit
 
-Other modes include WIDTHxHEIGHT, WIDTHxHEIGHT!,
-WIDTHxHEIGHT^, percentage (50%%), or fixed-axis
-(1920x, x1080) with optional ! for stretch.
-Full examples in the config file.
+More modes are included with examples in the config file.
 
 """,
     )
@@ -623,36 +639,36 @@ Full examples in the config file.
         "--crop-top",
         type=int,
         default=DEFAULT_CONFIG.crop_top,
-        help="Pixels to crop from top border of the target window",
+        help="Pixels to crop from top border of the target window.",
     )
     presentation_group.add_argument(
         "--crop-bottom",
         type=int,
         default=DEFAULT_CONFIG.crop_bottom,
-        help="Pixels to crop from bottom border of the target window",
+        help="Pixels to crop from bottom border of the target window.",
     )
     presentation_group.add_argument(
         "--crop-left",
         type=int,
         default=DEFAULT_CONFIG.crop_left,
-        help="Pixels to crop from left border of the target window",
+        help="Pixels to crop from left border of the target window.",
     )
     presentation_group.add_argument(
         "--crop-right",
         type=int,
         default=DEFAULT_CONFIG.crop_right,
-        help="Pixels to crop from right border of the target window",
+        help="Pixels to crop from right border of the target window.",
     )
     presentation_group.add_argument(
         "--background-color",
         default=DEFAULT_CONFIG.background_color,
         help="""Color for letterbox bars (supports transparency).
-Default: %(default)s
+Default: %(default)s.
 
 Can be a:
-  CSS color name (e.g., 'black', 'red', 'transparent')
-  Hex code (e.g., '#000000', '#FF0000', '#00000080')
-  Functional notation ('rgb(255,0,0)', 'rgba(255,0,0,0.5)')
+  CSS color name (e.g., 'black', 'red', 'transparent').
+  Hex code (e.g., '#000000', '#FF0000', '#00000080').
+  Functional notation ('rgb(255,0,0)', 'rgba(255,0,0,0.5)').
 """,
     )
 
@@ -667,7 +683,7 @@ Can be a:
         type=int,
         default=DEFAULT_CONFIG.offset_x,
         help="""Horizontal offset from centered position (pixels, positive
-moves right, negative moves left)
+moves right, negative moves left).
 
 Note: To pass negative values, use --offset-x=-1 (with an
 equals sign). The form --offset-x -1 will be misinterpreted
@@ -680,7 +696,7 @@ because the shell treats -1 as a separate option.
         type=int,
         default=DEFAULT_CONFIG.offset_y,
         help="""Vertical offset from centered position (pixels, positive
-moves down, negative moves up)
+moves down, negative moves up).
 
 Note: Same as above.
 """,
@@ -695,24 +711,24 @@ Note: Same as above.
         type=str,
         default=DEFAULT_CONFIG.screenshot_dir,
         help="""Directory to save screenshots.
-Default: '%(default)s'""",
+Default: '%(default)s'.""",
     )
     screenshot_group.add_argument(
         "--screenshot-filename",
         type=str,
         default=DEFAULT_CONFIG.screenshot_filename,
         help="""File name template for screenshots.
-Default: Screenshot_{timestamp:%%Y%%m%%d_%%H%%M%%S}.png
+Default: 'Screenshot_{timestamp:%%Y%%m%%d_%%H%%M%%S}.png'.
 
 Available placeholders:
-  {timestamp}  - capture time (supports strftime,
-                 e.g. {timestamp:%%Y-%%m-%%d_%%H-%%M-%%S})
-  {model}      - active upscaling model
-  {width}      - upscaled image width in pixels
-  {height}     - upscaled image height in pixels
+  {timestamp} - capture time (supports strftime,
+                e.g. '{timestamp:%%Y-%%m-%%d_%%H-%%M-%%S}').
+  {model}     - active upscaling model.
+  {width}     - upscaled image width in pixels.
+  {height}    - upscaled image height in pixels.
 
-Example: "{model}/{timestamp:%%H-%%M-%%S}.png"
-saves to "fast/14-30-22.png"
+Example: '{model}/{timestamp:%%H-%%M-%%S}.png'.
+saves to 'fast/14-30-22.png'.
 """,
     )
 
@@ -730,7 +746,8 @@ saves to "fast/14-30-22.png"
         "--osd-duration",
         type=float,
         default=DEFAULT_CONFIG.osd_duration,
-        help="How long (seconds) OSD messages stay visible. Default: %(default)s",
+        help="""How long (seconds) OSD messages stay visible.
+Default: %(default)s.""",
     )
 
     # ----------------------------------------------------------------------
@@ -742,7 +759,7 @@ saves to "fast/14-30-22.png"
         choices=["fifo", "mailbox", "immediate"],
         default=DEFAULT_CONFIG.vulkan_present_mode,
         help="""Vulkan presentation mode.
-Default: %(default)s
+Default: %(default)s.
 
 Modes:
   fifo      - V-Sync on. Limits FPS to display refresh rate.
@@ -769,7 +786,7 @@ reserves a small amount of extra VRAM.
 Raise this value if you notice stutters when many small
 regions change rapidly.
 
-Recommended range: 2-16. Default: %(default)s
+Recommended range: 2 - 16. Default: %(default)s.
 
 """,
     )
@@ -788,7 +805,7 @@ completes before proceeding, at the cost of potential
 pipeline stalls.
 
 Recommended range: 16666667 (1/60 s) - 1000000000 (1 s)
-Default: %(default)s
+Default: %(default)s.
 """,
     )
 
@@ -825,8 +842,8 @@ This increases PCIe bandwidth usage but guarantees the GPU
 always has the full image, eliminating any potential risk
 of missed updates from the compositor.
 
-Keep enabled unless you suspect damage tracking causes
-visual glitches.
+Damage tracking is enabled by default; use this flag to
+disable it only if you suspect it causes glitches.
 
 """,
     )
@@ -842,7 +859,7 @@ redundant data, but add CPU overhead during extraction.
 Large tiles reduce CPU work but cause more over-processing.
 
 Multiples of 32 work best with GPU workgroups.
-Recommended range: 32-128. Default: %(default)s
+Recommended range: 32 - 128. Default: %(default)s.
 
 """,
     )
@@ -861,7 +878,7 @@ amount of data processed per tile. More complex models
 benefit from higher values because their receptive field
 is larger and they use deeper convolution stacks.
 
-Recommended range: 4-24. Default: %(default)s
+Recommended range: 4 - 24. Default: %(default)s.
 
 """,
     )
@@ -880,7 +897,7 @@ Higher values tolerate more scattered changes, but each
 tile adds a GPU dispatch and may eventually hurt
 performance.
 
-Recommended range: 4-32. Default: %(default)s
+Recommended range: 4 - 32. Default: %(default)s.
 
 """,
     )
@@ -889,7 +906,7 @@ Recommended range: 4-32. Default: %(default)s
         "--area-threshold",
         type=float,
         default=DEFAULT_CONFIG.area_threshold,
-        help="""Fraction of the window area (0.0-1.0) that, when dirty,
+        help="""Fraction of the window area (0.0 - 1.0) that, when dirty,
 forces a fallback to full-frame processing in tile mode.
 
 Smaller values (e.g., 0.15) fall back earlier, preventing
@@ -897,7 +914,7 @@ too many tiny tile dispatches. Larger values (e.g., 0.5)
 try tile mode more aggressively. 0.0 always uses full-frame
 for dirty frames; 1.0 never falls back.
 
-Recommended range: 0.15-0.5. Default: %(default)s
+Recommended range: 0.15 - 0.5. Default: %(default)s.
 """,
     )
 
@@ -909,16 +926,16 @@ Recommended range: 0.15-0.5. Default: %(default)s
         "-q",
         "--quiet",
         action="store_true",
-        help="Decrease log verbosity (ERROR level)",
+        help="Decrease log verbosity (ERROR level).",
     )
     log_group.add_argument(
         "--debug",
         action="store_true",
-        help="Increase log verbosity (DEBUG level)",
+        help="Increase log verbosity (DEBUG level).",
     )
     log_group.add_argument(
         "--log-file",
-        help="Write logs to this file (parent directories are created)",
+        help="Write logs to this file (parent directories are created).",
     )
 
     # ----------------------------------------------------------------------
@@ -931,7 +948,6 @@ Recommended range: 0.15-0.5. Default: %(default)s
         lanczos_group,
         pre_processing_group,
         post_processing_group,
-        additional_display_group,
         additional_presentation_group,
         overlay_group,
         screenshot_group,

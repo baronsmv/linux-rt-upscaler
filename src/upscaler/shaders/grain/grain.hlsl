@@ -12,7 +12,7 @@
 //    - Static 2D bilinear noise - produces a smooth, uniform grain pattern
 //      with no visible grid or directional streaks.
 //    - Temporal micro-jitter - the entire noise field shifts by a fraction of
-//      a pixel each frame (< 0.3 px), giving a subtle “swimming” motion that
+//      a pixel each frame (< 0.3 px), giving a subtle "swimming" motion that
 //      mimics real film-grain Brownian movement without blinking.
 //    - Luminance-masked application - grain is strongest at midtones and
 //      fades to zero at pure black and pure white, preserving text clarity
@@ -24,7 +24,7 @@
 //      texture to gritty vintage grain.
 //    - Operates in-place (reads and writes the same RGBA8 texture).
 //
-//  Workgroup size : 16×16 threads.
+//  Workgroup size : 16-x16 threads.
 //  Dispatch :
 //    groupsX = ceil(dstWidth  / 16)
 //    groupsY = ceil(dstHeight / 16)
