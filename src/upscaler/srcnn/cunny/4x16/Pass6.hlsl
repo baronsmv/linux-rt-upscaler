@@ -99,7 +99,7 @@ void main(uint3 id : SV_DispatchThreadID)
     //     Multiply by 2 to get the top-left of the 2x2 upscaled quad.
     uint2 gxy = id.xy * 2;
     
-    // (3) Sampling position (centre of low-res pixel).
+    // (3) Sampling position (center of low-res pixel).
     float2 pos = ((gxy >> 1) + 0.5) * pt;
     //     (gxy >> 1) recovers the original id.xy.
 

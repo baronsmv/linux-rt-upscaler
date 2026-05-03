@@ -141,12 +141,12 @@ void main(uint3 id : SV_DispatchThreadID)
     //     gxy is the pixel coordinate (x, y), directly from the dispatch ID.
     uint2 gxy = id.xy;
     
-    // (3) normalized sampling position (0-1) - pixel *centre*.
-    //     pt converts pixel coordinates to UV space; +0.5 aligns to pixel centres.
+    // (3) normalized sampling position (0-1) - pixel *center*.
+    //     pt converts pixel coordinates to UV space; +0.5 aligns to pixel centers.
     float2 pos = (gxy + 0.5) * pt;
     
     //   In subsequent macro O(t, x, y) we sample at (pos + float2(x,y)*pt),
-    //   which yields the centre of neighbouring pixels (x,y offsets in pixels).
+    //   which yields the center of neighbouring pixels (x,y offsets in pixels).
 
     V4 s0_0_0, s0_0_1, s0_0_2, s0_1_0, s0_1_1, s0_1_2, s0_2_0, s0_2_1, s0_2_2, s1_0_0, s1_0_1, s1_0_2, s1_1_0, s1_1_1, s1_1_2, s1_2_0, s1_2_1, s1_2_2;
     V4 r0 = 0.0, r1 = 0.0, r2 = 0.0, r3 = 0.0, r4 = 0.0, r5 = 0.0, r6 = 0.0, r7 = 0.0;

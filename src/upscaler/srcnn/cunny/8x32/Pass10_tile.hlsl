@@ -141,7 +141,7 @@ void main(uint3 id : SV_DispatchThreadID)
     //     tileParams.margin is the context margin in feature-map pixels.
     //     We offset by (margin, margin) to skip the padded border and land on
     //     the start of the **valid interior** region. The +0.5 ensures we sample
-    //     pixel centres.
+    //     pixel centers.
     float2 pos = (float2(tileParams.margin, tileParams.margin)
                    + float2(id.xy) + 0.5) * pt;
 

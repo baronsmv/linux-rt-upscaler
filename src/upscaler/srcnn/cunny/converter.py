@@ -494,7 +494,7 @@ void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
     //     tileParams.margin is the context margin in feature-map pixels.
     //     We offset by (margin, margin) to skip the padded border and land on
     //     the start of the **valid interior** region. The +0.5 ensures we sample
-    //     pixel centres.
+    //     pixel centers.
     float2 pos = (float2(tileParams.margin, tileParams.margin)
                    + float2(id.xy) + 0.5) * pt;
 
@@ -530,7 +530,7 @@ void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
     //     Multiply by 2 to get the top-left of the 2x2 upscaled quad.
     uint2 gxy = id.xy * 2;
     
-    // (3) Sampling position (centre of low-res pixel).
+    // (3) Sampling position (center of low-res pixel).
     float2 pos = ((gxy >> 1) + 0.5) * pt;
     //     (gxy >> 1) recovers the original id.xy.
 """
@@ -555,12 +555,12 @@ void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
     //     gxy is the pixel coordinate (x, y), directly from the dispatch ID.
     uint2 gxy = id.xy;
     
-    // (3) normalized sampling position (0-1) - pixel *centre*.
-    //     pt converts pixel coordinates to UV space; +0.5 aligns to pixel centres.
+    // (3) normalized sampling position (0-1) - pixel *center*.
+    //     pt converts pixel coordinates to UV space; +0.5 aligns to pixel centers.
     float2 pos = (gxy + 0.5) * pt;
     
     //   In subsequent macro O(t, x, y) we sample at (pos + float2(x,y)*pt),
-    //   which yields the centre of neighbouring pixels (x,y offsets in pixels).
+    //   which yields the center of neighbouring pixels (x,y offsets in pixels).
 """
 
     def _extract_core_lines(self, body: str) -> List[str]:

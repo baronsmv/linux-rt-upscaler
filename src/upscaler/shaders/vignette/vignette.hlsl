@@ -1,7 +1,7 @@
 // =============================================================================
 //  Radial Vignette - Compute Shader
 //  --------------------------------
-//  Darkens the screen corners softly, drawing the eye toward the centre.
+//  Darkens the screen corners softly, drawing the eye toward the center.
 //
 //  Features:
 //    - Configurable strength, radius, and falloff.
@@ -20,8 +20,8 @@
 //                 0.2   -> barely visible
 //                 0.5   -> moderate
 //                 1.0   -> black corners
-//      radius   = 0.0   -> darkening starts at centre
-//                 0.7   -> keeps centre bright (recommended)
+//      radius   = 0.0   -> darkening starts at center
+//                 0.7   -> keeps center bright (recommended)
 //                 1.2   -> only extreme corners
 //      falloff  = 1.0   -> gentle, wide transition
 //                 3.0   -> sharp vignette ring
@@ -42,7 +42,7 @@ cbuffer Constants : register(b0)
     float vignetteStrength;     // 0.0 - 1.0
     uint  dstWidth;
     uint  dstHeight;
-    float vignetteRadius;       // distance where darkening starts (0.0 = centre, 1.5 = extreme)
+    float vignetteRadius;       // distance where darkening starts (0.0 = center, 1.5 = extreme)
     float vignetteFalloff;      // soft edge sharpness (higher = sharper transition)
 };
 
@@ -53,10 +53,10 @@ void main(uint3 dtid : SV_DispatchThreadID)
     if (pos.x >= dstWidth || pos.y >= dstHeight)
         return;
 
-    // ---- 1. Load original colour --------------------------------------------
+    // ---- 1. Load original color --------------------------------------------
     float4 color = InputTex.Load(int3(pos, 0));
 
-    // ---- 2. Distance from centre (normalised to [0, ~0.707] for square image) -----
+    // ---- 2. Distance from center (normalised to [0, ~0.707] for square image) -----
     float2 uv   = (float2(pos) + 0.5) / float2(dstWidth, dstHeight) - 0.5;
     float  dist = length(uv);
 

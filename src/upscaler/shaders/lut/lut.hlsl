@@ -1,13 +1,13 @@
 // =============================================================================
-//  3D LUT Colour Grading - Compute Shader
+//  3D LUT color Grading - Compute Shader
 //  --------------------------------------
-//  Applies a cinematic colour-lookup table to the image. Uses a 2D-array
+//  Applies a cinematic color-lookup table to the image. Uses a 2D-array
 //  texture with trilinear interpolation for smooth, banding-free results.
 //
 //  Features:
-//    - Correct UV-to-texel-centre mapping - input 0.0 lands on the centre of
-//      the first LUT texel, 1.0 on the centre of the last, eliminating
-//      half-texel offsets that cause colour inaccuracies at extremes.
+//    - Correct UV-to-texel-center mapping - input 0.0 lands on the center of
+//      the first LUT texel, 1.0 on the center of the last, eliminating
+//      half-texel offsets that cause color inaccuracies at extremes.
 //    - Trilinear interpolation - bilinear in R/G within each Blue slice,
 //      plus manual linear blend between two adjacent Blue slices for full
 //      three-dimensional smoothing.
@@ -34,7 +34,7 @@
 //  Tuning:
 //      intensity = 0.0   -> original image (passthrough, zero cost)
 //                  0.5   -> half blend
-//                  1.0   -> full colour grade
+//                  1.0   -> full color grade
 //      lutSize   = common values: 16, 32 (default), 64
 //                  larger -> smoother gradients, but more GPU memory
 //
@@ -48,7 +48,7 @@
 //    - The Python handler (`LUTPass`) automatically creates an identity LUT
 //      and exposes methods to upload custom LUT data.
 //
-//  Based on Resolve 3D LUTs colour grading for linux-rt-upscaler.
+//  Based on Resolve 3D LUTs color grading for linux-rt-upscaler.
 // =============================================================================
 
 Texture2D<float4>         InputTex   : register(t0);
@@ -75,7 +75,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     if (pos.x >= dstWidth || pos.y >= dstHeight)
         return;
 
-    // ---- 1. Load original colour --------------------------------------------
+    // ---- 1. Load original color --------------------------------------------
     float4 color = InputTex.Load(int3(pos, 0));
     color.rgb = color.bgr;
 
@@ -90,9 +90,9 @@ void main(uint3 dtid : SV_DispatchThreadID)
     float3 rgb = saturate(color.rgb);
     float  fSize = float(lutSize);
 
-    // ---- 3. Compute LUT UV coordinates with texel-centre alignment -----------
-    //  The LUT texture is indexed so that input 0.0 lands on the centre of
-    //  texel 0 and input 1.0 lands on the centre of texel (lutSize-1).
+    // ---- 3. Compute LUT UV coordinates with texel-center alignment -----------
+    //  The LUT texture is indexed so that input 0.0 lands on the center of
+    //  texel 0 and input 1.0 lands on the center of texel (lutSize-1).
     //  Formula:   (r * (fSize - 1) + 0.5) / fSize
     //  =  r * ((fSize - 1.0) / fSize) + (0.5 / fSize)
     float3 lutUV = rgb * ((fSize - 1.0f) / fSize) + (0.5f / fSize);
@@ -113,7 +113,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     float3 col1 = LUTTex.SampleLevel(LUTSampler, float3(lutUV.xy, float(slice1)), 0.0f).rgb;
 
     // ---- 6. Trilinear blend --------------------------------------------------
-    //  Interpolate between the two sampled colours based on zLerp.
+    //  Interpolate between the two sampled colors based on zLerp.
     float3 graded = lerp(col0, col1, zLerp);
     graded.rgb = graded.bgr;
 

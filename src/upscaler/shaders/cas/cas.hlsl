@@ -9,12 +9,12 @@
 //  Features :
 //    - Adaptive sharpening - strength automatically scales with local contrast,
 //      preventing noise amplification in flat areas.
-//    - 5-tap kernel (centre + N/S/E/W) - fewer texture reads, same visual quality
+//    - 5-tap kernel (center + N/S/E/W) - fewer texture reads, same visual quality
 //      as 9-tap, thanks to the contrast-sensitive weighting.
 //    - Linear-light processing - sRGB samples are squared before sharpening and
 //      square-rooted afterwards, giving perceptually uniform results.
 //    - Clamped output - result is restricted to the local min/max of the
-//      5-tap neighbourhood, hard-suppressing ringing / haloing.
+//      5-tap neighborhood, hard-suppressing ringing / haloing.
 //    - Full-screen operation - reads and writes the same RGBA8 texture.
 //    - Configurable sharpening strength via constant buffer (0.0 - 1.0).
 //
@@ -71,10 +71,10 @@ void main(uint3 dtid : SV_DispatchThreadID)
     if (pos.x >= dstWidth || pos.y >= dstHeight)
         return;
 
-    // ---- 1. Sample 5-tap neighbourhood (centre + N/S/E/W) --------------------
+    // ---- 1. Sample 5-tap neighborhood (center + N/S/E/W) --------------------
     //  Using only the axial neighbours keeps the kernel compact while preserving
     //  edge features. The local contrast is measured in these 5 values.
-    float3 c  = LoadPixel(int2(pos.x,     pos.y));     // centre
+    float3 c  = LoadPixel(int2(pos.x,     pos.y));     // center
     float3 n  = LoadPixel(int2(pos.x,     pos.y - 1)); // north
     float3 s  = LoadPixel(int2(pos.x,     pos.y + 1)); // south
     float3 e  = LoadPixel(int2(pos.x + 1, pos.y));     // east
@@ -109,15 +109,15 @@ void main(uint3 dtid : SV_DispatchThreadID)
     //  - For edges, weight becomes large, allowing strong sharpening.
     //  - The numerator `min(minRGB, 1.0 - maxRGB)` handles the case where
     //    the local values are near 0 or 1, reducing sharpening near black or
-    //    white to avoid clipping artefacts.
+    //    white to avoid clipping artifacts.
     // -  For 2D art we add a small minimum weight to keep the sharpening
     //    visible on high-contrast lines.
     float3 contrast = maxRGB - minRGB;
     float3 weight = max(0.15, saturate(min(minRGB, 1.0 - maxRGB) / (contrast + 1e-5)));
 
     // ---- 4a. Map user `sharpeningStrength` to peak sharpening offset ----------
-    //  The peak value controls how much the centre pixel deviates from the
-    //  neighbourhood average. AMD’s range is roughly -0.125 (mild) to -0.25
+    //  The peak value controls how much the center pixel deviates from the
+    //  neighborhood average. AMD’s range is roughly -0.125 (mild) to -0.25
     //  (strong). We interpolate between 1/8 and 1/5 based on the strength
     //  slider.
     //
@@ -130,7 +130,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     float3 wRGB = weight * peak;
 
     // ---- 5. Convolve -----------------------------------------------------------
-    //  The sharpening operation blends the centre pixel with its neighbours
+    //  The sharpening operation blends the center pixel with its neighbours
     //  using the computed weight:
     //
     //    result = (c + (n + s + e + w) * w) / (1.0 + 4.0 * w)

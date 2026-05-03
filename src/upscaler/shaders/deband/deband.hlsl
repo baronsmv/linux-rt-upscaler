@@ -1,13 +1,13 @@
 // =============================================================================
 //  Anisotropic Stochastic Debanding - Compute Shader
 //  -------------------------------------------------
-//  Removes colour banding artefacts that occasionally survive AI upscaling,
+//  Removes color banding artifacts that occasionally survive AI upscaling,
 //  particularly visible in smooth gradients (skies, fog, flat backgrounds).
 //
 //  How it works:
 //    - Four pseudo-random sample points are chosen per pixel, varying in angle
 //      and distance up to a strength-controlled radius (max 16 pixels).
-//    - Each sample is compared to the centre pixel - if the difference is small
+//    - Each sample is compared to the center pixel - if the difference is small
 //      (band-like), it contributes to a weighted average; large differences
 //      (real edges) are ignored.
 //    - A small amount of high-frequency dither (0.5/255) is injected per frame,
@@ -93,11 +93,11 @@ void main(uint3 dtid : SV_DispatchThreadID)
     if (pos.x >= dstWidth || pos.y >= dstHeight)
         return;
 
-    // ---- 1. Centre pixel (linear light) --------------------------------------
+    // ---- 1. center pixel (linear light) --------------------------------------
     float3 center = LoadPixelLinear(pos);
 
     // ---- 2. Pseudo-random parameters from hash --------------------------------
-    //  seed unique per pixel and frame -> no temporal correlation of artefacts.
+    //  seed unique per pixel and frame -> no temporal correlation of artifacts.
     float seed = Hash(pos + frameIndex);
 
     // ---- 3. Dynamic search radius -------------------------------------------
@@ -133,9 +133,9 @@ void main(uint3 dtid : SV_DispatchThreadID)
     float3 w3 = saturate(1.0f - diff3 / threshold);
     float3 w4 = saturate(1.0f - diff4 / threshold);
 
-    // ---- 7. Weighted average (centre gets a small fixed weight) --------------
+    // ---- 7. Weighted average (center gets a small fixed weight) --------------
     //  This pulls the pixel towards the sampled neighbours when they are
-    //  band-like, while preserving centre value when weights are zero.
+    //  band-like, while preserving center value when weights are zero.
     float3 avg = (tap1 * w1 + tap2 * w2 + tap3 * w3 + tap4 * w4) + (center * 0.1f);
     float3 weightSum = (w1 + w2 + w3 + w4) + 0.1f;
     float3 debanded = avg / weightSum;
@@ -146,8 +146,8 @@ void main(uint3 dtid : SV_DispatchThreadID)
     float grain = (seed - 0.5f) * (1.0f / 255.0f);
     debanded += grain * debandStrength;
 
-    // ---- 9. Clamp to the local neighbourhood’s min/max -----------------------
-    //  Prevents any overshoot that could create false edges or colour shifts.
+    // ---- 9. Clamp to the local neighborhood’s min/max -----------------------
+    //  Prevents any overshoot that could create false edges or color shifts.
     float3 minN = min(center, min(min(tap1, tap2), min(tap3, tap4)));
     float3 maxN = max(center, max(max(tap1, tap2), max(tap3, tap4)));
     debanded = clamp(debanded, minN, maxN);

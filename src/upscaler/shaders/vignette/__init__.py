@@ -29,7 +29,7 @@ class VignettePass(ShaderPass):
 
     Tuning:
         strength = 0.0 (off)   to   1.0 (fully black corners)
-        radius   = 0.0 - 1.5   (default 0.8 - keeps centre bright)
+        radius   = 0.0 - 1.5   (default 0.8 - keeps center bright)
         falloff  = 1.0 - 4.0   (default 2.0 - higher = sharper transition)
     """
 
@@ -58,7 +58,7 @@ class VignettePass(ShaderPass):
 
         Args:
             strength: 0.0 (off) to 1.0 (fully black). Default 0.0.
-            radius: 0.0 to 1.5. 0.0 = centre, 0.8 = moderate crop.
+            radius: 0.0 to 1.5. 0.0 = center, 0.8 = moderate crop.
             falloff: 1.0 (gentle) to 4.0 (sharp).
         """
         strength = max(0.0, min(strength, 1.0))
