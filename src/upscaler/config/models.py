@@ -99,8 +99,8 @@ class Config:
     # Vignette
     vignette_enabled: bool = False
     vignette_strength: float = 0.5
-    vignette_radius: float = 0.8
-    vignette_falloff: float = 4.0
+    vignette_radius: float = 0.3
+    vignette_falloff: float = 2.0
 
     # Color Grading (3D LUT)
     lut_enabled: bool = False

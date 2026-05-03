@@ -16,94 +16,7 @@
 
 
 # ------------------------------------------------------------------------------
-# General Options
-# ------------------------------------------------------------------------------
-
-# Upscaling model (trade-off between visual quality and GPU load).
-# Available models, ordered from highest to lowest quality:
-#   8x32, 4x32, 4x24, 4x16, 4x12, 3x12, fast, faster, veryfast
-# Default: fast
-model: fast
-
-# Perform two sequential 2x upscales (total 4x) instead of a single 2x pass.
-# Useful for very high-resolution screens (4K) or low-resolution sources.
-# Enabling this increases GPU and VRAM usage.
-# Default: false
-double_upscale: false
-
-# ------------------------------------------------------------------------------
-# Monitor / Display
-# ------------------------------------------------------------------------------
-
-# Monitor to cover.
-#   - "primary" : use the primary monitor (default)
-#   - "all"     : cover all connected monitors (multi-monitor spanning)
-#   - "HDMI-1", "eDP-1", ... : specific monitor name (use `xrandr` to list)
-#   - 0, 1, ... : monitor index (0 = first)
-# Default: primary
-monitor: primary
-
-# Override the automatically detected Wayland scale factor.
-# This is required when `monitor` is set to "all" because scaling cannot be
-# detected reliably across multiple monitors.
-# Example: 1.5 for 150% scaling.
-# Default: null (auto-detected)
-scale_factor: null
-
-# ------------------------------------------------------------------------------
-# Overlay / Output Geometry
-# ------------------------------------------------------------------------------
-
-# How the upscaled content is placed inside the overlay window.
-# Recognised formats:
-#   - "fit"        : letterboxed, preserve aspect ratio (default)
-#   - "stretch"    : fill the overlay window, ignore aspect ratio
-#   - "cover"      : fill the window, crop if necessary
-#   - "1920x1080"  : fit inside a 1920x1080 area
-#   - "1920x1080!" : stretch to exactly 1920x1080
-#   - "1920x1080^" : cover a 1920x1080 area (crop)
-#   - "50%"        : use 50% of the monitor, content fitted
-#   - "50%!"       : use 50% of the monitor, content stretched
-#   - "1920x"      : fixed width 1920, height proportional (fit)
-#   - "1920x!"     : fixed width 1920, height proportional (stretch)
-#   - "x1080"      : fixed height 1080, width proportional (fit)
-#   - "x1080!"     : fixed height 1080, width proportional (stretch)
-# Default: fit
-output_geometry: fit
-
-# Overlay window behavior.
-#   - "always-on-top"   : floating, unmanaged overlay above all other windows.
-#                         Mouse events are forwarded to the target window.
-#   - "top-transparent" : same as above, but click-through (mouse events pass
-#                         to the window below).
-#   - "fullscreen"      : borderless fullscreen window that covers the entire
-#                         monitor. Mouse events are forwarded.
-#   - "windowed"        : normal window with decorations, fixed size.
-# Default: always-on-top
-overlay_mode: always-on-top
-
-# Pixels to crop from each border of the captured window.
-# Useful for removing title bars, scroll bars, or black borders.
-# Default: 0
-crop_top: 0
-crop_bottom: 0
-crop_left: 0
-crop_right: 0
-
-# Horizontal / vertical offset (in pixels) from the centered position.
-# Positive values move right / down; negative values move left / up.
-# Default: 0
-offset_x: 0
-offset_y: 0
-
-# Color of letterbox / pillarbox bars. Accepts CSS color names or hex codes.
-# Examples:
-#   "black", "#000000", "red", "#FF0000", "rgba(0,0,0,0.8)", "transparent"
-# Default: "#000000"
-background_color: black
-
-# ------------------------------------------------------------------------------
-# Interaction Options
+# Interaction
 # ------------------------------------------------------------------------------
 
 # Automatically switch to the currently focused window (follow-focus).
@@ -121,38 +34,44 @@ focus_poll_interval: 0.2
 pause_on_focus_loss: true
 
 # ------------------------------------------------------------------------------
-# Screenshot Options
+# Window Detection Timeouts (used when launching a program)
 # ------------------------------------------------------------------------------
 
-# Directory where screenshots are saved. Supports ~ for home directory.
-# Default: ~/Pictures/Screenshots (localized)
-screenshot_dir: "~/Pictures/Screenshots"
+# Seconds to wait before capturing the active window after program launch.
+# Default: 5
+target_delay: 5
 
-# File name template for screenshots. Supports Python format placeholders:
-#   {timestamp}  - capture time (may include strftime format specs)
-#   {model}      - active upscaling model name
-#   {width}      - upscaled image width in pixels
-#   {height}     - upscaled image height in pixels
-# Example:
-#   "{model}/{timestamp:%Y-%m-%d_%H-%M-%S}.png"
-#    saves at "fast/2025-06-01_14-30-22.png"
-# If the resulting filename has no recognized image extension (.png/.jpg/etc.),
-# .png is appended automatically.
-# Default: Screenshot_{timestamp:%Y%m%d_%H%M%S}.png
-screenshot_filename: "Screenshot_{timestamp:%Y%m%d_%H%M%S}.png"
+# Timeout for PID-based window detection (phase 1).
+# Default: 10
+pid_timeout: 10
+
+# Timeout for class-based window detection (phase 2).
+# Default: 10
+class_timeout: 10
+
+# Total time before giving up window detection entirely.
+# Default: 30
+total_timeout: 30
+
+# Start with phase 1 (PID) or phase 2 (class). 1 = PID, 2 = class.
+# Default: 1
+starting_phase: 1
 
 # ------------------------------------------------------------------------------
-# On-Screen Display (OSD)
+# Upscaling
 # ------------------------------------------------------------------------------
 
-# Show on-screen status messages (model change, geometry change, zoom, offset,
-# screenshot confirmation).
-# Default: true
-show_osd: true
+# Upscaling model (trade-off between visual quality and GPU load).
+# Available models, ordered from highest to lowest quality:
+#   8x32, 4x32, 4x24, 4x16, 4x12, 3x12, fast, faster, veryfast
+# Default: fast
+model: fast
 
-# How long (in seconds) OSD messages remain visible before fading.
-# Default: 1.5
-osd_duration: 1.5
+# Perform two sequential 2x upscales (total 4x) instead of a single 2x pass.
+# Useful for very high-resolution screens (4K) or low-resolution sources.
+# Enabling this increases GPU and VRAM usage.
+# Default: false
+double_upscale: false
 
 # ------------------------------------------------------------------------------
 # Lanczos Scaler / Resampling Options
@@ -181,6 +100,277 @@ lanczos_antiring_strength: 1.0
 # on some content.
 # Default: true
 lanczos_linear_light: true
+
+# Use only the central 2x2 neighborhood for anti-ringing clamping.
+# When enabled (true), the clamp is less aggressive, keeping thin text
+# and line art crisp. Disable this if you notice distant ringing artifacts
+# on high-contrast edges - the full filter footprint will then be used
+# for a more conservative clamp.
+# Default: true
+lanczos_tight_antiring: true
+
+# ------------------------------------------------------------------------------
+# Monitor / Display
+# ------------------------------------------------------------------------------
+
+# Monitor to cover.
+#   - "primary" : use the primary monitor (default)
+#   - "all"     : cover all connected monitors (multi-monitor spanning)
+#   - "HDMI-1", "eDP-1", ... : specific monitor name (use `xrandr` to list)
+#   - 0, 1, ... : monitor index (0 = first)
+# Default: primary
+monitor: primary
+
+# Override the automatically detected Wayland scale factor.
+# This is required when `monitor` is set to "all" because scaling cannot be
+# detected reliably across multiple monitors.
+# Example: 1.5 for 150% scaling.
+# Default: null (auto-detected)
+scale_factor: null
+
+# ------------------------------------------------------------------------------
+# Overlay
+# ------------------------------------------------------------------------------
+
+# Overlay window behavior.
+#   - "always-on-top"   : floating, unmanaged overlay above all other windows.
+#                         Mouse events are forwarded to the target window.
+#   - "top-transparent" : same as above, but click-through (mouse events pass
+#                         to the window below).
+#   - "fullscreen"      : borderless fullscreen window that covers the entire
+#                         monitor. Mouse events are forwarded.
+#   - "windowed"        : normal window with decorations, fixed size.
+# Default: always-on-top
+overlay_mode: always-on-top
+
+# ------------------------------------------------------------------------------
+# Presentation
+# ------------------------------------------------------------------------------
+
+# How the upscaled content is placed inside the overlay window.
+# Recognised formats:
+#   - "fit"        : letterboxed, preserve aspect ratio (default)
+#   - "stretch"    : fill the overlay window, ignore aspect ratio
+#   - "cover"      : fill the window, crop if necessary
+#   - "1920x1080"  : fit inside a 1920x1080 area
+#   - "1920x1080!" : stretch to exactly 1920x1080
+#   - "1920x1080^" : cover a 1920x1080 area (crop)
+#   - "50%"        : use 50% of the monitor, content fitted
+#   - "50%!"       : use 50% of the monitor, content stretched
+#   - "1920x"      : fixed width 1920, height proportional (fit)
+#   - "1920x!"     : fixed width 1920, height proportional (stretch)
+#   - "x1080"      : fixed height 1080, width proportional (fit)
+#   - "x1080!"     : fixed height 1080, width proportional (stretch)
+# Default: fit
+output_geometry: fit
+
+# Pixels to crop from each border of the captured window.
+# Useful for removing title bars, scroll bars, or black borders.
+# Default: 0
+crop_top: 0
+crop_bottom: 0
+crop_left: 0
+crop_right: 0
+
+# Horizontal / vertical offset (in pixels) from the centered position.
+# Positive values move right / down; negative values move left / up.
+# Default: 0
+offset_x: 0
+offset_y: 0
+
+# Color of letterbox / pillarbox bars. Accepts CSS color names or hex codes.
+# Examples:
+#   "black", "#000000", "red", "#FF0000", "rgba(0,0,0,0.8)", "transparent"
+# Default: "#000000"
+background_color: black
+
+# ------------------------------------------------------------------------------
+# Pre-Processing (Debanding) Options
+# ------------------------------------------------------------------------------
+
+# Enable stochastic debanding before scaling.
+# Smooths out harsh color steps (banding) that can appear in smooth gradients
+# after AI upscaling, especially visible in skies, fog, or softly lit backgrounds.
+# Default: false
+deband_enabled: false
+
+# Debanding intensity.
+# 0.0 = off (no effect)
+# 1.0 = maximum blur (may soften fine details)
+# Low values (0.1-0.3) are sufficient for most content.
+# Default: 0.3
+deband_strength: 0.3
+
+# ------------------------------------------------------------------------------
+# Post-Processing Options (applied after Lanczos scaling)
+# ------------------------------------------------------------------------------
+
+# --- Contrast Adaptive Sharpening (CAS) ---
+
+# Enable CAS sharpening.
+# Adds a subtle, perceptually-based sharpening that enhances text and line art
+# without the halos typical of unsharp masks.
+# Default: false
+cas_enabled: false
+
+# CAS sharpening amount.
+# 0.0 = pass-through (original image)
+# 1.0 = maximum sharpening (may show ringing on high-contrast edges)
+# Values between 0.2 and 0.5 provide a pleasant crispness without visible artifacts.
+# Default: 0.4
+cas_strength: 0.4
+
+# --- Bloom (Soft Glow) ---
+
+# Enable a soft bloom (glow) effect around bright regions.
+# Creates a cinematic, dreamy look by feeding bright pixels through a wide blur
+# and screen-blending the result back onto the image.
+# Only pixels above a configurable threshold contribute, preserving shadows.
+# Default: false
+bloom_enabled: false
+
+# Bloom intensity.
+# 0.0 = off
+# 1.0 = extremely strong glow (may cause haloing on bright UI elements)
+# Subtle values (0.02-0.06) add a gentle, polished look.
+# Default: 0.03
+bloom_strength: 0.03
+
+# Brightness cutoff for bloom.
+# Only pixels whose blurred brightness exceeds this value will contribute.
+# 0.0 - 1.0
+# Lower thresholds (e.g., 0.7) include more of the scene.
+# Higher thresholds (0.9-0.95) restrict the glow to pure highlights like glowing
+# embers or bright sky.
+# Default: 0.85
+bloom_threshold: 0.85
+
+# Blur radius (in pixels) for the bloom core.
+# Larger radii spread the glow further, producing a softer, more ethereal look.
+# Smaller radii keep the effect tight.
+# Valid range: 1 - 16
+# Default: 4
+bloom_radius: 4
+
+# --- Vignette ---
+
+# Enable a radial vignette that darkens screen edges.
+# Naturally draws attention to the center of the screen and can simulate the
+# look of a camera lens.
+# Default: false
+vignette_enabled: false
+
+# Intensity of edge darkening.
+# 0.0 = off (no vignette)
+# 1.0 = fully black corners
+# Moderate values (0.3-0.6) give a subtle framing effect without overwhelming
+# the image.
+# Default: 0.5
+vignette_strength: 0.5
+
+# Distance from center where darkening begins.
+# 0.0 = starts immediately, affecting most of the screen.
+# Values around 0.7-0.8 keep the center bright and only darken the far edges.
+# At 1.0+ the vignette is confined to extreme corners.
+# Valid range: 0.0 - 2.0
+# Default: 0.3
+vignette_radius: 0.3
+
+# Softness of the vignette transition.
+# Low values (1.0) create a gentle, wide-rolloff effect.
+# Higher values (3.0-4.0) produce a sharp, distinct ring.
+# Valid range: 0.1 - 10.0
+# Default: 2.0
+vignette_falloff: 2.0
+
+# --- Film Grain ---
+
+# Enable simulated film grain on the final image.
+# An isotropic noise texture is added with a soft-light blend, mimicking the
+# look of real film emulsion. The pattern shifts slightly each frame, preventing
+# a static overlay feel.
+# Default: false
+grain_enabled: false
+
+# Grain intensity.
+# 0.0 = off
+# 1.0 = maximum noise (very gritty)
+# Low values (0.1-0.2) mimic fine photochemical grain; higher values (0.3+)
+# give a more noticeable vintage film look.
+# Default: 0.15
+grain_strength: 0.15
+
+# Apparent particle size of the grain.
+# 1.0 = fine, 2.0+ = coarser, clumpier grain typical of older film stocks.
+# Valid range: 1.0 - 10.0
+# Default: 1.0
+grain_size: 1.0
+
+# --- Color Grading (3D LUT) ---
+
+# Enable color grading via a 3D lookup table (LUT).
+# A LUT remaps all colors through a pre-computed table, enabling instant
+# film-stock emulation, color-grading presets, or any global color transform.
+# The built-in identity LUT passes the image through unchanged.
+# Default: false
+lut_enabled: false
+
+# Blend between original and graded image.
+# 0.0 = original image (no effect)
+# 1.0 = full color transform applied
+# Default: 1.0
+lut_intensity: 1.0
+
+# Built-in LUT preset to use.
+# Available presets:
+#   identity : No color change (passthrough).
+#   warm     : Golden-hour warmth: boosts reds/oranges.
+#   cool     : Moonlit night: lifts blues, mutes warm tones.
+#   split    : Cyan shadows + orange highlights.
+#   vivid    : Increased saturation, preserves luminance.
+#   pastel   : Soft, dreamy desaturation with a light glow.
+#   lofi     : Vintage LCD look, crushed blacks, muted colors.
+#   bleach   : Metallic desaturation, high contrast.
+#   film     : Subtle S-curve contrast + slight desaturation.
+#   noir     : High-contrast black and white.
+#   sepia    : Old-photo warmth, slightly faded.
+#   cyano    : Blue-cyan monochrome, blueprint style.
+# Default: identity
+lut_preset: identity
+
+# ------------------------------------------------------------------------------
+# Screenshot Options
+# ------------------------------------------------------------------------------
+
+# Directory where screenshots are saved. Supports ~ for home directory.
+# Default: ~/Pictures/Screenshots
+screenshot_dir: "~/Pictures/Screenshots"
+
+# File name template for screenshots. Supports Python format placeholders:
+#   {timestamp}  - capture time (may include strftime format specs)
+#   {model}      - active upscaling model name
+#   {width}      - upscaled image width in pixels
+#   {height}     - upscaled image height in pixels
+# Example:
+#   "{model}/{timestamp:%Y-%m-%d_%H-%M-%S}.png"
+#    saves at "fast/2025-06-01_14-30-22.png"
+# If the resulting filename has no recognized image extension (.png/.jpg/etc.),
+# .png is appended automatically.
+# Default: Screenshot_{timestamp:%Y%m%d_%H%M%S}.png
+screenshot_filename: "Screenshot_{timestamp:%Y%m%d_%H%M%S}.png"
+
+# ------------------------------------------------------------------------------
+# On-Screen Display (OSD)
+# ------------------------------------------------------------------------------
+
+# Show on-screen status messages (model change, geometry change, zoom, offset,
+# screenshot confirmation).
+# Default: true
+show_osd: true
+
+# How long (in seconds) OSD messages remain visible before fading.
+# Default: 1.5
+osd_duration: 1.5
 
 # ------------------------------------------------------------------------------
 # Vulkan Performance Options (Advanced)
@@ -269,30 +459,6 @@ max_tile_layers: 16
 # Recommended range: 0.15 - 0.5
 # Default: 0.3
 area_threshold: 0.3
-
-# ------------------------------------------------------------------------------
-# Window Detection Timeouts (used when launching a program)
-# ------------------------------------------------------------------------------
-
-# Seconds to wait before capturing the active window after program launch.
-# Default: 5
-target_delay: 5
-
-# Timeout for PID-based window detection (phase 1).
-# Default: 10
-pid_timeout: 10
-
-# Timeout for class-based window detection (phase 2).
-# Default: 10
-class_timeout: 10
-
-# Total time before giving up window detection entirely.
-# Default: 30
-total_timeout: 30
-
-# Start with phase 1 (PID) or phase 2 (class). 1 = PID, 2 = class.
-# Default: 1
-starting_phase: 1
 
 # ------------------------------------------------------------------------------
 # Logging

@@ -45,7 +45,7 @@ def build_lut(
 
 
 # ---------------------------------------------------------------------------
-#  Individual presets
+#  Preset definitions
 # ---------------------------------------------------------------------------
 
 
@@ -164,6 +164,112 @@ def _noir() -> bytes:
     return build_lut(gray, gray, gray)
 
 
+def _sepia() -> bytes:
+    """Classic sepia tone - old-photograph warmth, slightly faded."""
+
+    def r(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        return min(1.0, luma * 1.12 + 0.08)
+
+    def g(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        return min(1.0, luma * 0.95 + 0.04)
+
+    def b(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        return min(1.0, luma * 0.78)
+
+    return build_lut(r, g, b)
+
+
+def _bleach() -> bytes:
+    """Bleach-bypass: high contrast, metallic desaturation."""
+
+    def r(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        luma_contrast = max(0.0, min(1.0, (luma - 0.5) * 1.3 + 0.5))
+        return r_in * 0.7 + luma_contrast * 0.3
+
+    def g(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        luma_contrast = max(0.0, min(1.0, (luma - 0.5) * 1.3 + 0.5))
+        return g_in * 0.7 + luma_contrast * 0.3
+
+    def b(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        luma_contrast = max(0.0, min(1.0, (luma - 0.5) * 1.3 + 0.5))
+        return b_in * 0.7 + luma_contrast * 0.3
+
+    return build_lut(r, g, b)
+
+
+def _split_tone() -> bytes:
+    """Split-tone: cyan shadows, orange highlights - cinematic music video look."""
+
+    def r(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        # orange highlight tint (R=1.0, G=0.7, B=0.3) * luma^2
+        highlight = luma * luma
+        return r_in * (1.0 - highlight) + highlight * 1.0
+
+    def g(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        highlight = luma * luma
+        # shadow cyan tint (R=0, G=0.3, B=0.5) * (1-luma)
+        shadow = (1.0 - luma) * 0.3
+        return g_in * (1.0 - highlight - shadow) + highlight * 0.7 + shadow
+
+    def b(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        highlight = luma * luma
+        shadow = (1.0 - luma) * 0.5
+        return b_in * (1.0 - highlight - shadow) + highlight * 0.3 + shadow
+
+    return build_lut(r, g, b)
+
+
+def _cyano() -> bytes:
+    """Cyanotype: monochrome blue-cyan tint, like a blueprint."""
+
+    def r(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        return luma * 0.2
+
+    def g(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        return luma * 0.7
+
+    def b(r_in, g_in, b_in):
+        luma = 0.2126 * r_in + 0.7152 * g_in + 0.0722 * b_in
+        return luma * 1.0
+
+    return build_lut(r, g, b)
+
+
+def _lofi() -> bytes:
+    """Vintage Lo-Fi: crushed shadows, faded highlights, muted colors."""
+
+    def r(r_in, g_in, b_in):
+        r = r_in * 0.9 + 0.05
+        if r > 0.5:
+            r = r * 0.8 + 0.2
+        return r
+
+    def g(r_in, g_in, b_in):
+        g = g_in * 0.9 + 0.05
+        if g > 0.5:
+            g = g * 0.8 + 0.2
+        return g
+
+    def b(r_in, g_in, b_in):
+        b = b_in * 0.9 + 0.05
+        if b > 0.5:
+            b = b * 0.8 + 0.2
+        return b
+
+    return build_lut(r, g, b)
+
+
 # ---------------------------------------------------------------------------
 #  Preset registry
 # ---------------------------------------------------------------------------
@@ -171,8 +277,13 @@ BUILT_IN_PRESETS: Dict[str, Callable[[], bytes]] = {
     "identity": _identity,
     "warm": _warm_sunset,
     "cool": _cool_night,
-    "film": _film_stock,
+    "split": _split_tone,
     "vivid": _vivid,
     "pastel": _soft_pastel,
+    "lofi": _lofi,
+    "bleach": _bleach,
+    "film": _film_stock,
     "noir": _noir,
+    "sepia": _sepia,
+    "cyano": _cyano,
 }
