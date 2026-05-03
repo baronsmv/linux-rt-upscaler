@@ -56,16 +56,18 @@ class LanczosScaler(ShaderPass):
         self._shader_adapt = None
         self._load_shader_variants(shader_path_l2, shader_path_adapt)
 
-        # Initially use the adaptive shader (safe default).
+        # Let the base class handle persistent resources and pipeline creation.
+        # Important: super().__init__() sets self._shader = None internally,
+        # so we must assign self._shader *after* the super call.
+        super().__init__(
+            shader_path_adapt
+        )  # path is ignored because _load_shader is overridden
+
+        # Now set the initial shader to the adaptive variant (safe default).
         self._shader = self._shader_adapt
         self._current_variant = "adaptive"
         self._cb_format = CB_FORMAT_ADAPTIVE
         self._cb_size_current = CB_SIZE_ADAPTIVE
-
-        # Let the base class handle persistent resources and pipeline creation.
-        super().__init__(
-            shader_path_adapt
-        )  # path is ignored after _load_shader override
 
     # ------------------------------------------------------------------
     #  Constant buffer size - returns the maximum we ever need.
