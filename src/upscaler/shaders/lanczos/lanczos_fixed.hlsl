@@ -58,11 +58,12 @@ cbuffer Constants : register(b0)
 
 float lanczos2(float x)
 {
-    if (x < 1e-4f) return 1.0f;                 // removable singularity at 0
-    if (x >= 2.0f)  return 0.0f;                // compact support
+    float s = 1.0f / blur;
+    x *= s;                           // apply blur stretch
+    if (x < 1e-4f) return 1.0f;
+    if (x >= 2.0f)  return 0.0f;
 
     float pi_x = PI * x;
-    // Standard formula : 2 * sin(πx) * sin(πx/2) / (π² x²)
     return (2.0f * sin(pi_x) * sin(pi_x * 0.5f)) / (pi_x * pi_x);
 }
 

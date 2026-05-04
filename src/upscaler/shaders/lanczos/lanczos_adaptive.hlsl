@@ -62,6 +62,7 @@ cbuffer Constants : register(b0)
 
 float lanczos(float x, float r)
 {
+    x *= (1.0f / blur);               // apply blur stretch
     if (x < 1e-4f) return 1.0f;
     if (x >= r)    return 0.0f;
 
