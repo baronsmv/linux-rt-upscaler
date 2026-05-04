@@ -181,7 +181,7 @@ class Pipeline:
             config=self.config, crop_width=self.crop_width, crop_height=self.crop_height
         )
         # Update presenter's source texture to the new output.
-        self.presenter.set_source_texture(self.upscaler_mgr.get_output_texture())
+        self.presenter.set_upscaled_source(self.upscaler_mgr.get_output_texture())
 
     def clear_frame_queue(self) -> None:
         """No-op - kept for API compatibility."""

@@ -176,15 +176,7 @@ class PipelineController:
         # 3. Recalculate content dimensions based on new geometry and overlay size
         self._pipeline.update_content_dimensions()
 
-        # 4. Immediately recalculate Lanczos scaling rectangle so the change is
-        #    visible even before the next frame capture (e.g., when paused).
-        src_tex = self._pipeline.upscaler_mgr.get_output_texture()
-        if src_tex:
-            self._pipeline.presenter.update_lanczos_constants(
-                src_tex.width, src_tex.height
-            )
-
-        # 5. Show OSD message with the new geometry name
+        # 4. Show OSD message with the new geometry name
         self._pipeline.osd_queue.put(
             (f"Geometry: {new_geometry}", self._pipeline.config.osd_duration)
         )
@@ -257,7 +249,7 @@ class PipelineController:
         self._pipeline.recreate_upscaler()
 
         # Update Lanczos source texture to the new upscaler output
-        self._pipeline.presenter.set_source_texture(
+        self._pipeline.presenter.set_upscaled_source(
             self._pipeline.upscaler_mgr.get_output_texture()
         )
 
@@ -293,12 +285,6 @@ class PipelineController:
         )
 
         self._pipeline.update_content_dimensions()
-
-        src_tex = self._pipeline.upscaler_mgr.get_output_texture()
-        if src_tex:
-            self._pipeline.presenter.update_lanczos_constants(
-                src_tex.width, src_tex.height
-            )
 
         self._pipeline.osd_queue.put(
             (f"Zoom: {new_zoom}", self._pipeline.config.osd_duration)
