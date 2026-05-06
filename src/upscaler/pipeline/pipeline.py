@@ -182,8 +182,12 @@ class Pipeline:
         self.upscaler_mgr = UpscalerManager(
             config=self.config, crop_width=self.crop_width, crop_height=self.crop_height
         )
+
         # Update presenter's source texture to the new output.
         self.presenter.set_upscaled_source(self.upscaler_mgr.get_output_texture())
+
+        # Force full render
+        self._presenter_params_stale = True
 
     def clear_frame_queue(self) -> None:
         """No-op - kept for API compatibility."""
@@ -340,6 +344,9 @@ class Pipeline:
         self.recreate_upscaler()
         self._create_grabber()
 
+        # Force full render
+        self._presenter_params_stale = True
+
     def update_content_dimensions(self) -> None:
         """Recalculate content dimensions based on overlay size and output geometry."""
         overlay_w = self.overlay.width()
@@ -364,6 +371,7 @@ class Pipeline:
         """Recreate the swapchain and dependent resources (overlay resize)."""
         new_w = self.overlay.width()
         new_h = self.overlay.height()
+
         if new_w != self._screen_width or new_h != self._screen_height:
             self._screen_width = new_w
             self._screen_height = new_h
@@ -373,6 +381,9 @@ class Pipeline:
         else:
             self._swapchain_manager.recreate(new_w, new_h)
         self.osd.clear_compute_cache()  # screen texture changed
+
+        # Force full render
+        self._presenter_params_stale = True
 
     def _create_grabber(self) -> None:
         """Create (or recreate) the FrameGrabber for the current target window."""
@@ -483,8 +494,8 @@ class Pipeline:
                 c.offset_x,
                 c.offset_y,
                 c.background_color,
-                c.lanczos_blur,
-                c.lanczos_antiring_strength,
+                round(c.lanczos_blur, 6),
+                round(c.lanczos_antiring_strength, 6),
                 c.lanczos_linear_light,
                 c.lanczos_tight_antiring,
                 c.cas_enabled,
@@ -500,43 +511,6 @@ class Pipeline:
                 p.offset_y,
             )
         )
-
-    def _get_present_state_hash(self) -> int:
-        """Return a hash of all config and presenter state that affects the screen."""
-        c = self.config
-        p = self.presenter
-        state = (
-            c.output_geometry,
-            c.offset_x,
-            c.offset_y,
-            tuple(round(v, 6) for v in c.background_color),
-            round(c.lanczos_blur, 6),
-            round(c.lanczos_antiring_strength, 6),
-            c.lanczos_linear_light,
-            c.lanczos_tight_antiring,
-            c.deband_enabled,
-            round(c.deband_strength, 6),
-            c.cas_enabled,
-            round(c.cas_strength, 6),
-            c.bloom_enabled,
-            round(c.bloom_strength, 6),
-            round(c.bloom_threshold, 6),
-            c.bloom_radius,
-            c.vignette_enabled,
-            round(c.vignette_strength, 6),
-            round(c.vignette_radius, 6),
-            round(c.vignette_falloff, 6),
-            c.lut_enabled,
-            round(c.lut_intensity, 6),
-            c.lut_preset,
-            c.grain_enabled,
-            round(c.grain_strength, 6),
-            round(c.grain_size, 6),
-            p.content_width,
-            p.content_height,
-            p.scale_mode,
-        )
-        return hash(state)
 
     def _process_switch_requests(self) -> None:
         """Process pending window switch requests."""
