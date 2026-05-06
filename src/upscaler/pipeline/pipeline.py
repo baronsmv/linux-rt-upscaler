@@ -112,6 +112,7 @@ class Pipeline:
             osd_manager=self.osd,
             swapchain_manager=self._swapchain_manager,
         )
+        self._last_present_state_hash = None
 
         # Upscaler manager - full-frame or tile processing
         self.upscaler_mgr = UpscalerManager(
@@ -244,8 +245,17 @@ class Pipeline:
         self.overlay.update_opacity()
 
         # Skip frame if nothing changed and no OSD is active
-        if not is_dirty and osd_tex is None:
-            self.presenter.present()
+        idle = (
+            not is_dirty
+            and osd_tex is None
+            and self._last_present_state_hash is not None
+            and self._get_present_state_hash() == self._last_present_state_hash
+        )
+        if idle:
+            self.presenter.present_unchanged()
+            self.overlay.scaling_rect = self.presenter.get_scaling_rect(
+                self._scale_factor
+            )
             return
 
         # --- 3. Upscale ----------------------------------------------------
@@ -454,6 +464,43 @@ class Pipeline:
     # ----------------------------------------------------------------------
     # Internal helpers
     # ----------------------------------------------------------------------
+    def _get_present_state_hash(self) -> int:
+        """Return a hash of all config and presenter state that affects the screen."""
+        c = self.config
+        p = self.presenter
+        state = (
+            c.output_geometry,
+            c.offset_x,
+            c.offset_y,
+            tuple(round(v, 6) for v in c.background_color),
+            round(c.lanczos_blur, 6),
+            round(c.lanczos_antiring_strength, 6),
+            c.lanczos_linear_light,
+            c.lanczos_tight_antiring,
+            c.deband_enabled,
+            round(c.deband_strength, 6),
+            c.cas_enabled,
+            round(c.cas_strength, 6),
+            c.bloom_enabled,
+            round(c.bloom_strength, 6),
+            round(c.bloom_threshold, 6),
+            c.bloom_radius,
+            c.vignette_enabled,
+            round(c.vignette_strength, 6),
+            round(c.vignette_radius, 6),
+            round(c.vignette_falloff, 6),
+            c.lut_enabled,
+            round(c.lut_intensity, 6),
+            c.lut_preset,
+            c.grain_enabled,
+            round(c.grain_strength, 6),
+            round(c.grain_size, 6),
+            p.content_width,
+            p.content_height,
+            p.scale_mode,
+        )
+        return hash(state)
+
     def _process_switch_requests(self) -> None:
         """Process pending window switch requests."""
         try:

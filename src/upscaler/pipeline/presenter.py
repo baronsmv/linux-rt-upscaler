@@ -185,6 +185,10 @@ class Presenter:
         # ---- 10. Advance frame counter ---------------------------------------
         self._frame_counter += 1
 
+    def present_unchanged(self):
+        """Re-present the current screen texture without any processing."""
+        self.swapchain.present(self.screen_tex, wait_for_fence=True)
+
     def get_scaling_rect(self, scale_factor: float) -> List[float]:
         """
         Return the rectangle (in overlay widget coordinates) where content is
