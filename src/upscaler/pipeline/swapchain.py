@@ -66,7 +66,7 @@ class SwapchainManager:
         self._xcb_conn_ptr = int(ffi.cast("uintptr_t", self._xcb_conn._conn))
 
         self._create_swapchain()
-        logger.info(
+        logger.debug(
             f"SwapchainManager initialized: {width}x{height}, mode={present_mode}"
         )
 
@@ -109,7 +109,7 @@ class SwapchainManager:
                 return
             self._last_recreate_time = now
 
-            logger.info(
+            logger.debug(
                 f"Recreating swapchain: {self._width}x{self._height} -> {new_width}x{new_height}"
             )
             self._width = new_width

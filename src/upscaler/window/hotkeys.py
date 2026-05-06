@@ -152,7 +152,7 @@ class HotkeyManager(QObject):
 
         self._grab_keys()
         self._setup_event_listener()
-        logger.info("XCB hotkey manager started (standalone connection).")
+        logger.debug("XCB hotkey manager started (standalone connection).")
 
     def stop(self) -> None:
         """Ungrab keys and close connection."""
@@ -163,7 +163,7 @@ class HotkeyManager(QObject):
         if self._conn:
             self._conn.disconnect()
             self._conn = None
-        logger.info("XCB hotkey manager stopped.")
+        logger.debug("XCB hotkey manager stopped.")
 
     def _grab_keys(self) -> None:
         for action, hotkey_str in self._config_hotkeys.items():
@@ -194,7 +194,7 @@ class HotkeyManager(QObject):
                 )
 
             self._grabbed[(mod_mask, keycode)] = action
-            logger.info(
+            logger.debug(
                 f"Grabbed {action}: {hotkey_str} (mod={mod_mask}, keycode={keycode})"
             )
 

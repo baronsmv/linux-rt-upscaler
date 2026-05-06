@@ -43,7 +43,7 @@ class OverlayWindow(QMainWindow):
         """
         super().__init__()
         start_time = time.perf_counter()
-        logger.info(
+        logger.debug(
             f"Initializing OverlayWindow: mode={config.overlay_mode}, "
             f"target_handle={win_info.handle:#x}, scale_mode={config.output_geometry}"
         )
@@ -157,7 +157,7 @@ class OverlayWindow(QMainWindow):
             flags |= Qt.FramelessWindowHint
             self.setGeometry(x, y, width, height)
             self.showFullScreen()
-            logger.info(
+            logger.debug(
                 f"Overlay set to fullscreen on geometry ({x},{y},{width}x{height})"
             )
             return
@@ -165,19 +165,19 @@ class OverlayWindow(QMainWindow):
         if mode == OverlayMode.WINDOWED.value:
             self.setGeometry(x, y, width, height)
             self.setFixedSize(width, height)
-            logger.info(
+            logger.debug(
                 f"Overlay set to windowed mode at ({x},{y}) size {width}x{height}"
             )
         elif mode == OverlayMode.ALWAYS_ON_TOP.value:
             flags |= Qt.X11BypassWindowManagerHint
             self.setGeometry(x, y, width, height)
-            logger.info(
+            logger.debug(
                 f"Overlay set to always-on-top mode at ({x},{y}) size {width}x{height}"
             )
         elif mode == OverlayMode.ALWAYS_ON_TOP_TRANSPARENT.value:
             flags |= Qt.X11BypassWindowManagerHint | Qt.WindowTransparentForInput
             self.setGeometry(x, y, width, height)
-            logger.info(
+            logger.debug(
                 f"Overlay set to transparent always-on-top mode at ({x},{y}) size {width}x{height}"
             )
         else:
@@ -276,7 +276,7 @@ class OverlayWindow(QMainWindow):
                     self._geometry.overlay_width, self._geometry.overlay_height
                 )
 
-        logger.info(
+        logger.debug(
             f"Overlay geometry updated: {self._geometry.overlay_width}x{self._geometry.overlay_height}"
         )
 

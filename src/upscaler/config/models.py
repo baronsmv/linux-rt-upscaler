@@ -158,7 +158,7 @@ class Config:
     area_threshold: float = 0.3
 
     # Logging (set via flags, not directly from CLI)
-    log_level: str = "WARNING"
+    log_level: str = "INFO"
     log_file: Optional[str] = None
 
     # Config file (not a configurable option, just used internally)

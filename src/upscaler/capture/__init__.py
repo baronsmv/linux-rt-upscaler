@@ -84,7 +84,7 @@ class FrameGrabber:
         if not self._ctx:
             raise RuntimeError("Failed to create capture context")
 
-        logger.info(
+        logger.debug(
             f"FrameGrabber initialized: {self.width}x{self.height}, tile_size={tile_size}"
         )
 

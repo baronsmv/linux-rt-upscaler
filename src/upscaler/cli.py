@@ -41,7 +41,6 @@ def main() -> None:
         overlay = OverlayWindow(config, win_info)
     except ValueError as e:
         logger.error(str(e))
-        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
     # Prepare window for Vulkan
@@ -57,11 +56,11 @@ def main() -> None:
     # Pipeline creation
     pipeline = Pipeline(config, win_info, overlay)
     pipeline.start()
-    logger.info("Pipeline started")
+    logger.debug("Pipeline started")
 
     # Graceful shutdown on Qt exit
     app.aboutToQuit.connect(lambda: pipeline.stop())
-    logger.info(
+    logger.debug(
         f"Total initialization time: {time.perf_counter() - overall_start:.2f}s"
     )
 
@@ -70,7 +69,7 @@ def main() -> None:
     if config.follow_focus:
         # Activate the initial target window
         activate_window(win_info.handle)
-        logger.info(f"Activated initial target window {win_info.handle:#x}")
+        logger.debug(f"Activated initial target window {win_info.handle:#x}")
 
         monitor = FocusMonitor(interval=config.focus_poll_interval)
         # Connect signal: when focus changes, request pipeline switch
@@ -82,7 +81,7 @@ def main() -> None:
             )
         )
         monitor.start()
-        logger.info("Focus monitor started")
+        logger.debug("Focus monitor started")
 
     # Pipeline controller and Hotkey Manager
     controller = pipeline.controller
@@ -112,7 +111,7 @@ def main() -> None:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     try:
         exit_code = app.exec()
-        logger.info(f"Qt event loop exited with code {exit_code}")
+        logger.debug(f"Qt event loop exited with code {exit_code}")
     except Exception as e:
         logger.error(f"Unexpected error in Qt event loop: {e}", exc_info=True)
     finally:
@@ -121,7 +120,7 @@ def main() -> None:
         if monitor is not None:
             monitor.stop()
         if proc is not None:
-            logger.info(f"Terminating launched process {proc.pid}")
+            logger.debug(f"Terminating launched process {proc.pid}")
             proc.terminate()
             proc.wait()
         hotkey_manager.stop()

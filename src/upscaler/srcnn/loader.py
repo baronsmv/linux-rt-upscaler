@@ -139,7 +139,7 @@ def load_model(
     )
 
     _MODEL_CACHE[cache_key] = config
-    logger.info(
+    logger.debug(
         "Loaded model %r (variant=%r, depth=%s) with %d passes",
         model_name,
         variant,

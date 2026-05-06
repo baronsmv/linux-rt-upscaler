@@ -168,7 +168,7 @@ class TileProcessor:
         # -------------------------------------------------------------------
         self._finalize_pipeline()
 
-        logger.info(
+        logger.debug(
             "TileProcessor ready: crop=%dx%d, tile=%d, margin=%d, "
             "scale=%dx, layers=%d",
             crop_width,

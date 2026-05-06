@@ -156,14 +156,14 @@ class Pipeline:
     # ----------------------------------------------------------------------
     def start(self) -> None:
         """Start the pipeline thread."""
-        logger.info("Starting pipeline thread")
+        logger.debug("Starting pipeline thread")
         self._running = True
         self._thread = threading.Thread(target=self._run, name="PipelineThread")
         self._thread.start()
 
     def stop(self) -> None:
         """Stop the pipeline thread and release resources."""
-        logger.info("Stopping pipeline thread")
+        logger.debug("Stopping pipeline thread")
         self._running = False
         if self._thread is not None:
             self._thread.join(timeout=2.0)
@@ -178,7 +178,7 @@ class Pipeline:
 
     def recreate_upscaler(self) -> None:
         """Rebuild the upscaler manager (model change, crop resize)."""
-        logger.info("Recreating upscaler manager")
+        logger.debug("Recreating upscaler manager")
         self.upscaler_mgr = UpscalerManager(
             config=self.config, crop_width=self.crop_width, crop_height=self.crop_height
         )
@@ -318,7 +318,7 @@ class Pipeline:
         # --- 7. Handle swapchain recreation (overlay resize) ----------------
         if self._swapchain_manager.needs_recreation():
             if self._swapchain_manager.is_out_of_date():
-                logger.info("Swapchain out-of-date, recreating")
+                logger.debug("Swapchain out-of-date, recreating")
                 self._recreate_swapchain()
 
     # ----------------------------------------------------------------------
@@ -326,7 +326,7 @@ class Pipeline:
     # ----------------------------------------------------------------------
     def _handle_window_change(self) -> None:
         """Recreate resources when the target window changes size or handle."""
-        logger.info("Handling window change")
+        logger.debug("Handling window change")
         self._win_info.handle = self._window_tracker.handle
         self._win_info.width = self._window_tracker.width
         self._win_info.height = self._window_tracker.height
@@ -425,7 +425,7 @@ class Pipeline:
     # ----------------------------------------------------------------------
     def _run(self) -> None:
         """Main pipeline loop."""
-        logger.info("Pipeline thread started")
+        logger.debug("Pipeline thread started")
         self._create_grabber()
 
         while self._running:
@@ -478,7 +478,7 @@ class Pipeline:
                 )
             except RuntimeError:
                 pass
-        logger.info("Pipeline thread stopped")
+        logger.debug("Pipeline thread stopped")
 
     # ----------------------------------------------------------------------
     # Internal helpers
@@ -563,7 +563,7 @@ class Pipeline:
             elapsed = now - self._last_frame_time
             if elapsed > 0:
                 fps = self._frame_count / elapsed
-                logger.info(f"FPS: {fps:.1f}")
+                logger.debug(f"FPS: {fps:.1f}")
             self._last_frame_time = now
             self._frame_count = 0
             self._last_fps_log = now

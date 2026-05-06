@@ -157,7 +157,7 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'.""",
         "--target-title-regex",
         type=str,
         default=DEFAULT_CONFIG.target_title_regex,
-        help="Target a window whose title contains this regular expression.",
+        help="Target a window whose title matches this regular expression.",
     )
 
     # ----------------------------------------------------------------------

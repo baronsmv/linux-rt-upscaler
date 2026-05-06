@@ -120,7 +120,7 @@ class UpscalerManager:
         if self.use_tile:
             self._init_tile_mode()
 
-        logger.info(
+        logger.debug(
             "UpscalerManager ready: tile_mode=%s, crop=%dx%d, scale=%d, "
             "tile=%d, margin=%d, grid=%dx%d (%d tiles)",
             self.use_tile,

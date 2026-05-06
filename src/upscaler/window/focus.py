@@ -51,7 +51,7 @@ class FocusMonitor(QObject):
         self._thread = threading.Thread(target=self._poll, name="FocusMonitor")
         self._thread.daemon = True
         self._thread.start()
-        logger.info("Focus monitor started")
+        logger.debug("Focus monitor started")
 
     def stop(self) -> None:
         """Stop the focus monitor thread and wait for it to finish."""
@@ -60,7 +60,7 @@ class FocusMonitor(QObject):
         self._running = False
         if self._thread:
             self._thread.join(timeout=2.0)
-            logger.info("Focus monitor stopped")
+            logger.debug("Focus monitor stopped")
 
     def _poll(self) -> None:
         """

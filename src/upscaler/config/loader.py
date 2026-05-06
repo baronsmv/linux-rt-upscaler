@@ -35,7 +35,7 @@ def load_yaml_config(
                         general_options.update(data)
                         profiles = data.pop("profiles", {})
                         general_options = data
-                    logger.info(f"Loaded config from {path}")
+                    logger.debug(f"Loaded config from {path}")
             except Exception as e:
                 logger.warning(f"Failed to load config {path}: {e}")
             break

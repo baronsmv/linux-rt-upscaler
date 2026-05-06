@@ -43,8 +43,6 @@ def setup_config() -> Tuple[Config, WindowInfo, Popen]:
     if win_info is None:
         sys.exit(0 if config.select else 1)
 
-    logger.info(f"Target window confirmed: {win_info}")
-
     # Config profiling by match
     auto_profile = None
     if not manual_profile:
@@ -57,14 +55,17 @@ def setup_config() -> Tuple[Config, WindowInfo, Popen]:
     apply_overrides(config, provided_args)
     validate_config(config)
 
-    if config.log_level != "ERROR":
-        if config_path:
-            print(f"Configuration found in '{config_path}'.")
-        print(
-            f"Target window: handle={win_info.handle}, {win_info.width}x{win_info.height}, title={win_info.title}"
-        )
-        if auto_profile:
-            print(f"Match with profile '{profile_name}'")
+    if config_path:
+        logger.info(f"Configuration found in '{config_path}'.")
+    if auto_profile:
+        logger.info(f"Match with profile '{profile_name}'")
+
+    logger.info(
+        f'Upscaling "{win_info.title}" (%d\u00d7%d)',
+        win_info.width,
+        win_info.height,
+    )
+    logger.debug("Window handle: 0x%x", win_info.handle)
 
     parse_config(config)
 

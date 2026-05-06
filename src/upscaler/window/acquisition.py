@@ -36,7 +36,7 @@ def _list_windows() -> List[WindowInfo]:
         List of WindowInfo objects for windows that are considered application
         windows (by size, type, and class). Returns empty list on failure.
     """
-    logger.info("Starting window enumeration")
+    logger.debug("Starting window enumeration")
     conn = open_xcb_connection()
     if not conn:
         logger.error("Cannot open XCB connection for window enumeration")
@@ -76,12 +76,12 @@ def _list_windows() -> List[WindowInfo]:
                 continue
             _, _, w, h = geom
             result.append(WindowInfo(win, w, h, name))
-            logger.info(f"Found application window: {name} ({w}x{h})")
+            logger.debug(f"Found application window: {name} ({w}x{h})")
         except Exception as e:
             logger.debug(f"Error processing window {win}: {e}")
 
     close_xcb_connection(conn)
-    logger.info(f"Enumeration complete, found {len(result)} windows")
+    logger.debug(f"Enumeration complete, found {len(result)} windows")
     return result
 
 
@@ -165,12 +165,6 @@ def _find_by_pid(
     Raises:
         TimeoutError: If no matching window appears within the total timeout.
     """
-    logger.info(
-        f"_find_by_pid called with pid={pid}, class_hint={class_hint}, "
-        f"pid_timeout={pid_timeout}, class_timeout={class_timeout}, "
-        f"total_timeout={total_timeout}, starting_phase={starting_phase}"
-    )
-
     # Gather all PIDs in the process tree
     try:
         proc = psutil.Process(pid)
@@ -202,7 +196,7 @@ def _find_by_pid(
             phase_start = time.time()
 
             if phase == 1:
-                logger.info(f"Phase 1: Trying PID+class for {pid_timeout} seconds...")
+                logger.debug(f"Phase 1: Trying PID+class for {pid_timeout} seconds...")
                 while time.time() - phase_start < pid_timeout:
                     check_total_timeout()
                     windows = enumerate_all_windows(conn)
@@ -233,7 +227,7 @@ def _find_by_pid(
                             continue
                         _, _, w, h = geom
                         name = get_window_name(conn, win, atoms) or "unknown"
-                        logger.info(f"Found window in phase 1: {name}")
+                        logger.debug(f"Found window in phase 1: {name}")
                         return WindowInfo(win, w, h, name)
 
                     time.sleep(0.2)
@@ -241,16 +235,16 @@ def _find_by_pid(
                 # Phase 1 timed out
                 if class_hint_lower:
                     phase = 2
-                    logger.info(
+                    logger.debug(
                         "Phase 1 timed out, switching to phase 2 (pure class search)."
                     )
                 else:
-                    logger.info(
+                    logger.debug(
                         "Phase 1 timed out, restarting (no class hint available)."
                     )
 
             else:  # phase == 2
-                logger.info(
+                logger.debug(
                     f"Phase 2: Trying pure class hint for {class_timeout} seconds..."
                 )
                 while time.time() - phase_start < class_timeout:
@@ -276,13 +270,13 @@ def _find_by_pid(
                                 continue
                             _, _, w, h = geom
                             name = get_window_name(conn, win, atoms) or "unknown"
-                            logger.info(f"Found window in phase 2: {name}")
+                            logger.debug(f"Found window in phase 2: {name}")
                             return WindowInfo(win, w, h, name)
 
                     time.sleep(0.2)
 
                 # Phase 2 timed out - go back to phase 1
-                logger.info("Phase 2 timed out, restarting phase 1.")
+                logger.debug("Phase 2 timed out, restarting phase 1.")
                 phase = 1
 
     finally:
@@ -336,10 +330,10 @@ def _launch_and_find_window(
         return None, None
 
     program_name = config.program[0]
-    print(f"Launching: {' '.join(config.program)}")
+    logger.info(f"Launching: {' '.join(config.program)}")
     proc = subprocess.Popen(config.program)
 
-    print("Waiting for window...")
+    logger.info("Waiting for window...")
     try:
         win_info = _find_by_pid(
             proc.pid,
@@ -349,11 +343,10 @@ def _launch_and_find_window(
             total_timeout=config.total_timeout,
             starting_phase=config.starting_phase,
         )
-        logger.info(f"Found window for PID {proc.pid}: {win_info.title}")
+        logger.debug(f"Found window for PID {proc.pid}: {win_info.title}")
         return win_info, proc
     except TimeoutError as e:
         logger.error(f"Timeout while waiting for window: {e}")
-        print(e)
         proc.terminate()
         proc.wait()
         return None, None
@@ -370,24 +363,24 @@ def _select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo
         The selected WindowInfo, or None if the user quits.
     """
     windows.sort(key=lambda w: w.title.lower())
-    print("\nAvailable windows:")
+    logger.info("\nAvailable windows:")
     for i, w in enumerate(windows):
-        print(f"{i:3d}: {w.title} ({w.width}x{w.height})")
+        logger.info(f"{i:3d}: {w.title} ({w.width}x{w.height})")
 
     while True:
         try:
             choice = input("\nEnter window number (or 'q' to quit): ").strip()
             if choice.lower() == "q":
-                logger.info("User quit window selection")
+                logger.debug("User quit window selection")
                 return None
             idx = int(choice)
             if 0 <= idx < len(windows):
                 selected = windows[idx]
-                logger.info(f"User selected window {idx}: {selected.title}")
+                logger.debug(f"User selected window {idx}: {selected.title}")
                 return selected
-            print(f"Please enter a number between 0 and {len(windows)-1}")
+            logger.info(f"Please enter a number between 0 and {len(windows)-1}")
         except ValueError:
-            print("Invalid input. Please enter a number.")
+            logger.info("Invalid input. Please enter a number.")
 
 
 def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
@@ -400,11 +393,10 @@ def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
     Returns:
         WindowInfo of the active window, or None on failure.
     """
-    if config.log_level != "ERROR":
-        print(
-            f"No program specified. Will scale the currently active window "
-            f"in {config.target_delay} seconds..."
-        )
+    logger.info(
+        f"No program specified. Will scale the currently active window "
+        f"in {config.target_delay} seconds..."
+    )
     try:
         time.sleep(config.target_delay)
     except KeyboardInterrupt:
@@ -413,10 +405,11 @@ def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
     try:
         win_info = get_active_window()
         if not win_info:
-            print("No visible windows found.")
+            logger.error("No visible windows found.")
             sys.exit(1)
-        logger.info(f"Got active window: {win_info.title}")
+        logger.debug(f"Got active window: {win_info.title}")
         return win_info
+
     except RuntimeError as e:
         logger.error(f"Failed to get active window: {e}")
         return None
@@ -444,15 +437,15 @@ def activate_window(win_handle: int) -> None:
                 timeout=3,
                 capture_output=True,
             )
-            logger.info(f"Activated window {win_handle:#x} via xdotool")
+            logger.debug(f"Activated window {win_handle:#x} via xdotool")
             return
         except subprocess.TimeoutExpired:
-            logger.info(
+            logger.debug(
                 f"xdotool timed out activating window {win_handle:#x}; "
                 "falling back to XCB focus."
             )
         except subprocess.CalledProcessError as e:
-            logger.info(
+            logger.debug(
                 f"xdotool failed to activate window {win_handle:#x} (exit code {e.returncode}). "
                 "Falling back to XCB focus."
             )
@@ -462,7 +455,7 @@ def activate_window(win_handle: int) -> None:
     # Fallback: just give the window input focus
     conn = open_xcb_connection()
     if conn is None:
-        logger.info("Cannot focus window: XCB connection unavailable.")
+        logger.debug("Cannot focus window: XCB connection unavailable.")
         return
 
     try:
@@ -472,9 +465,9 @@ def activate_window(win_handle: int) -> None:
             time=xcffib.xproto.Time.CurrentTime,
         )
         conn.flush()
-        logger.info(f"Focused window {win_handle:#x} (raise not guaranteed)")
+        logger.debug(f"Focused window {win_handle:#x} (raise not guaranteed)")
     except Exception as e:
-        logger.info(f"Failed to focus window {win_handle:#x} via XCB: {e}")
+        logger.debug(f"Failed to focus window {win_handle:#x} via XCB: {e}")
     finally:
         close_xcb_connection(conn)
 
@@ -503,37 +496,35 @@ def acquire_target_window(
     start_time = time.perf_counter()
 
     if config.target_title or config.target_title_regex:
-        logger.info("Attaching to window by title criteria.")
+        logger.debug("Attaching to window by title criteria.")
         win_info = _find_window_by_title(
             contains=config.target_title,
             regex=config.target_title_regex,
         )
         if win_info is None:
-            logger.info("No window matching the title criteria found.")
-            print("No window matching the title criteria found.")
+            logger.error("No window matching the title criteria found.")
             return None, None
 
         activate_window(win_info.handle)
-        logger.info(
+        logger.debug(
             f"Window acquired via attach title in {time.perf_counter() - start_time:.2f}s"
         )
         return win_info, None
 
     if config.select:
-        logger.info("Selecting window interactively.")
-        print("Enumerating open windows...")
+        logger.debug("Selecting window interactively.")
+        logger.info("Enumerating open windows...")
         windows = _list_windows()
         if not windows:
             logger.error("No visible windows found")
-            print("No visible windows found.")
             return None, None
 
         win_info = _select_window_interactive(windows)
         if win_info is None:
             return None, None
         if config.log_level != "ERROR":
-            print(f"Selected: {win_info.title}")
-        logger.info(
+            logger.info(f"Selected: {win_info.title}")
+        logger.debug(
             f"Window acquired interactively in {time.perf_counter() - start_time:.2f}s"
         )
 
@@ -542,20 +533,20 @@ def acquire_target_window(
         return win_info, None
 
     elif config.program:
-        logger.info(f"Launching and finding window for program: {config.program}")
+        logger.debug(f"Launching and finding window for program: {config.program}")
         result = _launch_and_find_window(config)
-        logger.info(
+        logger.debug(
             f"Window acquired via program launch in {time.perf_counter() - start_time:.2f}s"
         )
         return result
 
     else:
-        logger.info(
+        logger.debug(
             f"Acquiring currently active window (waiting {config.target_delay} seconds)"
         )
         win_info = _get_active_window_after_delay(config)
         if win_info:
-            logger.info(
+            logger.debug(
                 f"Active window acquired in {time.perf_counter() - start_time:.2f}s"
             )
         return win_info, None

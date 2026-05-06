@@ -202,7 +202,7 @@ class WindowTracker:
         size_changed = (new_width != self.width) or (new_height != self.height)
 
         if size_changed or force:
-            logger.info(
+            logger.debug(
                 f"WindowTracker: change detected: size {self.width}x{self.height} "
                 f"-> {new_width}x{new_height}"
             )
