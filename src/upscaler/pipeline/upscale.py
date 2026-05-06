@@ -142,27 +142,34 @@ class UpscalerManager:
         """
         Build the compute pipelines for the full-frame path.
 
-        The model is always a standard depth-to-space upscaler. For
-        `scale >= 4` and when `config.double_upscale` is enabled,
-        two chained 2x SRCNN stages are created; otherwise a single
-        stage handles the entire upscale.
+        When `config.double_upscale` is enabled and the model's native
+        scale is 2, two chained 2x SRCNN stages are created for a total
+        scale of 4; otherwise the model's native scale is used directly.
         """
-        out_w = self.crop_width * self.scale
-        out_h = self.crop_height * self.scale
         fmt = self.model_cfg.intermediate_format
-
-        # Shared input and staging resources
-        self.input = Texture2D(self.crop_width, self.crop_height)
-        self.staging = Buffer(self.input.size, heap_type=HEAP_UPLOAD)
-
         factory = PipelineFactory(self.model_cfg)
         intermediate_names = _collect_intermediate_names(self.model_cfg)
 
-        if self.config.double_upscale and self.scale >= 4:
+        # ------------------------------------------------------------------
+        # Determine total scale and output size
+        # ------------------------------------------------------------------
+        if self.config.double_upscale and self.scale == 2:
+            total_scale = 4
+        else:
+            total_scale = self.scale
+
+        out_w = self.crop_width * total_scale
+        out_h = self.crop_height * total_scale
+
+        # Shared input and staging resources (always at crop resolution)
+        self.input = Texture2D(self.crop_width, self.crop_height)
+        self.staging = Buffer(self.input.size, heap_type=HEAP_UPLOAD)
+
+        if self.config.double_upscale and self.scale == 2:
             # ---- Two-stage 2x -> 4x upscaling ----
             stage1_in_w, stage1_in_h = self.crop_width, self.crop_height
             stage1_out_w, stage1_out_h = stage1_in_w * 2, stage1_in_h * 2
-            stage2_out_w, stage2_out_h = stage1_out_w * 2, stage1_out_h * 2
+            # stage2 will produce the final 4x output (out_w, out_h)
 
             # Stage 1: low-res -> 2x intermediate
             stage1_textures: Dict[str, Texture2D] = {
@@ -189,7 +196,7 @@ class UpscalerManager:
                 name: Texture2D(stage1_out_w, stage1_out_h, format=fmt)
                 for name in intermediate_names
             }
-            self.output = Texture2D(stage2_out_w, stage2_out_h)
+            self.output = Texture2D(out_w, out_h)  # 4x output
             stage2_textures["output"] = self.output
 
             srcnn2 = SRCNN(
@@ -227,6 +234,10 @@ class UpscalerManager:
             self.full_groups.append(
                 dispatch_groups(self.crop_width, self.crop_height, last_pass=False)
             )
+
+        # Finally, update the object-level scale to reflect the actual
+        # magnification factor (used by tile processor and logging)
+        self.scale = total_scale
 
     def _init_tile_mode(self) -> None:
         """

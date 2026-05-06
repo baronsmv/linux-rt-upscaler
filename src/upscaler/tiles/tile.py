@@ -139,7 +139,7 @@ class TileProcessor:
         self.intermediate_names = _collect_intermediate_names(model_config)
 
         # -------------------------------------------------------------------
-        #  Residual textures – provided by UpscalerManager (no extra copies)
+        #  Residual textures - provided by UpscalerManager (no extra copies)
         # -------------------------------------------------------------------
         if residual_1x_texture is None:
             self.residual_1x = Texture2D(crop_width, crop_height)  # safety fallback
