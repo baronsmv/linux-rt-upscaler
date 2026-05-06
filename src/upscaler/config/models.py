@@ -57,8 +57,12 @@ class Config:
     # Program
     program: Optional[List[str]] = None
 
-    # Interaction
+    # Target selection
     select: bool = False
+    target_title: Optional[str] = None
+    target_title_regex: Optional[str] = None
+
+    # Focus tracking
     follow_focus: bool = False
     pause_on_focus_loss: bool = True
 

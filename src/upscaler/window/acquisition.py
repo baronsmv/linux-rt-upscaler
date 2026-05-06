@@ -1,4 +1,5 @@
 import logging
+import re
 import shutil
 import struct
 import subprocess
@@ -289,6 +290,35 @@ def _find_by_pid(
         logger.debug("Closed XCB connection after window search")
 
 
+def _find_window_by_title(
+    contains: Optional[str] = None,
+    regex: Optional[str] = None,
+) -> Optional[WindowInfo]:
+    """Return the first visible window meeting the strongest criterion provided.
+
+    Priority: regex > contains.
+    """
+    windows = _list_windows()
+    if not windows:
+        return None
+
+    if regex:
+        pattern = re.compile(regex, re.IGNORECASE)
+        for win in windows:
+            if pattern.search(win.title):
+                return win
+        return None
+
+    if contains:
+        contains_lower = contains.lower()
+        for win in windows:
+            if contains_lower in win.title.lower():
+                return win
+        return None
+
+    return None
+
+
 def _launch_and_find_window(
     config: Config,
 ) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
@@ -471,6 +501,23 @@ def acquire_target_window(
         was launched.
     """
     start_time = time.perf_counter()
+
+    if config.target_title or config.target_title_regex:
+        logger.info("Attaching to window by title criteria.")
+        win_info = _find_window_by_title(
+            contains=config.target_title,
+            regex=config.target_title_regex,
+        )
+        if win_info is None:
+            logger.info("No window matching the title criteria found.")
+            print("No window matching the title criteria found.")
+            return None, None
+
+        activate_window(win_info.handle)
+        logger.info(
+            f"Window acquired via attach title in {time.perf_counter() - start_time:.2f}s"
+        )
+        return win_info, None
 
     if config.select:
         logger.info("Selecting window interactively.")

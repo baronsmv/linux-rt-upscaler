@@ -136,30 +136,42 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'.""",
     parser.add_argument("program", nargs="*", help="Program to launch and scale.")
 
     # ----------------------------------------------------------------------
-    # Interaction section
+    # Target Selection section
     # ----------------------------------------------------------------------
-    interaction_group = parser.add_argument_group("INTERACTION OPTIONS")
-    interaction_group.add_argument(
+    target_selection_group = parser.add_argument_group("TARGET SELECTION OPTIONS")
+    target_selection_group.add_argument(
         "-s",
         "--select",
         action="store_true",
         help="Select a window from the list of open windows.",
     )
-    interaction_group.add_argument(
+    target_selection_group.add_argument(
+        "-t",
+        "--target-title",
+        type=str,
+        default=DEFAULT_CONFIG.target_title,
+        help="""Target a window whose title contains this string
+(case-insensitive).""",
+    )
+    target_selection_group.add_argument(
+        "--target-title-regex",
+        type=str,
+        default=DEFAULT_CONFIG.target_title_regex,
+        help="Target a window whose title contains this regular expression.",
+    )
+
+    # ----------------------------------------------------------------------
+    # Focus Tracking section
+    # ----------------------------------------------------------------------
+    focus_tracking_group = parser.add_argument_group("FOCUS TRACKING OPTIONS")
+    focus_tracking_group.add_argument(
         "-f",
         "--follow-focus",
         action="store_true",
         help="""Follow the currently focused window (automatically switch
 when focus changes).""",
     )
-
-    # ----------------------------------------------------------------------
-    # Additional Interaction section
-    # ----------------------------------------------------------------------
-    additional_interaction_group = parser.add_argument_group(
-        "ADDITIONAL INTERACTION OPTIONS"
-    )
-    additional_interaction_group.add_argument(
+    focus_tracking_group.add_argument(
         "--no-focus-pause",
         action="store_false",
         dest="pause_on_focus_loss",
@@ -372,9 +384,7 @@ Common modes:
   stretch - Fill, ignore aspect ratio
   cover   - Fill and crop to fit
 
-More modes are included with examples in the config file.
-
-    """,
+""",
     )
     presentation_group.add_argument(
         "--crop-top",
@@ -950,7 +960,6 @@ Recommended range: 0.15 - 0.5. Default: %(default)s.
     # Additional groups
     # ----------------------------------------------------------------------
     additional_groups = [
-        additional_interaction_group,
         timing_group,
         window_detection_group,
         lanczos_group,
