@@ -112,7 +112,8 @@ class Pipeline:
             osd_manager=self.osd,
             swapchain_manager=self._swapchain_manager,
         )
-        self._last_present_state_hash = None
+        self._last_present_state_hash: Optional[int] = None
+        self._presenter_params_stale = True
 
         # Upscaler manager - full-frame or tile processing
         self.upscaler_mgr = UpscalerManager(
@@ -244,21 +245,28 @@ class Pipeline:
             return
         self.overlay.update_opacity()
 
-        # Skip frame if nothing changed and no OSD is active
+        # --- 3. Idle frame detection ---------------------------------------
+        current_hash = self._compute_present_state_hash()
         idle = (
             not is_dirty
             and osd_tex is None
-            and self._last_present_state_hash is not None
-            and self._get_present_state_hash() == self._last_present_state_hash
+            and not self._presenter_params_stale
+            and current_hash == self._last_present_state_hash
         )
+
         if idle:
+            # Re-present the exact same frame, zero compute cost
             self.presenter.present_unchanged()
             self.overlay.scaling_rect = self.presenter.get_scaling_rect(
                 self._scale_factor
             )
             return
 
-        # --- 3. Upscale ----------------------------------------------------
+        # Full render: mark params as fresh
+        self._presenter_params_stale = False
+        self._last_present_state_hash = current_hash
+
+        # --- 4. Upscale ----------------------------------------------------
         if not self.upscaler_mgr.use_tile:
             # Full-frame mode
             self.upscaler_mgr.upload_full_frame(
@@ -296,14 +304,14 @@ class Pipeline:
                 self.upscaler_mgr.process_full_frame()
                 src_tex = self.upscaler_mgr.get_output_texture()
 
-        # --- 4. Present ----------------------------------------------------
+        # --- 5. Present ----------------------------------------------------
         self.presenter.set_upscaled_source(src_tex)
         self.presenter.present()
 
-        # --- 5. Update mouse mapping for event forwarding -------------------
+        # --- 6. Update mouse mapping for event forwarding -------------------
         self.overlay.scaling_rect = self.presenter.get_scaling_rect(self._scale_factor)
 
-        # --- 6. Handle swapchain recreation (overlay resize) ----------------
+        # --- 7. Handle swapchain recreation (overlay resize) ----------------
         if self._swapchain_manager.needs_recreation():
             if self._swapchain_manager.is_out_of_date():
                 logger.info("Swapchain out-of-date, recreating")
@@ -464,6 +472,35 @@ class Pipeline:
     # ----------------------------------------------------------------------
     # Internal helpers
     # ----------------------------------------------------------------------
+    def _compute_present_state_hash(self) -> int:
+        """Return a hash of all config and geometry state that affects screen output."""
+        c = self.config
+        p = self.presenter
+        # Include only parameters that alter pixel values or placement.
+        return hash(
+            (
+                c.output_geometry,
+                c.offset_x,
+                c.offset_y,
+                c.background_color,
+                c.lanczos_blur,
+                c.lanczos_antiring_strength,
+                c.lanczos_linear_light,
+                c.lanczos_tight_antiring,
+                c.cas_enabled,
+                c.bloom_enabled,
+                c.vignette_enabled,
+                c.lut_enabled,
+                c.lut_preset,
+                c.grain_enabled,
+                p.content_width,
+                p.content_height,
+                p.scale_mode,
+                p.offset_x,
+                p.offset_y,
+            )
+        )
+
     def _get_present_state_hash(self) -> int:
         """Return a hash of all config and presenter state that affects the screen."""
         c = self.config

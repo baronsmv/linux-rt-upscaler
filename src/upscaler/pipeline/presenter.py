@@ -187,7 +187,7 @@ class Presenter:
 
     def present_unchanged(self):
         """Re-present the current screen texture without any processing."""
-        self.swapchain.present(self.screen_tex, wait_for_fence=True)
+        self.swapchain.present(self.screen_tex)
 
     def get_scaling_rect(self, scale_factor: float) -> List[float]:
         """
