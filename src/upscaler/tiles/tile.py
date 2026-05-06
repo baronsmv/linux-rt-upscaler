@@ -1,11 +1,11 @@
 import logging
 import struct
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from ..config import Config
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_model
-from ..vulkan import Buffer, Compute, Texture2D, HEAP_UPLOAD
+from ..vulkan import Buffer, Compute, Texture2D
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +97,8 @@ class TileProcessor:
         config: Config,
         crop_width: int,
         crop_height: int,
+        residual_1x_texture: Optional[Texture2D] = None,
+        residual_2x_texture: Optional[Texture2D] = None,
         model_variant: str = "_tile",
         push_constant_size: int = 32,  # 8 uint32 fields (see _make_push_bytes)
     ) -> None:
@@ -114,17 +116,17 @@ class TileProcessor:
         self.double_upscale = config.double_upscale
         self.max_layers = config.max_tile_layers
 
-        # --------------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # Derived sizes
-        # --------------------------------------------------------------------------
+        # -------------------------------------------------------------------
         self.expanded_tile_size = self.tile_size + 2 * self.margin
         self.scale = 4 if self.double_upscale else 2
         self.full_out_w = crop_width * self.scale
         self.full_out_h = crop_height * self.scale
 
-        # --------------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # Model & pipeline factory
-        # --------------------------------------------------------------------------
+        # -------------------------------------------------------------------
         model_config = load_model(
             config.model, variant=model_variant, push_constant_size=push_constant_size
         )
@@ -136,34 +138,39 @@ class TileProcessor:
         # All UAV names used by the model (except "output")
         self.intermediate_names = _collect_intermediate_names(model_config)
 
-        # --------------------------------------------------------------------------
-        # Residual textures (updated by UpscalerManager before tile processing)
-        # --------------------------------------------------------------------------
-        self.residual_1x = Texture2D(crop_width, crop_height)
-        self.residual_2x = (
-            Texture2D(crop_width * 2, crop_height * 2, format=self.intermediate_format)
-            if self.double_upscale
-            else None
-        )
-        # Persistent staging buffer for residual uploads (reused every frame)
-        self.residual_staging = Buffer(
-            crop_width * crop_height * 4, heap_type=HEAP_UPLOAD
-        )
+        # -------------------------------------------------------------------
+        #  Residual textures – provided by UpscalerManager (no extra copies)
+        # -------------------------------------------------------------------
+        if residual_1x_texture is None:
+            self.residual_1x = Texture2D(crop_width, crop_height)  # safety fallback
+        else:
+            self.residual_1x = residual_1x_texture
 
-        # --------------------------------------------------------------------------
+        if self.double_upscale:
+            if residual_2x_texture is None:
+                self.residual_2x = Texture2D(
+                    crop_width * 2, crop_height * 2, format=self.intermediate_format
+                )
+            else:
+                self.residual_2x = residual_2x_texture
+        else:
+            self.residual_2x = None
+
+        # -------------------------------------------------------------------
         # SRCNN stages and dispatch groups
-        # --------------------------------------------------------------------------
+        # -------------------------------------------------------------------
         self.stages: List[SRCNN] = []
         self.groups_per_stage: List[Tuple[int, int]] = []
         self._create_stages()
 
-        # --------------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # Final pipeline (replaces the last pass’s built-in pipeline)
-        # --------------------------------------------------------------------------
+        # -------------------------------------------------------------------
         self._finalize_pipeline()
 
         logger.info(
-            "TileProcessor ready: crop=%dx%d, tile=%d, margin=%d, scale=%dx, layers=%d",
+            "TileProcessor ready: crop=%dx%d, tile=%d, margin=%d, "
+            "scale=%dx, layers=%d",
             crop_width,
             crop_height,
             self.tile_size,

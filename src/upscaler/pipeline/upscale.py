@@ -231,18 +231,23 @@ class UpscalerManager:
     def _init_tile_mode(self) -> None:
         """
         Create the tile processor and ensure full-frame fallback writes
-        to the same output texture.
+        to the same output texture. The low-res input texture and the
+        2x intermediate (for double upscale) are used directly as residuals.
         """
         self.tile_processor = TileProcessor(
             config=self.config,
             crop_width=self.crop_width,
             crop_height=self.crop_height,
+            residual_1x_texture=self.input,
+            residual_2x_texture=(
+                self._residual_dst_tex if self.config.double_upscale else None
+            ),
         )
         self.output = self.tile_processor.output_texture
         self._rebind_full_frame_output()
 
-        # For double-upscale, store references needed to generate the 2x
-        # residual before tile processing.
+        # For double-upscale, keep the references needed to generate the 2x
+        # residual (the first SRCNN stage output) - they are already set.
         if self.config.double_upscale and len(self.full_stages) >= 2:
             self._residual_upscale_groups = self.full_groups[0]
             self._residual_dst_tex = self.full_stages[0].outputs["output"]
@@ -402,10 +407,7 @@ class UpscalerManager:
         # ---- First tile frame - seed with a full-frame pass ----
         if self._first_tile_frame:
             logger.debug("First tile frame - performing full capture")
-            payload = bytes(frame_data)
-            self.tile_processor.residual_1x.upload_subresources(
-                [(payload, 0, 0, self.crop_width, self.crop_height, 0)]
-            )
+            # Upload the full frame to self.input (this is also the 1x residual)
             self.upload_full_frame(
                 frame_data,
                 rects,
@@ -419,10 +421,6 @@ class UpscalerManager:
         # ---- Fallback check ----
         if self._should_fallback(rects):
             logger.debug("Fallback to full-frame (threshold exceeded)")
-            payload = bytes(frame_data)
-            self.tile_processor.residual_1x.upload_subresources(
-                [(payload, 0, 0, self.crop_width, self.crop_height, 0)]
-            )
             self.upload_full_frame(
                 frame_data,
                 rects,
@@ -451,7 +449,7 @@ class UpscalerManager:
 
         # ---- Actual tile processing ----
         if self.config.double_upscale:
-            # Upload low-res frame and compute the 2x residual.
+            # Upload low-res frame and compute the 2x residual
             self.upload_full_frame(
                 frame_data,
                 rects,
@@ -461,25 +459,14 @@ class UpscalerManager:
             if self._residual_upscale_groups is not None:
                 gx, gy = self._residual_upscale_groups
                 self.full_stages[0].dispatch(gx, gy, 1)
-            if self._residual_dst_tex is not None and self.tile_processor is not None:
-                self._residual_dst_tex.copy_to(
-                    self.tile_processor.residual_2x,
-                    width=self.crop_width * 2,
-                    height=self.crop_height * 2,
-                )
         else:
-            # Single-upscale: update the full low-res residual.
+            # Single-upscale: just upload the full frame to self.input
             self.upload_full_frame(
                 frame_data,
                 rects,
                 use_damage_tracking=False,
                 margin=self.config.tile_context_margin,
             )
-            if self.tile_processor is not None:
-                self.tile_processor.residual_staging.upload(frame_data)
-                self.tile_processor.residual_staging.copy_to(
-                    self.tile_processor.residual_1x,
-                )
 
         if self.tile_processor is not None:
             self.tile_processor.process_tiles(dirty_tiles)
