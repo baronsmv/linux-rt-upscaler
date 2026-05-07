@@ -143,6 +143,11 @@ class Pipeline:
         # Frame grabber (created on pipeline thread)
         self._grabber: Optional[FrameGrabber] = None
 
+        # Failure counters
+        self._consecutive_capture_failures = 0
+        self._max_capture_failures = 10
+        self._pause_after_failure = 0.05
+
         # Performance counters
         self._frame_count = 0
         self._last_fps_log = time.time()
@@ -233,7 +238,17 @@ class Pipeline:
             frame, is_dirty, rects = self._grabber.grab()
         except RuntimeError as e:
             logger.error(f"Frame grab failed: {e}")
+            self._consecutive_capture_failures += 1
+            if self._consecutive_capture_failures >= self._max_capture_failures:
+                logger.critical(
+                    "Too many consecutive capture failures - shutting down."
+                )
+                self._running = False
+            time.sleep(self._pause_after_failure)
             return
+
+        # If we get here, capture succeeded, so reset the counter
+        self._consecutive_capture_failures = 0
 
         if not self._running:
             return

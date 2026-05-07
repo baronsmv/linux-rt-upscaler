@@ -102,7 +102,7 @@ void capture_destroy(CaptureContext *ctx);
  * Returns NULL if no connection is available.
  * The returned pointer must be cast to xcb_connection_t* by the caller.
  */
-void* capture_get_xcb_connection(CaptureContext *ctx);
+void *capture_get_xcb_connection(CaptureContext *ctx);
 
 #ifdef __cplusplus
 }

@@ -133,8 +133,8 @@ int shm_capture_region(CaptureContext *ctx, int rx, int ry, int rw, int rh,
   if (rw <= 0 || rh <= 0)
     return 0;
 
+  // ---- SHM unavailable? Use XGetImage -----------------------------------
   if (!shm_recreate_if_needed(ctx)) {
-    /* SHM unavailable - use XGetImage */
     x11_lock();
     XImage *fb = XGetImage(ctx->dpy, ctx->xid, ctx->x + rx, ctx->y + ry, rw, rh,
                            AllPlanes, ZPixmap);
@@ -148,28 +148,55 @@ int shm_capture_region(CaptureContext *ctx, int rx, int ry, int rw, int rh,
     return 0;
   }
 
-  /* SHM path */
+  // ---- Fast SHM path (with instant BadMatch recovery) -------------------
   x11_lock();
   int ok = XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x + rx, ctx->y + ry,
                         AllPlanes);
-  if (!ok) {
-    x11_unlock();
-    ctx->had_shm_failure = 1;
-    x11_lock();
-    XImage *fb = XGetImage(ctx->dpy, ctx->xid, ctx->x + rx, ctx->y + ry, rw, rh,
-                           AllPlanes, ZPixmap);
-    x11_unlock();
-    if (!fb)
-      return -1;
-    convert_to_bgra(out, fb, 0, 0, rw, rh, fb->red_mask, fb->green_mask,
-                    fb->blue_mask,
-                    (fb->bits_per_pixel == 32 && fb->format == ZPixmap));
-    XDestroyImage(fb);
-  } else {
+  int mismatch = x11_error_shm_mismatch_occurred();
+
+  if (ok && !mismatch) {
+    // Fast success: SYNC + convert
     XSync(ctx->dpy, False);
     x11_unlock();
     convert_to_bgra(out, ctx->img, rx, ry, rw, rh, ctx->red_mask,
                     ctx->green_mask, ctx->blue_mask, ctx->use_fast_path);
+    return 0;
   }
+
+  // ---- Recovery path ---------------------------------------------------
+  // Either XShmGetImage failed or a BadMatch indicated a visual mismatch.
+  // We force a rebuild of the SHM image and try one more time.
+  x11_unlock();
+
+  // Force rebuild on next shm_recreate_if_needed
+  ctx->last_visual = NULL;
+  ctx->last_depth = 0;
+
+  if (shm_recreate_if_needed(ctx)) {
+    // Retry with the fresh SHM image
+    x11_lock();
+    ok = XShmGetImage(ctx->dpy, ctx->xid, ctx->img, ctx->x + rx, ctx->y + ry,
+                      AllPlanes);
+    if (ok) {
+      XSync(ctx->dpy, False);
+      x11_unlock();
+      convert_to_bgra(out, ctx->img, rx, ry, rw, rh, ctx->red_mask,
+                      ctx->green_mask, ctx->blue_mask, ctx->use_fast_path);
+      return 0;
+    }
+    x11_unlock();
+  }
+
+  // ---- Slow fallback (XGetImage) - last resort --------------------------
+  x11_lock();
+  XImage *fb = XGetImage(ctx->dpy, ctx->xid, ctx->x + rx, ctx->y + ry, rw, rh,
+                         AllPlanes, ZPixmap);
+  x11_unlock();
+  if (!fb)
+    return -1;
+  convert_to_bgra(out, fb, 0, 0, rw, rh, fb->red_mask, fb->green_mask,
+                  fb->blue_mask,
+                  (fb->bits_per_pixel == 32 && fb->format == ZPixmap));
+  XDestroyImage(fb);
   return 0;
 }

@@ -6,12 +6,12 @@
 #include "capture.h"
 #include "damage_tracking.h"
 #include "shm_image.h"
-#include "tile_cache.h"
 #include "sync.h"
+#include "tile_cache.h"
+#include <X11/Xlib-xcb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <X11/Xlib-xcb.h>
 #include <xcb/xcb.h>
 
 /* -------------------------------------------------------------------------
@@ -102,8 +102,7 @@ CaptureContext *capture_create(XID xid, int crop_left, int crop_top, int width,
 }
 
 int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
-                        size_t output_size, OutputRect *rects,
-                        int max_rects) {
+                        size_t output_size, OutputRect *rects, int max_rects) {
   if (!ctx || !ctx->dpy)
     return -1;
 
@@ -115,7 +114,8 @@ int capture_grab_damage(CaptureContext *ctx, unsigned char *output_data,
     if (max_h < ctx->height) {
       ctx->height = max_h;
       if (ctx->debug)
-        fprintf(stderr, "[capture] Buffer too small, clamped height to %d\n", max_h);
+        fprintf(stderr, "[capture] Buffer too small, clamped height to %d\n",
+                max_h);
     }
   }
 
@@ -318,7 +318,8 @@ void capture_destroy(CaptureContext *ctx) {
   free(ctx);
 }
 
-void* capture_get_xcb_connection(CaptureContext *ctx) {
-    if (!ctx || !ctx->dpy) return NULL;
-    return (void*)XGetXCBConnection(ctx->dpy);
+void *capture_get_xcb_connection(CaptureContext *ctx) {
+  if (!ctx || !ctx->dpy)
+    return NULL;
+  return (void *)XGetXCBConnection(ctx->dpy);
 }

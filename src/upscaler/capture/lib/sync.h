@@ -21,4 +21,8 @@ void x11_lock(void);
 /** Unlock the Xlib mutex. */
 void x11_unlock(void);
 
+/** Check whether a BadMatch during ShmGetImage occurred since the last call,
+ *  and reset the flag. */
+int x11_error_shm_mismatch_occurred(void);
+
 #endif /* SYNC_H */
