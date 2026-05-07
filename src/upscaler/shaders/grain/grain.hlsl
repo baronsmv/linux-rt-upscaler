@@ -1,7 +1,7 @@
 // =============================================================================
 //  Master Aesthetic Grain - Compute Shader
 //  ---------------------------------------
-//  Adds a realistic, film-emulsion texture to the final image.  The grain is
+//  Adds a realistic, film-emulsion texture to the final image. The grain is
 //  isotropic, temporally jittered, and blended via soft-light, producing a
 //  natural organic look without directional bias or flicker.
 //

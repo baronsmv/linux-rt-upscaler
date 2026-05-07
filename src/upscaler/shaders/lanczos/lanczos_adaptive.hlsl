@@ -2,19 +2,19 @@
 //  Adaptive Lanczos (Variable Radius) - Compute Shader
 //  ---------------------------------------------------
 //  Single-pass, high-quality 2D resampling for downscaling and non-uniform
-//  scaling.  Uses a generic variable-radius Lanczos kernel with integer-pixel
-//  alignment.  Optimised for correctness, not for speed - the host ensures this
+//  scaling. Uses a generic variable-radius Lanczos kernel with integer-pixel
+//  alignment. Optimised for correctness, not for speed - the host ensures this
 //  shader is only used when the filter radius is not 2 in both directions
 //  (upscaling is handled by the dedicated `lanczos_fixed.hlsl`).
 //
-//  Features :
+//  Features:
 //    - Correct variable-radius Lanczos kernel (sinc-based)
 //    - Independent X/Y radii (pre-computed by the host)
 //    - Linear-light processing (optional)
 //    - Soft anti-ringing with configurable neighborhood
 //    - Integer-pixel alignment - no jitter
 //
-//  Constant buffer (must match LanczosScaler.CB_FORMAT_ADAPTIVE) :
+//  Constant buffer (must match LanczosScaler.CB_FORMAT_ADAPTIVE):
 //    float4 bgColor;           // color outside the destination rect
 //    uint   srcWidth, srcHeight;
 //    uint   dstTotalWidth, dstTotalHeight;
@@ -26,8 +26,8 @@
 //    bool   linearLight;
 //    bool   tightAntiring;     // true = central 2x2 only for ringing bounds
 //
-//  Workgroup size : 16x16.
-//  Dispatch :
+//  Workgroup size: 16x16.
+//  Dispatch:
 //    groupsX = ceil(dstTotalWidth  / 16)
 //    groupsY = ceil(dstTotalHeight / 16)
 //

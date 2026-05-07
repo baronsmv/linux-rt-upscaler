@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # Lanczos Fixed (fixed radius 2) - no radiusX/radiusY fields
-CB_FORMAT_FIXED = "ffffIIIIiiiiffII"
+CB_FORMAT_FIXED = "ffffIIIIiiiif"
 CB_SIZE_FIXED = struct.calcsize(CB_FORMAT_FIXED)
 
 # Lanczos Adaptive (variable radius) - includes radiusX/radiusY
@@ -38,7 +38,7 @@ class LanczosScaler(ShaderPass):
           downscaling or non-uniform scaling.
 
     The appropriate shader is chosen automatically based on the pre-computed
-    filter radii.  Switching between shaders happens only when the scaling
+    filter radii. Switching between shaders happens only when the scaling
     setup changes (e.g. after a window resize) - never per frame.
 
     Public API identical to other :class:`ShaderPass` subclasses.
@@ -168,19 +168,16 @@ class LanczosScaler(ShaderPass):
         if self._current_variant == "fixed":
             data = struct.pack(
                 CB_FORMAT_FIXED,
-                *background_color,  # 4 floats
+                *background_color,
                 src_width,
-                src_height,  # 2 uint32
+                src_height,
                 dst_total_width,
-                dst_total_height,  # 2 uint32
+                dst_total_height,
                 dst_x,
                 dst_y,
                 dst_w,
-                dst_h,  # 4 int32
-                blur,  # float
-                antiring_strength,  # float
-                1 if linear_light else 0,  # uint32 (bool)
-                1 if tight_antiring else 0,  # uint32 (bool)
+                dst_h,
+                blur,
             )
         else:  # adaptive
             data = struct.pack(
