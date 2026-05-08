@@ -55,6 +55,9 @@ class WindowGridScene(QGraphicsScene):
         self._columns = 1
         self._rows = 0
 
+        self._last_handles: set = set()
+        self._last_vp_width: float = 0.0
+
         # We need to handle key events at the scene level for navigation
         # when no item has focus. We'll install an event filter on the view
         # when attached, but for now we override keyPressEvent.
@@ -97,12 +100,24 @@ class WindowGridScene(QGraphicsScene):
             new_tiles.append(tile)
 
         self._tiles = new_tiles
-
-        # Restore selection if possible
         self._restore_selection()
 
-        # Trigger relayout (debounced)
-        self.schedule_relayout()
+        # Relayout only if the set of handles changed or viewport width changed
+        if self._needs_relayout(new_handles):
+            self.schedule_relayout()
+        self._last_handles = new_handles
+
+    def _needs_relayout(self, new_handles: set) -> bool:
+        if new_handles != self._last_handles:
+            return True
+        view = self.views()[0] if self.views() else None
+        if view and hasattr(self, "_last_vp_width"):
+            if abs(view.viewport().width() - self._last_vp_width) > 10:
+                return True
+        # store current viewport width
+        if view:
+            self._last_vp_width = view.viewport().width()
+        return False
 
     def clear_all(self) -> None:
         """Remove all tiles and reset state."""

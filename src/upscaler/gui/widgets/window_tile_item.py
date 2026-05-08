@@ -76,8 +76,6 @@ class WindowTileItem(QGraphicsObject):
 
         # --- Geometry ---
         self._tile_rect = QRectF(0, 0, gui_config.tile_width, gui_config.tile_height)
-        self._max_scale = gui_config.pop_scale
-        self._shadow_extent = self._calculate_shadow_extent()
 
         # --- State ---
         self._hover = False
@@ -113,31 +111,21 @@ class WindowTileItem(QGraphicsObject):
         return max(abs(ox), abs(oy)) + blur * 1.5
 
     def boundingRect(self) -> QRectF:
-        """
-        Return the outer bounding rectangle that includes the tile at
-        its maximum pop‑out scale **plus** the surrounding drop shadow.
-
-        Because the bounding rect is constant, the scene and view can
-        perform efficient culling without recalculations during
-        animations.
-        """
-        # The tile’s visual centre in local coordinates
-        c = self._tile_rect.center()
-        half_w = self._tile_rect.width() / 2.0
-        half_h = self._tile_rect.height() / 2.0
-
-        # Extent of the scaled tile
-        sw = half_w * self._max_scale
-        sh = half_h * self._max_scale
-
-        # Add shadow margin
-        margin = self._shadow_extent
-
+        # Base tile rect
+        base = self._tile_rect
+        # Scale factor (current animation value)
+        s = self._scale
+        # Shadow offset (simple)
+        shadow = 8.0  # maximum shadow blur + offset
+        # Scaled width/height
+        w = base.width() * s
+        h = base.height() * s
+        # Centre of scaled tile
+        cx = base.center().x()
+        cy = base.center().y()
+        # Return inflated rect to include shadow
         return QRectF(
-            c.x() - sw - margin,
-            c.y() - sh - margin,
-            2.0 * (sw + margin),
-            2.0 * (sh + margin),
+            cx - w / 2 - shadow, cy - h / 2 - shadow, w + 2 * shadow, h + 2 * shadow
         )
 
     # ------------------------------------------------------------------
@@ -148,8 +136,10 @@ class WindowTileItem(QGraphicsObject):
         return self._scale
 
     def set_scale(self, value: float) -> None:
-        self._scale = value
-        self.update()  # trigger repaint
+        if self._scale != value:
+            self.prepareGeometryChange()  # tell scene bounding rect may change
+            self._scale = value
+            self.update()  # repaint the new area
 
     scale = Property(float, get_scale, set_scale)
 
@@ -219,9 +209,11 @@ class WindowTileItem(QGraphicsObject):
             )
             self._grabber = None
 
-    def _refresh(self) -> None:
-        """Grab a new frame and trigger a repaint."""
+    def _refresh(self):
         if self._grabber is None:
+            return
+        # Skip if the tile is not visible in any view
+        if not self.isVisible() or not self.scene():
             return
         try:
             frame, _, _ = self._grabber.grab()
@@ -338,7 +330,10 @@ class WindowTileItem(QGraphicsObject):
         radius = self._cfg.tile_radius
 
         # 1. Drop shadow
-        self._draw_shadow(painter, rect, radius)
+        shadow_rect = rect.adjusted(4, 4, 4, 4)
+        shadow_path = QPainterPath()
+        shadow_path.addRoundedRect(shadow_rect, radius, radius)
+        painter.fillPath(shadow_path, QColor(0, 0, 0, 60))
 
         # 2. Background
         bg_path = QPainterPath()
