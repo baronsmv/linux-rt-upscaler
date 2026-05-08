@@ -68,7 +68,7 @@ class FilterBar(QWidget):
         self._clear_button.setFixedSize(icon_size, icon_size)
         self._clear_button.setIcon(self._render_svg_icon(CLEAR_ICON_SVG, icon_size))
         self._clear_button.setFlat(True)
-        self._clear_button.setCursor(Qt.ArrowCursor)
+        self._clear_button.setCursor(Qt.PointingHandCursor)
         self._clear_button.clicked.connect(self._line_edit.clear)
         self._clear_button.hide()
 

@@ -75,6 +75,7 @@ class WindowTileItem(QGraphicsObject):
         self._max_bounding_rect = self._compute_max_bounding_rect()
 
         # --- State (hover & selection determine the animation target) -------
+        self.setCursor(Qt.PointingHandCursor)
         self._hover = False
         self._selected = False
         self._scale = 1.0  # current scale (animated)
