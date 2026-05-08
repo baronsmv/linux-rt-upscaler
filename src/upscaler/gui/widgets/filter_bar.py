@@ -2,20 +2,7 @@ from PySide6.QtCore import Qt, Signal, QEvent
 from PySide6.QtGui import QPalette, QColor, QPixmap, QPainter, QIcon
 from PySide6.QtWidgets import QWidget, QLineEdit, QPushButton, QLabel
 
-# SVG icons
-SEARCH_ICON_SVG = """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#7A9EB1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="11" cy="11" r="8"/>
-    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-</svg>
-"""
-
-CLEAR_ICON_SVG = """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#7A9EB1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/>
-    <line x1="6" y1="6" x2="18" y2="18"/>
-</svg>
-"""
+from ..icons import load_icon, load_pixmap
 
 
 class FilterBar(QWidget):
@@ -59,14 +46,12 @@ class FilterBar(QWidget):
         # ----- Search icon (QLabel) -----
         self._search_icon = QLabel(self)
         self._search_icon.setFixedSize(icon_size, icon_size)
-        self._search_icon.setPixmap(
-            self._render_svg(SEARCH_ICON_SVG, icon_size, icon_size)
-        )
+        self._search_icon.setPixmap(load_pixmap("search", icon_size, icon_size))
 
         # ----- Clear button -----
         self._clear_button = QPushButton(self)
         self._clear_button.setFixedSize(icon_size, icon_size)
-        self._clear_button.setIcon(self._render_svg_icon(CLEAR_ICON_SVG, icon_size))
+        self._clear_button.setIcon(load_icon("clear", icon_size))
         self._clear_button.setFlat(True)
         self._clear_button.setCursor(Qt.PointingHandCursor)
         self._clear_button.clicked.connect(self._line_edit.clear)

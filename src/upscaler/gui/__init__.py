@@ -10,6 +10,7 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 from .config import GUIConfig
+from .icons import load_icon
 from .main import MainWindow
 from ..config import load_config, parse_args, validate_overrides
 
@@ -26,6 +27,7 @@ def main() -> None:
     )
 
     app = QApplication(sys.argv)
+    app.setWindowIcon(load_icon("app", 256, 256))
     app.setApplicationName("upscaler-gui")
 
     # The main window will stay visible until the user starts.
