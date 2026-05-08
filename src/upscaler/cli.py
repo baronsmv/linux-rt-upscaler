@@ -13,13 +13,10 @@ import logging
 import signal
 import time
 
-from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
 
 from .config import setup_config
-from .overlay import OverlayWindow
-from .pipeline import Pipeline
-from .window import FocusMonitor, HotkeyManager, activate_window
+from .pipeline import create_pipeline_session
 
 logger = logging.getLogger(__name__)
 
@@ -30,102 +27,37 @@ def main() -> None:
     # Window acquisition and config setup
     config, win_info, proc = setup_config()
 
-    # Setup Qt application and overlay
+    # Create the Qt application
     app = QApplication([])
     app.setApplicationName("upscaler-overlay")
     app.setApplicationDisplayName("Upscaler Overlay")
     logger.debug("Qt application initialized.")
 
-    # Overlay creation
-    try:
-        overlay = OverlayWindow(config, win_info)
-    except ValueError as e:
-        logger.error(str(e))
-        sys.exit(1)
-
-    # Prepare window for Vulkan
-    time.sleep(0.5)
-    overlay.show()
-    QApplication.processEvents()
-    if overlay.windowHandle():
-        overlay.windowHandle().setSurfaceType(QWindow.VulkanSurface)
-        logger.debug("Overlay surface type set to VulkanSurface")
-    else:
-        logger.warning("No window handle available for Vulkan surface type")
-
-    # Pipeline creation
-    pipeline = Pipeline(config, win_info, overlay)
-    pipeline.start()
-    logger.debug("Pipeline started")
-
-    # Graceful shutdown on Qt exit
-    app.aboutToQuit.connect(lambda: pipeline.stop())
+    # Launch pipeline session
+    session = create_pipeline_session(config, win_info)
     logger.debug(
         f"Total initialization time: {time.perf_counter() - overall_start:.2f}s"
     )
 
-    # Monitor for change of focus
-    monitor = None
-    if config.follow_focus:
-        # Activate the initial target window
-        activate_window(win_info.handle)
-        logger.debug(f"Activated initial target window {win_info.handle:#x}")
-
-        monitor = FocusMonitor(interval=config.focus_poll_interval)
-        # Connect signal: when focus changes, request pipeline switch
-        monitor.focus_changed.connect(
-            lambda new_win: (
-                pipeline.request_switch(new_win)
-                if new_win.handle != overlay.xid  # ignore the overlay itself
-                else None
-            )
-        )
-        monitor.start()
-        logger.debug("Focus monitor started")
-
-    # Pipeline controller and Hotkey Manager
-    controller = pipeline.controller
-    hotkey_manager = HotkeyManager(config.hotkeys)
-
-    # Connect signals
-    hotkey_manager.toggle_scaling.connect(controller.toggle_overlay)
-    hotkey_manager.exit_app.connect(controller.exit_app)
-
-    hotkey_manager.screenshot.connect(controller.take_screenshot)
-
-    hotkey_manager.cycle_model.connect(controller.switch_model)
-    hotkey_manager.cycle_geometry.connect(controller.switch_geometry)
-
-    hotkey_manager.zoom_in.connect(controller.zoom_in)
-    hotkey_manager.zoom_out.connect(controller.zoom_out)
-
-    hotkey_manager.offset_up.connect(controller.offset_up)
-    hotkey_manager.offset_down.connect(controller.offset_down)
-    hotkey_manager.offset_left.connect(controller.offset_left)
-    hotkey_manager.offset_right.connect(controller.offset_right)
-
-    # Start Hotkey Manager
-    hotkey_manager.start()
-
     # Event loop
+    exit_code = 0
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     try:
         exit_code = app.exec()
         logger.debug(f"Qt event loop exited with code {exit_code}")
     except Exception as e:
         logger.error(f"Unexpected error in Qt event loop: {e}", exc_info=True)
+        exit_code = 1
     finally:
-        logger.debug("Cleaning up resources")
-        pipeline.stop()
-        if monitor is not None:
-            monitor.stop()
+        session.pipeline.stop()
+        if session.monitor is not None:
+            session.monitor.stop()
         if proc is not None:
             logger.debug(f"Terminating launched process {proc.pid}")
             proc.terminate()
             proc.wait()
-        hotkey_manager.stop()
-        logger.debug("Cleanup complete")
-        sys.exit(0)
+        session.hotkey_manager.stop()
+        sys.exit(exit_code)
 
 
 if __name__ == "__main__":
