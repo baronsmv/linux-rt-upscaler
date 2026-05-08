@@ -1,5 +1,6 @@
 """Utility public modules."""
 
+from .args import parse_args
 from .models import (
     BackgroundColor,
     Config,
@@ -8,14 +9,18 @@ from .models import (
     UPSCALING_MODELS,
     ZOOM_LEVELS,
 )
-from .setup import setup_config
+from .setup import load_config, setup_config
+from .validators import validate_overrides
 
 __all__ = [
     "BackgroundColor",
     "Config",
     "OverlayMode",
-    "setup_config",
     "OUTPUT_GEOMETRIES",
     "UPSCALING_MODELS",
     "ZOOM_LEVELS",
+    "load_config",
+    "parse_args",
+    "validate_overrides",
+    "setup_config",
 ]

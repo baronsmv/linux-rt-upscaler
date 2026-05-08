@@ -1,6 +1,9 @@
 import ctypes
+import faulthandler
 import os
 import sys
+
+faulthandler.enable()
 
 
 def setup_environment() -> None:

@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 
-import faulthandler
-import sys
-
-faulthandler.enable()
-
 from .env import setup_environment
 
 setup_environment()
 
 import logging
 import signal
+import sys
 import time
 
 from PySide6.QtWidgets import QApplication

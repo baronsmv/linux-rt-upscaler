@@ -28,7 +28,7 @@ from ..config import Config
 logger = logging.getLogger(__name__)
 
 
-def _list_windows() -> List[WindowInfo]:
+def list_windows() -> List[WindowInfo]:
     """
     Enumerate all visible application windows using _NET_CLIENT_LIST.
 
@@ -292,7 +292,7 @@ def _find_window_by_title(
 
     Priority: regex > contains.
     """
-    windows = _list_windows()
+    windows = list_windows()
     if not windows:
         return None
 
@@ -514,7 +514,7 @@ def acquire_target_window(
     if config.select:
         logger.debug("Selecting window interactively.")
         logger.info("Enumerating open windows...")
-        windows = _list_windows()
+        windows = list_windows()
         if not windows:
             logger.error("No visible windows found")
             return None, None
