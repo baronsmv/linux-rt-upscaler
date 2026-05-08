@@ -15,8 +15,11 @@ class GUIConfig:
     tile_width: int = 340
     tile_height: int = 260
     tile_radius: int = 12
+    tile_aspect_ratio: float = (
+        4 / 3
+    )  # overrides default; 0 = use tile_width/tile_height
     tile_spacing: int = 12  # minimum absolute spacing (pixels)
-    tile_spacing_ratio: float = 0.05  # proportional spacing (0 = use tile_spacing only)
+    tile_spacing_ratio: float = 0.1  # proportional spacing (0 = use tile_spacing only)
     grid_margin: int = 20  # inner margin of the grid container
     grid_columns: int = 3
 
@@ -69,7 +72,7 @@ class GUIConfig:
     empty_text_size: int = 18
 
     # ---- Timing ------------------------------------------------------
-    auto_refresh_ms: int = 1000
+    auto_refresh_ms: int = 3000
     tile_preview_interval_ms: int = 40  # how often live preview updates
 
     # ---- Scaling / layout helpers ------------------------------------

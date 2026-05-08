@@ -1,3 +1,5 @@
+# File: gui/widgets/window_tile_item.py
+
 from __future__ import annotations
 
 import logging
@@ -40,14 +42,23 @@ class WindowTileItem(QGraphicsObject):
     """
     A single live‑preview tile in the window‑selection mosaic.
 
-    Local coordinates are centred: (0,0) is the tile’s centre, so scaling
-    naturally expands from the middle without any offset.
+    Local coordinates are **centred** at (0,0), so scaling expands
+    symmetrically.  A constant bounding rectangle, pre‑computed for
+    the maximum pop‑out scale plus shadow, is returned by
+    :meth:`boundingRect` – this avoids layout recalculations during
+    animations and makes keyboard navigation flicker‑free.
+
+    All visual parameters are taken from a :class:`GUIConfig` instance.
 
     Signals:
         clicked(WindowInfo)
     """
 
     clicked = Signal(WindowInfo)
+
+    # ------------------------------------------------------------------
+    #  Initialisation
+    # ------------------------------------------------------------------
 
     def __init__(
         self,
@@ -59,17 +70,25 @@ class WindowTileItem(QGraphicsObject):
         self._win_info = win_info
         self._cfg = gui_config
 
-        # Half dimensions of the resting tile
+        # --- Geometry -------------------------------------------------------
         self._half_w = gui_config.tile_width / 2.0
         self._half_h = gui_config.tile_height / 2.0
         self._tile_size = (gui_config.tile_width, gui_config.tile_height)
+        self._max_bounding_rect = self._compute_max_bounding_rect()
 
-        # State
+        # --- State (hover & selection determine the animation target) -------
         self._hover = False
         self._selected = False
-        self._scale = 1.0
+        self._scale = 1.0  # current scale (animated)
+        self._target_scale = 1.0  # desired scale (1.0 or pop_scale)
 
-        # Capture
+        # --- Animation ------------------------------------------------------
+        self._anim = QPropertyAnimation(self, b"scale", self)
+        self._anim.setDuration(gui_config.pop_duration)
+        self._anim.setEasingCurve(QEasingCurve.OutCubic)
+        self._anim.finished.connect(self._on_animation_finished)
+
+        # --- Capture --------------------------------------------------------
         self._grabber: Optional[FrameGrabber] = None
         self._scaled_pixmap: Optional[QPixmap] = None
         self._full_w = 0
@@ -88,85 +107,80 @@ class WindowTileItem(QGraphicsObject):
     # ------------------------------------------------------------------
     #  Geometry helpers
     # ------------------------------------------------------------------
+
     def _resting_rect(self) -> QRectF:
         return QRectF(-self._half_w, -self._half_h, self._half_w * 2, self._half_h * 2)
 
-    def _shadow_margin(self) -> float:
-        """Extra space needed for the drop shadow (simple offset + blur)."""
-        return (
-            max(abs(self._cfg.shadow_offset[0]), abs(self._cfg.shadow_offset[1]))
-            + self._cfg.shadow_blur_radius
-        )
+    def _compute_max_bounding_rect(self) -> QRectF:
+        base = self._resting_rect()
+        s = self._cfg.pop_scale
+        shadow = 4.0 * s
+        w = base.width() * s + 2.0 * shadow
+        h = base.height() * s + 2.0 * shadow
+        return QRectF(-w / 2.0, -h / 2.0, w, h)
+
+    def boundingRect(self) -> QRectF:
+        return self._max_bounding_rect
+
+    def tile_size(self) -> Tuple[float, float]:
+        return self._tile_size
 
     def set_tile_size(self, width: float, height: float) -> None:
-        """
-        Resize the tile to new dimensions.
-        Stops any active pop animation and resets the scale to 1.0.
-        """
-        self._stop_animation()
-        self.prepareGeometryChange()
+        """Resize the tile. Stops animation, resets scale, clears cache."""
+        self._anim.stop()
         self._half_w = width / 2.0
         self._half_h = height / 2.0
         self._tile_size = (width, height)
         self._scale = 1.0
-        # Clear the cached pixmap so it is re‑scaled on the next refresh
+        self._target_scale = 1.0
+        self._max_bounding_rect = self._compute_max_bounding_rect()
         self._scaled_pixmap = None
         self.update()
 
-    def boundingRect(self) -> QRectF:
-        """
-        Bounding rect that includes the tile at its current scale plus the
-        scaled drop shadow (ensuring the shadow is never clipped).
-        """
-        base = self._resting_rect()
-        s = self._scale
-        # The shadow is painted as an offset of 4 px in local coordinates,
-        # which scales with the painter.  Add that scaled margin.
-        shadow = 4.0 * s
-        w = base.width() * s + 2 * shadow
-        h = base.height() * s + 2 * shadow
-        return QRectF(-w / 2, -h / 2, w, h)
+    # ------------------------------------------------------------------
+    #  Scale property (animated)
+    # ------------------------------------------------------------------
 
-    # ------------------------------------------------------------------
-    #  Scale property (for pop‑out animation)
-    # ------------------------------------------------------------------
     def get_scale(self) -> float:
         return self._scale
 
     def set_scale(self, value: float) -> None:
         if self._scale != value:
-            self.prepareGeometryChange()
             self._scale = value
             self.update()
 
     scale = Property(float, get_scale, set_scale)
 
-    def animate_pop_in(self) -> None:
-        self._stop_animation()
-        self._pop_anim = QPropertyAnimation(self, b"scale", self)
-        self._pop_anim.setDuration(self._cfg.pop_duration)
-        self._pop_anim.setStartValue(self._scale)
-        self._pop_anim.setEndValue(self._cfg.pop_scale)
-        self._pop_anim.setEasingCurve(QEasingCurve.OutCubic)
-        self._pop_anim.start()
+    # ------------------------------------------------------------------
+    #  Animation target (unified for hover & selection)
+    # ------------------------------------------------------------------
 
-    def animate_pop_out(self) -> None:
-        self._stop_animation()
-        self._pop_anim = QPropertyAnimation(self, b"scale", self)
-        self._pop_anim.setDuration(self._cfg.pop_duration)
-        self._pop_anim.setStartValue(self._scale)
-        self._pop_anim.setEndValue(1.0)
-        self._pop_anim.setEasingCurve(QEasingCurve.OutCubic)
-        self._pop_anim.start()
+    def _should_pop(self) -> bool:
+        """Return True if the tile should appear popped out."""
+        return self._hover or self._selected
 
-    def _stop_animation(self) -> None:
-        if hasattr(self, "_pop_anim") and self._pop_anim is not None:
-            self._pop_anim.stop()
-            self._pop_anim = None
+    def _update_animation_target(self) -> None:
+        """
+        Re‑evaluate the desired scale and smoothly animate toward it.
+        Called whenever :attr:`_hover` or :attr:`_selected` changes.
+        """
+        target = self._cfg.pop_scale if self._should_pop() else 1.0
+        if target == self._target_scale:
+            return
+        self._target_scale = target
+        self._anim.stop()
+        self._anim.setStartValue(self._scale)
+        self._anim.setEndValue(target)
+        self._anim.start()
+
+    def _on_animation_finished(self) -> None:
+        """Called when the pop‑in / pop‑out animation completes."""
+        pass  # nothing needed; target already reached
 
     # ------------------------------------------------------------------
-    #  Selection state
+    #  Selection state (managed by WindowGridScene)
     # ------------------------------------------------------------------
+
     @property
     def selected(self) -> bool:
         return self._selected
@@ -176,14 +190,41 @@ class WindowTileItem(QGraphicsObject):
         if self._selected != value:
             self._selected = value
             self.update()
-            if value:
-                self.animate_pop_in()
-            elif not self._hover:
-                self.animate_pop_out()
+            self._update_animation_target()
 
     # ------------------------------------------------------------------
-    #  Capture logic (unchanged except use tile size)
+    #  Mouse events
     # ------------------------------------------------------------------
+
+    def hoverEnterEvent(self, event) -> None:
+        self.setZValue(1)
+        self._hover = True
+        self.update()
+        self._update_animation_target()
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event) -> None:
+        self.setZValue(0)
+        self._hover = False
+        self.update()
+        self._update_animation_target()
+        super().hoverLeaveEvent(event)
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit(self._win_info)
+        super().mousePressEvent(event)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space):
+            self.clicked.emit(self._win_info)
+        else:
+            super().keyPressEvent(event)
+
+    # ------------------------------------------------------------------
+    #  Capture logic
+    # ------------------------------------------------------------------
+
     def _init_grabber(self) -> None:
         try:
             self._grabber = FrameGrabber(
@@ -209,6 +250,7 @@ class WindowTileItem(QGraphicsObject):
             logger.warning("Preview grab failed for %s", self._win_info.title)
             self.stop_capture()
             return
+
         if len(frame) != self._full_w * self._full_h * 4:
             return
 
@@ -216,23 +258,19 @@ class WindowTileItem(QGraphicsObject):
         for i in range(3, len(data), 4):
             data[i] = 255
 
-        # Pre‑scale to tile interior (8 px margin)
-        avail_w = int(self._tile_size[0]) - 8
-        avail_h = int(self._tile_size[1]) - 8
-        if avail_w > 0 and avail_h > 0:
-            self._scaled_pixmap = QPixmap.fromImage(
-                QImage(
-                    bytes(data),
-                    self._full_w,
-                    self._full_h,
-                    self._full_w * 4,
-                    QImage.Format_RGBA8888,
-                )
-                .rgbSwapped()
-                .scaled(avail_w, avail_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        avail_w = max(1, int(self._tile_size[0]) - 8)
+        avail_h = max(1, int(self._tile_size[1]) - 8)
+        self._scaled_pixmap = QPixmap.fromImage(
+            QImage(
+                bytes(data),
+                self._full_w,
+                self._full_h,
+                self._full_w * 4,
+                QImage.Format_RGBA8888,
             )
-        else:
-            self._scaled_pixmap = QPixmap()
+            .rgbSwapped()
+            .scaled(avail_w, avail_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        )
         self.update()
 
     def stop_capture(self) -> None:
@@ -242,36 +280,9 @@ class WindowTileItem(QGraphicsObject):
             self._grabber = None
 
     # ------------------------------------------------------------------
-    #  Event handling
+    #  Painting
     # ------------------------------------------------------------------
-    def hoverEnterEvent(self, event) -> None:
-        self.setZValue(1)
-        self._hover = True
-        self.update()
-        self.animate_pop_in()
-        super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event) -> None:
-        self.setZValue(0)
-        self._hover = False
-        self.update()
-        self.animate_pop_out()
-        super().hoverLeaveEvent(event)
-
-    def mousePressEvent(self, event) -> None:
-        if event.button() == Qt.LeftButton:
-            self.clicked.emit(self._win_info)
-        super().mousePressEvent(event)
-
-    def keyPressEvent(self, event: QKeyEvent) -> None:
-        if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space):
-            self.clicked.emit(self._win_info)
-        else:
-            super().keyPressEvent(event)
-
-    # ------------------------------------------------------------------
-    #  Painting – all drawing relative to local centre
-    # ------------------------------------------------------------------
     def paint(
         self,
         painter: QPainter,
@@ -281,16 +292,14 @@ class WindowTileItem(QGraphicsObject):
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Scale around (0,0) – the tile’s centre
         if abs(self._scale - 1.0) > 0.001:
             painter.scale(self._scale, self._scale)
 
         base = self._resting_rect()
-        w = base.width()
-        h = base.height()
+        w, h = base.width(), base.height()
         radius = self._cfg.tile_radius
 
-        # 1. Shadow (simple, single offset)
+        # Shadow
         shadow_rect = base.adjusted(4, 4, 4, 4)
         shadow_path = QPainterPath()
         shadow_path.addRoundedRect(shadow_rect, radius, radius)
@@ -298,25 +307,25 @@ class WindowTileItem(QGraphicsObject):
         painter.fillPath(shadow_path, QColor(0, 0, 0))
         painter.setOpacity(1.0)
 
-        # 2. Background
+        # Background
         bg_path = QPainterPath()
         bg_path.addRoundedRect(base, radius, radius)
         painter.fillPath(bg_path, QColor(self._cfg.tile_background))
 
-        # 3. Preview image
+        # Preview image
         if self._scaled_pixmap and not self._scaled_pixmap.isNull():
             px = (w - self._scaled_pixmap.width()) / 2.0
             py = (h - self._scaled_pixmap.height()) / 2.0
             painter.drawPixmap(int(-w / 2 + px), int(-h / 2 + py), self._scaled_pixmap)
 
-        # 4. Gradient overlay at the bottom of the tile
+        # Gradient overlay
         grad = QLinearGradient(0, h / 2 - 40, 0, h / 2)
         grad.setColorAt(0, QColor(*self._cfg.tile_title_overlay_start))
         grad.setColorAt(0.7, QColor(*self._cfg.tile_title_overlay_mid))
         grad.setColorAt(1.0, QColor(*self._cfg.tile_title_overlay_end))
         painter.fillRect(QRectF(-w / 2, h / 2 - 40, w, 40), grad)
 
-        # 5. Title
+        # Title
         painter.setPen(QColor(self._cfg.title_text_color))
         font = QFont(self._cfg.title_font_family, self._cfg.title_font_size)
         font.setBold(self._cfg.title_font_bold)
@@ -327,7 +336,7 @@ class WindowTileItem(QGraphicsObject):
             self._win_info.title,
         )
 
-        # 6. Border
+        # Border
         if self._selected:
             pen = QPen(
                 QColor(self._cfg.tile_selected_border), self._cfg.selection_border_width
@@ -348,9 +357,7 @@ class WindowTileItem(QGraphicsObject):
     # ------------------------------------------------------------------
     #  Public helpers
     # ------------------------------------------------------------------
+
     @property
     def window_info(self) -> WindowInfo:
         return self._win_info
-
-    def tile_size(self) -> Tuple[float, float]:
-        return self._tile_size

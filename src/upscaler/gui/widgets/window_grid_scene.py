@@ -210,7 +210,10 @@ class WindowGridScene(QGraphicsScene):
             tile_w = max(100.0, avail_w)
 
         # ---- 5. Tile height from aspect ratio ------------------------------
-        aspect = cfg.tile_width / cfg.tile_height if cfg.tile_height else 1.0
+        if cfg.tile_aspect_ratio > 0:
+            aspect = cfg.tile_aspect_ratio
+        else:
+            aspect = cfg.tile_width / cfg.tile_height if cfg.tile_height else 1.0
         tile_h = tile_w / aspect
 
         # ---- 6. Update tile sizes (resize if changed) ----------------------
@@ -282,6 +285,8 @@ class WindowGridScene(QGraphicsScene):
 
     def _set_selected_handle(self, handle: Optional[int]) -> None:
         """Change the selected tile, deselecting the previous one."""
+        if handle == self._selected_handle:
+            return
         if self._selected_handle is not None:
             prev = self._tile_by_handle.get(self._selected_handle)
             if prev:
