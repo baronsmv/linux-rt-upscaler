@@ -69,7 +69,7 @@ class SelectorWindow(QMainWindow):
 
         # --- Filter bar ----------------------------------------------------
         filter_layout = QHBoxLayout()
-        filter_label = QLabel("Fi<er:")
+        filter_label = QLabel("Filter:")
         self.filter_edit = QLineEdit()
         self.filter_edit.setPlaceholderText("Type to filter by title…")
         self.filter_edit.textChanged.connect(self._on_filter_changed)
