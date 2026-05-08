@@ -68,7 +68,7 @@ class SelectorWindow(QMainWindow):
         self._refresh_btn: Optional[QPushButton] = None
         self._first_layout_done = False
 
-        self.setWindowTitle("Upscaler – Select Window")
+        self.setWindowTitle("Linux Real-Time Upscaler")
         self.setMinimumSize(600, 400)
         self._setup_ui()
         self._auto_timer = QTimer(self)
@@ -103,6 +103,7 @@ class SelectorWindow(QMainWindow):
         header.addWidget(self.filter_edit)
 
         self._refresh_btn = QPushButton("Refresh")
+        self._refresh_btn.setFocusPolicy(Qt.NoFocus)
         self._refresh_btn.clicked.connect(self._manual_refresh)
         self._refresh_btn.setStyleSheet(_REFRESH_BUTTON_STYLE)
         header.addWidget(self._refresh_btn)
@@ -138,12 +139,19 @@ class SelectorWindow(QMainWindow):
             return
         self._first_layout_done = True
         self._populate_grid()
-        self.grid_widget.setFocus()
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
         QTimer.singleShot(50, self._relayout_grid)
         self.showMaximized()
+        QTimer.singleShot(200, self._focus_grid_on_startup)
+
+    def _focus_grid_on_startup(self) -> None:
+        """Remove focus from the filter (if any) and transfer it to the grid."""
+        if self.filter_edit.hasFocus():
+            self.filter_edit.clearFocus()
+        self.grid_widget.setFocus(Qt.OtherFocusReason)
+        self.grid_widget.update()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -274,10 +282,16 @@ class SelectorWindow(QMainWindow):
         ):
             key = event.key()
             if self.filter_edit.hasFocus():
+                # While typing in the filter:
+                if key in (Qt.Key_Left, Qt.Key_Right):
+                    return False  # allow cursor movement
+                if key in (Qt.Key_Up, Qt.Key_Down):
+                    return True  # swallow – no navigation
                 if key in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Escape):
-                    self.keyPressEvent(event)
+                    self.keyPressEvent(event)  # forward to tile control
                     return True
-                return False
+                return False  # other keys → filter
+            # Filter does NOT have focus → we control the tiles:
             if key in (
                 Qt.Key_Up,
                 Qt.Key_Down,
