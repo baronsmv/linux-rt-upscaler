@@ -1,9 +1,13 @@
+# File: gui/widgets/preview.py
+
+from __future__ import annotations
+
 import logging
 from typing import Optional
 
 from PySide6.QtCore import Qt, QTimer, Slot
-from PySide6.QtGui import QPixmap, QImage
-from PySide6.QtWidgets import QLabel, QWidget
+from PySide6.QtGui import QPixmap, QImage, QPainter
+from PySide6.QtWidgets import QWidget
 
 from ...capture import FrameGrabber
 from ...window import WindowInfo
@@ -13,59 +17,44 @@ logger = logging.getLogger(__name__)
 
 class PreviewWidget(QWidget):
     """
-    A widget that displays a real‑time, low‑resolution preview of a target X11 window.
+    A widget that displays a live, scaled preview of an X11 window.
 
-    Captures the full window content using :class:`FrameGrabber` at native
-    resolution, forces the alpha channel to fully opaque, then downscales
-    and displays it in a centered :class:`QLabel`. Updates at 5 fps.
+    Captures the full window content, forces alpha to opaque, and draws
+    the result inside the widget's area, maintaining aspect ratio.
 
-    When no window is selected, a dark placeholder with 'No preview' is shown.
+    Call :meth:`set_target` with a :class:`WindowInfo` to start previewing,
+    or with ``None`` to stop and show a placeholder.
     """
 
-    def __init__(self, parent=None, preview_width: int = 260):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self._preview_w = preview_width
-        self._preview_h = int(preview_width * 3 / 4)
-
-        self.setFixedSize(self._preview_w, self._preview_h)
-        self.setStyleSheet("background-color: #2d2d2d;")
-
         self._grabber: Optional[FrameGrabber] = None
         self._full_w: int = 0
         self._full_h: int = 0
+        self._pixmap: Optional[QPixmap] = None
+        self._placeholder: bool = True
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._refresh)
-        self._timer.setInterval(200)  # 5 fps
+        self._timer.setInterval(300)  # ~3 fps, enough for a mosaic
 
-        self._label = QLabel(self)
-        self._label.setAlignment(Qt.AlignCenter)
-        self._label.setScaledContents(False)
-        self._label.setStyleSheet("background-color: transparent; border: none;")
-
-        self._show_placeholder()
+        self.setMinimumSize(20, 20)  # allow shrinking
+        self.setStyleSheet("background-color: #2d2d2d;")
 
     def set_target(self, win_info: Optional[WindowInfo]) -> None:
-        """Start (or stop) previewing the given window."""
         self._stop()
         if win_info is None:
-            self._show_placeholder()
+            self._placeholder = True
+            self._pixmap = None
+            self.update()
             return
 
         w, h = win_info.width, win_info.height
         if w <= 0 or h <= 0:
-            self._show_placeholder()
+            self._placeholder = True
+            self._pixmap = None
+            self.update()
             return
-
-        scale = self.width() / max(w, h)
-        pw = max(1, int(w * scale))
-        ph = max(1, int(h * scale))
-
-        self._label.setFixedSize(pw, ph)
-        self._label.move(
-            (self.width() - pw) // 2,
-            (self.height() - ph) // 2,
-        )
 
         try:
             self._grabber = FrameGrabber(
@@ -78,14 +67,16 @@ class PreviewWidget(QWidget):
             )
         except Exception:
             logger.exception("Failed to create preview grabber")
-            self._show_placeholder()
+            self._placeholder = True
+            self.update()
             return
 
         self._full_w = w
         self._full_h = h
-        self._label.clear()
+        self._placeholder = False
+        self._pixmap = None
         self._timer.start()
-        logger.debug("Preview started for 0x%x (%dx%d)", win_info.handle, w, h)
+        self.update()
 
     def _stop(self) -> None:
         self._timer.stop()
@@ -103,15 +94,15 @@ class PreviewWidget(QWidget):
             frame, _, _ = self._grabber.grab()
         except RuntimeError as e:
             logger.warning("Preview grab failed: %s", e)
-            self._show_placeholder()
+            self._placeholder = True
+            self._pixmap = None
             self._timer.stop()
+            self.update()
             return
 
-        expected = self._full_w * self._full_h * 4
-        if len(frame) != expected:
+        if len(frame) != self._full_w * self._full_h * 4:
             return
 
-        # Force alpha to 255 to make the image fully opaque
         data = bytearray(frame)
         for i in range(3, len(data), 4):
             data[i] = 255
@@ -122,27 +113,33 @@ class PreviewWidget(QWidget):
             self._full_h,
             self._full_w * 4,
             QImage.Format_RGBA8888,
-        ).rgbSwapped()  # BGRA → RGBA
+        ).rgbSwapped()
 
-        pixmap = QPixmap.fromImage(
-            qimg.scaled(
-                self._label.width(),
-                self._label.height(),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation,
-            )
+        # Scale to fit the current widget size, maintaining aspect ratio
+        scaled = qimg.scaled(
+            self.width(),
+            self.height(),
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation,
         )
-        if pixmap.isNull():
-            return
-        self._label.setPixmap(pixmap)
-        self._label.repaint()
+        self._pixmap = QPixmap.fromImage(scaled)
+        self.update()
 
-    def _show_placeholder(self) -> None:
-        self._label.clear()
-        self._label.setText("No preview")
-        self._label.setFixedSize(self.width(), self.height())
-        self._label.move(0, 0)
-        self._label.setAlignment(Qt.AlignCenter)
+    def paintEvent(self, event) -> None:
+        super().paintEvent(event)
+        painter = QPainter(self)
+        if self._placeholder or self._pixmap is None:
+            painter.setPen(Qt.gray)
+            font = painter.font()
+            font.setPointSize(10)
+            painter.setFont(font)
+            painter.drawText(self.rect(), Qt.AlignCenter, "Preview")
+        else:
+            # Center the pixmap
+            x = (self.width() - self._pixmap.width()) // 2
+            y = (self.height() - self._pixmap.height()) // 2
+            painter.drawPixmap(x, y, self._pixmap)
+        painter.end()
 
     def closeEvent(self, event) -> None:
         self._stop()
