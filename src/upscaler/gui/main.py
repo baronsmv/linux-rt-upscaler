@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import List, Optional, Dict, TYPE_CHECKING
 
-from PySide6.QtCore import Qt, Slot, QTimer
+from PySide6.QtCore import Qt, Slot, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -29,6 +29,28 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_STYLESHEET = """
+QMainWindow { background: #121212; }
+QLineEdit {
+    border: 1px solid #444; border-radius: 4px; padding: 6px;
+    font-size: 13px; background: #2a2a2a; color: #eee;
+}
+QLineEdit:focus { border-color: #2b5b84; }
+QScrollArea { background: transparent; }
+"""
+
+_REFRESH_BUTTON_STYLE = """
+QPushButton {
+    background: #2a2a2a; border: 1px solid #444;
+    border-radius: 4px; padding: 6px 12px; color: #eee; font-size: 13px;
+}
+QPushButton:hover { background: #333; }
+QPushButton:disabled { color: #666; }
+"""
+
+TITLE_STYLE = "font-size: 16px; font-weight: bold; color: #ccc;"
+EMPTY_STYLE = "color: #666; font-size: 18px;"
+
 
 class SelectorWindow(QMainWindow):
     _AUTO_REFRESH_MS = 2000
@@ -41,22 +63,17 @@ class SelectorWindow(QMainWindow):
         self._session: Optional[PipelineSession] = None
         self._tiles: Dict[int, PreviewTile] = {}
         self._tile_order: List[PreviewTile] = []
-        self._selected_index: int = -1  # -1 = no keyboard selection
+        self._selected_index: int = -1
         self._selected_win_info: Optional[WindowInfo] = None
         self._refresh_btn: Optional[QPushButton] = None
         self._first_layout_done = False
 
         self.setWindowTitle("Upscaler – Select Window")
         self.setMinimumSize(600, 400)
-
         self._setup_ui()
-
-        # Auto‑refresh (silent)
         self._auto_timer = QTimer(self)
         self._auto_timer.timeout.connect(self._auto_refresh)
         self._auto_timer.start(self._AUTO_REFRESH_MS)
-
-        # Populate once the window is shown and has a valid size
         QTimer.singleShot(0, self._initial_populate)
 
     # ------------------------------------------------------------------
@@ -65,15 +82,16 @@ class SelectorWindow(QMainWindow):
     def _setup_ui(self) -> None:
         central = QWidget()
         self.setCentralWidget(central)
+        self._central = central
+        central.installEventFilter(self)
+
         layout = QVBoxLayout(central)
         layout.setContentsMargins(12, 12, 12, 12)
 
         # Header
         header = QHBoxLayout()
         self._title_label = QLabel("Choose a window to upscale")
-        self._title_label.setStyleSheet(
-            "font-size: 16px; font-weight: bold; color: #ccc;"
-        )
+        self._title_label.setStyleSheet(TITLE_STYLE)
         header.addWidget(self._title_label)
         header.addStretch()
 
@@ -81,21 +99,12 @@ class SelectorWindow(QMainWindow):
         self.filter_edit.setPlaceholderText("Filter by title…")
         self.filter_edit.setFixedWidth(260)
         self.filter_edit.textChanged.connect(self._on_filter_changed)
+        self.filter_edit.installEventFilter(self)
         header.addWidget(self.filter_edit)
 
         self._refresh_btn = QPushButton("Refresh")
         self._refresh_btn.clicked.connect(self._manual_refresh)
-        self._refresh_btn.setStyleSheet(
-            """
-            QPushButton {
-                background: #2a2a2a; border: 1px solid #444;
-                border-radius: 4px; padding: 6px 12px; color: #eee; font-size: 13px;
-            }
-            QPushButton:hover { background: #333; }
-            QPushButton:disabled { color: #666; }
-            """
-        )
-        self.showMaximized()
+        self._refresh_btn.setStyleSheet(_REFRESH_BUTTON_STYLE)
         header.addWidget(self._refresh_btn)
         layout.addLayout(header)
 
@@ -104,7 +113,10 @@ class SelectorWindow(QMainWindow):
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QScrollArea.NoFrame)
         self._scroll.setStyleSheet("background: transparent; border: none;")
+
         self.grid_widget = QWidget()
+        self.grid_widget.setFocusPolicy(Qt.StrongFocus)
+        self.grid_widget.installEventFilter(self)
         self.grid_layout = QGridLayout(self.grid_widget)
         self.grid_layout.setContentsMargins(0, 10, 0, 0)
         self.grid_layout.setSpacing(12)
@@ -113,34 +125,25 @@ class SelectorWindow(QMainWindow):
 
         self._empty_label = QLabel("No windows found", self.grid_widget)
         self._empty_label.setAlignment(Qt.AlignCenter)
-        self._empty_label.setStyleSheet("color: #666; font-size: 18px;")
+        self._empty_label.setStyleSheet(EMPTY_STYLE)
         self._empty_label.hide()
 
-        self.setStyleSheet(
-            """
-            QMainWindow { background: #121212; }
-            QLineEdit {
-                border: 1px solid #444; border-radius: 4px; padding: 6px;
-                font-size: 13px; background: #2a2a2a; color: #eee;
-            }
-            QLineEdit:focus { border-color: #2b5b84; }
-            QScrollArea { background: transparent; }
-            """
-        )
+        self.setStyleSheet(_STYLESHEET)
 
     # ------------------------------------------------------------------
-    #  Initial population (deferred until layout is ready)
+    #  Initial population
     # ------------------------------------------------------------------
     def _initial_populate(self) -> None:
         if self._first_layout_done:
             return
         self._first_layout_done = True
         self._populate_grid()
+        self.grid_widget.setFocus()
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        # Re‑layout after the window is actually displayed
         QTimer.singleShot(50, self._relayout_grid)
+        self.showMaximized()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -181,7 +184,6 @@ class SelectorWindow(QMainWindow):
                 tile.clicked.connect(self._on_tile_clicked)
                 new_tiles[win.handle] = tile
 
-        # Remove tiles for closed windows
         for handle, tile in self._tiles.items():
             if handle not in visible:
                 tile.stop()
@@ -190,34 +192,24 @@ class SelectorWindow(QMainWindow):
 
         self._tiles = new_tiles
         self._tile_order = [t for t in self._tiles.values()]
-        self.setFocus()
 
-        # Keep keyboard selection if possible, otherwise leave none
         self._restore_selection()
         self._relayout_grid()
 
-        # Animate new tiles after they are placed in the grid
         if animate:
             for tile in self._tiles.values():
-                if tile not in new_tiles.values():
-                    # already existing tiles don't animate
-                    continue
                 if tile.window_info.handle in self._tiles:
                     tile.animate_in()
 
     def _restore_selection(self) -> None:
-        """If a tile was keyboard‑selected, try to keep it selected.
-        Otherwise leave no selection (index = -1)."""
         if self._selected_win_info is not None:
             for i, tile in enumerate(self._tile_order):
                 if tile.window_info.handle == self._selected_win_info.handle:
                     self._set_selection(i)
                     return
-        # Window gone → clear selection without visual effect
-        self._clear_selection()
+            self._clear_selection()
 
     def _relayout_grid(self) -> None:
-        # Remove all tiles from layout without destroying them
         while self.grid_layout.count():
             self.grid_layout.takeAt(0)
 
@@ -227,10 +219,9 @@ class SelectorWindow(QMainWindow):
             return
         self._empty_label.hide()
 
-        # Reliable column width: use the viewport of the scroll area
         vp_width = self._scroll.viewport().width()
         if vp_width <= 0:
-            vp_width = self.width() - 40  # fallback
+            vp_width = self.width() - 40
         columns = max(1, (vp_width - 20) // (PreviewTile.TILE_W + 16))
         row = col = 0
         for tile in self._tile_order:
@@ -253,11 +244,9 @@ class SelectorWindow(QMainWindow):
     #  Refresh logic
     # ------------------------------------------------------------------
     def _auto_refresh(self) -> None:
-        """Silent periodic refresh from the timer."""
         self._populate_grid(self.filter_edit.text(), animate=False)
 
     def _manual_refresh(self) -> None:
-        """User‑clicked refresh with visual feedback."""
         if self._refresh_btn is None:
             return
         self._refresh_btn.setText("Refreshing…")
@@ -271,14 +260,43 @@ class SelectorWindow(QMainWindow):
             self._refresh_btn.setEnabled(True)
 
     # ------------------------------------------------------------------
-    #  Keyboard navigation
+    #  Focus & keyboard navigation
     # ------------------------------------------------------------------
+    def eventFilter(self, obj, event):
+        if not hasattr(self, "grid_widget") or self.grid_widget is None:
+            return super().eventFilter(obj, event)
+        if obj == self.grid_widget and event.type() == QEvent.MouseButtonPress:
+            self.grid_widget.setFocus()
+            return False
+        if (
+            obj in (self._central, self.grid_widget, self.filter_edit)
+            and event.type() == QEvent.KeyPress
+        ):
+            key = event.key()
+            if self.filter_edit.hasFocus():
+                if key in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Escape):
+                    self.keyPressEvent(event)
+                    return True
+                return False
+            if key in (
+                Qt.Key_Up,
+                Qt.Key_Down,
+                Qt.Key_Left,
+                Qt.Key_Right,
+                Qt.Key_Return,
+                Qt.Key_Enter,
+                Qt.Key_Space,
+                Qt.Key_Escape,
+            ):
+                self.keyPressEvent(event)
+                return True
+            return False
+        return super().eventFilter(obj, event)
+
     def keyPressEvent(self, event: QKeyEvent) -> None:
         key = event.key()
         if key in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space):
-            if self._selected_index >= 0 and self._selected_index < len(
-                self._tile_order
-            ):
+            if 0 <= self._selected_index < len(self._tile_order):
                 self._on_tile_clicked(
                     self._tile_order[self._selected_index].window_info
                 )
@@ -293,7 +311,7 @@ class SelectorWindow(QMainWindow):
             self._keyboard_move(-self._columns_count())
         elif key == Qt.Key_Escape:
             self._clear_selection()
-            self._selected_win_info = None  # so auto‑refresh doesn’t bring it back
+            self._selected_win_info = None
         else:
             super().keyPressEvent(event)
 
@@ -306,13 +324,8 @@ class SelectorWindow(QMainWindow):
     def _keyboard_move(self, delta: int) -> None:
         if not self._tile_order:
             return
-        # If no tile is currently selected, start keyboard mode by selecting
-        # the first tile (for forward moves) or the last tile (for backward moves).
         if self._selected_index == -1:
-            if delta > 0:
-                new_idx = 0
-            else:
-                new_idx = len(self._tile_order) - 1
+            new_idx = 0 if delta > 0 else len(self._tile_order) - 1
         else:
             new_idx = self._selected_index + delta
             new_idx = max(0, min(new_idx, len(self._tile_order) - 1))
@@ -320,7 +333,6 @@ class SelectorWindow(QMainWindow):
         self._ensure_selected_visible()
 
     def _set_selection(self, index: int) -> None:
-        # Deselect previous
         if 0 <= self._selected_index < len(self._tile_order):
             self._tile_order[self._selected_index].selected = False
         self._selected_index = index
@@ -331,11 +343,9 @@ class SelectorWindow(QMainWindow):
             self._selected_win_info = None
 
     def _clear_selection(self) -> None:
-        """Remove keyboard selection without activating anything."""
         if 0 <= self._selected_index < len(self._tile_order):
             self._tile_order[self._selected_index].selected = False
         self._selected_index = -1
-        # Do not clear _selected_win_info – it may be used to restore later
 
     def _ensure_selected_visible(self) -> None:
         if 0 <= self._selected_index < len(self._tile_order):
@@ -351,7 +361,6 @@ class SelectorWindow(QMainWindow):
         self._populate_grid(text, animate=False)
 
     def _on_tile_clicked(self, win_info: WindowInfo) -> None:
-        # Clicking a tile clears any keyboard selection and starts immediately
         self._clear_selection()
         self._selected_win_info = win_info
         self._on_start()
