@@ -21,10 +21,10 @@ def _color_string_to_float4(
         - Hex: "#RGB", "#RRGGBB", "#RRGGBBAA", "#AARRGGBB"
         - Functional: "rgb(255,0,0)", "rgba(255,0,0,0.5)", "hsl(120,100%,50%)"
 
-    If ``color`` is already a 4‑tuple of floats, it is returned unchanged.
+    If ``color`` is already a 4-tuple of floats, it is returned unchanged.
     This makes the function safe to call multiple times on the same config object.
     """
-    # If it's already a tuple, assume it's valid and return as‑is.
+    # If it's already a tuple, assume it's valid and return as-is.
     if isinstance(color, tuple):
         if len(color) == 4 and all(isinstance(v, (float, int)) for v in color):
             return color
@@ -32,7 +32,7 @@ def _color_string_to_float4(
             logger.warning("Invalid tuple color %s, falling back to black", color)
             return 0.0, 0.0, 0.0, 1.0
 
-    # Continue with original string‑to‑tuple logic…
+    # Continue with original string-to-tuple logic…
     color_str = color.strip() if isinstance(color, str) else str(color)
     hex_match = re.match(r"^#([0-9A-Fa-f]{3,8})$", color_str)
 

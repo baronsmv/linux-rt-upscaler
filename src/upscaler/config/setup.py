@@ -80,43 +80,80 @@ def load_config(
     return config, profiles
 
 
-def setup_config() -> Tuple[Config, WindowInfo, Popen]:
+def finalize_config(
+    config: Config,
+    win_info: Optional[WindowInfo] = None,
+    profiles: Optional[Dict[str, Any]] = None,
+    profile_name: Optional[str] = None,
+    extra_overrides: Optional[Dict[str, Any]] = None,
+) -> None:
+    """
+    Apply window-matching profile, extra overrides, and then finalize the
+    config object (parse colors, set up logging, validate).
+
+    Parameters
+    ----------
+    config : Config
+        The configuration to modify in place.
+    win_info : WindowInfo or None
+        The target window; required if *profiles* is given and no
+        *profile_name* was set.
+    profiles : dict or None
+        Raw profiles dictionary (from `load_yaml_config`).
+    profile_name : str or None
+        If set, window-matching is skipped (a manual profile was already in use).
+    extra_overrides : dict or None
+        Additional overrides to apply **after** the auto profile (e.g.
+        GUI-user modifications).
+    """
+    # Auto-profile if no manual profile was given
+    if profiles and not profile_name and win_info is not None:
+        apply_window_profile(config, win_info, profiles)
+
+    # Apply extra overrides (these win over everything)
+    if extra_overrides:
+        apply_overrides(config, extra_overrides)
+
+    # Re-parse string colors
+    parse_config(config)
+
+    # Ensure logging matches the final log_level / log_file
+    setup_logging(config.log_level, config.log_file)
+
+    # Final validation
+    validate_config(config)
+
+
+def setup_config() -> Tuple[Config, WindowInfo, Optional[Popen]]:
     """
     Load configuration, acquire target window, apply automatic profile, and
     return the resulting ``Config``, ``WindowInfo``, and optionally the
     launched process handle.
     """
-    # 1. Parse the command line
+    # Parse the command line
     overrides, profile_name, config_path = parse_args()
     validate_overrides(overrides)
 
-    # 2. Build the full configuration (YAML, profile, overrides)
+    # Build the full configuration (YAML, profile, overrides)
     config, profiles = load_config(
         profile_name=profile_name,
         config_path=config_path,
         overrides=overrides,
     )
 
-    # 3. Acquire the target window
+    # Acquire the target window
     win_info, proc = acquire_target_window(config)
     if win_info is None:
         sys.exit(0 if config.select else 1)
 
-    # 4. Apply automatic window‑matching profile if no manual profile was given
-    if not profile_name:
-        apply_window_profile(config, win_info, profiles)
-
-    # 5. Re‑apply CLI overrides to guarantee they trump the auto‑profile
-    apply_overrides(config, overrides)
-
-    # 6. Parse any config value remaining (color string → tuple, etc.)
-    parse_config(config)
-
-    # 7.  Ensure logging matches the final, possibly overridden, log settings
-    setup_logging(config.log_level, config.log_file)
-
-    # 8. Final validation
-    validate_config(config)
+    # Post-window merging and finalization
+    finalize_config(
+        config,
+        win_info=win_info,
+        profiles=profiles,
+        profile_name=profile_name,
+        extra_overrides=overrides,
+    )
 
     # Log summary
     logger.info(

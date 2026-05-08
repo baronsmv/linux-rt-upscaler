@@ -25,7 +25,7 @@ def add_or_update_profile(
     Parameters
     ----------
     name : str
-        Profile name (case‑sensitive).
+        Profile name (case-sensitive).
     match : dict, optional
         Match criteria to include in the profile (e.g. ``{"title": "Firefox"}``).
     options : dict, optional
