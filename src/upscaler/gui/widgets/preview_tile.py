@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, QTimer, Signal, QRectF
+from PySide6.QtCore import Qt, QTimer, Signal, QRectF, Property, QPropertyAnimation
 from PySide6.QtGui import (
     QPainter,
     QPixmap,
@@ -16,11 +16,6 @@ from ...window import WindowInfo
 
 
 class PreviewTile(QWidget):
-    """
-    A stylish tile showing a live window preview with gradient title overlay.
-    Emits clicked when the tile is pressed.
-    """
-
     clicked = Signal(WindowInfo)
     TILE_W = 340
     TILE_H = 260
@@ -32,7 +27,6 @@ class PreviewTile(QWidget):
         self.setFixedSize(self.TILE_W, self.TILE_H)
         self.setCursor(Qt.PointingHandCursor)
 
-        # Shadow effect
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(20)
         shadow.setOffset(0, 4)
@@ -46,9 +40,45 @@ class PreviewTile(QWidget):
         self._full_w = 0
         self._full_h = 0
         self._hover = False
+        self._selected = False
+        self._opacity = 1.0  # fully opaque by default
 
         self._init_grabber()
-        self._timer.start(250)  # ~4 fps per tile, adjustable
+        self._timer.start(250)
+
+    # ---- opacity property (for animation) ----
+    def get_opacity(self) -> float:
+        return self._opacity
+
+    def set_opacity(self, value: float) -> None:
+        self._opacity = value
+        self.update()
+
+    opacity = Property(float, get_opacity, set_opacity)
+
+    def animate_in(self) -> None:
+        """Fade in from 0 to 1 over 300 ms."""
+        self._opacity = 0.0
+        self.update()
+        animation = QPropertyAnimation(self, b"opacity", self)
+        animation.setDuration(300)
+        animation.setStartValue(0.0)
+        animation.setEndValue(1.0)
+        animation.start()
+
+    @property
+    def selected(self) -> bool:
+        return self._selected
+
+    @selected.setter
+    def selected(self, value: bool) -> None:
+        if self._selected != value:
+            self._selected = value
+            self.update()
+
+    @property
+    def window_info(self) -> WindowInfo:
+        return self._win_info
 
     def _init_grabber(self):
         try:
@@ -88,7 +118,6 @@ class PreviewTile(QWidget):
             QImage.Format_RGBA8888,
         ).rgbSwapped()
 
-        # Scale to fit tile interior (leave space for gradient)
         avail_w = self.width() - 8
         avail_h = self.height() - 8
         scaled = qimg.scaled(
@@ -118,35 +147,38 @@ class PreviewTile(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.setOpacity(self._opacity)
 
-        # Background rounded rect
         path = QPainterPath()
         path.addRoundedRect(QRectF(self.rect()), self.RADIUS, self.RADIUS)
         painter.setClipPath(path)
         painter.fillPath(path, QColor("#1e1e1e"))
 
-        # Draw pixmap centered
         if self._pixmap and not self._pixmap.isNull():
             x = (self.width() - self._pixmap.width()) // 2
             y = (self.height() - self._pixmap.height()) // 2
             painter.drawPixmap(x, y, self._pixmap)
 
-        # Gradient overlay at bottom
         gradient = QLinearGradient(0, self.height() - 40, 0, self.height())
         gradient.setColorAt(0, QColor(0, 0, 0, 0))
         gradient.setColorAt(0.7, QColor(0, 0, 0, 160))
         gradient.setColorAt(1.0, QColor(0, 0, 0, 200))
         painter.fillRect(0, self.height() - 40, self.width(), 40, gradient)
 
-        # Title text
         painter.setPen(Qt.white)
         font = QFont("Segoe UI", 12)
         font.setBold(True)
         painter.setFont(font)
         painter.drawText(10, self.height() - 12, self._win_info.title)
 
-        # Hover border
-        if self._hover:
+        if self._selected:
+            pen = QPen(QColor("#4a9eff"), 3)
+            painter.setPen(pen)
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRoundedRect(
+                QRectF(self.rect()).adjusted(1, 1, -1, -1), self.RADIUS, self.RADIUS
+            )
+        elif self._hover:
             pen = QPen(QColor("#2b5b84"), 2)
             painter.setPen(pen)
             painter.setBrush(Qt.NoBrush)

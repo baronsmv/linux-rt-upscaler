@@ -1,11 +1,10 @@
-# File: gui/main_window.py
-
 from __future__ import annotations
 
 import logging
 from typing import List, Optional, Dict, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Slot, QTimer
+from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -32,46 +31,44 @@ logger = logging.getLogger(__name__)
 
 
 class SelectorWindow(QMainWindow):
-    """
-    Immersive window selector – a mosaic of live previews.
-
-    Shows all candidate windows as clickable tiles with real‑time thumbnails.
-    A filter bar at the top lets you narrow the selection. The grid refreshes
-    automatically every 2 seconds to pick up newly created windows.
-    """
-
-    _REFRESH_INTERVAL_MS = 2000
+    _AUTO_REFRESH_MS = 2000
+    _ANIM_DURATION_MS = 400
 
     def __init__(self, config: Config, profiles: dict, parent=None):
         super().__init__(parent)
         self.config = config
         self.profiles = profiles
         self._session: Optional[PipelineSession] = None
-        self._tiles: Dict[int, PreviewTile] = {}  # handle -> tile
+        self._tiles: Dict[int, PreviewTile] = {}
+        self._tile_order: List[PreviewTile] = []
+        self._selected_index: int = -1  # -1 = no keyboard selection
         self._selected_win_info: Optional[WindowInfo] = None
+        self._refresh_btn: Optional[QPushButton] = None
+        self._first_layout_done = False
 
         self.setWindowTitle("Upscaler – Select Window")
         self.setMinimumSize(600, 400)
 
         self._setup_ui()
-        self._populate_grid()
 
-        # Auto refresh timer
-        self._refresh_timer = QTimer(self)
-        self._refresh_timer.timeout.connect(self._refresh_grid)
-        self._refresh_timer.start(self._REFRESH_INTERVAL_MS)
+        # Auto‑refresh (silent)
+        self._auto_timer = QTimer(self)
+        self._auto_timer.timeout.connect(self._auto_refresh)
+        self._auto_timer.start(self._AUTO_REFRESH_MS)
+
+        # Populate once the window is shown and has a valid size
+        QTimer.singleShot(0, self._initial_populate)
 
     # ------------------------------------------------------------------
     #  UI construction
     # ------------------------------------------------------------------
-
     def _setup_ui(self) -> None:
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
         layout.setContentsMargins(12, 12, 12, 12)
 
-        # ---- Header ----
+        # Header
         header = QHBoxLayout()
         self._title_label = QLabel("Choose a window to upscale")
         self._title_label.setStyleSheet(
@@ -86,42 +83,34 @@ class SelectorWindow(QMainWindow):
         self.filter_edit.textChanged.connect(self._on_filter_changed)
         header.addWidget(self.filter_edit)
 
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.clicked.connect(self._refresh_grid)
-        refresh_btn.setStyleSheet(
+        self._refresh_btn = QPushButton("Refresh")
+        self._refresh_btn.clicked.connect(self._manual_refresh)
+        self._refresh_btn.setStyleSheet(
             """
             QPushButton {
-                background-color: #2a2a2a;
-                border: 1px solid #444;
-                border-radius: 4px;
-                padding: 6px 12px;
-                color: #eee;
-                font-size: 13px;
+                background: #2a2a2a; border: 1px solid #444;
+                border-radius: 4px; padding: 6px 12px; color: #eee; font-size: 13px;
             }
-            QPushButton:hover {
-                background-color: #333;
-            }
+            QPushButton:hover { background: #333; }
+            QPushButton:disabled { color: #666; }
             """
         )
-        header.addWidget(refresh_btn)
-
+        self.showMaximized()
+        header.addWidget(self._refresh_btn)
         layout.addLayout(header)
 
-        # ---- Grid area ----
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QScrollArea.NoFrame)
-        scroll.setStyleSheet("background: transparent; border: none;")
-
+        # Scrollable grid
+        self._scroll = QScrollArea()
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QScrollArea.NoFrame)
+        self._scroll.setStyleSheet("background: transparent; border: none;")
         self.grid_widget = QWidget()
         self.grid_layout = QGridLayout(self.grid_widget)
         self.grid_layout.setContentsMargins(0, 10, 0, 0)
         self.grid_layout.setSpacing(12)
-        scroll.setWidget(self.grid_widget)
+        self._scroll.setWidget(self.grid_widget)
+        layout.addWidget(self._scroll, stretch=1)
 
-        layout.addWidget(scroll, stretch=1)
-
-        # Empty state label (overlaid when grid is empty)
         self._empty_label = QLabel("No windows found", self.grid_widget)
         self._empty_label.setAlignment(Qt.AlignCenter)
         self._empty_label.setStyleSheet("color: #666; font-size: 18px;")
@@ -129,32 +118,39 @@ class SelectorWindow(QMainWindow):
 
         self.setStyleSheet(
             """
-            QMainWindow {
-                background-color: #121212;
-            }
+            QMainWindow { background: #121212; }
             QLineEdit {
-                border: 1px solid #444;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 13px;
-                background: #2a2a2a;
-                color: #eee;
+                border: 1px solid #444; border-radius: 4px; padding: 6px;
+                font-size: 13px; background: #2a2a2a; color: #eee;
             }
-            QLineEdit:focus {
-                border-color: #2b5b84;
-            }
-            QScrollArea {
-                background: transparent;
-            }
+            QLineEdit:focus { border-color: #2b5b84; }
+            QScrollArea { background: transparent; }
             """
         )
 
     # ------------------------------------------------------------------
-    #  Grid management
+    #  Initial population (deferred until layout is ready)
     # ------------------------------------------------------------------
+    def _initial_populate(self) -> None:
+        if self._first_layout_done:
+            return
+        self._first_layout_done = True
+        self._populate_grid()
 
-    def _populate_grid(self, filter_text: str = "") -> None:
-        """Re‑read the window list and update tiles (preserve unchanged ones)."""
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        # Re‑layout after the window is actually displayed
+        QTimer.singleShot(50, self._relayout_grid)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if self._first_layout_done:
+            QTimer.singleShot(0, self._relayout_grid)
+
+    # ------------------------------------------------------------------
+    #  Grid population
+    # ------------------------------------------------------------------
+    def _populate_grid(self, filter_text: str = "", animate: bool = False) -> None:
         try:
             windows: List[WindowInfo] = list_windows()
         except Exception:
@@ -165,9 +161,8 @@ class SelectorWindow(QMainWindow):
         own_handle = int(self.winId())
         filter_lower = filter_text.lower().strip()
 
-        # Build a set of handles that are visible
         visible = set()
-        new_tiles = {}
+        new_tiles: Dict[int, PreviewTile] = {}
 
         for win in windows:
             if win.handle == own_handle:
@@ -178,17 +173,15 @@ class SelectorWindow(QMainWindow):
                 continue
             visible.add(win.handle)
 
-            # Reuse existing tile if available
             if win.handle in self._tiles:
                 tile = self._tiles[win.handle]
-                # The preview is still active; just keep it
                 new_tiles[win.handle] = tile
             else:
                 tile = PreviewTile(win, parent=self.grid_widget)
                 tile.clicked.connect(self._on_tile_clicked)
                 new_tiles[win.handle] = tile
 
-        # Remove tiles that are no longer visible
+        # Remove tiles for closed windows
         for handle, tile in self._tiles.items():
             if handle not in visible:
                 tile.stop()
@@ -196,75 +189,181 @@ class SelectorWindow(QMainWindow):
                 tile.deleteLater()
 
         self._tiles = new_tiles
+        self._tile_order = [t for t in self._tiles.values()]
+        self.setFocus()
 
-        # Rearrange the grid
+        # Keep keyboard selection if possible, otherwise leave none
+        self._restore_selection()
         self._relayout_grid()
 
+        # Animate new tiles after they are placed in the grid
+        if animate:
+            for tile in self._tiles.values():
+                if tile not in new_tiles.values():
+                    # already existing tiles don't animate
+                    continue
+                if tile.window_info.handle in self._tiles:
+                    tile.animate_in()
+
+    def _restore_selection(self) -> None:
+        """If a tile was keyboard‑selected, try to keep it selected.
+        Otherwise leave no selection (index = -1)."""
+        if self._selected_win_info is not None:
+            for i, tile in enumerate(self._tile_order):
+                if tile.window_info.handle == self._selected_win_info.handle:
+                    self._set_selection(i)
+                    return
+        # Window gone → clear selection without visual effect
+        self._clear_selection()
+
     def _relayout_grid(self) -> None:
-        """Place tiles in a grid, updating empty state."""
-        # Remove all widgets from grid (but tiles are still alive)
+        # Remove all tiles from layout without destroying them
         while self.grid_layout.count():
             item = self.grid_layout.takeAt(0)
             if item.widget():
-                item.widget().setParent(None)  # detach temporarily
+                item.widget().setParent(None)
 
-        tile_list = list(self._tiles.values())
-        if not tile_list:
+        if not self._tile_order:
             self._empty_label.show()
             self._update_title_count(0)
             return
         self._empty_label.hide()
 
-        # Compute columns
-        columns = max(1, (self.grid_widget.width() - 20) // (PreviewTile.TILE_W + 16))
+        # Reliable column width: use the viewport of the scroll area
+        vp_width = self._scroll.viewport().width()
+        if vp_width <= 0:
+            vp_width = self.width() - 40  # fallback
+        columns = max(1, (vp_width - 20) // (PreviewTile.TILE_W + 16))
         row = col = 0
-        for tile in tile_list:
+        for tile in self._tile_order:
             self.grid_layout.addWidget(tile, row, col)
             col += 1
             if col >= columns:
                 col = 0
                 row += 1
 
-        self._update_title_count(len(tile_list))
+        self._update_title_count(len(self._tile_order))
+        self._ensure_selected_visible()
 
     def _update_title_count(self, count: int) -> None:
-        """Update the header text with the window count."""
-        if count == 0:
-            self._title_label.setText("Choose a window to upscale")
+        suffix = "s" if count != 1 else ""
+        self._title_label.setText(
+            f"Choose a window to upscale – {count} window{suffix}"
+        )
+
+    # ------------------------------------------------------------------
+    #  Refresh logic
+    # ------------------------------------------------------------------
+    def _auto_refresh(self) -> None:
+        """Silent periodic refresh from the timer."""
+        self._populate_grid(self.filter_edit.text(), animate=False)
+
+    def _manual_refresh(self) -> None:
+        """User‑clicked refresh with visual feedback."""
+        if self._refresh_btn is None:
+            return
+        self._refresh_btn.setText("Refreshing…")
+        self._refresh_btn.setEnabled(False)
+        self._populate_grid(self.filter_edit.text(), animate=True)
+        QTimer.singleShot(self._ANIM_DURATION_MS, self._enable_refresh_btn)
+
+    def _enable_refresh_btn(self) -> None:
+        if self._refresh_btn:
+            self._refresh_btn.setText("Refresh")
+            self._refresh_btn.setEnabled(True)
+
+    # ------------------------------------------------------------------
+    #  Keyboard navigation
+    # ------------------------------------------------------------------
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        key = event.key()
+        if key in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space):
+            if self._selected_index >= 0 and self._selected_index < len(
+                self._tile_order
+            ):
+                self._on_tile_clicked(
+                    self._tile_order[self._selected_index].window_info
+                )
+            return
+        elif key == Qt.Key_Right:
+            self._keyboard_move(1)
+        elif key == Qt.Key_Left:
+            self._keyboard_move(-1)
+        elif key == Qt.Key_Down:
+            self._keyboard_move(self._columns_count())
+        elif key == Qt.Key_Up:
+            self._keyboard_move(-self._columns_count())
         else:
-            self._title_label.setText(
-                f"Choose a window to upscale – {count} window{'s' if count != 1 else ''}"
+            super().keyPressEvent(event)
+
+    def _columns_count(self) -> int:
+        vp_width = self._scroll.viewport().width()
+        if vp_width <= 0:
+            vp_width = self.width() - 40
+        return max(1, (vp_width - 20) // (PreviewTile.TILE_W + 16))
+
+    def _keyboard_move(self, delta: int) -> None:
+        if not self._tile_order:
+            return
+        # If no tile is currently selected, start keyboard mode by selecting
+        # the first tile (for forward moves) or the last tile (for backward moves).
+        if self._selected_index == -1:
+            if delta > 0:
+                new_idx = 0
+            else:
+                new_idx = len(self._tile_order) - 1
+        else:
+            new_idx = self._selected_index + delta
+            new_idx = max(0, min(new_idx, len(self._tile_order) - 1))
+        self._set_selection(new_idx)
+        self._ensure_selected_visible()
+
+    def _set_selection(self, index: int) -> None:
+        # Deselect previous
+        if 0 <= self._selected_index < len(self._tile_order):
+            self._tile_order[self._selected_index].selected = False
+        self._selected_index = index
+        if 0 <= index < len(self._tile_order):
+            self._tile_order[index].selected = True
+            self._selected_win_info = self._tile_order[index].window_info
+        else:
+            self._selected_win_info = None
+
+    def _clear_selection(self) -> None:
+        """Remove keyboard selection without activating anything."""
+        if 0 <= self._selected_index < len(self._tile_order):
+            self._tile_order[self._selected_index].selected = False
+        self._selected_index = -1
+        # Do not clear _selected_win_info – it may be used to restore later
+
+    def _ensure_selected_visible(self) -> None:
+        if 0 <= self._selected_index < len(self._tile_order):
+            self._scroll.ensureWidgetVisible(
+                self._tile_order[self._selected_index], 20, 20
             )
 
     # ------------------------------------------------------------------
     #  Slots
     # ------------------------------------------------------------------
-
-    @Slot()
-    def _refresh_grid(self) -> None:
-        """Refresh the entire grid, preserving the current filter."""
-        self._populate_grid(self.filter_edit.text())
-
     @Slot(str)
     def _on_filter_changed(self, text: str) -> None:
-        self._populate_grid(text)
+        self._populate_grid(text, animate=False)
 
     def _on_tile_clicked(self, win_info: WindowInfo) -> None:
+        # Clicking a tile clears any keyboard selection and starts immediately
+        self._clear_selection()
         self._selected_win_info = win_info
         self._on_start()
 
     def _on_start(self) -> None:
         if self._selected_win_info is None:
             return
-
         win_info = self._selected_win_info
         activate_window(win_info.handle)
         logger.info("Starting upscale for: %s", win_info.title)
-
         self.hide()
         for tile in self._tiles.values():
             tile.stop()
-
         try:
             self._session = create_pipeline_session(self.config, win_info)
         except Exception as e:
@@ -272,12 +371,8 @@ class SelectorWindow(QMainWindow):
             QMessageBox.critical(None, "Error", f"Could not start pipeline:\n{e}")
             QApplication.instance().quit()
 
-    # ------------------------------------------------------------------
-    #  Cleanup
-    # ------------------------------------------------------------------
-
     def closeEvent(self, event) -> None:
-        self._refresh_timer.stop()
+        self._auto_timer.stop()
         for tile in self._tiles.values():
             tile.stop()
         super().closeEvent(event)
