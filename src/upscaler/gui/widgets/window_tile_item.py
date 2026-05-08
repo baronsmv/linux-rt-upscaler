@@ -40,28 +40,14 @@ class WindowTileItem(QGraphicsObject):
     """
     A single live‑preview tile in the window‑selection mosaic.
 
-    Designed for use inside a :class:`QGraphicsScene`; the scene manages
-    absolute positioning (via `setPos`) and the viewport handles
-    scrolling.  The tile itself is responsible only for its visual
-    appearance, capture, and animations.
-
-    All visual parameters are taken from a :class:`GUIConfig` instance.
-    The tile can be *selected* (persistent highlight) and *hovered*
-    (transient highlight).  Both states trigger a smooth “pop‑out”
-    scaling animation.
-
-    Keyboard navigation is supported: when the tile has focus, pressing
-    :kbd:`Enter`, :kbd:`Return`, or :kbd:`Space` emits :attr:`clicked`.
+    Local coordinates are centred: (0,0) is the tile’s centre, so scaling
+    naturally expands from the middle without any offset.
 
     Signals:
-        clicked(WindowInfo): emitted when the user confirms this tile.
+        clicked(WindowInfo)
     """
 
     clicked = Signal(WindowInfo)
-
-    # ------------------------------------------------------------------
-    #  Initialisation
-    # ------------------------------------------------------------------
 
     def __init__(
         self,
@@ -70,79 +56,92 @@ class WindowTileItem(QGraphicsObject):
         parent: Optional[QGraphicsItem] = None,
     ) -> None:
         super().__init__(parent)
-
         self._win_info = win_info
         self._cfg = gui_config
 
-        # --- Geometry ---
-        self._tile_rect = QRectF(0, 0, gui_config.tile_width, gui_config.tile_height)
+        # Half dimensions of the resting tile
+        self._half_w = gui_config.tile_width / 2.0
+        self._half_h = gui_config.tile_height / 2.0
+        self._tile_size = (gui_config.tile_width, gui_config.tile_height)
 
-        # --- State ---
+        # State
         self._hover = False
         self._selected = False
-        self._scale = 1.0  # 1.0 = normal, > 1.0 = popped
+        self._scale = 1.0
 
-        # --- Capture ---
+        # Capture
         self._grabber: Optional[FrameGrabber] = None
-        self._full_image: Optional[QImage] = None  # latest raw capture
         self._scaled_pixmap: Optional[QPixmap] = None
+        self._full_w = 0
+        self._full_h = 0
 
         self._timer = QTimer()
         self._timer.timeout.connect(self._refresh)
         self._timer.setInterval(gui_config.tile_preview_interval_ms)
 
-        # --- Graphics item flags ---
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, True)
 
-        # Start capturing immediately
         self._init_grabber()
         self._timer.start()
 
     # ------------------------------------------------------------------
     #  Geometry helpers
     # ------------------------------------------------------------------
+    def _resting_rect(self) -> QRectF:
+        return QRectF(-self._half_w, -self._half_h, self._half_w * 2, self._half_h * 2)
 
-    def _calculate_shadow_extent(self) -> float:
-        """Return the maximum distance the shadow reaches outside the tile."""
-        ox, oy = self._cfg.shadow_offset
-        blur = self._cfg.shadow_blur_radius
-        # A simple approximation: offset + blur radius covers most of the shadow
-        return max(abs(ox), abs(oy)) + blur * 1.5
-
-    def _current_bounding_rect(self) -> QRectF:
-        """Return the bounding rect that encloses the tile at its current scale plus shadow."""
-        base = self._tile_rect
-        s = self._scale
-        shadow = 8.0  # small extra for the drop shadow
-        w = base.width() * s
-        h = base.height() * s
-        cx = base.center().x()
-        cy = base.center().y()
-        return QRectF(
-            cx - w / 2 - shadow, cy - h / 2 - shadow, w + 2 * shadow, h + 2 * shadow
+    def _shadow_margin(self) -> float:
+        """Extra space needed for the drop shadow (simple offset + blur)."""
+        return (
+            max(abs(self._cfg.shadow_offset[0]), abs(self._cfg.shadow_offset[1]))
+            + self._cfg.shadow_blur_radius
         )
 
+    def set_tile_size(self, width: float, height: float) -> None:
+        """
+        Resize the tile to new dimensions.
+        Stops any active pop animation and resets the scale to 1.0.
+        """
+        self._stop_animation()
+        self.prepareGeometryChange()
+        self._half_w = width / 2.0
+        self._half_h = height / 2.0
+        self._tile_size = (width, height)
+        self._scale = 1.0
+        # Clear the cached pixmap so it is re‑scaled on the next refresh
+        self._scaled_pixmap = None
+        self.update()
+
     def boundingRect(self) -> QRectF:
-        return self._current_bounding_rect()
+        """
+        Bounding rect that includes the tile at its current scale plus the
+        scaled drop shadow (ensuring the shadow is never clipped).
+        """
+        base = self._resting_rect()
+        s = self._scale
+        # The shadow is painted as an offset of 4 px in local coordinates,
+        # which scales with the painter.  Add that scaled margin.
+        shadow = 4.0 * s
+        w = base.width() * s + 2 * shadow
+        h = base.height() * s + 2 * shadow
+        return QRectF(-w / 2, -h / 2, w, h)
 
     # ------------------------------------------------------------------
     #  Scale property (for pop‑out animation)
     # ------------------------------------------------------------------
-
     def get_scale(self) -> float:
         return self._scale
 
     def set_scale(self, value: float) -> None:
         if self._scale != value:
-            self.prepareGeometryChange()  # tell scene bounding rect may change
+            self.prepareGeometryChange()
             self._scale = value
-            self.update()  # repaint the new area
+            self.update()
 
     scale = Property(float, get_scale, set_scale)
 
     def animate_pop_in(self) -> None:
-        """Smoothly pop the tile out to the configured maximum scale."""
         self._stop_animation()
         self._pop_anim = QPropertyAnimation(self, b"scale", self)
         self._pop_anim.setDuration(self._cfg.pop_duration)
@@ -152,7 +151,6 @@ class WindowTileItem(QGraphicsObject):
         self._pop_anim.start()
 
     def animate_pop_out(self) -> None:
-        """Smoothly return the tile to its resting scale."""
         self._stop_animation()
         self._pop_anim = QPropertyAnimation(self, b"scale", self)
         self._pop_anim.setDuration(self._cfg.pop_duration)
@@ -169,7 +167,6 @@ class WindowTileItem(QGraphicsObject):
     # ------------------------------------------------------------------
     #  Selection state
     # ------------------------------------------------------------------
-
     @property
     def selected(self) -> bool:
         return self._selected
@@ -185,11 +182,9 @@ class WindowTileItem(QGraphicsObject):
                 self.animate_pop_out()
 
     # ------------------------------------------------------------------
-    #  Capture logic
+    #  Capture logic (unchanged except use tile size)
     # ------------------------------------------------------------------
-
     def _init_grabber(self) -> None:
-        """Create the FrameGrabber for this window."""
         try:
             self._grabber = FrameGrabber(
                 self._win_info,
@@ -197,21 +192,16 @@ class WindowTileItem(QGraphicsObject):
                 crop_top=0,
                 crop_right=0,
                 crop_bottom=0,
-                tile_size=64,  # could be configurable
+                tile_size=64,
             )
             self._full_w = self._win_info.width
             self._full_h = self._win_info.height
         except Exception:
-            logger.exception(
-                "Failed to create preview grabber for %s", self._win_info.title
-            )
+            logger.exception("Preview grabber failed for %s", self._win_info.title)
             self._grabber = None
 
-    def _refresh(self):
+    def _refresh(self) -> None:
         if self._grabber is None:
-            return
-        # Skip if the tile is not visible in any view
-        if not self.isVisible() or not self.scene():
             return
         try:
             frame, _, _ = self._grabber.grab()
@@ -219,41 +209,33 @@ class WindowTileItem(QGraphicsObject):
             logger.warning("Preview grab failed for %s", self._win_info.title)
             self.stop_capture()
             return
-
         if len(frame) != self._full_w * self._full_h * 4:
             return
 
-        # Force alpha to opaque
         data = bytearray(frame)
         for i in range(3, len(data), 4):
             data[i] = 255
 
-        self._full_image = QImage(
-            bytes(data),
-            self._full_w,
-            self._full_h,
-            self._full_w * 4,
-            QImage.Format_RGBA8888,
-        ).rgbSwapped()
-
-        # Pre‑scale the image to the tile’s logical size (with a small
-        # margin) so the paint method does not do expensive scaling every
-        # frame.
-        avail_w = int(self._tile_rect.width()) - 8
-        avail_h = int(self._tile_rect.height()) - 8
+        # Pre‑scale to tile interior (8 px margin)
+        avail_w = int(self._tile_size[0]) - 8
+        avail_h = int(self._tile_size[1]) - 8
         if avail_w > 0 and avail_h > 0:
             self._scaled_pixmap = QPixmap.fromImage(
-                self._full_image.scaled(
-                    avail_w, avail_h, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                QImage(
+                    bytes(data),
+                    self._full_w,
+                    self._full_h,
+                    self._full_w * 4,
+                    QImage.Format_RGBA8888,
                 )
+                .rgbSwapped()
+                .scaled(avail_w, avail_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         else:
             self._scaled_pixmap = QPixmap()
-
         self.update()
 
     def stop_capture(self) -> None:
-        """Stop the refresh timer and release the grabber."""
         self._timer.stop()
         if self._grabber:
             self._grabber.close()
@@ -262,7 +244,6 @@ class WindowTileItem(QGraphicsObject):
     # ------------------------------------------------------------------
     #  Event handling
     # ------------------------------------------------------------------
-
     def hoverEnterEvent(self, event) -> None:
         self.setZValue(1)
         self._hover = True
@@ -289,79 +270,64 @@ class WindowTileItem(QGraphicsObject):
             super().keyPressEvent(event)
 
     # ------------------------------------------------------------------
-    #  Painting
+    #  Painting – all drawing relative to local centre
     # ------------------------------------------------------------------
-
     def paint(
         self,
         painter: QPainter,
         option: QStyleOptionGraphicsItem,
         widget: Optional[QWidget] = None,
     ) -> None:
-        """
-        Draw the tile.
-
-        The drawing is performed in several layers:
-
-        1. **Drop shadow** – a series of semi‑transparent rounded
-           rectangles that simulate a soft shadow.
-        2. **Tile background** – filled with the configured colour.
-        3. **Live preview image** – the most recent capture, scaled to
-           fit the tile.
-        4. **Gradient overlay** – a dark gradient at the bottom that
-           improves title readability.
-        5. **Window title** – the window’s name.
-        6. **Border** – a coloured border that indicates hover or
-           selection state.
-        """
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Apply pop‑out scaling around the tile’s centre
+        # Scale around (0,0) – the tile’s centre
         if abs(self._scale - 1.0) > 0.001:
-            c = self._tile_rect.center()
-            painter.translate(c)
             painter.scale(self._scale, self._scale)
-            painter.translate(-c)
 
-        rect = self._tile_rect
+        base = self._resting_rect()
+        w = base.width()
+        h = base.height()
         radius = self._cfg.tile_radius
 
-        # 1. Drop shadow
-        shadow_rect = rect.adjusted(4, 4, 4, 4)
+        # 1. Shadow (simple, single offset)
+        shadow_rect = base.adjusted(4, 4, 4, 4)
         shadow_path = QPainterPath()
         shadow_path.addRoundedRect(shadow_rect, radius, radius)
-        painter.save()
-        painter.setOpacity(0.2)
+        painter.setOpacity(0.15)
         painter.fillPath(shadow_path, QColor(0, 0, 0))
-        painter.restore()
+        painter.setOpacity(1.0)
 
         # 2. Background
         bg_path = QPainterPath()
-        bg_path.addRoundedRect(rect, radius, radius)
+        bg_path.addRoundedRect(base, radius, radius)
         painter.fillPath(bg_path, QColor(self._cfg.tile_background))
 
         # 3. Preview image
         if self._scaled_pixmap and not self._scaled_pixmap.isNull():
-            px = (rect.width() - self._scaled_pixmap.width()) / 2.0
-            py = (rect.height() - self._scaled_pixmap.height()) / 2.0
-            painter.drawPixmap(int(px), int(py), self._scaled_pixmap)
+            px = (w - self._scaled_pixmap.width()) / 2.0
+            py = (h - self._scaled_pixmap.height()) / 2.0
+            painter.drawPixmap(int(-w / 2 + px), int(-h / 2 + py), self._scaled_pixmap)
 
-        # 4. Gradient overlay (bottom 40 px)
-        grad = QLinearGradient(0, rect.height() - 40, 0, rect.height())
+        # 4. Gradient overlay at the bottom of the tile
+        grad = QLinearGradient(0, h / 2 - 40, 0, h / 2)
         grad.setColorAt(0, QColor(*self._cfg.tile_title_overlay_start))
         grad.setColorAt(0.7, QColor(*self._cfg.tile_title_overlay_mid))
         grad.setColorAt(1.0, QColor(*self._cfg.tile_title_overlay_end))
-        painter.fillRect(0, rect.height() - 40, rect.width(), 40, grad)
+        painter.fillRect(QRectF(-w / 2, h / 2 - 40, w, 40), grad)
 
         # 5. Title
         painter.setPen(QColor(self._cfg.title_text_color))
         font = QFont(self._cfg.title_font_family, self._cfg.title_font_size)
         font.setBold(self._cfg.title_font_bold)
         painter.setFont(font)
-        painter.drawText(10, rect.height() - 12, self._win_info.title)
+        painter.drawText(
+            QRectF(-w / 2 + 10, h / 2 - 32, w - 20, 20),
+            Qt.AlignLeft | Qt.AlignVCenter,
+            self._win_info.title,
+        )
 
-        # 6. Border (selected / hovered)
+        # 6. Border
         if self._selected:
             pen = QPen(
                 QColor(self._cfg.tile_selected_border), self._cfg.selection_border_width
@@ -380,45 +346,11 @@ class WindowTileItem(QGraphicsObject):
         painter.restore()
 
     # ------------------------------------------------------------------
-    #  Dynamic shadow drawing
-    # ------------------------------------------------------------------
-
-    def _draw_shadow(self, painter: QPainter, rect: QRectF, radius: float) -> None:
-        """
-        Render a soft drop shadow by drawing multiple semi‑transparent
-        rounded rectangles with increasing offset and decreasing opacity.
-        """
-        ox, oy = self._cfg.shadow_offset
-        blur = self._cfg.shadow_blur_radius
-        base_color = QColor(*self._cfg.shadow_color)
-        # Number of layers trades quality for performance; 4 is usually enough.
-        layers = 4
-        for i in range(layers):
-            alpha = base_color.alpha() * (1.0 - i / layers)
-            color = QColor(
-                base_color.red(), base_color.green(), base_color.blue(), int(alpha)
-            )
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(color)
-            # Offset the layer progressively
-            dx = ox * (i / layers)
-            dy = oy * (i / layers)
-            # Blur is imitated by expanding the rect slightly
-            expand = blur * (i / layers) * 0.5
-            shadow_rect = rect.adjusted(-expand, -expand, expand, expand)
-            shadow_rect.translate(dx, dy)
-            shadow_path = QPainterPath()
-            shadow_path.addRoundedRect(shadow_rect, radius + expand, radius + expand)
-            painter.drawPath(shadow_path)
-
-    # ------------------------------------------------------------------
     #  Public helpers
     # ------------------------------------------------------------------
-
     @property
     def window_info(self) -> WindowInfo:
         return self._win_info
 
     def tile_size(self) -> Tuple[float, float]:
-        """Return the logical tile dimensions (width, height)."""
-        return self._tile_rect.width(), self._tile_rect.height()
+        return self._tile_size

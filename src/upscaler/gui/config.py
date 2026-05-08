@@ -15,8 +15,10 @@ class GUIConfig:
     tile_width: int = 340
     tile_height: int = 260
     tile_radius: int = 12
-    tile_spacing: int = 12
+    tile_spacing: int = 12  # minimum absolute spacing (pixels)
+    tile_spacing_ratio: float = 0.05  # proportional spacing (0 = use tile_spacing only)
     grid_margin: int = 20  # inner margin of the grid container
+    grid_columns: int = 3
 
     # ---- Pop‑out animation -------------------------------------------
     pop_scale: float = 1.05  # maximum scale factor on hover
