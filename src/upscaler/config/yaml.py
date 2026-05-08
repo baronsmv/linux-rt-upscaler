@@ -41,3 +41,31 @@ def load_yaml_config(
             break
 
     return general_options, profiles
+
+
+def save_yaml_config(
+    general_options: dict,
+    profiles: dict,
+    config_path: Optional[str] = None,
+) -> str:
+    """
+    Write general options and profiles to a YAML file.
+
+    If *config_path* is `None`, the default XDG location is used.
+    The parent directory is created if it does not exist.
+
+    Returns the absolute path that was written.
+    """
+    data = dict(general_options) if general_options else {}
+    if profiles:
+        data["profiles"] = profiles
+
+    if config_path is None:
+        xdg_config = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+        config_path = os.path.join(xdg_config, "linux-rt-upscaler", "config.yaml")
+
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
+
+    return config_path

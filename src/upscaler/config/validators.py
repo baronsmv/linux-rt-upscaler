@@ -87,9 +87,18 @@ def validate_geometry(geometry: str, _: str) -> None:
         sys.exit(1)
 
 
-def validate_color(color_str: str, _: str) -> None:
+def validate_color(color: Union[Tuple, str], _: str) -> None:
     """Validate CSS color string, supporting #RRGGBBAA, #AARRGGBB, rgb(), rgba()."""
-    color_str = color_str.strip()
+
+    # Allow tuple (already converted) as valid
+    if isinstance(color, tuple):
+        if len(color) == 4 and all(isinstance(v, (float, int)) for v in color):
+            return
+        else:
+            logger.error(f"Invalid tuple for background_color: {color}")
+            sys.exit(1)
+
+    color_str = color.strip()
     hex_match = re.match(r"^#([0-9A-Fa-f]{3,8})$", color_str)
 
     if hex_match:

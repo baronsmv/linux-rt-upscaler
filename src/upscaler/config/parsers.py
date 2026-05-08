@@ -9,7 +9,9 @@ from . import Config
 logger = logging.getLogger(__name__)
 
 
-def _color_string_to_float4(color_str: str) -> Tuple[float, float, float, float]:
+def _color_string_to_float4(
+    color: str | Tuple[float, float, float, float],
+) -> Tuple[float, float, float, float]:
     """
     Convert any valid CSS color string to normalized (b, g, r, a) for the shader.
     The shader expects BGRA order, so it returns blue, green, red, alpha.
@@ -19,9 +21,19 @@ def _color_string_to_float4(color_str: str) -> Tuple[float, float, float, float]
         - Hex: "#RGB", "#RRGGBB", "#RRGGBBAA", "#AARRGGBB"
         - Functional: "rgb(255,0,0)", "rgba(255,0,0,0.5)", "hsl(120,100%,50%)"
 
-    If the string is invalid, falls back to opaque black.
+    If ``color`` is already a 4‑tuple of floats, it is returned unchanged.
+    This makes the function safe to call multiple times on the same config object.
     """
-    color_str = color_str.strip()
+    # If it's already a tuple, assume it's valid and return as‑is.
+    if isinstance(color, tuple):
+        if len(color) == 4 and all(isinstance(v, (float, int)) for v in color):
+            return color
+        else:
+            logger.warning("Invalid tuple color %s, falling back to black", color)
+            return 0.0, 0.0, 0.0, 1.0
+
+    # Continue with original string‑to‑tuple logic…
+    color_str = color.strip() if isinstance(color, str) else str(color)
     hex_match = re.match(r"^#([0-9A-Fa-f]{3,8})$", color_str)
 
     if hex_match:
