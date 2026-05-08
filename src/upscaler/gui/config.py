@@ -61,10 +61,14 @@ class GUIConfig:
     filter_placeholder_color: str = "#666"
     filter_icon_color: str = "#7A9EB1"
     filter_font_size: int = 16
-    filter_padding_h: int = 14
-    filter_padding_v: int = 10
-    filter_border_radius: int = 10
-    filter_height: int = 50
+    filter_padding_h: int = 16
+    filter_padding_v: int = 16
+    filter_border_radius: int = 12
+    filter_height: int = 80
+    filter_icon_size: int = 24
+    filter_icon_gap: int = -8
+    filter_horizontal_margin: int = 18
+    filter_vertical_margin: int = 6
 
     # ---- Selection / focus indicators --------------------------------
     selection_border_width: int = 3

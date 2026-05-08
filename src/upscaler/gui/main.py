@@ -19,7 +19,7 @@ from .widgets.window_grid_scene import WindowGridScene
 from .widgets.window_grid_view import WindowGridView
 from ..config import Config
 from ..pipeline.launcher import create_pipeline_session
-from ..window import WindowInfo, list_windows
+from ..window import WindowInfo, activate_window, list_windows
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, self.gui_config.filter_vertical_margin, 0, 0)
         layout.setSpacing(0)
 
         # Filter bar (no refresh button)
@@ -147,6 +147,9 @@ class MainWindow(QMainWindow):
 
         win_info = self._selected_win_info
         logger.info("Starting upscale for: %s", win_info.title)
+
+        # Activate (raise + focus) the target window
+        activate_window(win_info.handle)
 
         self.hide()
         self._scene.clear_all()  # stops all captures
