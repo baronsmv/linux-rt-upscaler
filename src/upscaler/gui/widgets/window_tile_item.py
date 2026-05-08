@@ -1,5 +1,3 @@
-# File: gui/widgets/window_tile_item.py
-
 from __future__ import annotations
 
 import logging

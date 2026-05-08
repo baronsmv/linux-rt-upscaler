@@ -67,12 +67,15 @@ class MainWindow(QMainWindow):
         self.filter_bar.focus_grid_requested.connect(self._focus_grid)
         layout.addWidget(self.filter_bar)
 
-        # ---- The new graphics‑view‑based grid ----
+        # Graphics‑view‑based grid
         self._scene = WindowGridScene(self.gui_config)
         self._view = WindowGridView(self._scene, self.gui_config)
+
         # Forward scene's window_selected to our handler
         self._scene.window_selected.connect(self._on_window_selected)
-        # Optionally, connect Ctrl+F from the view as well
+        self._scene.focus_filter_requested.connect(self.filter_bar.set_focus)
+
+        # Connect Ctrl+F from the view as well
         self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
         layout.addWidget(self._view, stretch=1)
 

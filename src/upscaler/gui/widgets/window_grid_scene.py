@@ -40,6 +40,8 @@ class WindowGridScene(QGraphicsScene):
 
     # Emitted when the user confirms a window (click or Enter / Space)
     window_selected = Signal(WindowInfo)
+    # Emitted when pressing Up on the first row (towards the search bar)
+    focus_filter_requested = Signal()
 
     _SCENE_MARGIN = 10  # extra padding around the grid block
 
@@ -370,6 +372,11 @@ class WindowGridScene(QGraphicsScene):
 
         cols = self._columns
         if self._selected_handle is None:
+            # If no tile selected and Up is pressed, go to filter bar
+            if key == Qt.Key_Up:
+                self.focus_filter_requested.emit()
+                return
+            # Otherwise start from first tile for other arrows
             new_idx = 0
         else:
             # Locate current index
@@ -393,7 +400,11 @@ class WindowGridScene(QGraphicsScene):
                     row_start_idx = row * cols
                     row_len = min(cols, len(tiles) - row_start_idx)
                     col = min(col, row_len - 1)
-                elif key == Qt.Key_Up:
+                if key == Qt.Key_Up:
+                    if current_idx // cols == 0:
+                        self._set_selected_handle(None)
+                        self.focus_filter_requested.emit()
+                        return
                     row = max(row - 1, 0)
                     row_start_idx = row * cols
                     row_len = min(cols, len(tiles) - row_start_idx)

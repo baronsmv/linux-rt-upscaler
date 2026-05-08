@@ -19,7 +19,9 @@ class GUIConfig:
         4 / 3
     )  # overrides default; 0 = use tile_width/tile_height
     tile_spacing: int = 12  # minimum absolute spacing (pixels)
-    tile_spacing_ratio: float = 0.1  # proportional spacing (0 = use tile_spacing only)
+    tile_spacing_ratio: float = (
+        0.075  # proportional spacing (0 = use tile_spacing only)
+    )
     grid_margin: int = 20  # inner margin of the grid container
     grid_columns: int = 3
 
@@ -52,15 +54,17 @@ class GUIConfig:
 
     # ---- Filter bar --------------------------------------------------
     filter_background: str = "#2a2a2a"
+    filter_hover_background: str = "#353535"
     filter_border_color: str = "#444"
     filter_border_focus_color: str = "#2b5b84"
     filter_text_color: str = "#eee"
     filter_placeholder_color: str = "#666"
-    filter_font_size: int = 14
-    filter_padding_h: int = 12
-    filter_padding_v: int = 8
-    filter_border_radius: int = 6  # slightly smaller than tiles
-    filter_height: int = 44  # total height including padding
+    filter_icon_color: str = "#888"
+    filter_font_size: int = 16
+    filter_padding_h: int = 14
+    filter_padding_v: int = 10
+    filter_border_radius: int = 10
+    filter_height: int = 50
 
     # ---- Selection / focus indicators --------------------------------
     selection_border_width: int = 3
