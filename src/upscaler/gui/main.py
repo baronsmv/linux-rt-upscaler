@@ -86,7 +86,7 @@ class SelectorWindow(QMainWindow):
         # --- Buttons -------------------------------------------------
         btn_layout = QHBoxLayout()
         self.refresh_btn = QPushButton("&Refresh")
-        self.refresh_btn.clicked.connect(self._populate_list)
+        self.refresh_btn.clicked.connect(self._refresh)
         btn_layout.addWidget(self.refresh_btn)
         btn_layout.addStretch()
         self.start_btn = QPushButton("&Start")
@@ -96,22 +96,31 @@ class SelectorWindow(QMainWindow):
         layout.addLayout(btn_layout)
 
     def _populate_list(self, filter_text: str = ""):
-        """Re‑enumerate windows and rebuild the model."""
+        """Re‑enumerate windows and rebuild the model, excluding our own window."""
         self.model.clear()
         try:
             windows: List[WindowInfo] = list_windows()
         except Exception:
+            logger.exception("Failed to enumerate windows")
             QMessageBox.warning(self, "Error", "Could not enumerate windows.")
             return
 
+        # Ignore the selector’s own window
+        own_handle = int(self.winId())
         filter_lower = filter_text.lower().strip()
+
         for win in windows:
+            if win.handle == own_handle:
+                continue
+            # Skip windows with empty titles (usually invisible or useless)
+            if not win.title.strip():
+                continue
             if filter_lower and filter_lower not in win.title.lower():
                 continue
+
             item = QStandardItem(f"{win.title}   ({win.width}×{win.height})")
             item.setData(win, Qt.UserRole)
             item.setToolTip(f"Handle: 0x{win.handle:x}")
-            # Use a generic icon – we could later fetch the window’s real icon
             item.setIcon(self.style().standardIcon(QStyle.SP_TitleBarNormalButton))
             self.model.appendRow(item)
 
@@ -121,6 +130,11 @@ class SelectorWindow(QMainWindow):
     @Slot()
     def _on_filter_changed(self, text: str):
         self._populate_list(text)
+
+    @Slot()
+    def _refresh(self):
+        """Refresh the window list while keeping the current filter text."""
+        self._populate_list(self.filter_edit.text())
 
     @Slot()
     def _on_start(self):
