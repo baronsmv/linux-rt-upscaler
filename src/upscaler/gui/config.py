@@ -1,0 +1,75 @@
+from dataclasses import dataclass
+from typing import Tuple
+
+
+@dataclass
+class GUIConfig:
+    """
+    Centralised GUI style and layout constants.
+
+    All visual parameters live here, making it trivial to tune the
+    appearance or add themes later.
+    """
+
+    # ---- Tile geometry -----------------------------------------------
+    tile_width: int = 340
+    tile_height: int = 260
+    tile_radius: int = 12
+    tile_spacing: int = 12
+    grid_margin: int = 20  # inner margin of the grid container
+
+    # ---- Pop‑out animation -------------------------------------------
+    pop_scale: float = 1.05  # maximum scale factor on hover
+    pop_duration: int = 200  # animation duration in ms
+
+    # ---- Colors ------------------------------------------------------
+    background_color: str = "#121212"
+    tile_background: str = "#1e1e1e"
+    tile_hover_border: str = "#2b5b84"
+    tile_selected_border: str = "#4a9eff"
+    tile_title_overlay_start: Tuple[int, int, int, int] = (0, 0, 0, 0)
+    tile_title_overlay_mid: Tuple[int, int, int, int] = (0, 0, 0, 160)
+    tile_title_overlay_end: Tuple[int, int, int, int] = (0, 0, 0, 200)
+
+    # ---- Drop shadow -------------------------------------------------
+    shadow_blur_radius: int = 20
+    shadow_offset: Tuple[int, int] = (0, 4)
+    shadow_color: Tuple[int, int, int, int] = (0, 0, 0, 120)
+    # when hovered the shadow darkens and spreads
+    shadow_hover_color: Tuple[int, int, int, int] = (0, 0, 0, 180)
+    shadow_hover_blur_radius: int = 30
+
+    # ---- Title font --------------------------------------------------
+    title_font_family: str = "Segoe UI"
+    title_font_size: int = 12
+    title_font_bold: bool = True
+    title_text_color: str = "#ffffff"
+
+    # ---- Filter bar --------------------------------------------------
+    filter_background: str = "#2a2a2a"
+    filter_border_color: str = "#444"
+    filter_border_focus_color: str = "#2b5b84"
+    filter_text_color: str = "#eee"
+    filter_placeholder_color: str = "#666"
+    filter_font_size: int = 14
+    filter_padding_h: int = 12
+    filter_padding_v: int = 8
+    filter_border_radius: int = 6  # slightly smaller than tiles
+    filter_height: int = 44  # total height including padding
+
+    # ---- Selection / focus indicators --------------------------------
+    selection_border_width: int = 3
+    hover_border_width: int = 2
+
+    # ---- Empty‑grid placeholder --------------------------------------
+    empty_text: str = "No windows found"
+    empty_text_color: str = "#666"
+    empty_text_size: int = 18
+
+    # ---- Timing ------------------------------------------------------
+    auto_refresh_ms: int = 1000
+    tile_preview_interval_ms: int = 40  # how often live preview updates
+
+    # ---- Scaling / layout helpers ------------------------------------
+    min_columns: int = 1
+    scroll_margin: int = 20  # extra space for scroll‑into‑view

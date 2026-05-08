@@ -9,7 +9,8 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from .main import SelectorWindow
+from .config import GUIConfig
+from .main import MainWindow
 from ..config import load_config, parse_args, validate_overrides
 
 
@@ -28,7 +29,7 @@ def main() -> None:
     app.setApplicationName("upscaler-gui")
 
     # The main window will stay visible until the user starts.
-    window = SelectorWindow(config, profiles)
+    window = MainWindow(config, profiles)
     window.show()
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
