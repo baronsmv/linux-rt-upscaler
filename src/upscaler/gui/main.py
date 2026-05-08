@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QStyle,
 )
 
+from .widgets import PreviewWidget
 from ..config import Config
 from ..pipeline import create_pipeline_session
 from ..window import WindowInfo, activate_window, list_windows
@@ -35,7 +36,8 @@ class WindowListModel(QStandardItemModel):
 
 class SelectorWindow(QMainWindow):
     """
-    Main window that presents a filterable list of X11 application windows.
+    Main window that presents a filterable list of X11 application windows
+    together with a live preview of the currently selected window.
 
     Double‑clicking an entry or pressing the “Start” button will:
     1. Activate (raise+focus) the selected window.
@@ -46,23 +48,26 @@ class SelectorWindow(QMainWindow):
         super().__init__(parent)
         self.config = config
         self.profiles = profiles
-        self.selected_index: Optional[QModelIndex] = None
+        self._session = None  # will hold the pipeline session reference
 
         self.setWindowTitle("Linux RT Upscaler – Select Window")
-        self.setMinimumSize(600, 400)
-        # Use a simple application icon (optional)
+        self.setMinimumSize(800, 450)
         self.setWindowIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
 
         self._setup_ui()
         self._populate_list()
 
-    def _setup_ui(self):
+    # ------------------------------------------------------------------
+    #  UI construction
+    # ------------------------------------------------------------------
+
+    def _setup_ui(self) -> None:
         """Build the central widget layout."""
         central = QWidget()
         self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
+        main_layout = QVBoxLayout(central)
 
-        # --- Filter bar ------------------------------------------------
+        # --- Filter bar ----------------------------------------------------
         filter_layout = QHBoxLayout()
         filter_label = QLabel("Fi<er:")
         self.filter_edit = QLineEdit()
@@ -71,19 +76,29 @@ class SelectorWindow(QMainWindow):
         filter_label.setBuddy(self.filter_edit)
         filter_layout.addWidget(filter_label)
         filter_layout.addWidget(self.filter_edit)
-        layout.addLayout(filter_layout)
 
-        # --- List view ------------------------------------------------
+        # --- List view ----------------------------------------------------
         self.list_view = QListView()
         self.list_view.setEditTriggers(QListView.NoEditTriggers)
         self.list_view.setSelectionMode(QListView.SingleSelection)
         self.list_view.doubleClicked.connect(self._on_start)
-        layout.addWidget(self.list_view)
-
         self.model = WindowListModel()
         self.list_view.setModel(self.model)
 
-        # --- Buttons -------------------------------------------------
+        # --- Preview widget -----------------------------------------------
+        self.preview = PreviewWidget(self, preview_width=260)
+
+        # --- Horizontal panel: list + preview ----------------------------
+        content_layout = QHBoxLayout()
+        left_layout = QVBoxLayout()
+        left_layout.addLayout(filter_layout)
+        left_layout.addWidget(self.list_view)
+        content_layout.addLayout(left_layout, stretch=1)
+        content_layout.addWidget(self.preview, stretch=0)
+
+        main_layout.addLayout(content_layout)
+
+        # --- Buttons ------------------------------------------------------
         btn_layout = QHBoxLayout()
         self.refresh_btn = QPushButton("&Refresh")
         self.refresh_btn.clicked.connect(self._refresh)
@@ -93,10 +108,23 @@ class SelectorWindow(QMainWindow):
         self.start_btn.setDefault(True)
         self.start_btn.clicked.connect(self._on_start)
         btn_layout.addWidget(self.start_btn)
-        layout.addLayout(btn_layout)
+        main_layout.addLayout(btn_layout)
 
-    def _populate_list(self, filter_text: str = ""):
-        """Re‑enumerate windows and rebuild the model, excluding our own window."""
+        # Connect selection changes for preview update
+        self.list_view.selectionModel().currentChanged.connect(
+            self._on_selection_changed
+        )
+
+    # ------------------------------------------------------------------
+    #  Window list management
+    # ------------------------------------------------------------------
+
+    def _populate_list(self, filter_text: str = "") -> None:
+        """
+        Re‑enumerate all visible application windows and rebuild the list.
+        The selector’s own window is excluded, as well as windows with
+        empty titles.
+        """
         self.model.clear()
         try:
             windows: List[WindowInfo] = list_windows()
@@ -126,19 +154,37 @@ class SelectorWindow(QMainWindow):
 
         if self.model.rowCount() > 0 and not self.list_view.currentIndex().isValid():
             self.list_view.setCurrentIndex(self.model.index(0, 0))
+        else:
+            # No item selected → clear preview
+            self.preview.set_target(None)
+
+    # ------------------------------------------------------------------
+    #  Slots
+    # ------------------------------------------------------------------
 
     @Slot()
-    def _on_filter_changed(self, text: str):
-        self._populate_list(text)
-
-    @Slot()
-    def _refresh(self):
-        """Refresh the window list while keeping the current filter text."""
+    def _refresh(self) -> None:
+        """Refresh the list while keeping the current filter text."""
         self._populate_list(self.filter_edit.text())
 
+    @Slot(str)
+    def _on_filter_changed(self, text: str) -> None:
+        self._populate_list(text)
+
+    @Slot(QModelIndex, QModelIndex)
+    def _on_selection_changed(
+        self, current: QModelIndex, previous: QModelIndex
+    ) -> None:
+        """Update the preview when the selection changes."""
+        if current.isValid():
+            win_info = self.model.window_at(current.row())
+            self.preview.set_target(win_info)
+        else:
+            self.preview.set_target(None)
+
     @Slot()
-    def _on_start(self):
-        """Activate the selected window and launch the pipeline."""
+    def _on_start(self) -> None:
+        """Activate the chosen window and launch the upscaling pipeline."""
         index = self.list_view.currentIndex()
         if not index.isValid():
             QMessageBox.information(
@@ -156,9 +202,9 @@ class SelectorWindow(QMainWindow):
 
         # Hide this window (it will be closed when the application exits)
         self.hide()
+        self.preview.set_target(None)  # stop preview
 
         # Create the overlay and pipeline.
-        # If an error occurs, we show a message and close the app.
         try:
             session = create_pipeline_session(self.config, win_info)
         except Exception as e:
@@ -167,6 +213,12 @@ class SelectorWindow(QMainWindow):
             QApplication.instance().quit()
             return
 
-        # Store the session somewhere so it isn’t garbage collected.
-        # The session’s overlay will keep the application alive.
-        self._session = session  # Keep reference
+        self._session = session  # keep reference
+
+    # ------------------------------------------------------------------
+    #  Cleanup
+    # ------------------------------------------------------------------
+
+    def closeEvent(self, event) -> None:
+        self.preview.set_target(None)
+        super().closeEvent(event)

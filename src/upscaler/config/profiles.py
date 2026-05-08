@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import logging
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
-from . import Config
 from .args import apply_overrides
 from .yaml import load_yaml_config, save_yaml_config
-from ..window import WindowInfo
+
+if TYPE_CHECKING:
+    from .models import Config
+    from ..window import WindowInfo
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 import sys
 from subprocess import Popen
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 from .args import DEFAULT_CONFIG, apply_overrides, parse_args
 from .logging import setup_logging
@@ -10,7 +12,9 @@ from .parsers import parse_config
 from .profiles import find_profile, apply_window_profile
 from .validators import validate_config, validate_overrides
 from .yaml import load_yaml_config
-from ..window import acquire_target_window, WindowInfo
+
+if TYPE_CHECKING:
+    from ..window import WindowInfo
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +134,8 @@ def setup_config() -> Tuple[Config, WindowInfo, Optional[Popen]]:
     return the resulting ``Config``, ``WindowInfo``, and optionally the
     launched process handle.
     """
+    from ..window import acquire_target_window
+
     # Parse the command line
     overrides, profile_name, config_path = parse_args()
     validate_overrides(overrides)
