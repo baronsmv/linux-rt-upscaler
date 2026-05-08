@@ -45,6 +45,7 @@ BugTracker = "https://github.com/baronsmv/linux-rt-upscaler/issues"
 
 [project.scripts]
 upscale = "upscaler.cli:main"
+upscale-gui = "upscaler.gui:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
