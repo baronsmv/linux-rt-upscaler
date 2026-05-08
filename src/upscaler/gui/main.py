@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
-    QLabel,
     QMessageBox,
     QApplication,
 )
@@ -50,16 +49,6 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-
-        # Title label
-        self._title_label = QLabel("Choose a window to upscale")
-        self._title_label.setStyleSheet(
-            f"color: {self.gui_config.title_text_color}; "
-            f"font-size: {self.gui_config.title_font_size + 4}px; "
-            f"font-family: {self.gui_config.title_font_family}; "
-            f"font-weight: bold; padding: 12px {self.gui_config.grid_margin}px 4px;"
-        )
-        layout.addWidget(self._title_label)
 
         # Filter bar (no refresh button)
         self.filter_bar = FilterBar(self.gui_config)
@@ -125,12 +114,6 @@ class MainWindow(QMainWindow):
             filtered.append(win)
 
         self._scene.set_windows(filtered)
-
-        count = len(filtered)
-        suffix = "s" if count != 1 else ""
-        self._title_label.setText(
-            f"Choose a window to upscale – {count} window{suffix}"
-        )
 
     def _auto_refresh(self) -> None:
         self._populate_grid(self.filter_bar.text())

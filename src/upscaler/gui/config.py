@@ -59,7 +59,7 @@ class GUIConfig:
     filter_border_focus_color: str = "#2b5b84"
     filter_text_color: str = "#eee"
     filter_placeholder_color: str = "#666"
-    filter_icon_color: str = "#888"
+    filter_icon_color: str = "#7A9EB1"
     filter_font_size: int = 16
     filter_padding_h: int = 14
     filter_padding_v: int = 10
