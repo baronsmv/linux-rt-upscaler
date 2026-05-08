@@ -110,23 +110,21 @@ class WindowTileItem(QGraphicsObject):
         # A simple approximation: offset + blur radius covers most of the shadow
         return max(abs(ox), abs(oy)) + blur * 1.5
 
-    def boundingRect(self) -> QRectF:
-        # Base tile rect
+    def _current_bounding_rect(self) -> QRectF:
+        """Return the bounding rect that encloses the tile at its current scale plus shadow."""
         base = self._tile_rect
-        # Scale factor (current animation value)
         s = self._scale
-        # Shadow offset (simple)
-        shadow = 8.0  # maximum shadow blur + offset
-        # Scaled width/height
+        shadow = 8.0  # small extra for the drop shadow
         w = base.width() * s
         h = base.height() * s
-        # Centre of scaled tile
         cx = base.center().x()
         cy = base.center().y()
-        # Return inflated rect to include shadow
         return QRectF(
             cx - w / 2 - shadow, cy - h / 2 - shadow, w + 2 * shadow, h + 2 * shadow
         )
+
+    def boundingRect(self) -> QRectF:
+        return self._current_bounding_rect()
 
     # ------------------------------------------------------------------
     #  Scale property (for pop‑out animation)
@@ -333,7 +331,10 @@ class WindowTileItem(QGraphicsObject):
         shadow_rect = rect.adjusted(4, 4, 4, 4)
         shadow_path = QPainterPath()
         shadow_path.addRoundedRect(shadow_rect, radius, radius)
-        painter.fillPath(shadow_path, QColor(0, 0, 0, 60))
+        painter.save()
+        painter.setOpacity(0.2)
+        painter.fillPath(shadow_path, QColor(0, 0, 0))
+        painter.restore()
 
         # 2. Background
         bg_path = QPainterPath()

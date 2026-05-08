@@ -103,9 +103,21 @@ class WindowGridScene(QGraphicsScene):
         self._restore_selection()
 
         # Relayout only if the set of handles changed or viewport width changed
-        if self._needs_relayout(new_handles):
+        if self._should_relayout(new_handles):
             self.schedule_relayout()
         self._last_handles = new_handles
+
+    def _should_relayout(self, new_handles: set) -> bool:
+        if new_handles != self._last_handles:
+            return True
+        view = self.views()[0] if self.views() else None
+        if view:
+            vp_w = view.viewport().width()
+            if abs(vp_w - self._last_vp_width) > 10:
+                self._last_vp_width = vp_w
+                return True
+            self._last_vp_width = vp_w
+        return False
 
     def _needs_relayout(self, new_handles: set) -> bool:
         if new_handles != self._last_handles:
