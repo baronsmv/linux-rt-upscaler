@@ -135,7 +135,8 @@ class MainWindow(QMainWindow):
 
     def _on_window_selected(self, win_info: WindowInfo) -> None:
         self._selected_win_info = win_info
-        self._start_pipeline()
+        # Defer launch so mouse grab is released before cleanup
+        QTimer.singleShot(0, self._start_pipeline)
 
     # ------------------------------------------------------------------
     #  Pipeline launch

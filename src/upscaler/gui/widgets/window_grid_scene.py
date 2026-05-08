@@ -129,6 +129,11 @@ class WindowGridScene(QGraphicsScene):
 
     def clear_all(self) -> None:
         """Remove all tiles and reset the selection."""
+        # Release any active mouse grab to avoid 'ungrabMouse' warnings
+        grabber = self.mouseGrabberItem()
+        if grabber is not None:
+            grabber.ungrabMouse()
+
         for handle in list(self._tile_by_handle.keys()):
             self._remove_tile(handle)
         self._tiles.clear()
