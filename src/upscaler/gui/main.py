@@ -219,9 +219,7 @@ class SelectorWindow(QMainWindow):
     def _relayout_grid(self) -> None:
         # Remove all tiles from layout without destroying them
         while self.grid_layout.count():
-            item = self.grid_layout.takeAt(0)
-            if item.widget():
-                item.widget().setParent(None)
+            self.grid_layout.takeAt(0)
 
         if not self._tile_order:
             self._empty_label.show()
@@ -293,6 +291,9 @@ class SelectorWindow(QMainWindow):
             self._keyboard_move(self._columns_count())
         elif key == Qt.Key_Up:
             self._keyboard_move(-self._columns_count())
+        elif key == Qt.Key_Escape:
+            self._clear_selection()
+            self._selected_win_info = None  # so auto‑refresh doesn’t bring it back
         else:
             super().keyPressEvent(event)
 
