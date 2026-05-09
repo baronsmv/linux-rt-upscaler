@@ -8,8 +8,8 @@ from PySide6.QtCore import Qt, Signal, QRectF, QTimer
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
 
-from .window_tile_item import WindowTileItem
-from ...window import WindowInfo
+from .item import WindowTileItem
+from ....window import WindowInfo
 
 logger = logging.getLogger(__name__)
 

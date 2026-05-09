@@ -30,8 +30,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ...capture import FrameGrabber
-from ...window import WindowInfo
+from ....capture import FrameGrabber
+from ....window import WindowInfo
 
 logger = logging.getLogger(__name__)
 

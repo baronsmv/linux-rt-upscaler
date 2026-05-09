@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt, Signal, QRectF
 from PySide6.QtGui import QKeyEvent, QPainter, QKeySequence
 from PySide6.QtWidgets import QGraphicsView
 
-from .window_grid_scene import WindowGridScene
+from .scene import WindowGridScene
 
 
 class WindowGridView(QGraphicsView):

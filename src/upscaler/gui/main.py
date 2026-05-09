@@ -3,20 +3,19 @@ from __future__ import annotations
 import logging
 from typing import List, Optional
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
-    QVBoxLayout,
+    QHBoxLayout,
+    QSplitter,
     QMessageBox,
     QApplication,
 )
 
 from .config import GUIConfig
-from .widgets.filter_bar import FilterBar
-from .widgets.window_grid_scene import WindowGridScene
-from .widgets.window_grid_view import WindowGridView
+from .widgets import ProfilesSidebar, SettingsSidebar, WindowGridScene, WindowGridView
 from ..config import Config
 from ..pipeline.launcher import create_pipeline_session
 from ..window import WindowInfo, activate_window, list_windows
@@ -25,51 +24,61 @@ logger = logging.getLogger(__name__)
 
 
 class MainWindow(QMainWindow):
-    """
-    Central GUI window for selecting a window and starting the upscaling
-    pipeline.
-
-    Uses a modern QGraphicsView‑based mosaic for live preview tiles
-    with hover pop‑out animations, and a styled filter bar.
-    """
-
     def __init__(self, config: Config, profiles: dict, parent=None):
         super().__init__(parent)
         self.config = config
         self.profiles = profiles
         self.gui_config = GUIConfig()
 
-        # Basic window setup
         self.setWindowTitle("Linux Real-Time Upscaler")
-        self.setMinimumSize(600, 400)
+        self.setMinimumSize(1200, 600)
 
-        # Central widget and layout
+        # ---- Central widget with horizontal splitter ----
         central = QWidget()
         self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
-        layout.setContentsMargins(0, self.gui_config.filter_vertical_margin, 0, 0)
-        layout.setSpacing(0)
+        main_layout = QHBoxLayout(central)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        # Filter bar (no refresh button)
-        self.filter_bar = FilterBar(self.gui_config)
-        self.filter_bar.filter_changed.connect(self._on_filter_changed)
-        self.filter_bar.focus_grid_requested.connect(self._focus_grid)
-        layout.addWidget(self.filter_bar)
+        # ---- Left sidebar ----
+        self.left_sidebar = ProfilesSidebar(self.gui_config)
+        self.left_sidebar.filter_bar.filter_changed.connect(self._on_filter_changed)
+        self.left_sidebar.filter_bar.focus_grid_requested.connect(self._focus_grid)
 
-        # Graphics‑view‑based grid
+        # ---- Central grid (the main content) ----
         self._scene = WindowGridScene(self.gui_config)
         self._view = WindowGridView(self._scene, self.gui_config)
 
-        # Forward scene's window_selected to our handler
+        # Forward scene signals
         self._scene.window_selected.connect(self._on_window_selected)
-        self._scene.focus_filter_requested.connect(self.filter_bar.set_focus)
+        self._scene.focus_filter_requested.connect(
+            self.left_sidebar.filter_bar.set_focus
+        )
+        self._view.focus_filter_requested.connect(
+            self.left_sidebar.filter_bar.set_focus
+        )
 
-        # Connect Ctrl+F from the view as well
-        self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
-        layout.addWidget(self._view, stretch=1)
+        # ---- Right sidebar (settings) ----
+        self.right_sidebar = SettingsSidebar(self.gui_config, self.config)
+        self.right_sidebar.config_changed.connect(lambda: None)  # for future
 
-        # Ctrl+F shortcut (in addition to view's own handling)
-        QShortcut(QKeySequence("Ctrl+F"), self, self.filter_bar.set_focus)
+        # Assemble splitter
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.addWidget(self.left_sidebar)
+        splitter.addWidget(self._view)
+        splitter.addWidget(self.right_sidebar)
+        splitter.setSizes(
+            [
+                self.gui_config.sidebar_width,
+                self.width() - 2 * self.gui_config.sidebar_width,
+                self.gui_config.sidebar_width,
+            ]
+        )
+
+        main_layout.addWidget(splitter)
+
+        # Ctrl+F shortcut (focus filter)
+        QShortcut(QKeySequence("Ctrl+F"), self, self.left_sidebar.filter_bar.set_focus)
 
         # Auto‑refresh timer
         self._refresh_timer = QTimer(self)
@@ -81,14 +90,12 @@ class MainWindow(QMainWindow):
         self._session = None
         self._own_handle: Optional[int] = None
 
-        # Show maximised and populate initial list
         self.showMaximized()
         QTimer.singleShot(0, self._initial_populate)
 
     # ------------------------------------------------------------------
     #  Window list management
     # ------------------------------------------------------------------
-
     def _initial_populate(self) -> None:
         self._own_handle = int(self.winId())
         self._populate_grid()
@@ -116,12 +123,11 @@ class MainWindow(QMainWindow):
         self._scene.set_windows(filtered)
 
     def _auto_refresh(self) -> None:
-        self._populate_grid(self.filter_bar.text())
+        self._populate_grid(self.left_sidebar.filter_bar.text())
 
     # ------------------------------------------------------------------
     #  Focus helpers
     # ------------------------------------------------------------------
-
     def _focus_grid(self) -> None:
         self._view.setFocus()
         self._scene.focus_first_tile()
@@ -129,31 +135,26 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     #  Slots
     # ------------------------------------------------------------------
-
     def _on_filter_changed(self, text: str) -> None:
         self._populate_grid(text)
 
     def _on_window_selected(self, win_info: WindowInfo) -> None:
         self._selected_win_info = win_info
-        # Defer launch so mouse grab is released before cleanup
         QTimer.singleShot(0, self._start_pipeline)
 
     # ------------------------------------------------------------------
     #  Pipeline launch
     # ------------------------------------------------------------------
-
     def _start_pipeline(self) -> None:
         if self._selected_win_info is None:
             return
 
         win_info = self._selected_win_info
         logger.info("Starting upscale for: %s", win_info.title)
-
-        # Activate (raise + focus) the target window
         activate_window(win_info.handle)
 
         self.hide()
-        self._scene.clear_all()  # stops all captures
+        self._scene.clear_all()
 
         try:
             self._session = create_pipeline_session(self.config, win_info)
