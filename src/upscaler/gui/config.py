@@ -88,18 +88,18 @@ class GUIConfig:
     scroll_margin: int = 20  # extra space for scroll‑into‑view
 
     # ---- Right and Left Sidebars -------------------------------------
-    sidebar_width: int = 240
+    sidebar_width: int = 360
     sidebar_background: str = "#161616"
     sidebar_tab_background: str = "#1e1e1e"
     sidebar_tab_background_active: str = "#2c2c2c"
     sidebar_tab_text_color: str = "#cccccc"
     sidebar_tab_text_color_active: str = "#ffffff"
-    sidebar_tab_font_size: int = 11
+    sidebar_tab_font_size: int = 16
     sidebar_tab_icon_size: int = 18
     sidebar_tab_indicator_color: str = "#4a9eff"
     sidebar_tab_indicator_width: int = 3
     sidebar_section_title_color: str = "#888888"
-    sidebar_section_title_size: int = 10
+    sidebar_section_title_size: int = 16
     sidebar_row_height: int = 32
     sidebar_checkbox_color: str = "#4a9eff"
     sidebar_slider_color: str = "#4a9eff"
