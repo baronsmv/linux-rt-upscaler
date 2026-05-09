@@ -138,7 +138,7 @@ class AdvancedTab(SettingsTab):
         )
         self._area_thresh = self._add_slider(
             "Area Threshold %",
-            10,
+            0,
             100,
             int(self._config.area_threshold * 100),
             self._on_area_threshold,
