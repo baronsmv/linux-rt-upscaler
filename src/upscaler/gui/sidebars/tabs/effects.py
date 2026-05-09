@@ -114,68 +114,67 @@ class EffectsTab(SettingsTab):
         )
         self._grain_str.setEnabled(self._config.grain_enabled)
 
-    def _on_deband_enabled(self, state):
+    def _on_deband_enabled(self, state: bool):
         enabled = bool(state)
         self._config.deband_enabled = enabled
         self._deband_str.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_cas_enabled(self, state):
+    def _on_cas_enabled(self, state: bool):
         enabled = bool(state)
         self._config.cas_enabled = enabled
         self._cas_str.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_bloom_enabled(self, state):
+    def _on_bloom_enabled(self, state: bool):
         enabled = bool(state)
         self._config.bloom_enabled = enabled
         self._bloom_str.setEnabled(enabled)
         self._bloom_thresh.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_vignette_enabled(self, state):
+    def _on_vignette_enabled(self, state: bool):
         enabled = bool(state)
         self._config.vignette_enabled = enabled
         self._vignette_str.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_lut_enabled(self, state):
+    def _on_lut_enabled(self, state: bool):
         enabled = bool(state)
         self._config.lut_enabled = enabled
         self._lut_combo.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_grain_enabled(self, state):
+    def _on_grain_enabled(self, state: bool):
         enabled = bool(state)
         self._config.grain_enabled = enabled
         self._grain_str.setEnabled(enabled)
         self.config_changed.emit()
 
-    # Slider strength handlers remain unchanged (they only update config)
-    def _on_deband_strength(self, val):
-        self._config.deband_strength = val / 100.0
+    def _on_deband_strength(self, val: float):
+        self._config.deband_strength = val
         self.config_changed.emit()
 
-    def _on_cas_strength(self, val):
-        self._config.cas_strength = val / 100.0
+    def _on_cas_strength(self, val: float):
+        self._config.cas_strength = val
         self.config_changed.emit()
 
-    def _on_bloom_strength(self, val):
-        self._config.bloom_strength = val / 100.0
+    def _on_bloom_strength(self, val: float):
+        self._config.bloom_strength = val
         self.config_changed.emit()
 
-    def _on_bloom_threshold(self, val):
-        self._config.bloom_threshold = val / 100.0
+    def _on_bloom_threshold(self, val: float):
+        self._config.bloom_threshold = val
         self.config_changed.emit()
 
-    def _on_vignette_strength(self, val):
-        self._config.vignette_strength = val / 100.0
+    def _on_vignette_strength(self, val: float):
+        self._config.vignette_strength = val
         self.config_changed.emit()
 
-    def _on_lut_preset(self, text):
+    def _on_lut_preset(self, text: str):
         self._config.lut_preset = text
         self.config_changed.emit()
 
-    def _on_grain_strength(self, val):
-        self._config.grain_strength = val / 100.0
+    def _on_grain_strength(self, val: float):
+        self._config.grain_strength = val
         self.config_changed.emit()

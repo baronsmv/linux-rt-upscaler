@@ -38,9 +38,10 @@ class ExtrasTab(SettingsTab):
         self._osd_duration = self._add_slider(
             "Duration (s)",
             1,
-            10,
-            int(self._config.osd_duration),
-            self._on_osd_duration,
+            1000,
+            int(self._config.osd_duration * 100),
+            scale_factor=100,
+            float_slot=self._on_osd_duration,
         )
         self._osd_duration.setEnabled(self._config.show_osd)
 
@@ -52,12 +53,12 @@ class ExtrasTab(SettingsTab):
         self._config.screenshot_filename = text
         self.config_changed.emit()
 
-    def _on_osd_enabled(self, state):
+    def _on_osd_enabled(self, state: bool):
         enabled = bool(state)
         self._config.show_osd = enabled
         self._osd_duration.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_osd_duration(self, val):
-        self._config.osd_duration = float(val)
+    def _on_osd_duration(self, val: float):
+        self._config.osd_duration = val
         self.config_changed.emit()

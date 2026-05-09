@@ -133,8 +133,8 @@ class DisplayTab(SettingsTab):
             self._on_bg_color,
         )
 
-    def _on_monitor_changed(self, text):
-        self._config.monitor = text
+    def _on_monitor_changed(self, text: str):
+        self._config.monitor = str(text)
         self.config_changed.emit()
 
     def _on_auto_scale_changed(self, state: int) -> None:
@@ -152,38 +152,38 @@ class DisplayTab(SettingsTab):
             self._config.scale_factor = val
             self.config_changed.emit()
 
-    def _on_overlay_mode(self, text):
-        self._config.overlay_mode = text
+    def _on_overlay_mode(self, text: str):
+        self._config.overlay_mode = str(text)
         self.config_changed.emit()
 
     def _on_geometry_changed(self, text: str) -> None:
-        self._config.output_geometry = text
+        self._config.output_geometry = str(text)
         self.config_changed.emit()
 
-    def _on_crop_left(self, val):
-        self._config.crop_left = val
+    def _on_crop_left(self, val: int):
+        self._config.crop_left = int(val)
         self.config_changed.emit()
 
-    def _on_crop_top(self, val):
-        self._config.crop_top = val
+    def _on_crop_top(self, val: int):
+        self._config.crop_top = int(val)
         self.config_changed.emit()
 
-    def _on_crop_right(self, val):
-        self._config.crop_right = val
+    def _on_crop_right(self, val: int):
+        self._config.crop_right = int(val)
         self.config_changed.emit()
 
-    def _on_crop_bottom(self, val):
-        self._config.crop_bottom = val
+    def _on_crop_bottom(self, val: int):
+        self._config.crop_bottom = int(val)
         self.config_changed.emit()
 
-    def _on_offset_x(self, val):
-        self._config.offset_x = val
+    def _on_offset_x(self, val: int):
+        self._config.offset_x = int(val)
         self.config_changed.emit()
 
-    def _on_offset_y(self, val):
-        self._config.offset_y = val
+    def _on_offset_y(self, val: int):
+        self._config.offset_y = int(val)
         self.config_changed.emit()
 
-    def _on_bg_color(self, text):
-        self._config.background_color = text
+    def _on_bg_color(self, text: str):
+        self._config.background_color = str(text)
         self.config_changed.emit()

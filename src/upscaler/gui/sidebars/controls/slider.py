@@ -24,7 +24,7 @@ class SliderRow(QWidget):
         value: int = 50,
         show_value: bool = False,
         value_formatter: Optional[Callable[[int], str]] = None,
-        scale_factor: int = 1,  # <--- new
+        scale_factor: int = 1,
         editable: bool = False,
         parent: Optional[QWidget] = None,
     ) -> None:
@@ -55,6 +55,8 @@ class SliderRow(QWidget):
         layout.addWidget(self._slider, stretch=1)
 
         # -- Value display / editable field --
+        self._value_label = None
+        self._value_edit = None
         if show_value or editable:
             if editable:
                 # Show real value initially

@@ -45,14 +45,14 @@ class GeneralTab(SettingsTab):
         self._config.model = text
         self.config_changed.emit()
 
-    def _on_double_changed(self, state: int) -> None:
+    def _on_double_changed(self, state: bool) -> None:
         self._config.double_upscale = bool(state)
         self.config_changed.emit()
 
-    def _on_follow_focus(self, state):
+    def _on_follow_focus(self, state: bool):
         self._config.follow_focus = bool(state)
         self.config_changed.emit()
 
-    def _on_pause_focus_loss(self, state):
+    def _on_pause_focus_loss(self, state: bool):
         self._config.pause_on_focus_loss = bool(state)
         self.config_changed.emit()

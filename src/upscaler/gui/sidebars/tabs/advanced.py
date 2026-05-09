@@ -105,12 +105,12 @@ class AdvancedTab(SettingsTab):
             self._on_area_threshold,
         )
 
-    def _on_blur(self, val: int):
-        self._config.lanczos_blur = max(0.01, val / 100.0)
+    def _on_blur(self, val: float):
+        self._config.lanczos_blur = max(0.01, val)
         self.config_changed.emit()
 
-    def _on_antiring(self, val: int):
-        self._config.lanczos_antiring_strength = val / 100.0
+    def _on_antiring(self, val: float):
+        self._config.lanczos_antiring_strength = val
         self.config_changed.emit()
 
     def _on_linear_light(self, state: int):
@@ -121,38 +121,38 @@ class AdvancedTab(SettingsTab):
         self._config.lanczos_tight_antiring = bool(state)
         self.config_changed.emit()
 
-    def _on_present_mode(self, text):
-        self._config.vulkan_present_mode = text
+    def _on_present_mode(self, text: str):
+        self._config.vulkan_present_mode = str(text)
         self.config_changed.emit()
 
-    def _on_buffer_pool(self, val):
-        self._config.vulkan_buffer_pool_size = val
+    def _on_buffer_pool(self, val: int):
+        self._config.vulkan_buffer_pool_size = int(val)
         self.config_changed.emit()
 
-    def _on_frame_timeout(self, val):
+    def _on_frame_timeout(self, val: int):
         self._config.frame_timeout = val * 1_000_000
         self.config_changed.emit()
 
-    def _on_tile_mode(self, state):
+    def _on_tile_mode(self, state: bool):
         self._config.use_tile_processing = bool(state)
         self.config_changed.emit()
 
-    def _on_damage_tracking(self, state):
+    def _on_damage_tracking(self, state: bool):
         self._config.use_damage_tracking = bool(state)
         self.config_changed.emit()
 
-    def _on_tile_size(self, val):
-        self._config.tile_size = val
+    def _on_tile_size(self, val: int):
+        self._config.tile_size = int(val)
         self.config_changed.emit()
 
-    def _on_margin(self, val):
-        self._config.tile_context_margin = val
+    def _on_margin(self, val: int):
+        self._config.tile_context_margin = int(val)
         self.config_changed.emit()
 
-    def _on_max_layers(self, val):
-        self._config.max_tile_layers = val
+    def _on_max_layers(self, val: int):
+        self._config.max_tile_layers = int(val)
         self.config_changed.emit()
 
-    def _on_area_threshold(self, val):
-        self._config.area_threshold = val / 100.0
+    def _on_area_threshold(self, val: float):
+        self._config.area_threshold = max(0.0, min(val, 1.0))
         self.config_changed.emit()
