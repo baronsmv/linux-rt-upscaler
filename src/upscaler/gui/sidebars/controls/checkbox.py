@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from ...config import GUIConfig
 
 
-class StyledCheckBox(QCheckBox):
+class CheckBox(QCheckBox):
     """
     A QCheckBox that includes its descriptive text and applies a polished
     stylesheet from :class:`GUIConfig`. No additional label is needed.

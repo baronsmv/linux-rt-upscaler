@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
-from ..controls import LineEditRow, PathPickerRow, SectionLabel
+from ..controls import LineEditRow, PathPickerRow
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -33,9 +33,6 @@ class ScreenshotsTab(SettingsTab):
         )
         self._file_input.textChanged.connect(self._on_file_changed)
         self.content_layout.addWidget(self._file_input)
-
-    def _add_section(self, title: str) -> None:
-        self.content_layout.addWidget(SectionLabel(title, self.gui_config))
 
     def _on_dir_changed(self, path: str) -> None:
         self._config.screenshot_dir = path

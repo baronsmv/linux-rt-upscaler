@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from . import styles
+from ..controls import CheckBox, SectionLabel, SliderRow
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -102,3 +103,28 @@ class SettingsTab(QWidget):
         row.addWidget(widget)
 
         self.content_layout.addLayout(row)
+
+    def _add_section(self, title: str) -> None:
+        self.content_layout.addWidget(SectionLabel(title, self.gui_config))
+
+    def _add_cb(self, label: str, checked: bool, slot) -> CheckBox:
+        cb = CheckBox(label, self.gui_config, checked)
+        cb.stateChanged.connect(slot)
+        self.content_layout.addWidget(cb)
+        return cb
+
+    def _add_slider(
+        self,
+        label: str,
+        min_val: int,
+        max_val: int,
+        value: int,
+        slot,
+        show_val: bool = False,
+    ) -> SliderRow:
+        slider = SliderRow(
+            label, self.gui_config, min_val, max_val, value, show_value=show_val
+        )
+        slider.valueChanged.connect(slot)
+        self.content_layout.addWidget(slider)
+        return slider

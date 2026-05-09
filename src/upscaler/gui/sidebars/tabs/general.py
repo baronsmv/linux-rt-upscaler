@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
-from ..controls import ComboRow, SectionLabel, StyledCheckBox
+from ..controls import CheckBox, ComboRow, SectionLabel
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -37,7 +37,7 @@ class GeneralTab(SettingsTab):
         self._model_combo.currentTextChanged.connect(self._on_model_changed)
         self.content_layout.addWidget(self._model_combo)
 
-        self._double_cb = StyledCheckBox(
+        self._double_cb = CheckBox(
             "Double Upscale (4x)", self.gui_config, self._config.double_upscale
         )
         self._double_cb.stateChanged.connect(self._on_double_changed)

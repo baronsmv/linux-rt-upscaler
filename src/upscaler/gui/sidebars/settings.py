@@ -9,10 +9,8 @@ from .tabs import (
     EffectsTab,
     GeneralTab,
     OSDTab,
-    PerformanceTab,
-    ScalerTab,
+    AdvancedTab,
     ScreenshotsTab,
-    TilesTab,
 )
 
 if TYPE_CHECKING:
@@ -33,9 +31,7 @@ class SettingsSidebar(IconSidebarBase):
             (CaptureTab(gui_config, config), "capture", "Capture"),
             (ScreenshotsTab(gui_config, config), "screenshot", "Screenshots"),
             (OSDTab(gui_config, config), "osd", "OSD"),
-            (ScalerTab(gui_config, config), "lanczos", "Scaler"),
-            (PerformanceTab(gui_config, config), "performance", "Performance"),
-            (TilesTab(gui_config, config), "tiles", "Tiles"),
+            (AdvancedTab(gui_config, config), "advanced", "Advanced"),
         ]
 
         for tab, icon, tooltip in tabs:

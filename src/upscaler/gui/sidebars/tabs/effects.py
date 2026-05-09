@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
-from ..controls import ComboRow, SectionLabel, SliderRow, StyledCheckBox
+from ..controls import ComboRow
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -121,33 +121,6 @@ class EffectsTab(SettingsTab):
             show_val=True,
         )
 
-    # ---- Helper shortcuts ----
-    def _add_section(self, title: str) -> None:
-        self.content_layout.addWidget(SectionLabel(title, self.gui_config))
-
-    def _add_cb(self, label: str, checked: bool, slot) -> StyledCheckBox:
-        cb = StyledCheckBox(label, self.gui_config, checked)
-        cb.stateChanged.connect(slot)
-        self.content_layout.addWidget(cb)
-        return cb
-
-    def _add_slider(
-        self,
-        label: str,
-        min_val: int,
-        max_val: int,
-        value: int,
-        slot,
-        show_val: bool = False,
-    ) -> SliderRow:
-        slider = SliderRow(
-            label, self.gui_config, min_val, max_val, value, show_value=show_val
-        )
-        slider.valueChanged.connect(slot)
-        self.content_layout.addWidget(slider)
-        return slider
-
-    # ---- Signal handlers ----
     def _on_deband_enabled(self, state):
         self._config.deband_enabled = bool(state)
         self.config_changed.emit()

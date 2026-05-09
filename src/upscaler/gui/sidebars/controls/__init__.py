@@ -1,6 +1,6 @@
 """Control widgets for sidebars public module."""
 
-from .checkbox import StyledCheckBox
+from .checkbox import CheckBox
 from .color import ColorPickerRow
 from .combo import ComboRow
 from .path import PathPickerRow
@@ -15,5 +15,5 @@ __all__ = [
     "PathPickerRow",
     "SectionLabel",
     "SliderRow",
-    "StyledCheckBox",
+    "CheckBox",
 ]

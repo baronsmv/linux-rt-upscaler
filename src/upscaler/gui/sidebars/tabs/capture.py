@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
-from ..controls import ComboRow, SectionLabel, SliderRow, StyledCheckBox
+from ..controls import ComboRow
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -75,31 +75,6 @@ class CaptureTab(SettingsTab):
         )
         self._starting_phase_combo.currentTextChanged.connect(self._on_starting_phase)
         self.content_layout.addWidget(self._starting_phase_combo)
-
-    def _add_section(self, title: str) -> None:
-        self.content_layout.addWidget(SectionLabel(title, self.gui_config))
-
-    def _add_cb(self, label: str, checked: bool, slot) -> StyledCheckBox:
-        cb = StyledCheckBox(label, self.gui_config, checked)
-        cb.stateChanged.connect(slot)
-        self.content_layout.addWidget(cb)
-        return cb
-
-    def _add_slider(
-        self,
-        label: str,
-        min_val: int,
-        max_val: int,
-        value: int,
-        slot,
-        show_val: bool = False,
-    ) -> SliderRow:
-        slider = SliderRow(
-            label, self.gui_config, min_val, max_val, value, show_value=show_val
-        )
-        slider.valueChanged.connect(slot)
-        self.content_layout.addWidget(slider)
-        return slider
 
     def _on_follow_focus(self, state):
         self._config.follow_focus = bool(state)

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtGui import QColor
 
 from ..common import SettingsTab
-from ..controls import ColorPickerRow, ComboRow, SectionLabel, SliderRow
+from ..controls import ColorPickerRow, ComboRow
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -115,27 +115,6 @@ class DisplayTab(SettingsTab):
         self._bg_picker.colorChanged.connect(self._on_bg_color)
         self.content_layout.addWidget(self._bg_picker)
 
-    # Helpers
-    def _add_section(self, title: str) -> None:
-        self.content_layout.addWidget(SectionLabel(title, self.gui_config))
-
-    def _add_slider(
-        self,
-        label: str,
-        min_val: int,
-        max_val: int,
-        value: int,
-        slot,
-        show_val: bool = False,
-    ) -> SliderRow:
-        slider = SliderRow(
-            label, self.gui_config, min_val, max_val, value, show_value=show_val
-        )
-        slider.valueChanged.connect(slot)
-        self.content_layout.addWidget(slider)
-        return slider
-
-    # Handlers
     def _on_monitor_changed(self, text):
         self._config.monitor = text
         self.config_changed.emit()
