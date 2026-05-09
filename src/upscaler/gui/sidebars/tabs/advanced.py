@@ -24,7 +24,6 @@ class AdvancedTab(SettingsTab):
             200,
             max(1, int(self._config.lanczos_blur * 100)),
             self._on_blur,
-            show_val=True,
         )
         self._antiring = self._add_slider(
             "Antiring Strength",
@@ -32,7 +31,6 @@ class AdvancedTab(SettingsTab):
             100,
             int(self._config.lanczos_antiring_strength * 100),
             self._on_antiring,
-            show_val=True,
         )
         self._linear_cb = self._add_cb(
             "Linear Light", self._config.lanczos_linear_light, self._on_linear_light
@@ -57,7 +55,6 @@ class AdvancedTab(SettingsTab):
             16,
             self._config.vulkan_buffer_pool_size,
             self._on_buffer_pool,
-            show_val=True,
         )
         self._frame_timeout = self._add_slider(
             "Frame Timeout (ms)",
@@ -65,7 +62,6 @@ class AdvancedTab(SettingsTab):
             1000,
             max(1, self._config.frame_timeout // 1_000_000),
             self._on_frame_timeout,
-            show_val=True,
         )
 
         # ---- Tile‑Based Processing ----
@@ -84,7 +80,6 @@ class AdvancedTab(SettingsTab):
             128,
             self._config.tile_size,
             self._on_tile_size,
-            show_val=True,
         )
         self._margin = self._add_slider(
             "Context Margin",
@@ -92,7 +87,6 @@ class AdvancedTab(SettingsTab):
             24,
             self._config.tile_context_margin,
             self._on_margin,
-            show_val=True,
         )
         self._max_layers = self._add_slider(
             "Max Tiles per Frame",
@@ -100,7 +94,6 @@ class AdvancedTab(SettingsTab):
             32,
             self._config.max_tile_layers,
             self._on_max_layers,
-            show_val=True,
         )
         self._area_thresh = self._add_slider(
             "Area Threshold %",
@@ -108,7 +101,6 @@ class AdvancedTab(SettingsTab):
             100,
             int(self._config.area_threshold * 100),
             self._on_area_threshold,
-            show_val=True,
         )
 
     def _on_blur(self, val: int):

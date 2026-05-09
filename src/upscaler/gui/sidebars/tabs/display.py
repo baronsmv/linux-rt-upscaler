@@ -30,7 +30,6 @@ class DisplayTab(SettingsTab):
 
         # ---- Scale Factor ----
         self._add_section("Scale Factor")
-        auto = self._config.scale_factor is None
         self._auto_scale_cb = self._add_cb(
             "Auto Scale",
             self._config.scale_factor is None,
@@ -41,12 +40,10 @@ class DisplayTab(SettingsTab):
             100,
             400,
             max(100, int((self._config.scale_factor or 1.0) * 100)),
-            slot=lambda v: None,
-            show_val=True,
-            editable=True,
             scale_factor=100,
             float_slot=self._on_scale_slider_changed,
         )
+        # Enable or disable scale slider if scale factor is None (auto)
         self._scale_slider.setEnabled(self._config.scale_factor is not None)
 
         # ---- Overlay Mode ----
@@ -70,13 +67,25 @@ class DisplayTab(SettingsTab):
         # ---- Crop ----
         self._add_section("Crop")
         self._crop_left = self._add_slider(
-            "Left", 0, 200, self._config.crop_left, self._on_crop_left, show_val=True
+            "Left",
+            0,
+            200,
+            self._config.crop_left,
+            self._on_crop_left,
         )
         self._crop_top = self._add_slider(
-            "Top", 0, 200, self._config.crop_top, self._on_crop_top, show_val=True
+            "Top",
+            0,
+            200,
+            self._config.crop_top,
+            self._on_crop_top,
         )
         self._crop_right = self._add_slider(
-            "Right", 0, 200, self._config.crop_right, self._on_crop_right, show_val=True
+            "Right",
+            0,
+            200,
+            self._config.crop_right,
+            self._on_crop_right,
         )
         self._crop_bottom = self._add_slider(
             "Bottom",
@@ -84,7 +93,6 @@ class DisplayTab(SettingsTab):
             200,
             self._config.crop_bottom,
             self._on_crop_bottom,
-            show_val=True,
         )
 
         # ---- Offsets ----
@@ -95,7 +103,6 @@ class DisplayTab(SettingsTab):
             200,
             self._config.offset_x,
             self._on_offset_x,
-            show_val=True,
         )
         self._offset_y = self._add_slider(
             "Y Offset",
@@ -103,7 +110,6 @@ class DisplayTab(SettingsTab):
             200,
             self._config.offset_y,
             self._on_offset_y,
-            show_val=True,
         )
 
         # ---- Background Color ----

@@ -74,6 +74,31 @@ class SliderRow(QWidget):
                 self._value_edit = None
                 layout.addWidget(self._value_label)
 
+    def setEnabled(self, enabled: bool) -> None:
+        """Disable the slider and grey out the label / edit field."""
+        super().setEnabled(enabled)
+        if hasattr(self, "_label") and self._label is not None:
+            self._label.setStyleSheet(
+                styles.row_label(self._cfg)
+                if enabled
+                else f"color: #555; font-size: {self._cfg.sidebar_tab_font_size}px;"
+            )
+        if hasattr(self, "_value_edit") and self._value_edit is not None:
+            self._value_edit.setReadOnly(not enabled)
+            self._value_edit.setStyleSheet(
+                self._edit_style()
+                if enabled
+                else self._edit_style()
+                .replace("#ddd", "#555")
+                .replace("#2a2a2c", "#1e1e1e")
+            )
+        if hasattr(self, "_value_label") and self._value_label is not None:
+            self._value_label.setStyleSheet(
+                styles.row_label(self._cfg)
+                if enabled
+                else f"color: #555; font-size: {self._cfg.sidebar_tab_font_size}px;"
+            )
+
     # ----------------------------------------------------------------
     def _format(self, val: int) -> str:
         """Convert raw slider value to display string using formatter."""

@@ -41,7 +41,6 @@ class ExtrasTab(SettingsTab):
             10,
             int(self._config.osd_duration),
             self._on_osd_duration,
-            show_val=True,
         )
 
     def _on_dir_changed(self, path: str) -> None:

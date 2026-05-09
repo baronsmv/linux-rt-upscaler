@@ -26,7 +26,6 @@ class EffectsTab(SettingsTab):
             100,
             int(self._config.deband_strength * 100),
             self._on_deband_strength,
-            show_val=True,
         )
 
         # ---- CAS ----
@@ -40,7 +39,6 @@ class EffectsTab(SettingsTab):
             100,
             int(self._config.cas_strength * 100),
             self._on_cas_strength,
-            show_val=True,
         )
 
         # ---- Bloom ----
@@ -54,7 +52,6 @@ class EffectsTab(SettingsTab):
             100,
             int(self._config.bloom_strength * 100),
             self._on_bloom_strength,
-            show_val=True,
         )
         self._bloom_thresh = self._add_slider(
             "Threshold",
@@ -62,7 +59,6 @@ class EffectsTab(SettingsTab):
             100,
             int(self._config.bloom_threshold * 100),
             self._on_bloom_threshold,
-            show_val=True,
         )
 
         # ---- Vignette ----
@@ -76,7 +72,6 @@ class EffectsTab(SettingsTab):
             100,
             int(self._config.vignette_strength * 100),
             self._on_vignette_strength,
-            show_val=True,
         )
 
         # ---- Color Grading (LUT) ----
@@ -115,7 +110,6 @@ class EffectsTab(SettingsTab):
             100,
             int(self._config.grain_strength * 100),
             self._on_grain_strength,
-            show_val=True,
         )
 
     def _on_deband_enabled(self, state):
