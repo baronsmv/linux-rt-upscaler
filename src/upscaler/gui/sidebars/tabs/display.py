@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PySide6.QtGui import QColor
+
 from ..common import SettingsTab
-from ..controls import ComboRow, SectionLabel, SliderRow
+from ..controls import ColorPickerRow, ComboRow, SectionLabel, SliderRow
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -92,14 +94,26 @@ class DisplayTab(SettingsTab):
 
         # ---- Background Colour ----
         self._add_section("Background Colour")
-        self._bg_combo = ComboRow(
-            "Colour",
+        bg = self._config.background_color
+        if isinstance(bg, tuple):
+            # convert (b, g, r, a) to #AARRGGBB
+            r, g, b, a = bg[2], bg[1], bg[0], bg[3]
+            r8, g8, b8, a8 = [int(c * 255) for c in (r, g, b, a)]
+            bg = f"#{a8:02x}{r8:02x}{g8:02x}{b8:02x}"
+
+        elif isinstance(bg, str) and not bg.startswith("#"):
+            # named color – convert to hex via QColor
+            qc = QColor(bg)
+            if qc.isValid():
+                bg = qc.name(QColor.HexArgb)
+
+        self._bg_picker = ColorPickerRow(
+            "Color",
             self.gui_config,
-            ["black", "white", "transparent", "#000000", "#FFFFFF", "#00000080"],
-            self._config.background_color,
+            initial_color=bg,
         )
-        self._bg_combo.currentTextChanged.connect(self._on_bg_colour)
-        self.content_layout.addWidget(self._bg_combo)
+        self._bg_picker.colorChanged.connect(self._on_bg_colour)
+        self.content_layout.addWidget(self._bg_picker)
 
     # Helpers
     def _add_section(self, title: str) -> None:
