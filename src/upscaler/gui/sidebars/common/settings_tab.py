@@ -183,6 +183,7 @@ class SettingsTab(QWidget):
         current_name: str,
         slot: Callable,
         editable: bool = False,
+        baseline: Optional[str] = None,  # ← new parameter
         help: Optional[str] = None,
     ) -> SliderRow:
         """Add a slider that displays a name from a list instead of a number."""
@@ -190,6 +191,15 @@ class SettingsTab(QWidget):
             index = names.index(current_name)
         except ValueError:
             index = 0
+
+        # Convert baseline string to index (or None if not provided)
+        if baseline is not None:
+            try:
+                baseline_index = names.index(baseline)
+            except ValueError:
+                baseline_index = None
+        else:
+            baseline_index = None
 
         formatter = lambda v: names[v] if 0 <= v < len(names) else "?"
 
@@ -202,6 +212,7 @@ class SettingsTab(QWidget):
             show_value=True,
             value_formatter=formatter,
             editable=editable,
+            baseline=baseline_index,
             tooltip=help,
         )
         # Map the integer index back to the name before calling the slot
@@ -236,10 +247,17 @@ class SettingsTab(QWidget):
         label: str,
         text: str,
         slot: Callable,
+        baseline: Optional[str] = None,
         help: Optional[str] = None,
     ) -> LineEditRow:
         """Add a labeled single‑line text edit and return it."""
-        editor = LineEditRow(label, self.gui_config, text, tooltip=help)
+        editor = LineEditRow(
+            label,
+            self.gui_config,
+            text,
+            baseline=baseline,
+            tooltip=help,
+        )
         editor.textChanged.connect(slot)
         self.content_layout.addWidget(editor)
         return editor

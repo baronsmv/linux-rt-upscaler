@@ -25,6 +25,7 @@ class AdvancedTab(SettingsTab):
             max(1, int(self._config.lanczos_blur * 100)),
             scale_factor=100,
             float_slot=self._on_blur,
+            baseline=self.baseline_config.lanczos_blur,
             help="Kernel width for the final resampling step (>0.0 – 2.0).\n"
             "Lower values increase sharpness/ringing; higher values smooth the result.\n"
             "Recommended range: 0.8 – 1.2.",
@@ -36,6 +37,7 @@ class AdvancedTab(SettingsTab):
             int(self._config.lanczos_antiring_strength * 100),
             scale_factor=100,
             float_slot=self._on_antiring,
+            baseline=self.baseline_config.lanczos_antiring_strength,
             help="Anti‑ringing strength (0.0 – 1.0).\n"
             "Lower values soften the clamp, preserving more detail at the cost of possible ringing.\n"
             "Recommended range: 0.7 – 1.0.",
@@ -44,6 +46,7 @@ class AdvancedTab(SettingsTab):
             "Linear Light",
             self._config.lanczos_linear_light,
             self._on_linear_light,
+            baseline=self.baseline_config.lanczos_linear_light,
             help="Process the image in linear light (sRGB → linear → sRGB).\n"
             "Disabling may improve text clarity on some content but colours could lose saturation when downscaling.",
         )
@@ -51,6 +54,7 @@ class AdvancedTab(SettingsTab):
             "Tight Antiring",
             self._config.lanczos_tight_antiring,
             self._on_tight_antiring,
+            baseline=self.baseline_config.lanczos_tight_antiring,
             help="Use only the central 2x2 neighbourhood for anti‑ringing bounds.\n"
             "Keeps thin text and line art sharp. Disable if you see distant ringing artifacts on high‑contrast edges.",
         )
@@ -62,6 +66,7 @@ class AdvancedTab(SettingsTab):
             [e.value for e in VulkanPresentMode],
             self._config.vulkan_present_mode,
             self._on_present_mode,
+            baseline=self.baseline_config.vulkan_present_mode,
             help="Vulkan presentation mode:\n"
             "• fifo – VSync on, lowest power, no tearing\n"
             "• mailbox – tear‑free, lower latency, higher power\n"
@@ -73,6 +78,7 @@ class AdvancedTab(SettingsTab):
             16,
             self._config.vulkan_buffer_pool_size,
             self._on_buffer_pool,
+            baseline=self.baseline_config.vulkan_buffer_pool_size,
             help="Number of pre‑allocated staging buffers for partial texture updates.\n"
             "Raise this if you notice stutters when many small regions change rapidly.\n"
             "Recommended range: 2 – 16.",
@@ -83,6 +89,7 @@ class AdvancedTab(SettingsTab):
             1000,
             max(1, self._config.frame_timeout // 1_000_000),
             self._on_frame_timeout,
+            baseline=self.baseline_config.frame_timeout,
             help="Maximum time (in milliseconds) to wait for the GPU to finish the previous frame.\n"
             "Lower values reduce CPU blocking but may drop frames under heavy load.\n"
             "Recommended range: 17 (1/60 s) – 1000 (1 s).",
@@ -94,6 +101,7 @@ class AdvancedTab(SettingsTab):
             "Enable Tile Mode",
             self._config.use_tile_processing,
             self._on_tile_mode,
+            baseline=self.baseline_config.use_tile_processing,
             help="Divide the frame into tiles and only re‑process the ones that have changed.\n"
             "Ideal for mostly static content (e.g. text editors, visual novels).\n"
             "When disabled, the whole frame is upscaled in one pass – better for video or rapid changes.",
@@ -102,6 +110,7 @@ class AdvancedTab(SettingsTab):
             "Damage Tracking",
             self._config.use_damage_tracking,
             self._on_damage_tracking,
+            baseline=self.baseline_config.use_damage_tracking,
             help="Transfer only the changed regions of the frame to the GPU instead of the entire image.\n"
             "Disable if you suspect missed updates from the compositor causing glitches.",
         )
@@ -111,6 +120,7 @@ class AdvancedTab(SettingsTab):
             128,
             self._config.tile_size,
             self._on_tile_size,
+            baseline=self.baseline_config.tile_size,
             help="Interior size of each tile in pixels.\n"
             "Smaller tiles track changes more precisely but add CPU overhead.\n"
             "Multiples of 32 work best with GPU workgroups.\n"
@@ -122,6 +132,7 @@ class AdvancedTab(SettingsTab):
             24,
             self._config.tile_context_margin,
             self._on_margin,
+            baseline=self.baseline_config.tile_context_margin,
             help="Extra border pixels added around each tile to provide context for the neural network.\n"
             "Larger margins improve boundary quality but increase processing.\n"
             "Recommended range: 4 – 24.",
@@ -132,6 +143,7 @@ class AdvancedTab(SettingsTab):
             32,
             self._config.max_tile_layers,
             self._on_max_layers,
+            baseline=self.baseline_config.max_tile_layers,
             help="Maximum number of dirty tiles processed per frame.\n"
             "When exceeded, the pipeline falls back to full‑frame processing to avoid excessive GPU dispatches.\n"
             "Recommended range: 4 – 32.",
@@ -142,6 +154,7 @@ class AdvancedTab(SettingsTab):
             100,
             int(self._config.area_threshold * 100),
             self._on_area_threshold,
+            baseline=self.baseline_config.area_threshold,
             help="Fraction of the window area (in %) that, when dirty, forces a fallback to full‑frame processing.\n"
             "Smaller values fall back earlier, preventing too many tiny tile dispatches.\n"
             "Recommended range: 15% – 50%.",

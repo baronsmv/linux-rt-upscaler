@@ -26,19 +26,28 @@ class DisplayTab(SettingsTab):
             list_monitors(),
             self._config.monitor,
             self._on_monitor_changed,
+            baseline=self.baseline_config.monitor,
             help="Monitor to cover: 'primary', 'all' (multi‑monitor), "
             "or a specific output name (e.g., 'HDMI‑1').",
         )
 
         # ---- Scale Factor ----
         self._add_section("Scale Factor")
+        # Auto Scale checkbox: baseline is True if baseline_config.scale_factor is None
         self._auto_scale_cb = self._add_cb(
             "Auto Scale",
             self._config.scale_factor is None,
             self._on_auto_scale_changed,
+            baseline=self.baseline_config.scale_factor is None,
             help="Let the application automatically detect the correct scale factor "
             "based on the physical monitor resolution.",
         )
+        # Scale slider baseline: convert baseline_config.scale_factor to slider value
+        baseline_scale = self.baseline_config.scale_factor
+        if baseline_scale is not None:
+            baseline_scale_val = max(100, int(baseline_scale * 100))
+        else:
+            baseline_scale_val = None
         self._scale_slider = self._add_slider(
             "Scale Factor %",
             100,
@@ -46,10 +55,10 @@ class DisplayTab(SettingsTab):
             max(100, int((self._config.scale_factor or 1.0) * 100)),
             scale_factor=100,
             float_slot=self._on_scale_slider_changed,
+            baseline=baseline_scale_val,
             help="Manual scale factor (e.g., 1.50 for 150% scaling). "
             "Only available when 'Auto Scale' is disabled.",
         )
-        # Enable or disable scale slider if scale factor is None (auto)
         self._scale_slider.setEnabled(self._config.scale_factor is not None)
 
         # ---- Overlay Mode ----
@@ -59,6 +68,7 @@ class DisplayTab(SettingsTab):
             [e.value for e in OverlayMode],
             self._config.overlay_mode,
             self._on_overlay_mode,
+            baseline=self.baseline_config.overlay_mode,
             help="Overlay window behaviour:\n"
             "• always‑on‑top – floating, cannot be focused (recommended)\n"
             "• top‑transparent – click‑through (mouse passes to window below)\n"
@@ -73,6 +83,7 @@ class DisplayTab(SettingsTab):
             ["fit", "stretch", "cover"],
             self._config.output_geometry,
             self._on_geometry_changed,
+            baseline=self.baseline_config.output_geometry,
             help="How the upscaled content fits the overlay:\n"
             "• fit – letterbox, preserves aspect ratio\n"
             "• stretch – fill, aspect ratio may be distorted\n"
@@ -81,57 +92,38 @@ class DisplayTab(SettingsTab):
 
         # ---- Crop ----
         self._add_section("Crop")
-        self._crop_left = self._add_slider(
-            "Left",
-            0,
-            200,
-            self._config.crop_left,
-            self._on_crop_left,
-            help="Pixels to crop from the left border of the target window.",
-        )
-        self._crop_top = self._add_slider(
-            "Top",
-            0,
-            200,
-            self._config.crop_top,
-            self._on_crop_top,
-            help="Pixels to crop from the top border of the target window.",
-        )
-        self._crop_right = self._add_slider(
-            "Right",
-            0,
-            200,
-            self._config.crop_right,
-            self._on_crop_right,
-            help="Pixels to crop from the right border of the target window.",
-        )
-        self._crop_bottom = self._add_slider(
-            "Bottom",
-            0,
-            200,
-            self._config.crop_bottom,
-            self._on_crop_bottom,
-            help="Pixels to crop from the bottom border of the target window.",
-        )
+        for label, field, slot in [
+            ("Left", "crop_left", self._on_crop_left),
+            ("Top", "crop_top", self._on_crop_top),
+            ("Right", "crop_right", self._on_crop_right),
+            ("Bottom", "crop_bottom", self._on_crop_bottom),
+        ]:
+            self._add_slider(
+                label,
+                0,
+                200,
+                getattr(self._config, field),
+                slot,
+                baseline=getattr(self.baseline_config, field),
+                help=f"Pixels to crop from the {label.lower()} border of the target window.",
+            )
 
         # ---- Offsets ----
         self._add_section("Offset")
-        self._offset_x = self._add_slider(
-            "X Offset",
-            -200,
-            200,
-            self._config.offset_x,
-            self._on_offset_x,
-            help="Horizontal offset from the centred position (positive = right).",
-        )
-        self._offset_y = self._add_slider(
-            "Y Offset",
-            -200,
-            200,
-            self._config.offset_y,
-            self._on_offset_y,
-            help="Vertical offset from the centred position (positive = down).",
-        )
+        for label, field, slot in [
+            ("X Offset", "offset_x", self._on_offset_x),
+            ("Y Offset", "offset_y", self._on_offset_y),
+        ]:
+            self._add_slider(
+                label,
+                -200,
+                200,
+                getattr(self._config, field),
+                slot,
+                baseline=getattr(self.baseline_config, field),
+                help=f"{'Horizontal' if 'X' in label else 'Vertical'} offset from the "
+                "centred position (positive = {'right' if 'X' in label else 'down'}).",
+            )
 
         # ---- Background Color ----
         self._add_section("Background Color")
@@ -148,10 +140,22 @@ class DisplayTab(SettingsTab):
             if qc.isValid():
                 bg = qc.name(QColor.HexArgb)
 
+        # Baseline background color
+        baseline_bg = self.baseline_config.background_color
+        if isinstance(baseline_bg, tuple):
+            r, g, b, a = baseline_bg[2], baseline_bg[1], baseline_bg[0], baseline_bg[3]
+            r8, g8, b8, a8 = [int(c * 255) for c in (r, g, b, a)]
+            baseline_bg = f"#{a8:02x}{r8:02x}{g8:02x}{b8:02x}"
+        elif isinstance(baseline_bg, str) and not baseline_bg.startswith("#"):
+            qc = QColor(baseline_bg)
+            if qc.isValid():
+                baseline_bg = qc.name(QColor.HexArgb)
+
         self._bg_picker = self._add_color_picker(
             "Color",
             bg,
             self._on_bg_color,
+            baseline=baseline_bg,
             help="Colour of the letterbox bars. Supports transparency.",
         )
 

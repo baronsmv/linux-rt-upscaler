@@ -21,12 +21,14 @@ class ExtrasTab(SettingsTab):
             "Directory",
             self._config.screenshot_dir,
             self._on_dir_changed,
+            baseline=self.baseline_config.screenshot_dir,
             help="Folder where screenshots will be saved.",
         )
         self._file_input = self._add_text(
             "Filename Template",
             self._config.screenshot_filename,
             self._on_file_changed,
+            baseline=self.baseline_config.screenshot_filename,
             help="Filename template for screenshots. Available placeholders:\n"
             "{timestamp} – capture time (supports strftime, e.g. "
             "{timestamp:%Y-%m-%d-%H-%M-%S})\n"
@@ -41,6 +43,7 @@ class ExtrasTab(SettingsTab):
             "Show OSD",
             self._config.show_osd,
             self._on_osd_enabled,
+            baseline=self.baseline_config.show_osd,
             help="Show on‑screen messages when model, geometry, or zoom changes, "
             "and after taking a screenshot.",
         )
@@ -51,6 +54,7 @@ class ExtrasTab(SettingsTab):
             int(self._config.osd_duration * 100),
             scale_factor=100,
             float_slot=self._on_osd_duration,
+            baseline=self.baseline_config.osd_duration,
             help="How many seconds OSD messages remain visible before fading out.",
         )
         self._osd_duration.setEnabled(self._config.show_osd)

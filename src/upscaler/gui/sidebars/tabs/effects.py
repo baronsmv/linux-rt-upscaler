@@ -22,6 +22,7 @@ class EffectsTab(SettingsTab):
             "Enable Deband",
             self._config.deband_enabled,
             self._on_deband_enabled,
+            baseline=self.baseline_config.deband_enabled,
             help="Smooth harsh colour banding in gradients before upscaling. "
             "Helps skies, fog and smooth backgrounds.",
         )
@@ -32,6 +33,7 @@ class EffectsTab(SettingsTab):
             int(self._config.deband_strength * 100),
             scale_factor=100,
             float_slot=self._on_deband_strength,
+            baseline=self.baseline_config.deband_strength,
             help="Debanding intensity (0 = off, 1 = maximum). Low values (0.1‑0.3) "
             "are sufficient for most content.",
         )
@@ -43,6 +45,7 @@ class EffectsTab(SettingsTab):
             "Enable CAS",
             self._config.cas_enabled,
             self._on_cas_enabled,
+            baseline=self.baseline_config.cas_enabled,
             help="Contrast Adaptive Sharpening: enhances text and line art without "
             "the halos of traditional unsharp masks.",
         )
@@ -53,6 +56,7 @@ class EffectsTab(SettingsTab):
             int(self._config.cas_strength * 100),
             scale_factor=100,
             float_slot=self._on_cas_strength,
+            baseline=self.baseline_config.cas_strength,
             help="Sharpening amount (0 = none, 1 = max). 0.2‑0.5 gives pleasant crispness.",
         )
         self._cas_str.setEnabled(self._config.cas_enabled)
@@ -63,6 +67,7 @@ class EffectsTab(SettingsTab):
             "Enable Bloom",
             self._config.bloom_enabled,
             self._on_bloom_enabled,
+            baseline=self.baseline_config.bloom_enabled,
             help="Soft glow around bright areas, creating a cinematic look.",
         )
         self._bloom_str = self._add_slider(
@@ -72,6 +77,7 @@ class EffectsTab(SettingsTab):
             int(self._config.bloom_strength * 100),
             scale_factor=100,
             float_slot=self._on_bloom_strength,
+            baseline=self.baseline_config.bloom_strength,
             help="Bloom intensity (0 = off, 1 = max). Subtle values (0.02‑0.06) "
             "add a gentle, polished look.",
         )
@@ -84,6 +90,7 @@ class EffectsTab(SettingsTab):
             int(self._config.bloom_threshold * 100),
             scale_factor=100,
             float_slot=self._on_bloom_threshold,
+            baseline=self.baseline_config.bloom_threshold,
             help="Brightness cutoff for bloom. Only pixels above this contribute. "
             "Lower values include more of the scene.",
         )
@@ -95,6 +102,7 @@ class EffectsTab(SettingsTab):
             16,
             self._config.bloom_radius,
             self._on_bloom_radius,
+            baseline=self.baseline_config.bloom_radius,
             help="Blur radius in pixels. Larger radii spread the glow further.",
         )
         self._bloom_radius.setEnabled(self._config.bloom_enabled)
@@ -105,6 +113,7 @@ class EffectsTab(SettingsTab):
             "Enable Grain",
             self._config.grain_enabled,
             self._on_grain_enabled,
+            baseline=self.baseline_config.grain_enabled,
             help="Simulated film grain for a photochemical, organic look.",
         )
         self._grain_str = self._add_slider(
@@ -114,6 +123,7 @@ class EffectsTab(SettingsTab):
             int(self._config.grain_strength * 100),
             scale_factor=100,
             float_slot=self._on_grain_strength,
+            baseline=self.baseline_config.grain_strength,
             help="Grain intensity (0 = off, 1 = max). Low values (0.1‑0.2) mimic "
             "fine photochemical grain.",
         )
@@ -126,6 +136,7 @@ class EffectsTab(SettingsTab):
             int(self._config.grain_size * 100),
             scale_factor=100,
             float_slot=self._on_grain_size_changed,
+            baseline=self.baseline_config.grain_size,
             help="Apparent particle size of the grain. Larger values produce "
             "coarser, more visible grain.",
         )
@@ -137,6 +148,7 @@ class EffectsTab(SettingsTab):
             "Enable Vignette",
             self._config.vignette_enabled,
             self._on_vignette_enabled,
+            baseline=self.baseline_config.vignette_enabled,
             help="Radial darkening of screen edges, drawing focus to the centre.",
         )
         self._vignette_str = self._add_slider(
@@ -146,6 +158,7 @@ class EffectsTab(SettingsTab):
             int(self._config.vignette_strength * 100),
             scale_factor=100,
             float_slot=self._on_vignette_strength,
+            baseline=self.baseline_config.vignette_strength,
             help="Edge darkening intensity (0 = none, 1 = max). Moderate values "
             "(0.3‑0.6) give a subtle framing effect.",
         )
@@ -158,6 +171,7 @@ class EffectsTab(SettingsTab):
             int(self._config.vignette_radius * 100),
             scale_factor=100,
             float_slot=self._on_vignette_radius,
+            baseline=self.baseline_config.vignette_radius,
             help="Distance from centre where darkening begins. Higher values keep "
             "the centre bright longer.",
         )
@@ -170,6 +184,7 @@ class EffectsTab(SettingsTab):
             int(self._config.vignette_falloff * 100),
             scale_factor=100,
             float_slot=self._on_vignette_falloff,
+            baseline=self.baseline_config.vignette_falloff,
             help="Softness of the vignette transition. Low values = gentle, "
             "high values = sharp ring.",
         )
@@ -181,6 +196,7 @@ class EffectsTab(SettingsTab):
             "Enable Grain",
             self._config.grain_enabled,
             self._on_grain_enabled,
+            baseline=self.baseline_config.grain_enabled,
             help="Simulated film grain for a photochemical, organic look.",
         )
         self._grain_str = self._add_slider(
@@ -190,6 +206,7 @@ class EffectsTab(SettingsTab):
             int(self._config.grain_strength * 100),
             scale_factor=100,
             float_slot=self._on_grain_strength,
+            baseline=self.baseline_config.grain_strength,
             help="Grain intensity (0 = off, 1 = max). Low values (0.1‑0.2) mimic "
             "fine photochemical grain.",
         )
@@ -202,6 +219,7 @@ class EffectsTab(SettingsTab):
             int(self._config.grain_size * 100),
             scale_factor=100,
             float_slot=self._on_grain_size_changed,
+            baseline=self.baseline_config.grain_size,
             help="Apparent particle size of the grain. Larger values produce "
             "coarser, more visible grain.",
         )
@@ -213,6 +231,7 @@ class EffectsTab(SettingsTab):
             "Enable LUT",
             self._config.lut_enabled,
             self._on_lut_enabled,
+            baseline=self.baseline_config.lut_enabled,
             help="Apply a cinematic colour‑lookup table for instant film‑stock "
             "emulation or colour grading.",
         )
@@ -221,6 +240,7 @@ class EffectsTab(SettingsTab):
             list(BUILT_IN_PRESETS.keys()),
             self._config.lut_preset,
             self._on_lut_preset,
+            baseline=self.baseline_config.lut_preset,
             help="Built‑in 3D LUT preset. Choose from warm, cool, film, sepia, etc.",
         )
         self._lut_combo.setEnabled(self._config.lut_enabled)
@@ -232,6 +252,7 @@ class EffectsTab(SettingsTab):
             int(self._config.lut_intensity * 100),
             scale_factor=100,
             float_slot=self._on_lut_intensity,
+            baseline=self.baseline_config.lut_intensity,
             help="Blend between original and graded image (0 = original, 1 = full effect).",
         )
         self._lut_intensity.setEnabled(self._config.lut_enabled)

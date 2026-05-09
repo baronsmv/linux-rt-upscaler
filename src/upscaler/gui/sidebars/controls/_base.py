@@ -37,24 +37,28 @@ class BaseRow(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # Indicator – hidden by default, width collapsed
+        # ---- Coloured Bar ----
         self._indicator = QFrame()
+        self._indicator.setFixedWidth(cfg.highlight_border_width)
         self._indicator.setStyleSheet(
             f"background: {cfg.highlight_border_color}; border: none;"
         )
-        self._indicator_full_width = cfg.highlight_border_width
-        self._indicator.setFixedWidth(0)  # collapsed
         self._indicator.hide()
         main_layout.addWidget(self._indicator)
 
-        # Content container – holds label, control, and optional value
+        # ---- Transparent gap (only visible when highlighted) ----
+        self._indicator_spacer = QWidget()
+        self._indicator_spacer.setFixedWidth(0)
+        main_layout.addWidget(self._indicator_spacer)
+
+        # ---- Content container ----
         self._content_container = QWidget()
         self._content_layout = QHBoxLayout(self._content_container)
         self._content_layout.setContentsMargins(0, 0, 0, 0)
-        self._content_layout.setSpacing(cfg.sidebar_row_spacing)  # original spacing
+        self._content_layout.setSpacing(cfg.sidebar_row_spacing)
         main_layout.addWidget(self._content_container)
 
-        # Label (created by subclass via _init_label)
+        # ---- Label (created by subclass via _init_label) ----
         self._label: Optional[QLabel] = None
 
     # ------------------------------------------------------------------
@@ -83,13 +87,17 @@ class BaseRow(QWidget):
     def _update_highlight(self) -> None:
         """Called whenever the value or baseline changes."""
         highlighted = self._is_highlighted()
-        # Collapse indicator width to 0 when hidden, preserving spacing exactly
         if highlighted and self.isEnabled():
-            self._indicator.setFixedWidth(self._indicator_full_width)
             self._indicator.show()
+            self._indicator_spacer.setFixedWidth(self._cfg.highlight_indicator_gap)
+            if self._cfg.highlight_background_enabled:
+                self._content_container.setStyleSheet(
+                    f"background: {self._cfg.highlight_background_color}; border-radius: 4px;"
+                )
         else:
             self._indicator.hide()
-            self._indicator.setFixedWidth(0)
+            self._indicator_spacer.setFixedWidth(0)
+            self._content_container.setStyleSheet("background: transparent;")
         self._apply_highlight_style(highlighted)
 
     def _apply_highlight_style(self, highlighted: bool) -> None:

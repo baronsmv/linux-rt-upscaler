@@ -23,6 +23,7 @@ class GeneralTab(SettingsTab):
             UPSCALING_MODELS,
             self._config.model,
             self._on_model_changed,
+            baseline=self.baseline_config.model,
             help="Upscaling model to use. Models are ordered from worst to best quality. "
             "Larger numbers indicate deeper networks (slower, higher quality).",
         )
@@ -30,6 +31,7 @@ class GeneralTab(SettingsTab):
             "Double Upscale (4x)",
             self._config.double_upscale,
             self._on_double_changed,
+            baseline=self.baseline_config.double_upscale,
             help="Perform two 2x passes (total 4x) for higher resolution screens (4k, 1440p) "
             "or low-resolution sources. Uses more GPU resources.",
         )
@@ -40,6 +42,7 @@ class GeneralTab(SettingsTab):
             "Follow Focus",
             self._config.follow_focus,
             self._on_follow_focus,
+            baseline=self.baseline_config.follow_focus,
             help="Automatically switch the upscaling target to the currently focused window. "
             "Useful when moving between multiple windows.",
         )
@@ -47,6 +50,7 @@ class GeneralTab(SettingsTab):
             "Pause on Focus Loss",
             self._config.pause_on_focus_loss,
             self._on_pause_focus_loss,
+            baseline=self.baseline_config.pause_on_focus_loss,
             help="When the target window loses focus, hide the overlay until it regains focus. "
             "Uncheck to keep the overlay always visible.",
         )

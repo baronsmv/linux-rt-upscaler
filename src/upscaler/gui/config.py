@@ -168,6 +168,9 @@ class GUIConfig:
     splitter_handle_hover_color: str = "#2a2a2a"
 
     # ---- Visual hints for non‑default values -------------------------
-    highlight_border_width: int = 3
-    highlight_border_color: str = "#4a9eff"
-    highlight_label_color: str = "#4a9eff"
+    highlight_border_width: int = 4
+    highlight_border_color: str = "#5b9eff"
+    highlight_label_color: str = "#5b9eff"
+    highlight_background_color: str = "#1a2b3c"
+    highlight_background_enabled: bool = True
+    highlight_indicator_gap: int = 8
