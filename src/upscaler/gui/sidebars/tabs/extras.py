@@ -42,6 +42,7 @@ class ExtrasTab(SettingsTab):
             int(self._config.osd_duration),
             self._on_osd_duration,
         )
+        self._osd_duration.setEnabled(self._config.show_osd)
 
     def _on_dir_changed(self, path: str) -> None:
         self._config.screenshot_dir = path
@@ -52,7 +53,9 @@ class ExtrasTab(SettingsTab):
         self.config_changed.emit()
 
     def _on_osd_enabled(self, state):
-        self._config.show_osd = bool(state)
+        enabled = bool(state)
+        self._config.show_osd = enabled
+        self._osd_duration.setEnabled(enabled)
         self.config_changed.emit()
 
     def _on_osd_duration(self, val):
