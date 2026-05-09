@@ -165,7 +165,6 @@ class BaseRow(QWidget):
         """
 
     def _make_combo_style(self, enabled: bool) -> str:
-        """Return a common stylesheet for QComboBox-based controls."""
         cfg = self._cfg
         bg = cfg.combo_background if enabled else cfg.combo_background_disabled
         text_color = cfg.combo_text_color if enabled else cfg.combo_text_color_disabled
@@ -175,6 +174,7 @@ class BaseRow(QWidget):
         popup_bg = cfg.combo_popup_background
         popup_selection = cfg.combo_popup_selection_background
         popup_text = cfg.combo_popup_text_color
+
         return f"""
             QComboBox {{
                 background: {bg};
@@ -191,17 +191,22 @@ class BaseRow(QWidget):
                 border-color: {focus};
             }}
             QComboBox::drop-down {{
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: {cfg.combo_dropdown_width}px;
-                border-left: 1px solid {border};
-                border-top-right-radius: {cfg.combo_border_radius}px;
-                border-bottom-right-radius: {cfg.combo_border_radius}px;
+                width: 0px;
+                background: transparent;
+                border: none;
+            }}
+            QComboBox::down-arrow {{
+                image: none;
+                width: 0px;
+                height: 0px;
             }}
             QComboBox QAbstractItemView {{
                 background: {popup_bg};
-                border: 1px solid {border};
+                border: none;
+                border-radius: 0px;
+                padding: 0px;
                 selection-background-color: {popup_selection};
                 color: {popup_text};
+                outline: none;
             }}
         """
