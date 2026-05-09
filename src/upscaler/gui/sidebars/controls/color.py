@@ -56,10 +56,9 @@ class ColorPickerRow(BaseRow):
         self._apply_color()
 
     # ------------------------------------------------------------------
-    #  Public API
+    #  BaseRow overrides
     # ------------------------------------------------------------------
-    def setEnabled(self, enabled: bool) -> None:
-        super().setEnabled(enabled)
+    def _on_enabled_changed(self, enabled: bool) -> None:
         self._button.setEnabled(enabled)
         if enabled:
             self._apply_color()
@@ -73,11 +72,7 @@ class ColorPickerRow(BaseRow):
                 }}
             """
             )
-        self._update_highlight()
 
-    # ------------------------------------------------------------------
-    #  BaseRow overrides
-    # ------------------------------------------------------------------
     def _is_highlighted(self) -> bool:
         if self._baseline is None:
             return False

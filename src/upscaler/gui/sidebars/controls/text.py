@@ -44,12 +44,6 @@ class LineEditRow(BaseRow):
     # ------------------------------------------------------------------
     #  Public API
     # ------------------------------------------------------------------
-    def setEnabled(self, enabled: bool) -> None:
-        super().setEnabled(enabled)
-        self._edit.setReadOnly(not enabled)
-        self._apply_style()
-        self._update_highlight()
-
     def text(self) -> str:
         return self._edit.text()
 
@@ -59,6 +53,10 @@ class LineEditRow(BaseRow):
     # ------------------------------------------------------------------
     #  BaseRow overrides
     # ------------------------------------------------------------------
+    def _on_enabled_changed(self, enabled: bool) -> None:
+        self._edit.setReadOnly(not enabled)
+        self._apply_style()
+
     def _is_highlighted(self) -> bool:
         if self._baseline is None:
             return False

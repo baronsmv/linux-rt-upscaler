@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any, Optional, TYPE_CHECKING
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QEvent
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 if TYPE_CHECKING:
@@ -113,3 +113,17 @@ class BaseRow(QWidget):
     def set_baseline(self, baseline: Any) -> None:
         self._baseline = baseline
         self._update_highlight()
+
+    def changeEvent(self, event: QEvent) -> None:
+        """Re‑highlight when enabled state changes."""
+        if event.type() == QEvent.EnabledChange:
+            self._on_enabled_changed(self.isEnabled())
+            self._update_highlight()
+        super().changeEvent(event)
+
+    def _on_enabled_changed(self, enabled: bool) -> None:
+        """
+        Override in subclasses to update control‑specific styles
+        when the row is enabled or disabled.
+        """
+        pass

@@ -48,12 +48,6 @@ class ComboRow(BaseRow):
     # ------------------------------------------------------------------
     #  Public API
     # ------------------------------------------------------------------
-    def setEnabled(self, enabled: bool) -> None:
-        super().setEnabled(enabled)
-        self._combo.setEnabled(enabled)
-        self._apply_style()
-        self._update_highlight()
-
     def currentText(self) -> str:
         return self._combo.currentText()
 
@@ -64,6 +58,10 @@ class ComboRow(BaseRow):
     # ------------------------------------------------------------------
     #  BaseRow overrides
     # ------------------------------------------------------------------
+    def _on_enabled_changed(self, enabled: bool) -> None:
+        self._combo.setEnabled(enabled)
+        self._apply_style()
+
     def _is_highlighted(self) -> bool:
         if self._baseline is None:
             return False

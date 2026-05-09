@@ -76,6 +76,11 @@ class SliderRow(BaseRow):
     # ------------------------------------------------------------------
     #  BaseRow overrides
     # ------------------------------------------------------------------
+    def _on_enabled_changed(self, enabled: bool) -> None:
+        self._apply_slider_style()
+        self._apply_edit_style()
+        self._apply_label_style()
+
     def _is_highlighted(self) -> bool:
         if self._baseline is None:
             return False
@@ -89,13 +94,6 @@ class SliderRow(BaseRow):
     # ------------------------------------------------------------------
     #  Public API
     # ------------------------------------------------------------------
-    def setEnabled(self, enabled: bool) -> None:
-        super().setEnabled(enabled)
-        self._apply_slider_style()
-        self._apply_edit_style()
-        self._apply_label_style()
-        self._update_highlight()
-
     def value(self) -> int:
         return self._slider.value()
 

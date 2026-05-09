@@ -58,14 +58,12 @@ class CheckBox(BaseRow):
     def setChecked(self, checked: bool) -> None:
         self._checkbox.setChecked(checked)
 
-    def setEnabled(self, enabled: bool) -> None:
-        super().setEnabled(enabled)
-        self._checkbox.setEnabled(enabled)
-        self._apply_style()
-
     # ------------------------------------------------------------------
     #  BaseRow overrides
     # ------------------------------------------------------------------
+    def _on_enabled_changed(self, enabled: bool) -> None:
+        self._checkbox.setEnabled(enabled)
+
     def _is_highlighted(self) -> bool:
         if self._baseline is None:
             return False
