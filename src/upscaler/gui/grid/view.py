@@ -38,7 +38,7 @@ class WindowGridView(QGraphicsView):
         self.setOptimizationFlag(QGraphicsView.DontAdjustForAntialiasing, True)
         self.setBackgroundBrush(Qt.NoBrush)
 
-        # No drag mode – tiles are not draggable
+        # No drag mode - tiles are not draggable
         self.setDragMode(QGraphicsView.NoDrag)
 
         # Scrollbar policy
@@ -58,7 +58,7 @@ class WindowGridView(QGraphicsView):
         self._resize_timer_id = -1
 
     # ------------------------------------------------------------------
-    #  View resize → scene relayout
+    #  View resize -> scene relayout
     # ------------------------------------------------------------------
 
     def resizeEvent(self, event) -> None:
@@ -82,7 +82,7 @@ class WindowGridView(QGraphicsView):
 
     def drawBackground(self, painter: QPainter, rect: QRectF) -> None:
         """
-        Do nothing – leave the background completely transparent so that
+        Do nothing - leave the background completely transparent so that
         the parent widget’s background shows through.
         """
         pass
@@ -92,7 +92,7 @@ class WindowGridView(QGraphicsView):
     # ------------------------------------------------------------------
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        # Ctrl+F → request focus on filter bar
+        # Ctrl+F -> request focus on filter bar
         if event.matches(QKeySequence.Find):
             self.focus_filter_requested.emit()
             event.accept()

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 class ColorPickerRow(BaseRow):
     """
-    A row with a label and a color‑swatch button, plus highlight support.
+    A row with a label and a color-swatch button, plus highlight support.
 
     Emits ``colorChanged(str)`` with a hex string (e.g., "#AARRGGBB").
     """

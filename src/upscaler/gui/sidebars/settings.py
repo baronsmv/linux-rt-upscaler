@@ -6,19 +6,21 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
-    QLabel,
+    QMenu,
     QPushButton,
+    QSizePolicy,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from .common import IconSidebarBase
 from .tabs import (
+    AdvancedTab,
     DisplayTab,
     EffectsTab,
-    GeneralTab,
-    AdvancedTab,
     ExtrasTab,
+    GeneralTab,
 )
 
 if TYPE_CHECKING:
@@ -27,7 +29,7 @@ if TYPE_CHECKING:
 
 
 class SettingsSidebar(IconSidebarBase):
-    """Right sidebar with icon tabs, footer buttons, and dirty‑state tracking."""
+    """Right sidebar with icon tabs, footer buttons, and dirty-state tracking."""
 
     save_settings = Signal()
     reset_settings = Signal()
@@ -54,7 +56,7 @@ class SettingsSidebar(IconSidebarBase):
             self.add_tab(tab, f"tabs/{icon}", tooltip)
             tab.config_changed.connect(self._on_config_changed)
 
-        # ---- Footer with Save & Reset buttons + Restore Defaults link ----
+        # ---- Footer with Save & Reset buttons ----
         footer = self._create_footer()
         self.layout().addWidget(footer)
 
@@ -64,11 +66,11 @@ class SettingsSidebar(IconSidebarBase):
     #  Slots
     # ------------------------------------------------------------------
     def _on_config_changed(self) -> None:
-        """Any setting was modified; re‑evaluate dirty state."""
+        """Any setting was modified; re-evaluate dirty state."""
         self._check_dirty()
 
     # ------------------------------------------------------------------
-    #  Dirty‑state logic
+    #  Dirty-state logic
     # ------------------------------------------------------------------
     def _check_dirty(self) -> None:
         """Enable buttons only if at least one setting differs from the baseline."""
@@ -77,18 +79,16 @@ class SettingsSidebar(IconSidebarBase):
             self._dirty = dirty
             self._save_btn.setEnabled(dirty)
             self._reset_btn.setEnabled(dirty)
+            self._update_reset_button_style()
 
     def _has_changes(self) -> bool:
         """Compare the current config with the baseline config field by field."""
         import dataclasses
 
         for field in dataclasses.fields(self._config):
-            # Skip internal fields never edited via the UI
             if field.name in ("config_file", "log_level", "log_file"):
                 continue
-            cur_val = getattr(self._config, field.name)
-            base_val = getattr(self._bc, field.name)
-            if cur_val != base_val:
+            if getattr(self._config, field.name) != getattr(self._bc, field.name):
                 return True
         return False
 
@@ -101,96 +101,138 @@ class SettingsSidebar(IconSidebarBase):
         outer = QWidget()
         outer_layout = QVBoxLayout(outer)
         outer_layout.setContentsMargins(0, 0, 0, 0)
-        outer_layout.setSpacing(4)
+        outer_layout.setSpacing(0)
 
-        # ---- Button row ----
         button_widget = QWidget()
         button_layout = QHBoxLayout(button_widget)
         button_layout.setContentsMargins(8, 8, 8, 8)
         button_layout.setSpacing(8)
 
-        # Save button
+        # ---- Save button ----
         self._save_btn = QPushButton("Save")
         self._save_btn.setCursor(Qt.PointingHandCursor)
+        self._save_btn.setFixedHeight(cfg.footer_button_height)
+        self._save_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._save_btn.clicked.connect(self.save_settings.emit)
         self._save_btn.setStyleSheet(
             f"""
             QPushButton {{
-                background: {cfg.sidebar_tab_background};
-                color: {cfg.sidebar_tab_text_color_active};
-                border: 2px solid {cfg.sidebar_tab_indicator_color};
-                border-radius: 8px;
-                padding: 6px 18px;
+                background: {cfg.footer_save_bg};
+                color: {cfg.footer_save_text};
+                border: 2px solid {cfg.footer_save_border};
+                border-radius: {cfg.footer_button_radius}px;
+                padding: {cfg.footer_button_padding_v}px {cfg.footer_button_padding_h}px;
                 font-size: {cfg.sidebar_tab_font_size}px;
                 font-weight: 600;
+                height: {cfg.footer_button_height}px;
             }}
             QPushButton:hover {{
-                background: {cfg.sidebar_tab_background_active};
-                border-color: {cfg.sidebar_combo_border_focus};
+                background: {cfg.footer_save_hover_bg};
+                border-color: {cfg.footer_save_hover_border};
             }}
             QPushButton:pressed {{
-                background: {cfg.sidebar_tab_background_active};
-                border-color: {cfg.sidebar_tab_indicator_color};
+                background: {cfg.footer_save_hover_bg};
+                border-color: {cfg.footer_save_border};
             }}
             QPushButton:disabled {{
-                background: {cfg.sidebar_tab_background};
-                color: {cfg.control_disabled_text};
-                border-color: {cfg.control_disabled_border};
+                background: {cfg.footer_save_disabled_bg};
+                color: {cfg.footer_save_disabled_text};
+                border-color: {cfg.footer_save_disabled_border};
             }}
         """
         )
         button_layout.addWidget(self._save_btn, 1)
 
-        # Reset button
-        self._reset_btn = QPushButton("Reset")
+        # ---- Reset split-button ----
+        self._reset_btn = QToolButton()
+        self._reset_btn.setText("Reset")
+        self._reset_btn.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self._reset_btn.setPopupMode(QToolButton.MenuButtonPopup)
         self._reset_btn.setCursor(Qt.PointingHandCursor)
+        self._reset_btn.setFixedHeight(cfg.footer_button_height)
+        self._reset_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._reset_btn.clicked.connect(self.reset_settings.emit)
-        self._reset_btn.setStyleSheet(
+
+        # Drop-down menu
+        menu = QMenu(self._reset_btn)
+        restore_action = menu.addAction("Restore System Defaults")
+        restore_action.triggered.connect(self.restore_defaults.emit)
+        self._reset_btn.setMenu(menu)
+
+        menu.setStyleSheet(
             f"""
-            QPushButton {{
-                background: {cfg.sidebar_tab_background};
-                color: {cfg.sidebar_tab_text_color};
-                border: 2px solid #914343;
-                border-radius: 8px;
-                padding: 6px 18px;
+            QMenu {{
+                background: {cfg.footer_menu_bg};
+                border: 1px solid {cfg.footer_menu_border};
+                border-radius: 4px;
+                padding: 4px;
+            }}
+            QMenu::item {{
+                color: {cfg.footer_menu_text};
+                padding: 6px 24px;
                 font-size: {cfg.sidebar_tab_font_size}px;
-                font-weight: 600;
             }}
-            QPushButton:hover {{
-                background: {cfg.sidebar_tab_background_active};
-                border-color: #b55a5a;
-            }}
-            QPushButton:pressed {{
-                background: {cfg.sidebar_tab_background_active};
-                border-color: #914343;
-            }}
-            QPushButton:disabled {{
-                background: {cfg.sidebar_tab_background};
-                color: {cfg.control_disabled_text};
-                border-color: {cfg.control_disabled_border};
+            QMenu::item:selected {{
+                background: {cfg.footer_menu_selection_bg};
+                color: {cfg.footer_menu_selection_text};
             }}
         """
         )
-        button_layout.addWidget(self._reset_btn, 1)
 
+        button_layout.addWidget(self._reset_btn, 1)
         outer_layout.addWidget(button_widget)
 
-        # ---- "Restore System Defaults" link ----
-        restore_label = QLabel("<a href='#'>Restore System Defaults</a>")
-        restore_label.setAlignment(Qt.AlignCenter)
-        restore_label.setCursor(Qt.PointingHandCursor)
-        restore_label.setStyleSheet(
+        # Apply initial styles (also sets the correct split-line color)
+        self._save_btn.setEnabled(False)
+        self._reset_btn.setEnabled(False)
+        self._update_reset_button_style()
+
+        return outer
+
+    def _update_reset_button_style(self) -> None:
+        """Re-apply the Reset button stylesheet with the correct split-line colour."""
+        cfg = self.gui_config
+        enabled = self._reset_btn.isEnabled()
+        split = (
+            cfg.footer_reset_split_border
+            if enabled
+            else cfg.footer_reset_disabled_border
+        )
+
+        self._reset_btn.setStyleSheet(
             f"""
-            QLabel {{
-                color: {cfg.sidebar_section_title_color};
-                font-size: {cfg.sidebar_tab_font_size - 2}px;
+            QToolButton {{
+                background: {cfg.footer_reset_bg};
+                color: {cfg.footer_reset_text};
+                border: 2px solid {cfg.footer_reset_border};
+                border-radius: {cfg.footer_button_radius}px;
+                padding: {cfg.footer_button_padding_v}px {cfg.footer_button_padding_h}px;
+                font-size: {cfg.sidebar_tab_font_size}px;
+                font-weight: 600;
+                height: {cfg.footer_button_height}px;
             }}
-            QLabel:hover {{
-                color: {cfg.highlight_label_color};
+            QToolButton:hover {{
+                background: {cfg.footer_reset_hover_bg};
+                border-color: {cfg.footer_reset_hover_border};
+            }}
+            QToolButton:pressed {{
+                background: {cfg.footer_reset_hover_bg};
+                border-color: {cfg.footer_reset_border};
+            }}
+            QToolButton:disabled {{
+                background: {cfg.footer_reset_disabled_bg};
+                color: {cfg.footer_reset_disabled_text};
+                border-color: {cfg.footer_reset_disabled_border};
+            }}
+            QToolButton::menu-button {{
+                background: transparent;
+                border: none;
+                border-left: 1px solid {split};
+                width: 20px;
+            }}
+            QToolButton::menu-arrow {{
+                width: 12px;
+                height: 12px;
             }}
         """
         )
-        restore_label.linkActivated.connect(self.restore_defaults.emit)
-        outer_layout.addWidget(restore_label)
-
-        return outer

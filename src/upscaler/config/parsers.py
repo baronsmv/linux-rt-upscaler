@@ -32,7 +32,7 @@ def _color_string_to_float4(
             logger.warning("Invalid tuple color %s, falling back to black", color)
             return 0.0, 0.0, 0.0, 1.0
 
-    # Continue with original string-to-tuple logic…
+    # Continue with original string-to-tuple logic
     color_str = color.strip() if isinstance(color, str) else str(color)
     hex_match = re.match(r"^#([0-9A-Fa-f]{3,8})$", color_str)
 

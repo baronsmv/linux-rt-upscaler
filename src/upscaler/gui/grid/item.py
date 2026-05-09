@@ -38,13 +38,13 @@ logger = logging.getLogger(__name__)
 
 class WindowTileItem(QGraphicsObject):
     """
-    A single live‑preview tile in the window‑selection mosaic.
+    A single live-preview tile in the window-selection mosaic.
 
     Local coordinates are **centred** at (0,0), so scaling expands
-    symmetrically.  A constant bounding rectangle, pre‑computed for
-    the maximum pop‑out scale plus shadow, is returned by
-    :meth:`boundingRect` – this avoids layout recalculations during
-    animations and makes keyboard navigation flicker‑free.
+    symmetrically.  A constant bounding rectangle, pre-computed for
+    the maximum pop-out scale plus shadow, is returned by
+    :meth:`boundingRect` - this avoids layout recalculations during
+    animations and makes keyboard navigation flicker-free.
 
     All visual parameters are taken from a :class:`GUIConfig` instance.
 
@@ -160,7 +160,7 @@ class WindowTileItem(QGraphicsObject):
 
     def _update_animation_target(self) -> None:
         """
-        Re‑evaluate the desired scale and smoothly animate toward it.
+        Re-evaluate the desired scale and smoothly animate toward it.
         Called whenever :attr:`_hover` or :attr:`_selected` changes.
         """
         target = self._cfg.pop_scale if self._should_pop() else 1.0
@@ -173,7 +173,7 @@ class WindowTileItem(QGraphicsObject):
         self._anim.start()
 
     def _on_animation_finished(self) -> None:
-        """Called when the pop‑in / pop‑out animation completes."""
+        """Called when the pop-in / pop-out animation completes."""
         pass  # nothing needed; target already reached
 
     # ------------------------------------------------------------------

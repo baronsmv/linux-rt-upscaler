@@ -15,7 +15,7 @@ class BaseRow(QWidget):
     Base class for settings rows that support visual hints.
 
     Provides:
-    - A colored left‑side indicator bar that collapses to zero width when hidden.
+    - A colored left-side indicator bar that collapses to zero width when hidden.
     - An optional label (added directly to the content layout).
     - A content container with configurable spacing for the actual controls.
     - Abstract `_is_highlighted()` that subclasses implement.
@@ -103,7 +103,7 @@ class BaseRow(QWidget):
     def _apply_highlight_style(self, highlighted: bool) -> None:
         """
         Update the label colour.
-        Disabled always wins – dimmed text, no highlight styling.
+        Disabled always wins - dimmed text, no highlight styling.
         """
         if self._label is None:
             return
@@ -123,7 +123,7 @@ class BaseRow(QWidget):
         self._update_highlight()
 
     def changeEvent(self, event: QEvent) -> None:
-        """Re‑highlight when enabled state changes."""
+        """Re-highlight when enabled state changes."""
         if event.type() == QEvent.EnabledChange:
             self._on_enabled_changed(self.isEnabled())
             self._update_highlight()
@@ -131,7 +131,7 @@ class BaseRow(QWidget):
 
     def _on_enabled_changed(self, enabled: bool) -> None:
         """
-        Override in subclasses to update control‑specific styles
+        Override in subclasses to update control-specific styles
         when the row is enabled or disabled.
         """
         pass

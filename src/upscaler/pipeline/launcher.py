@@ -30,7 +30,7 @@ def create_pipeline_session(config: Config, win_info: WindowInfo) -> PipelineSes
     """
     Create the overlay, pipeline, and all supporting systems.
 
-    This function does **not** enter an event loop – it only creates the
+    This function does **not** enter an event loop - it only creates the
     required objects and starts the pipeline’s background thread.
 
     The caller must ensure that a `QApplication` already exists.

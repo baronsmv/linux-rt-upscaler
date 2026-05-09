@@ -38,8 +38,8 @@ class DisplayTab(SettingsTab):
             self._config.monitor,
             self._on_monitor_changed,
             baseline=self.baseline_config.monitor,
-            help="Monitor to cover: 'primary', 'all' (multi‑monitor), "
-            "or a specific output name (e.g., 'HDMI‑1').",
+            help="Monitor to cover: 'primary', 'all' (multi-monitor), "
+            "or a specific output name (e.g., 'HDMI-1').",
         )
 
         # ---- Scale Factor ----
@@ -78,10 +78,10 @@ class DisplayTab(SettingsTab):
             self._on_overlay_mode,
             baseline=self.baseline_config.overlay_mode,
             help="Overlay window behaviour:\n"
-            "• always‑on‑top – floating, cannot be focused (recommended)\n"
-            "• top‑transparent – click‑through (mouse passes to window below)\n"
-            "• fullscreen – covers entire monitor\n"
-            "• windowed – normal window with decorations",
+            f"{chr(8226)} always-on-top - floating, cannot be focused (recommended)\n"
+            f"{chr(8226)} top-transparent - click-through (mouse passes to window below)\n"
+            f"{chr(8226)} fullscreen - covers entire monitor\n"
+            f"{chr(8226)} windowed - normal window with decorations",
         )
 
         # ---- Output Geometry ----
@@ -93,9 +93,9 @@ class DisplayTab(SettingsTab):
             self._on_geometry_changed,
             baseline=self.baseline_config.output_geometry,
             help="How the upscaled content fits the overlay:\n"
-            "• fit – letterbox, preserves aspect ratio\n"
-            "• stretch – fill, aspect ratio may be distorted\n"
-            "• cover – fill and crop to fit",
+            f"{chr(8226)} fit - letterbox, preserves aspect ratio\n"
+            f"{chr(8226)} stretch - fill, aspect ratio may be distorted\n"
+            f"{chr(8226)} cover - fill and crop to fit",
         )
 
         # ---- Crop ----
@@ -143,7 +143,7 @@ class DisplayTab(SettingsTab):
             bg = f"#{a8:02x}{r8:02x}{g8:02x}{b8:02x}"
 
         elif isinstance(bg, str) and not bg.startswith("#"):
-            # named color – convert to hex via QColor
+            # named color - convert to hex via QColor
             qc = QColor(bg)
             if qc.isValid():
                 bg = qc.name(QColor.HexArgb)

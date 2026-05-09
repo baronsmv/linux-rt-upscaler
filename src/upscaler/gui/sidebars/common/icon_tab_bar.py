@@ -10,7 +10,7 @@ from ...icons import load_pixmap
 
 class IconTabBar(QWidget):
     """
-    Grid‑based icon bar. Call `add_icon(name, tooltip)` for each tab,
+    Grid-based icon bar. Call `add_icon(name, tooltip)` for each tab,
     then connect `currentChanged` to a `QStackedWidget`.
     """
 

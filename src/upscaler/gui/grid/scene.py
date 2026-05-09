@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class WindowGridScene(QGraphicsScene):
     """
-    A responsive, centred grid of live window‑preview tiles.
+    A responsive, centred grid of live window-preview tiles.
 
     The scene automatically arranges :class:`WindowTileItem` instances
     in rows of *grid_columns* (from :class:`GUIConfig`).  Each tile is
@@ -30,7 +30,7 @@ class WindowGridScene(QGraphicsScene):
         - *Spacing* between tiles can be proportional to the tile width
           (e.g. 5%) with a configurable minimum absolute value.
         - Rows with fewer than *grid_columns* tiles are centred.
-        - The whole grid block is centred horizontally and top‑aligned.
+        - The whole grid block is centred horizontally and top-aligned.
         - Layout is only recalculated when the set of window handles
           changes or the viewport width varies by more than 10 px,
           avoiding flicker during animations.
@@ -66,13 +66,13 @@ class WindowGridScene(QGraphicsScene):
 
         # --- Tile storage ----------------------------------------------------
         self._tiles: List[WindowTileItem] = []  # ordered grid order
-        self._tile_by_handle: Dict[int, WindowTileItem] = {}  # handle → tile
+        self._tile_by_handle: Dict[int, WindowTileItem] = {}  # handle -> tile
         self._selected_handle: Optional[int] = None
 
         # --- Layout state ----------------------------------------------------
         self._columns = 1
         self._rows = 0
-        # used to avoid redundant relayouts during auto‑refresh
+        # used to avoid redundant relayouts during auto-refresh
         self._last_handles: Set[int] = set()
         self._last_vp_width: float = 0.0
 
@@ -207,13 +207,13 @@ class WindowGridScene(QGraphicsScene):
         if target_cols > 1:
             total_spacing = (target_cols - 1) * spacing
             tile_w = max(100.0, (avail_w - total_spacing) / target_cols)
-            # Re‑evaluate spacing if proportional (it depends on tile_w)
+            # Re-evaluate spacing if proportional (it depends on tile_w)
             if cfg.tile_spacing_ratio > 0:
                 spacing = max(cfg.tile_spacing, int(tile_w * cfg.tile_spacing_ratio))
                 total_spacing = (target_cols - 1) * spacing
                 tile_w = max(100.0, (avail_w - total_spacing) / target_cols)
         else:
-            # Single column – spacing is irrelevant
+            # Single column - spacing is irrelevant
             tile_w = max(100.0, avail_w)
 
         # ---- 5. Tile height from aspect ratio ------------------------------
@@ -306,7 +306,7 @@ class WindowGridScene(QGraphicsScene):
                 self._ensure_tile_visible(tile)
 
     def _restore_selection(self) -> None:
-        """Re‑apply the selection after the tile list was rebuilt."""
+        """Re-apply the selection after the tile list was rebuilt."""
         if (
             self._selected_handle is not None
             and self._selected_handle in self._tile_by_handle

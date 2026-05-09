@@ -25,7 +25,7 @@ class GUIConfig:
     grid_margin: int = 20  # inner margin of the grid container
     grid_columns: int = 3
 
-    # ---- Pop‑out animation -------------------------------------------
+    # ---- Pop-out animation -------------------------------------------
     pop_scale: float = 1.05  # maximum scale factor on hover
     pop_duration: int = 200  # animation duration in ms
 
@@ -74,7 +74,7 @@ class GUIConfig:
     selection_border_width: int = 3
     hover_border_width: int = 2
 
-    # ---- Empty‑grid placeholder --------------------------------------
+    # ---- Empty-grid placeholder --------------------------------------
     empty_text: str = "No windows found"
     empty_text_color: str = "#666"
     empty_text_size: int = 18
@@ -85,7 +85,7 @@ class GUIConfig:
 
     # ---- Scaling / layout helpers ------------------------------------
     min_columns: int = 1
-    scroll_margin: int = 20  # extra space for scroll‑into‑view
+    scroll_margin: int = 20  # extra space for scroll-into-view
 
     # ---- Right and Left Sidebars -------------------------------------
     sidebar_width: int = 400
@@ -175,10 +175,44 @@ class GUIConfig:
     splitter_handle_color: str = "#2a2a2a"
     splitter_handle_hover_color: str = "#2a2a2a"
 
-    # ---- Visual hints for non‑default values -------------------------
+    # ---- Visual hints for non-default values -------------------------
     highlight_border_width: int = 4
     highlight_border_color: str = "#5b9eff"
     highlight_label_color: str = "#5b9eff"
     highlight_background_color: str = "#1a2b3c"
     highlight_background_enabled: bool = True
     highlight_indicator_gap: int = 8
+
+    # ---- Footer buttons -------------------------------------------------
+    footer_button_height: int = 42  # consistent total height
+    footer_button_padding_h: int = 18
+    footer_button_padding_v: int = 6
+    footer_button_radius: int = 8
+
+    # Save button
+    footer_save_bg: str = "#1e1e1e"  # sidebar_tab_background
+    footer_save_text: str = "#ffffff"  # sidebar_tab_text_color_active
+    footer_save_border: str = "#4a9eff"  # sidebar_tab_indicator_color
+    footer_save_hover_bg: str = "#2c2c2c"  # sidebar_tab_background_active
+    footer_save_hover_border: str = "#4a9eff"  # sidebar_combo_border_focus
+    footer_save_disabled_bg: str = "#1e1e1e"
+    footer_save_disabled_text: str = "#555"
+    footer_save_disabled_border: str = "#444"
+
+    # Reset button (main area)
+    footer_reset_bg: str = "#1e1e1e"
+    footer_reset_text: str = "#cccccc"
+    footer_reset_border: str = "#914343"
+    footer_reset_hover_bg: str = "#2c2c2c"
+    footer_reset_hover_border: str = "#b55a5a"
+    footer_reset_disabled_bg: str = "#1e1e1e"
+    footer_reset_disabled_text: str = "#555"
+    footer_reset_disabled_border: str = "#444"
+    footer_reset_split_border: str = "#914343"
+
+    # Reset dropdown menu
+    footer_menu_bg: str = "#2a2a2c"  # combo_popup_background
+    footer_menu_border: str = "#444444"  # sidebar_combo_border_color
+    footer_menu_text: str = "#ddd"  # combo_popup_text_color
+    footer_menu_selection_bg: str = "#4a9eff"  # combo_popup_selection_background
+    footer_menu_selection_text: str = "#ffffff"

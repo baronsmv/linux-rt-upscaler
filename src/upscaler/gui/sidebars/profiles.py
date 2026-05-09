@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class ProfilesSidebar(SidebarBase):
-    """Left sidebar – for now a single Profiles tab (empty)."""
+    """Left sidebar - for now a single Profiles tab (empty)."""
 
     def __init__(self, gui_config: GUIConfig, parent: QWidget | None = None) -> None:
         super().__init__(gui_config, parent)

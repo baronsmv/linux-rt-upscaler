@@ -163,7 +163,7 @@ def setup_config() -> Tuple[Config, WindowInfo, Optional[Popen]]:
 
     # Log summary
     logger.info(
-        'Upscaling "%s" (%d×%d)',
+        f'Upscaling "%s" (%d{chr(215)}%d)',
         win_info.title,
         win_info.width,
         win_info.height,

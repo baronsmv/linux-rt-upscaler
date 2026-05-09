@@ -89,7 +89,7 @@ class MainWindow(QMainWindow):
         # Ctrl+F shortcut
         QShortcut(QKeySequence("Ctrl+F"), self, self.filter_bar.set_focus)
 
-        # Auto‑refresh timer
+        # Auto-refresh timer
         self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self._auto_refresh)
         self._refresh_timer.start(self.gui_config.auto_refresh_ms)

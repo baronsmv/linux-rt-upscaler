@@ -45,7 +45,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_deband_strength,
             baseline=self.baseline_config.deband_strength,
-            help="Debanding intensity (0 = off, 1 = maximum). Low values (0.1‑0.3) "
+            help="Debanding intensity (0 = off, 1 = maximum). Low values (0.1-0.3) "
             "are sufficient for most content.",
         )
         self._deband_str.setEnabled(self._config.deband_enabled)
@@ -68,7 +68,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_cas_strength,
             baseline=self.baseline_config.cas_strength,
-            help="Sharpening amount (0 = none, 1 = max). 0.2‑0.5 gives pleasant crispness.",
+            help="Sharpening amount (0 = none, 1 = max). 0.2-0.5 gives pleasant crispness.",
         )
         self._cas_str.setEnabled(self._config.cas_enabled)
 
@@ -89,7 +89,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_bloom_strength,
             baseline=self.baseline_config.bloom_strength,
-            help="Bloom intensity (0 = off, 1 = max). Subtle values (0.02‑0.06) "
+            help="Bloom intensity (0 = off, 1 = max). Subtle values (0.02-0.06) "
             "add a gentle, polished look.",
         )
         self._bloom_str.setEnabled(self._config.bloom_enabled)
@@ -136,7 +136,7 @@ class EffectsTab(SettingsTab):
             float_slot=self._on_vignette_strength,
             baseline=self.baseline_config.vignette_strength,
             help="Edge darkening intensity (0 = none, 1 = max). Moderate values "
-            "(0.3‑0.6) give a subtle framing effect.",
+            "(0.3-0.6) give a subtle framing effect.",
         )
         self._vignette_str.setEnabled(self._config.vignette_enabled)
 
@@ -183,7 +183,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_grain_strength,
             baseline=self.baseline_config.grain_strength,
-            help="Grain intensity (0 = off, 1 = max). Low values (0.1‑0.2) mimic "
+            help="Grain intensity (0 = off, 1 = max). Low values (0.1-0.2) mimic "
             "fine photochemical grain.",
         )
         self._grain_str.setEnabled(self._config.grain_enabled)
@@ -208,7 +208,7 @@ class EffectsTab(SettingsTab):
             self._config.lut_enabled,
             self._on_lut_enabled,
             baseline=self.baseline_config.lut_enabled,
-            help="Apply a cinematic colour‑lookup table for instant film‑stock "
+            help="Apply a cinematic colour-lookup table for instant film-stock "
             "emulation or colour grading.",
         )
         self._lut_combo = self._add_combo(
@@ -217,7 +217,7 @@ class EffectsTab(SettingsTab):
             self._config.lut_preset,
             self._on_lut_preset,
             baseline=self.baseline_config.lut_preset,
-            help="Built‑in 3D LUT preset. Choose from warm, cool, film, sepia, etc.",
+            help="Built-in 3D LUT preset. Choose from warm, cool, film, sepia, etc.",
         )
         self._lut_combo.setEnabled(self._config.lut_enabled)
 

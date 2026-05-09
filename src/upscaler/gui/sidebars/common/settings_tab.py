@@ -38,7 +38,7 @@ class SettingsTab(QWidget):
     a setting has been modified (optional, depending on concrete tab).
 
     The class provides convenience methods for adding rows with labels,
-    section headers, and separators – all styled consistently.
+    section headers, and separators - all styled consistently.
     """
 
     config_changed = Signal()
@@ -105,7 +105,7 @@ class SettingsTab(QWidget):
         self.content_layout.addWidget(line)
 
     def _add_row(self, label_text: str, widget: QWidget) -> None:
-        """Place a label and a control side‑by‑side on one row."""
+        """Place a label and a control side-by-side on one row."""
         row = QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
 
@@ -250,7 +250,7 @@ class SettingsTab(QWidget):
         baseline: Optional[str] = None,
         help: Optional[str] = None,
     ) -> LineEditRow:
-        """Add a labeled single‑line text edit and return it."""
+        """Add a labeled single-line text edit and return it."""
         editor = LineEditRow(
             label,
             self.gui_config,

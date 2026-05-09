@@ -38,9 +38,9 @@ class AdvancedTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_blur,
             baseline=self.baseline_config.lanczos_blur,
-            help="Kernel width for the final resampling step (>0.0 – 2.0).\n"
+            help="Kernel width for the final resampling step (>0.0 - 2.0).\n"
             "Lower values increase sharpness/ringing; higher values smooth the result.\n"
-            "Recommended range: 0.8 – 1.2.",
+            "Recommended range: 0.8 - 1.2.",
         )
         self._antiring = self._add_slider(
             "Antiring Strength",
@@ -50,16 +50,16 @@ class AdvancedTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_antiring,
             baseline=self.baseline_config.lanczos_antiring_strength,
-            help="Anti‑ringing strength (0.0 – 1.0).\n"
+            help="Anti-ringing strength (0.0 - 1.0).\n"
             "Lower values soften the clamp, preserving more detail at the cost of possible ringing.\n"
-            "Recommended range: 0.7 – 1.0.",
+            "Recommended range: 0.7 - 1.0.",
         )
         self._linear_cb = self._add_cb(
             "Linear Light",
             self._config.lanczos_linear_light,
             self._on_linear_light,
             baseline=self.baseline_config.lanczos_linear_light,
-            help="Process the image in linear light (sRGB → linear → sRGB).\n"
+            help=f"Process the image in linear light (sRGB {chr(8594)} linear {chr(8594)} sRGB).\n"
             "Disabling may improve text clarity on some content but colours could lose saturation when downscaling.",
         )
         self._tight_cb = self._add_cb(
@@ -67,8 +67,8 @@ class AdvancedTab(SettingsTab):
             self._config.lanczos_tight_antiring,
             self._on_tight_antiring,
             baseline=self.baseline_config.lanczos_tight_antiring,
-            help="Use only the central 2x2 neighbourhood for anti‑ringing bounds.\n"
-            "Keeps thin text and line art sharp. Disable if you see distant ringing artifacts on high‑contrast edges.",
+            help="Use only the central 2x2 neighbourhood for anti-ringing bounds.\n"
+            "Keeps thin text and line art sharp. Disable if you see distant ringing artifacts on high-contrast edges.",
         )
 
         # ---- Vulkan Rendering ----
@@ -80,9 +80,9 @@ class AdvancedTab(SettingsTab):
             self._on_present_mode,
             baseline=self.baseline_config.vulkan_present_mode,
             help="Vulkan presentation mode:\n"
-            "• fifo – VSync on, lowest power, no tearing\n"
-            "• mailbox – tear‑free, lower latency, higher power\n"
-            "• immediate – no VSync, lowest latency, may tear",
+            f"{chr(8226)} fifo - VSync on, lowest power, no tearing\n"
+            f"{chr(8226)} mailbox - tear-free, lower latency, higher power\n"
+            f"{chr(8226)} immediate - no VSync, lowest latency, may tear",
         )
         self._buffer_pool = self._add_slider(
             "Buffer Pool Size",
@@ -91,9 +91,9 @@ class AdvancedTab(SettingsTab):
             self._config.vulkan_buffer_pool_size,
             self._on_buffer_pool,
             baseline=self.baseline_config.vulkan_buffer_pool_size,
-            help="Number of pre‑allocated staging buffers for partial texture updates.\n"
+            help="Number of pre-allocated staging buffers for partial texture updates.\n"
             "Raise this if you notice stutters when many small regions change rapidly.\n"
-            "Recommended range: 2 – 16.",
+            "Recommended range: 2 - 16.",
         )
         self._frame_timeout = self._add_slider(
             "Frame Timeout (ms)",
@@ -104,19 +104,19 @@ class AdvancedTab(SettingsTab):
             baseline=self.baseline_config.frame_timeout // 1_000_000,
             help="Maximum time (in milliseconds) to wait for the GPU to finish the previous frame.\n"
             "Lower values reduce CPU blocking but may drop frames under heavy load.\n"
-            "Recommended range: 17 (1/60 s) – 1000 (1 s).",
+            "Recommended range: 17 (1/60 s) - 1000 (1 s).",
         )
 
-        # ---- Tile‑Based Processing ----
-        self._add_section("Tile‑Based Processing")
+        # ---- Tile-Based Processing ----
+        self._add_section("Tile-Based Processing")
         self._tile_mode_cb = self._add_cb(
             "Enable Tile Mode",
             self._config.use_tile_processing,
             self._on_tile_mode,
             baseline=self.baseline_config.use_tile_processing,
-            help="Divide the frame into tiles and only re‑process the ones that have changed.\n"
+            help="Divide the frame into tiles and only re-process the ones that have changed.\n"
             "Ideal for mostly static content (e.g. text editors, visual novels).\n"
-            "When disabled, the whole frame is upscaled in one pass – better for video or rapid changes.",
+            "When disabled, the whole frame is upscaled in one pass - better for video or rapid changes.",
         )
         self._damage_cb = self._add_cb(
             "Damage Tracking",
@@ -136,7 +136,7 @@ class AdvancedTab(SettingsTab):
             help="Interior size of each tile in pixels.\n"
             "Smaller tiles track changes more precisely but add CPU overhead.\n"
             "Multiples of 32 work best with GPU workgroups.\n"
-            "Recommended range: 32 – 128.",
+            "Recommended range: 32 - 128.",
         )
         self._margin = self._add_slider(
             "Context Margin",
@@ -147,7 +147,7 @@ class AdvancedTab(SettingsTab):
             baseline=self.baseline_config.tile_context_margin,
             help="Extra border pixels added around each tile to provide context for the neural network.\n"
             "Larger margins improve boundary quality but increase processing.\n"
-            "Recommended range: 4 – 24.",
+            "Recommended range: 4 - 24.",
         )
         self._max_layers = self._add_slider(
             "Max Tiles per Frame",
@@ -157,8 +157,8 @@ class AdvancedTab(SettingsTab):
             self._on_max_layers,
             baseline=self.baseline_config.max_tile_layers,
             help="Maximum number of dirty tiles processed per frame.\n"
-            "When exceeded, the pipeline falls back to full‑frame processing to avoid excessive GPU dispatches.\n"
-            "Recommended range: 4 – 32.",
+            "When exceeded, the pipeline falls back to full-frame processing to avoid excessive GPU dispatches.\n"
+            "Recommended range: 4 - 32.",
         )
         self._area_thresh = self._add_slider(
             "Area Threshold %",
@@ -169,9 +169,9 @@ class AdvancedTab(SettingsTab):
             float_slot=self._on_area_threshold,
             baseline=self.baseline_config.area_threshold,
             help="Fraction of the window area (in %) that, when dirty, forces a fallback to "
-            "full‑frame processing.\n"
+            "full-frame processing.\n"
             "Smaller values fall back earlier, preventing too many tiny tile dispatches.\n"
-            "Recommended range: 15% – 50%.",
+            "Recommended range: 15% - 50%.",
         )
 
     def _on_blur(self, val: float):

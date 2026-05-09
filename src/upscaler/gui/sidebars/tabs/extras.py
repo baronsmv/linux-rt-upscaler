@@ -41,11 +41,11 @@ class ExtrasTab(SettingsTab):
             self._on_file_changed,
             baseline=self.baseline_config.screenshot_filename,
             help="Filename template for screenshots. Available placeholders:\n"
-            "{timestamp} – capture time (supports strftime, e.g. "
+            "{timestamp} - capture time (supports strftime, e.g. "
             "{timestamp:%Y-%m-%d-%H-%M-%S})\n"
-            "{model} – active upscaling model\n"
-            "{width} – upscaled image width\n"
-            "{height} – upscaled image height",
+            "{model} - active upscaling model\n"
+            "{width} - upscaled image width\n"
+            "{height} - upscaled image height",
         )
 
         # ---- On-Screen Display ----
@@ -55,7 +55,7 @@ class ExtrasTab(SettingsTab):
             self._config.show_osd,
             self._on_osd_enabled,
             baseline=self.baseline_config.show_osd,
-            help="Show on‑screen messages when model, geometry, or zoom changes, "
+            help="Show on-screen messages when model, geometry, or zoom changes, "
             "and after taking a screenshot.",
         )
         self._osd_duration = self._add_slider(

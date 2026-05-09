@@ -28,11 +28,11 @@ class FilterBar(QWidget):
 
         # ----- Line edit (fills the whole widget minus margins) -----
         self._line_edit = QLineEdit(self)
-        self._line_edit.setPlaceholderText("Filter windows…")
+        self._line_edit.setPlaceholderText(f"Filter windows{chr(8230)}")
         self._line_edit.textChanged.connect(self._on_text_changed)
         self._line_edit.installEventFilter(self)
 
-        # Search icon – fixed size
+        # Search icon - fixed size
         icon_size = cfg.filter_icon_size
         icon_gap = cfg.filter_icon_gap
 
@@ -85,12 +85,12 @@ class FilterBar(QWidget):
         lh = self.height() - 2 * vertical_pad
         self._line_edit.setGeometry(lx, ly, lw, lh)
 
-        # Search icon – flush with the left edge of the line edit + inner horizontal pad
+        # Search icon - flush with the left edge of the line edit + inner horizontal pad
         icon_x = lx + inner_h_pad
         icon_y = (self.height() - icon_size) // 2
         self._search_icon.move(icon_x, icon_y)
 
-        # Clear button – same spacing from the right edge
+        # Clear button - same spacing from the right edge
         clear_x = lx + lw - inner_h_pad - icon_size
         self._clear_button.move(clear_x, icon_y)
 
