@@ -9,7 +9,7 @@ from ...config import GUIConfig
 
 
 class ColorPickerRow(QWidget):
-    """A row with a label and a colour‑swatch button."""
+    """A row with a label and a color‑swatch button."""
 
     colorChanged = Signal(str)  # emits a hex string (e.g., "#FF0000")
 
@@ -55,7 +55,7 @@ class ColorPickerRow(QWidget):
             self.colorChanged.emit(hex_str)
 
     def _apply_color(self) -> None:
-        """Update the button's background to the current colour."""
+        """Update the button's background to the current color."""
         self._button.setStyleSheet(
             f"""
             QPushButton {{

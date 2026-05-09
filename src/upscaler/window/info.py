@@ -295,6 +295,8 @@ def is_application_window(
                 atoms.get("_NET_WM_WINDOW_TYPE_MENU"),
                 atoms.get("_NET_WM_WINDOW_TYPE_UTILITY"),
                 atoms.get("_NET_WM_WINDOW_TYPE_SPLASH"),
+                atoms.get("_NET_WM_WINDOW_TYPE_DIALOG"),
+                atoms.get("_NET_WM_WINDOW_TYPE_POPUP_MENU"),
             ):
                 return False
         if not is_normal:

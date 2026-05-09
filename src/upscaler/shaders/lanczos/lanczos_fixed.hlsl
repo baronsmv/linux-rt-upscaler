@@ -13,7 +13,7 @@
 //
 //  Features:
 //    - Lanczos-2 kernel (fixed radius 2)
-//    - Hardware Gather (4 Gather calls per colour channel)
+//    - Hardware Gather (4 Gather calls per color channel)
 //    - Separable, normalised weights - zero sum drift
 //    - Full 4x4 anti-ringing clamp (proven, block-free)
 //    - Implicit linear-light processing (squaring / sqrt)
@@ -31,7 +31,7 @@
 //      the fixed shader is kept simple and safe.
 //
 //  Constant buffer layout (must match CB_FORMAT_FIXED):
-//    float4 bgColor;               // colour outside the destination rect
+//    float4 bgColor;               // color outside the destination rect
 //    uint   srcWidth, srcHeight;
 //    uint   dstTotalWidth, dstTotalHeight;
 //    int    dstX, dstY, dstW, dstH;

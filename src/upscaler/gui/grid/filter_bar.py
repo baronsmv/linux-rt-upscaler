@@ -9,7 +9,7 @@ class FilterBar(QWidget):
     """
     A search bar with embedded icons and configurable geometry.
 
-    All dimensional constants and colours are taken from a :class:`GUIConfig`
+    All dimensional constants and colors are taken from a :class:`GUIConfig`
     instance. The bar uses symmetrical horizontal and vertical padding,
     and places icons inside the text field with a configurable gap.
     """

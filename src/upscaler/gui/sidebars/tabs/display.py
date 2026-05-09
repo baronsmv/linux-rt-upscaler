@@ -92,8 +92,8 @@ class DisplayTab(SettingsTab):
             show_val=True,
         )
 
-        # ---- Background Colour ----
-        self._add_section("Background Colour")
+        # ---- Background Color ----
+        self._add_section("Background Color")
         bg = self._config.background_color
         if isinstance(bg, tuple):
             # convert (b, g, r, a) to #AARRGGBB
@@ -112,7 +112,7 @@ class DisplayTab(SettingsTab):
             self.gui_config,
             initial_color=bg,
         )
-        self._bg_picker.colorChanged.connect(self._on_bg_colour)
+        self._bg_picker.colorChanged.connect(self._on_bg_color)
         self.content_layout.addWidget(self._bg_picker)
 
     # Helpers
@@ -173,6 +173,6 @@ class DisplayTab(SettingsTab):
         self._config.offset_y = val
         self.config_changed.emit()
 
-    def _on_bg_colour(self, text):
+    def _on_bg_color(self, text):
         self._config.background_color = text
         self.config_changed.emit()

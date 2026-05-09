@@ -62,7 +62,7 @@ def scroll_area() -> str:
 
 
 def section_label(cfg: GUIConfig) -> str:
-    """Uppercase section title with subtle separator colour."""
+    """Uppercase section title with subtle separator color."""
     return f"""
         font-size: {cfg.sidebar_section_title_size}px;
         font-weight: bold;
