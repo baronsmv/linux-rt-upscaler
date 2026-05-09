@@ -59,7 +59,7 @@ class SliderRow(BaseRow):
                 # Show real value initially
                 initial_text = self._format(value)
                 self._value_edit = QLineEdit(initial_text)
-                self._value_edit.setFixedWidth(60)
+                self._value_edit.setFixedWidth(self._cfg.slider_value_edit_width)
                 self._value_edit.setFixedHeight(gui_config.sidebar_row_height)
                 self._value_edit.setAlignment(Qt.AlignCenter)
                 self._value_edit.editingFinished.connect(self._on_edit_finished)

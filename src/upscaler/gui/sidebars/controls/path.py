@@ -45,6 +45,7 @@ class PathPickerRow(BaseRow):
 
         # Path field
         self._edit = QLineEdit(initial_path)
+        self._edit.setFixedHeight(self._cfg.sidebar_row_height)
         self._edit.setReadOnly(True)
         self._edit.setPlaceholderText("Select directory…")
         self._edit.textChanged.connect(self._on_text_changed)

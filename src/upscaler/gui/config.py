@@ -146,6 +146,7 @@ class GUIConfig:
     slider_handle_hover_color: str = "#6aade5"
     slider_handle_hover_color_disabled: str = "#555"
     slider_sub_page_color_disabled: str = "#444"
+    slider_value_edit_width: int = 72
 
     # ---- Editable text fields (LineEdit, editable sliders, path picker) ---
     edit_background: str = "#2a2a2c"
