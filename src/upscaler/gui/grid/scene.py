@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class WindowGridScene(QGraphicsScene):
     """
-    A responsive, centred grid of live window-preview tiles.
+    A responsive, centered grid of live window-preview tiles.
 
     The scene automatically arranges :class:`WindowTileItem` instances
     in rows of *grid_columns* (from :class:`GUIConfig`).  Each tile is
@@ -29,8 +29,8 @@ class WindowGridScene(QGraphicsScene):
           the default tile dimensions.
         - *Spacing* between tiles can be proportional to the tile width
           (e.g. 5%) with a configurable minimum absolute value.
-        - Rows with fewer than *grid_columns* tiles are centred.
-        - The whole grid block is centred horizontally and top-aligned.
+        - Rows with fewer than *grid_columns* tiles are centered.
+        - The whole grid block is centered horizontally and top-aligned.
         - Layout is only recalculated when the set of window handles
           changes or the viewport width varies by more than 10 px,
           avoiding flicker during animations.
@@ -230,7 +230,7 @@ class WindowGridScene(QGraphicsScene):
                 tile.set_tile_size(tile_w, tile_h)
 
         # ---- 7. Position tiles ---------------------------------------------
-        # centre of the first tile in a full row
+        # center of the first tile in a full row
         full_row_width = cols * tile_w + (cols - 1) * spacing
         start_x = (vp_w - full_row_width) / 2.0 + tile_w / 2.0
         start_y = margin + tile_h / 2.0
@@ -238,7 +238,7 @@ class WindowGridScene(QGraphicsScene):
         for i, tile in enumerate(tiles):
             row = i // cols
             col = i % cols
-            # For rows with fewer tiles than *cols*, centre the row group
+            # For rows with fewer tiles than *cols*, center the row group
             tiles_in_this_row = min(cols, len(tiles) - row * cols)
             row_width = tiles_in_this_row * tile_w + (tiles_in_this_row - 1) * spacing
             row_start_x = (vp_w - row_width) / 2.0 + tile_w / 2.0

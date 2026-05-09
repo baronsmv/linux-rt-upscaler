@@ -60,14 +60,14 @@ class AdvancedTab(SettingsTab):
             self._on_linear_light,
             baseline=self.baseline_config.lanczos_linear_light,
             help=f"Process the image in linear light (sRGB {chr(8594)} linear {chr(8594)} sRGB).\n"
-            "Disabling may improve text clarity on some content but colours could lose saturation when downscaling.",
+            "Disabling may improve text clarity on some content but colors could lose saturation when downscaling.",
         )
         self._tight_cb = self._add_cb(
             "Tight Antiring",
             self._config.lanczos_tight_antiring,
             self._on_tight_antiring,
             baseline=self.baseline_config.lanczos_tight_antiring,
-            help="Use only the central 2x2 neighbourhood for anti-ringing bounds.\n"
+            help="Use only the central 2x2 neighborhood for anti-ringing bounds.\n"
             "Keeps thin text and line art sharp. Disable if you see distant ringing artifacts on high-contrast edges.",
         )
 

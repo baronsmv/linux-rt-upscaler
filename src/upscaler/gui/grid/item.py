@@ -40,7 +40,7 @@ class WindowTileItem(QGraphicsObject):
     """
     A single live-preview tile in the window-selection mosaic.
 
-    Local coordinates are **centred** at (0,0), so scaling expands
+    Local coordinates are **centered** at (0,0), so scaling expands
     symmetrically.  A constant bounding rectangle, pre-computed for
     the maximum pop-out scale plus shadow, is returned by
     :meth:`boundingRect` - this avoids layout recalculations during

@@ -5,7 +5,7 @@
 //  Exact replica of the original working Lanczos-2 upscaler, with optional
 //  blur/softness. Uses hardware Gather for optimal memory throughput.
 //  Anti-ringing clamps to the full 4x4 pixel window - the only configuration
-//  that proved artefact-free in practice. Linear-light processing (square ->
+//  that proved artifact-free in practice. Linear-light processing (square ->
 //  process -> sqrt) is always applied; this matches the original behaviour.
 //
 //  This shader is used automatically when radiusX = radiusY = 2 (upscaling).
@@ -26,7 +26,7 @@
 //      visible or subtle blockiness.
 //    - The adaptive shader (lanczos_adaptive.hlsl) handles the advanced
 //      features (tight/soft anti-ringing, linear-light toggle) correctly
-//      because its explicit pixel-offset loop makes the centre region trivial
+//      because its explicit pixel-offset loop makes the center region trivial
 //      to define. For radius 2 upscaling, these features are not needed and
 //      the fixed shader is kept simple and safe.
 //
@@ -150,7 +150,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
         mul(wx, float4x3(l[3][0], l[3][1], l[3][2], l[3][3]))
     ));
 
-    // Hard anti-ringing clamp (full 4x4 neighbourhood)
+    // Hard anti-ringing clamp (full 4x4 neighborhood)
     v = clamp(v, vmin, vmax);
 
     // Linear-light output: sqrt to return to sRGB

@@ -37,7 +37,7 @@ class BaseRow(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # ---- Coloured Bar ----
+        # ---- Colored Bar ----
         self._indicator = QFrame()
         self._indicator.setFixedWidth(cfg.highlight_border_width)
         self._indicator.setStyleSheet(
@@ -102,7 +102,7 @@ class BaseRow(QWidget):
 
     def _apply_highlight_style(self, highlighted: bool) -> None:
         """
-        Update the label colour.
+        Update the label color.
         Disabled always wins - dimmed text, no highlight styling.
         """
         if self._label is None:

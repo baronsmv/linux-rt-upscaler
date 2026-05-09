@@ -130,7 +130,7 @@ class DisplayTab(SettingsTab):
                 slot,
                 baseline=getattr(self.baseline_config, field),
                 help=f"{'Horizontal' if 'X' in label else 'Vertical'} offset from the "
-                "centred position (positive = {'right' if 'X' in label else 'down'}).",
+                "centered position (positive = {'right' if 'X' in label else 'down'}).",
             )
 
         # ---- Background Color ----
@@ -164,7 +164,7 @@ class DisplayTab(SettingsTab):
             bg,
             self._on_bg_color,
             baseline=baseline_bg,
-            help="Colour of the letterbox bars. Supports transparency.",
+            help="Color of the letterbox bars. Supports transparency.",
         )
 
     def _on_monitor_changed(self, text: str):

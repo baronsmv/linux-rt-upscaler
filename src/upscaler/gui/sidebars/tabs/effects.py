@@ -34,7 +34,7 @@ class EffectsTab(SettingsTab):
             self._config.deband_enabled,
             self._on_deband_enabled,
             baseline=self.baseline_config.deband_enabled,
-            help="Smooth harsh colour banding in gradients before upscaling. "
+            help="Smooth harsh color banding in gradients before upscaling. "
             "Helps skies, fog and smooth backgrounds.",
         )
         self._deband_str = self._add_slider(
@@ -125,7 +125,7 @@ class EffectsTab(SettingsTab):
             self._config.vignette_enabled,
             self._on_vignette_enabled,
             baseline=self.baseline_config.vignette_enabled,
-            help="Radial darkening of screen edges, drawing focus to the centre.",
+            help="Radial darkening of screen edges, drawing focus to the center.",
         )
         self._vignette_str = self._add_slider(
             "Strength",
@@ -148,8 +148,8 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_vignette_radius,
             baseline=self.baseline_config.vignette_radius,
-            help="Distance from centre where darkening begins. Higher values keep "
-            "the centre bright longer.",
+            help="Distance from center where darkening begins. Higher values keep "
+            "the center bright longer.",
         )
         self._vignette_radius.setEnabled(self._config.vignette_enabled)
 
@@ -208,8 +208,8 @@ class EffectsTab(SettingsTab):
             self._config.lut_enabled,
             self._on_lut_enabled,
             baseline=self.baseline_config.lut_enabled,
-            help="Apply a cinematic colour-lookup table for instant film-stock "
-            "emulation or colour grading.",
+            help="Apply a cinematic color-lookup table for instant film-stock "
+            "emulation or color grading.",
         )
         self._lut_combo = self._add_combo(
             "Preset",

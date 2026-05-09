@@ -190,7 +190,7 @@ class SettingsSidebar(IconSidebarBase):
         return outer
 
     def _update_reset_button_style(self) -> None:
-        """Re-apply the Reset button stylesheet with the correct split-line colour."""
+        """Re-apply the Reset button stylesheet with the correct split-line color."""
         cfg = self.gui_config
         enabled = self._reset_btn.isEnabled()
         split = (
