@@ -12,12 +12,6 @@ if TYPE_CHECKING:
 
 
 class LineEditRow(BaseRow):
-    """
-    A row with a descriptive label and a QLineEdit, plus highlight support.
-
-    Emits ``textChanged(str)`` when the text is modified.
-    """
-
     textChanged = Signal(str)
 
     def __init__(
@@ -36,35 +30,20 @@ class LineEditRow(BaseRow):
         layout.setSpacing(0)
 
         # Indicator and label
-        indicator = self._init_indicator()
-        layout.addWidget(indicator)
-        label_w = self._init_label(label)
-        layout.addWidget(label_w)
+        layout.addWidget(self._init_indicator())
+        layout.addWidget(self._init_label(label))
 
+        # Tooltip
         if tooltip:
             self.setToolTip(tooltip)
 
         # Line edit
         self._edit = QLineEdit(text)
-        self._edit.setStyleSheet(
-            f"""
-            QLineEdit {{
-                background: #2a2a2c;
-                border: 1px solid {gui_config.sidebar_combo_border_color};
-                border-radius: 6px;
-                padding: 4px 8px;
-                color: #ddd;
-                font-size: {gui_config.sidebar_tab_font_size}px;
-            }}
-            QLineEdit:focus {{
-                border-color: {gui_config.sidebar_combo_border_focus};
-            }}
-            """
-        )
         self._edit.setFixedHeight(gui_config.sidebar_row_height)
         self._edit.textChanged.connect(self._on_text_changed)
         layout.addWidget(self._edit, stretch=1)
 
+        self._apply_style()
         self._update_highlight()
 
     # ------------------------------------------------------------------
@@ -73,28 +52,7 @@ class LineEditRow(BaseRow):
     def setEnabled(self, enabled: bool) -> None:
         super().setEnabled(enabled)
         self._edit.setReadOnly(not enabled)
-        self._edit.setStyleSheet(
-            """
-            QLineEdit {
-                background: %s;
-                border: 1px solid %s;
-                border-radius: 6px;
-                padding: 4px 8px;
-                color: %s;
-                font-size: %dpx;
-            }
-            QLineEdit:focus {
-                border-color: %s;
-            }
-            """
-            % (
-                "#2a2a2c" if enabled else "#1e1e1e",
-                self._cfg.sidebar_combo_border_color if enabled else "#444",
-                "#ddd" if enabled else "#555",
-                self._cfg.sidebar_tab_font_size,
-                self._cfg.sidebar_combo_border_focus if enabled else "#444",
-            )
-        )
+        self._apply_style()
 
     def text(self) -> str:
         return self._edit.text()
@@ -113,3 +71,33 @@ class LineEditRow(BaseRow):
     def _on_text_changed(self, text: str) -> None:
         self._update_highlight()
         self.textChanged.emit(text)
+
+    # ------------------------------------------------------------------
+    #  Style helpers
+    # ------------------------------------------------------------------
+    def _apply_style(self) -> None:
+        cfg = self._cfg
+        enabled = self.isEnabled()
+        bg = cfg.edit_background if enabled else cfg.edit_background_disabled
+        text_color = cfg.edit_text_color if enabled else cfg.edit_text_color_disabled
+        border = (
+            cfg.sidebar_combo_border_color if enabled else cfg.control_disabled_border
+        )
+        focus = (
+            cfg.sidebar_combo_border_focus if enabled else cfg.control_disabled_border
+        )
+        self._edit.setStyleSheet(
+            f"""
+            QLineEdit {{
+                background: {bg};
+                border: 1px solid {border};
+                border-radius: {cfg.edit_border_radius}px;
+                padding: {cfg.edit_padding_v}px {cfg.edit_padding_h}px;
+                color: {text_color};
+                font-size: {cfg.sidebar_tab_font_size}px;
+            }}
+            QLineEdit:focus {{
+                border-color: {focus};
+            }}
+        """
+        )

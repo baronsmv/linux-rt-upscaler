@@ -108,6 +108,59 @@ class GUIConfig:
     sidebar_icon_columns: int = 5
     sidebar_icon_size: int = 32
 
+    # ---- Control row generic states ------------------------------------
+    control_disabled_text: str = "#555"
+    control_disabled_bg: str = "#1e1e1e"
+    control_disabled_border: str = "#444"
+
+    # ---- Checkbox --------------------------------------------------------
+    checkbox_indicator_size: int = 18
+    checkbox_indicator_radius: int = 4
+    checkbox_spacing: int = 8
+    checkbox_padding_v: int = 4
+    checkbox_disabled_color: str = "#555"
+
+    # ---- Combo box -------------------------------------------------------
+    combo_background: str = "#2a2a2c"
+    combo_background_disabled: str = "#1e1e1e"
+    combo_text_color: str = "#ddd"
+    combo_text_color_disabled: str = "#555"
+    combo_border_color_disabled: str = "#444"
+    combo_padding_h: int = 8
+    combo_padding_v: int = 4
+    combo_border_radius: int = 6
+    combo_dropdown_width: int = 20
+    combo_popup_background: str = "#2a2a2c"
+    combo_popup_selection_background: str = "#4a9eff"
+    combo_popup_text_color: str = "#ddd"
+
+    # ---- Slider ----------------------------------------------------------
+    slider_groove_bg: str = "#333"
+    slider_groove_bg_disabled: str = "#222"
+    slider_handle_color: str = "#4a9eff"  # overridden by sidebar_slider_color
+    slider_handle_color_disabled: str = "#555"
+    slider_handle_hover_color: str = "#6aade5"
+    slider_handle_hover_color_disabled: str = "#555"
+    slider_sub_page_color_disabled: str = "#444"
+
+    # ---- Editable text fields (LineEdit, editable sliders, path picker) ---
+    edit_background: str = "#2a2a2c"
+    edit_background_disabled: str = "#1e1e1e"
+    edit_text_color: str = "#ddd"
+    edit_text_color_disabled: str = "#555"
+    edit_border_radius: int = 6
+    edit_padding_h: int = 8
+    edit_padding_v: int = 4
+
+    # ---- Color swatch button ---------------------------------------------
+    color_swatch_width: int = 36
+    color_swatch_height: int = 24
+    color_swatch_border: str = "#777"
+    color_swatch_disabled_bg: str = "#555"
+
+    # ---- Path picker browse button ---------------------------------------
+    path_browse_button_width: int = 32
+
     # ---- Splitter handle style ---------------------------------------
     splitter_handle_width: int = 3
     splitter_handle_color: str = "#2a2a2a"

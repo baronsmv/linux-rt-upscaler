@@ -31,15 +31,12 @@ class CheckBox(BaseRow):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(gui_config, baseline, parent)
-        self._checked_value = checked
-
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Indicator from base (no label)
-        indicator = self._init_indicator()
-        layout.addWidget(indicator)
+        # Indicator
+        layout.addWidget(self._init_indicator())
 
         # Checkbox
         self._checkbox = QCheckBox(text)
@@ -100,31 +97,34 @@ class CheckBox(BaseRow):
             cfg.highlight_label_color if highlighted else cfg.sidebar_tab_text_color
         )
         if not enabled:
-            text_color = "#555"
-        border = (
+            text_color = cfg.checkbox_disabled_color
+
+        indicator_color = (
             cfg.highlight_border_color
             if highlighted
-            else (cfg.sidebar_checkbox_color if enabled else "#555")
+            else (
+                cfg.sidebar_checkbox_color if enabled else cfg.checkbox_disabled_color
+            )
         )
 
         self._checkbox.setStyleSheet(
             f"""
             QCheckBox {{
-                spacing: 8px;
+                spacing: {cfg.checkbox_spacing}px;
                 color: {text_color};
                 font-size: {cfg.sidebar_tab_font_size}px;
-                padding: 4px 0;
+                padding: {cfg.checkbox_padding_v}px 0;
             }}
             QCheckBox::indicator {{
-                width: 18px;
-                height: 18px;
-                border: 2px solid {border};
-                border-radius: 4px;
+                width: {cfg.checkbox_indicator_size}px;
+                height: {cfg.checkbox_indicator_size}px;
+                border: 2px solid {indicator_color};
+                border-radius: {cfg.checkbox_indicator_radius}px;
                 background: transparent;
             }}
             QCheckBox::indicator:checked {{
-                background-color: {border};
-                border-color: {border};
+                background-color: {indicator_color};
+                border-color: {indicator_color};
             }}
         """
         )

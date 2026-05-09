@@ -42,24 +42,23 @@ class ColorPickerRow(BaseRow):
         layout.setSpacing(0)
 
         # Indicator and label
-        indicator = self._init_indicator()
-        layout.addWidget(indicator)
-        label_w = self._init_label(label)
-        layout.addWidget(label_w)
+        layout.addWidget(self._init_indicator())
+        layout.addWidget(self._init_label(label))
         layout.addStretch()
 
         if tooltip:
             self.setToolTip(tooltip)
 
-        # Swatch button
         self._button = QPushButton()
-        self._button.setFixedSize(36, 24)
+        self._button.setFixedSize(
+            gui_config.color_swatch_width, gui_config.color_swatch_height
+        )
         self._button.setCursor(Qt.PointingHandCursor)
         self._button.clicked.connect(self._pick_color)
         layout.addWidget(self._button)
 
-        self._apply_color()
         self._update_highlight()
+        self._apply_color()
 
     # ------------------------------------------------------------------
     #  Public API
@@ -71,7 +70,13 @@ class ColorPickerRow(BaseRow):
             self._apply_color()
         else:
             self._button.setStyleSheet(
-                "QPushButton { background-color: #555; border: 1px solid #444; border-radius: 4px; }"
+                f"""
+                QPushButton {{
+                    background-color: {self._cfg.color_swatch_disabled_bg};
+                    border: 1px solid {self._cfg.control_disabled_border};
+                    border-radius: 4px;
+                }}
+            """
             )
 
     # ------------------------------------------------------------------
@@ -84,12 +89,8 @@ class ColorPickerRow(BaseRow):
             self._current_color.name(QColor.HexArgb).lower() != self._baseline.lower()
         )
 
-    def _apply_highlight_style(self, highlighted: bool) -> None:
-        """ColorPickerRow already uses the label; the base handles label text colour."""
-        super()._apply_highlight_style(highlighted)
-
     # ------------------------------------------------------------------
-    #  Colour picking
+    #  Color picking
     # ------------------------------------------------------------------
     def _pick_color(self) -> None:
         color = QColorDialog.getColor(
@@ -105,16 +106,18 @@ class ColorPickerRow(BaseRow):
             self._update_highlight()
 
     def _apply_color(self) -> None:
-        """Update the button's background to the current colour."""
+        """Update the button's background to the current color."""
+        border = self._cfg.color_swatch_border
+        hover = self._cfg.sidebar_combo_border_focus
         self._button.setStyleSheet(
             f"""
             QPushButton {{
                 background-color: {self._current_color.name(QColor.HexArgb)};
-                border: 1px solid #777;
+                border: 1px solid {border};
                 border-radius: 4px;
             }}
             QPushButton:hover {{
-                border-color: {self._cfg.sidebar_combo_border_focus};
+                border-color: {hover};
             }}
         """
         )
