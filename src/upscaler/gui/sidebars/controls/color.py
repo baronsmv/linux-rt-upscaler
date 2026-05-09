@@ -78,6 +78,7 @@ class ColorPickerRow(BaseRow):
                 }}
             """
             )
+        self._update_highlight()
 
     # ------------------------------------------------------------------
     #  BaseRow overrides

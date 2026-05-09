@@ -36,13 +36,17 @@ class BaseRow(QWidget):
     # ------------------------------------------------------------------
     #  Subclass API
     # ------------------------------------------------------------------
+    # Inside BaseRow class
+
     def _init_indicator(self) -> QFrame:
-        """Create and return the indicator widget. Subclasses add it to their layout."""
+        """Create the indicator widget. The caller inserts it into the layout."""
         self._indicator = QFrame()
         self._indicator.setFixedWidth(self._cfg.highlight_border_width)
         self._indicator.setStyleSheet(
             f"background: {self._cfg.highlight_border_color}; border: none;"
         )
+        # Store the configured width for later toggling
+        self._indicator_full_width = self._cfg.highlight_border_width
         self._indicator.hide()
         return self._indicator
 
@@ -68,23 +72,32 @@ class BaseRow(QWidget):
         """Called whenever the value or baseline changes."""
         highlighted = self._is_highlighted()
         if self._indicator:
-            self._indicator.setVisible(highlighted)
+            # Collapse width to 0 when hidden so no space is taken
+            if highlighted:
+                self._indicator.setFixedWidth(self._indicator_full_width)
+                self._indicator.show()
+            else:
+                self._indicator.hide()
+                self._indicator.setFixedWidth(0)
         self._apply_highlight_style(highlighted)
 
     def _apply_highlight_style(self, highlighted: bool) -> None:
         """
-        Override to adjust the appearance of the row when highlighted.
-        Default changes the label colour.
+        Update the label colour.
+        Disabled always wins – dimmed text, no highlight styling.
         """
-        if self._label:
-            color = (
-                self._cfg.highlight_label_color
-                if highlighted
-                else self._cfg.sidebar_tab_text_color
-            )
-            self._label.setStyleSheet(
-                f"color: {color}; font-size: {self._cfg.sidebar_tab_font_size}px;"
-            )
+        if self._label is None:
+            return
+        if not self.isEnabled():
+            color = self._cfg.control_disabled_text
+        elif highlighted:
+            color = self._cfg.highlight_label_color
+        else:
+            color = self._cfg.sidebar_tab_text_color
+
+        self._label.setStyleSheet(
+            f"color: {color}; font-size: {self._cfg.sidebar_tab_font_size}px;"
+        )
 
     def set_baseline(self, baseline: Any) -> None:
         self._baseline = baseline

@@ -100,6 +100,7 @@ class SliderRow(BaseRow):
         self._apply_slider_style()
         self._apply_edit_style()
         self._apply_label_style()
+        self._update_highlight()
 
     def value(self) -> int:
         return self._slider.value()

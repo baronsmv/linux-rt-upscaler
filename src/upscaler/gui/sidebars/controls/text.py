@@ -53,6 +53,7 @@ class LineEditRow(BaseRow):
         super().setEnabled(enabled)
         self._edit.setReadOnly(not enabled)
         self._apply_style()
+        self._update_highlight()
 
     def text(self) -> str:
         return self._edit.text()

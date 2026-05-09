@@ -77,6 +77,7 @@ class PathPickerRow(BaseRow):
         self._browse_btn.setEnabled(enabled)
         self._edit.setReadOnly(not enabled)
         self._apply_style()
+        self._update_highlight()
 
     def path(self) -> str:
         return self._edit.text()

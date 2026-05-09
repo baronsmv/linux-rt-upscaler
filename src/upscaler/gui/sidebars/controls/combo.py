@@ -57,6 +57,7 @@ class ComboRow(BaseRow):
         super().setEnabled(enabled)
         self._combo.setEnabled(enabled)
         self._apply_style()
+        self._update_highlight()
 
     def currentText(self) -> str:
         return self._combo.currentText()
