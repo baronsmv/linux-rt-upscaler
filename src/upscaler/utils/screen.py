@@ -1,11 +1,20 @@
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 from PySide6.QtCore import QRect
 from PySide6.QtGui import QGuiApplication, QScreen
 from screeninfo import get_monitors
 
 logger = logging.getLogger(__name__)
+
+
+def list_monitors() -> List[str]:
+    """
+    Return a sorted list of display names known to the system.
+    The special names ``"primary"`` and ``"all"`` are prepended.
+    """
+    names = sorted({m.name for m in get_monitors() if m.name})
+    return ["primary", "all"] + names
 
 
 def _get_screen(screen_spec: str) -> QScreen:

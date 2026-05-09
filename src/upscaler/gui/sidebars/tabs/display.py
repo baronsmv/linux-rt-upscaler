@@ -6,6 +6,7 @@ from PySide6.QtGui import QColor
 
 from ..common import SettingsTab
 from ....config import OverlayMode
+from ....utils import list_monitors
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -22,7 +23,7 @@ class DisplayTab(SettingsTab):
         self._add_section("Monitor")
         self._monitor_combo = self._add_combo(
             "Monitor",
-            ["primary", "all", "HDMI-1", "HDMI-2", "DP-1", "DP-2", "eDP-1"],
+            list_monitors(),
             self._config.monitor,
             self._on_monitor_changed,
         )

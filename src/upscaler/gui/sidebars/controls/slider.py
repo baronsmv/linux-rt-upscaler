@@ -44,6 +44,7 @@ class SliderRow(QWidget):
         self._slider.setValue(value)
         self._slider.setFixedHeight(gui_config.sidebar_row_height)
         self._slider.setStyleSheet(self._slider_style())
+        self._slider.setCursor(Qt.PointingHandCursor)
         self._slider.valueChanged.connect(self._on_value_changed)
 
         layout.addWidget(self._label)
