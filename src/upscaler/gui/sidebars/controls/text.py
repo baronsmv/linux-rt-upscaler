@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QLineEdit, QHBoxLayout, QWidget
+from PySide6.QtWidgets import QLineEdit, QWidget
 
 from ._base import BaseRow
 
@@ -25,13 +25,8 @@ class LineEditRow(BaseRow):
     ) -> None:
         super().__init__(gui_config, baseline, parent)
 
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        # Indicator and label
-        layout.addWidget(self._init_indicator())
-        layout.addWidget(self._init_label(label))
+        # Label
+        self._init_label(label)
 
         # Tooltip
         if tooltip:
@@ -41,7 +36,7 @@ class LineEditRow(BaseRow):
         self._edit = QLineEdit(text)
         self._edit.setFixedHeight(gui_config.sidebar_row_height)
         self._edit.textChanged.connect(self._on_text_changed)
-        layout.addWidget(self._edit, stretch=1)
+        self._content_layout.addWidget(self._edit, stretch=1)
 
         self._apply_style()
         self._update_highlight()

@@ -6,7 +6,6 @@ from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFileDialog,
-    QHBoxLayout,
     QLineEdit,
     QPushButton,
     QWidget,
@@ -38,13 +37,8 @@ class PathPickerRow(BaseRow):
     ) -> None:
         super().__init__(gui_config, baseline, parent)
 
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        # Indicator and label
-        layout.addWidget(self._init_indicator())
-        layout.addWidget(self._init_label(label))
+        # Label
+        self._init_label(label)
 
         if tooltip:
             self.setToolTip(tooltip)
@@ -54,7 +48,7 @@ class PathPickerRow(BaseRow):
         self._edit.setReadOnly(True)
         self._edit.setPlaceholderText("Select directory…")
         self._edit.textChanged.connect(self._on_text_changed)
-        layout.addWidget(self._edit, stretch=1)
+        self._content_layout.addWidget(self._edit, stretch=1)
 
         # Browse button
         self._browse_btn = QPushButton("…")
@@ -64,7 +58,7 @@ class PathPickerRow(BaseRow):
         self._browse_btn.setToolTip("Browse for directory")
         self._browse_btn.setCursor(Qt.PointingHandCursor)
         self._browse_btn.clicked.connect(self._browse)
-        layout.addWidget(self._browse_btn)
+        self._content_layout.addWidget(self._browse_btn)
 
         self._apply_style()
         self._update_highlight()

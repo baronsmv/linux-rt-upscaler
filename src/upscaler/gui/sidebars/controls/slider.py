@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Callable, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QHBoxLayout, QSlider, QLineEdit, QLabel, QWidget
+from PySide6.QtWidgets import QSlider, QLineEdit, QLabel, QWidget
 
 from ._base import BaseRow
 
@@ -35,14 +35,8 @@ class SliderRow(BaseRow):
         self._editable = editable
         self._scale_factor = scale_factor
 
-        # Layout: indicator | label | slider | [value]
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        # Indicator and label from base
-        layout.addWidget(self._init_indicator())
-        layout.addWidget(self._init_label(label))
+        # Label
+        self._init_label(label)
 
         # Slider
         self._slider = QSlider(Qt.Horizontal)
@@ -51,7 +45,7 @@ class SliderRow(BaseRow):
         self._slider.setFixedHeight(gui_config.sidebar_row_height)
         self._slider.setCursor(Qt.PointingHandCursor)
         self._slider.valueChanged.connect(self._on_value_changed)
-        layout.addWidget(self._slider, stretch=1)
+        self._content_layout.addWidget(self._slider, stretch=1)
 
         # Tooltip
         if tooltip:
@@ -69,11 +63,11 @@ class SliderRow(BaseRow):
                 self._value_edit.setFixedHeight(gui_config.sidebar_row_height)
                 self._value_edit.setAlignment(Qt.AlignCenter)
                 self._value_edit.editingFinished.connect(self._on_edit_finished)
-                layout.addWidget(self._value_edit)
+                self._content_layout.addWidget(self._value_edit)
             else:
                 self._value_label = QLabel(self._format(value))
                 self._value_label.setFixedHeight(gui_config.sidebar_row_height)
-                layout.addWidget(self._value_label)
+                self._content_layout.addWidget(self._value_label)
 
         self._apply_slider_style()
         self._apply_edit_style()

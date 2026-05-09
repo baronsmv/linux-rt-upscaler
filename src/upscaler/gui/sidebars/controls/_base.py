@@ -4,7 +4,7 @@ from abc import abstractmethod
 from typing import Any, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QWidget, QFrame, QLabel
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -15,8 +15,9 @@ class BaseRow(QWidget):
     Base class for settings rows that support visual hints.
 
     Provides:
-    - A coloured left‑side indicator bar.
-    - An optional label (can be None for checkbox‑style rows).
+    - A colored left‑side indicator bar that collapses to zero width when hidden.
+    - An optional label (added directly to the content layout).
+    - A content container with configurable spacing for the actual controls.
     - Abstract `_is_highlighted()` that subclasses implement.
     - `set_baseline()` and automatic highlight updates.
     """
@@ -30,34 +31,45 @@ class BaseRow(QWidget):
         super().__init__(parent)
         self._cfg = cfg
         self._baseline = baseline
-        self._indicator: Optional[QFrame] = None
+
+        # Main layout: indicator | content container
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # Indicator – hidden by default, width collapsed
+        self._indicator = QFrame()
+        self._indicator.setStyleSheet(
+            f"background: {cfg.highlight_border_color}; border: none;"
+        )
+        self._indicator_full_width = cfg.highlight_border_width
+        self._indicator.setFixedWidth(0)  # collapsed
+        self._indicator.hide()
+        main_layout.addWidget(self._indicator)
+
+        # Content container – holds label, control, and optional value
+        self._content_container = QWidget()
+        self._content_layout = QHBoxLayout(self._content_container)
+        self._content_layout.setContentsMargins(0, 0, 0, 0)
+        self._content_layout.setSpacing(cfg.sidebar_row_spacing)  # original spacing
+        main_layout.addWidget(self._content_container)
+
+        # Label (created by subclass via _init_label)
         self._label: Optional[QLabel] = None
 
     # ------------------------------------------------------------------
     #  Subclass API
     # ------------------------------------------------------------------
-    # Inside BaseRow class
-
-    def _init_indicator(self) -> QFrame:
-        """Create the indicator widget. The caller inserts it into the layout."""
-        self._indicator = QFrame()
-        self._indicator.setFixedWidth(self._cfg.highlight_border_width)
-        self._indicator.setStyleSheet(
-            f"background: {self._cfg.highlight_border_color}; border: none;"
-        )
-        # Store the configured width for later toggling
-        self._indicator_full_width = self._cfg.highlight_border_width
-        self._indicator.hide()
-        return self._indicator
-
     def _init_label(self, text: str) -> QLabel:
-        """Create and return a standard row label. Subclasses may call this to get a label."""
+        """Create a standard row label and add it to the content layout."""
         self._label = QLabel(text)
         self._label.setStyleSheet(
-            f"color: {self._cfg.sidebar_tab_text_color}; font-size: {self._cfg.sidebar_tab_font_size}px;"
+            f"color: {self._cfg.sidebar_tab_text_color}; "
+            f"font-size: {self._cfg.sidebar_tab_font_size}px;"
         )
         self._label.setFixedHeight(self._cfg.sidebar_row_height)
         self._label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        self._content_layout.addWidget(self._label)
         return self._label
 
     # ------------------------------------------------------------------
@@ -71,14 +83,13 @@ class BaseRow(QWidget):
     def _update_highlight(self) -> None:
         """Called whenever the value or baseline changes."""
         highlighted = self._is_highlighted()
-        if self._indicator:
-            # Collapse width to 0 when hidden so no space is taken
-            if highlighted:
-                self._indicator.setFixedWidth(self._indicator_full_width)
-                self._indicator.show()
-            else:
-                self._indicator.hide()
-                self._indicator.setFixedWidth(0)
+        # Collapse indicator width to 0 when hidden, preserving spacing exactly
+        if highlighted and self.isEnabled():
+            self._indicator.setFixedWidth(self._indicator_full_width)
+            self._indicator.show()
+        else:
+            self._indicator.hide()
+            self._indicator.setFixedWidth(0)
         self._apply_highlight_style(highlighted)
 
     def _apply_highlight_style(self, highlighted: bool) -> None:

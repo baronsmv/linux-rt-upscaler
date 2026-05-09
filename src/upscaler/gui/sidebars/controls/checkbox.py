@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QWidget
+from PySide6.QtWidgets import QCheckBox, QWidget
 
 from ._base import BaseRow
 
@@ -34,12 +34,6 @@ class CheckBox(BaseRow):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(gui_config, baseline, parent)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        # Indicator
-        layout.addWidget(self._init_indicator())
 
         # Checkbox
         self._checkbox = QCheckBox(text)
@@ -49,7 +43,7 @@ class CheckBox(BaseRow):
             self._checkbox.setToolTip(tooltip)
 
         self._checkbox.stateChanged.connect(self._on_state_changed)
-        layout.addWidget(self._checkbox, 1)
+        self._content_layout.addWidget(self._checkbox, 1)
 
         # Initial style and highlight
         self._apply_style()

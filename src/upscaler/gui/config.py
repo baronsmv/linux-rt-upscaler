@@ -107,6 +107,7 @@ class GUIConfig:
     sidebar_combo_border_focus: str = "#4a9eff"
     sidebar_icon_columns: int = 5
     sidebar_icon_size: int = 32
+    sidebar_row_spacing: int = 6
 
     # ---- Control row generic states ------------------------------------
     control_disabled_text: str = "#555"

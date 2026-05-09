@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QComboBox, QHBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QWidget
 
 from ._base import BaseRow
 
@@ -26,13 +26,8 @@ class ComboRow(BaseRow):
     ) -> None:
         super().__init__(gui_config, baseline, parent)
 
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        # Indicator and label
-        layout.addWidget(self._init_indicator())
-        layout.addWidget(self._init_label(label))
+        # Label
+        self._init_label(label)
 
         # Combo box
         self._combo = QComboBox()
@@ -42,7 +37,7 @@ class ComboRow(BaseRow):
         self._combo.setFixedHeight(gui_config.sidebar_row_height)
         self._combo.setMinimumWidth(100)
         self._combo.currentTextChanged.connect(self._on_current_text_changed)
-        layout.addWidget(self._combo)
+        self._content_layout.addWidget(self._combo)
 
         if tooltip:
             self.setToolTip(tooltip)

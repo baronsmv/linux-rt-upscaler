@@ -4,7 +4,7 @@ from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QColorDialog, QPushButton, QHBoxLayout, QWidget
+from PySide6.QtWidgets import QColorDialog, QPushButton, QWidget
 
 from ._base import BaseRow
 
@@ -37,14 +37,9 @@ class ColorPickerRow(BaseRow):
             else QColor("#000000")
         )
 
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        # Indicator and label
-        layout.addWidget(self._init_indicator())
-        layout.addWidget(self._init_label(label))
-        layout.addStretch()
+        # Label
+        self._init_label(label)
+        self._content_layout.addStretch()
 
         if tooltip:
             self.setToolTip(tooltip)
@@ -55,7 +50,7 @@ class ColorPickerRow(BaseRow):
         )
         self._button.setCursor(Qt.PointingHandCursor)
         self._button.clicked.connect(self._pick_color)
-        layout.addWidget(self._button)
+        self._content_layout.addWidget(self._button)
 
         self._update_highlight()
         self._apply_color()
