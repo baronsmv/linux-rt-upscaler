@@ -36,7 +36,7 @@ class ExtrasTab(SettingsTab):
             help="Folder where screenshots will be saved.",
         )
         self._file_input = self._add_text(
-            "Filename Template",
+            "Template",
             self._config.screenshot_filename,
             self._on_file_changed,
             baseline=self.baseline_config.screenshot_filename,
