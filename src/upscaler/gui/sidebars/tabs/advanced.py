@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
+from ....config import VulkanPresentMode
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -46,7 +47,7 @@ class AdvancedTab(SettingsTab):
         self._add_section("Vulkan Rendering")
         self._present_combo = self._add_combo(
             "Present Mode",
-            ["fifo", "mailbox", "immediate"],
+            [e.value for e in VulkanPresentMode],
             self._config.vulkan_present_mode,
             self._on_present_mode,
         )

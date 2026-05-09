@@ -6,15 +6,15 @@ from typing import List, Optional, Tuple, Union, Dict
 from platformdirs import user_pictures_dir
 
 UPSCALING_MODELS = (
-    "8x32",
-    "4x32",
-    "4x24",
-    "4x16",
-    "4x12",
-    "3x12",
-    "fast",
-    "faster",
     "veryfast",
+    "faster",
+    "fast",
+    "3x12",
+    "4x12",
+    "4x16",
+    "4x24",
+    "4x32",
+    "8x32",
 )
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
 ZOOM_LEVELS = ("50%", "75%", "100%", "150%", "200%", "300%", "400%")

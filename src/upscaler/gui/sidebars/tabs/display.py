@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtGui import QColor
 
 from ..common import SettingsTab
-from ..controls import ComboRow
+from ....config import OverlayMode
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class DisplayTab(SettingsTab):
     def __init__(self, gui_config: GUIConfig, config: Config, parent=None) -> None:
         self._config = config
-        super().__init__(gui_config, "Display", parent)
+        super().__init__(gui_config, "Display & Overlay", parent)
 
     def _build_content(self) -> None:
         # ---- Monitor & Scale ----
@@ -46,14 +46,21 @@ class DisplayTab(SettingsTab):
 
         # ---- Overlay Mode ----
         self._add_section("Overlay Mode")
-        self._overlay_combo = ComboRow(
+        self._overlay_combo = self._add_combo(
             "Mode",
-            self.gui_config,
-            ["always-on-top", "top-transparent", "fullscreen", "windowed"],
+            [e.value for e in OverlayMode],
             self._config.overlay_mode,
+            self._on_overlay_mode,
         )
-        self._overlay_combo.currentTextChanged.connect(self._on_overlay_mode)
-        self.content_layout.addWidget(self._overlay_combo)
+
+        # ---- Output Geometry ----
+        self._add_section("Output Geometry")
+        self._geom_combo = self._add_combo(
+            "Scaling mode",
+            ["fit", "stretch", "cover"],
+            self._config.output_geometry,
+            self._on_geometry_changed,
+        )
 
         # ---- Crop ----
         self._add_section("Crop")
@@ -136,6 +143,10 @@ class DisplayTab(SettingsTab):
 
     def _on_overlay_mode(self, text):
         self._config.overlay_mode = text
+        self.config_changed.emit()
+
+    def _on_geometry_changed(self, text: str) -> None:
+        self._config.output_geometry = text
         self.config_changed.emit()
 
     def _on_crop_left(self, val):

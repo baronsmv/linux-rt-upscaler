@@ -242,7 +242,7 @@ Default: %(default)s.""",
         "--model",
         choices=UPSCALING_MODELS,
         default=DEFAULT_CONFIG.model,
-        help="""Upscaling model to use (ordered from best to worst quality).
+        help="""Upscaling model to use (ordered from worst to best quality).
 Default: %(default)s.""",
     )
     upscaling_group.add_argument(

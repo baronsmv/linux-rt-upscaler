@@ -24,7 +24,7 @@ class SettingsSidebar(IconSidebarBase):
 
         tabs = [
             (GeneralTab(gui_config, config), "general", "General"),
-            (DisplayTab(gui_config, config), "display", "Display"),
+            (DisplayTab(gui_config, config), "display", "Display & Overlay"),
             (EffectsTab(gui_config, config), "effects", "Effects"),
             (ExtrasTab(gui_config, config), "extras", "Extras"),
             (AdvancedTab(gui_config, config), "advanced", "Advanced"),
