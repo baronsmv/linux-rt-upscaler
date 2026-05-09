@@ -105,5 +105,5 @@ class GUIConfig:
     sidebar_slider_color: str = "#4a9eff"
     sidebar_combo_border_color: str = "#444444"
     sidebar_combo_border_focus: str = "#4a9eff"
-    sidebar_icon_columns: int = 7
-    sidebar_icon_size: int = 24
+    sidebar_icon_columns: int = 5
+    sidebar_icon_size: int = 32

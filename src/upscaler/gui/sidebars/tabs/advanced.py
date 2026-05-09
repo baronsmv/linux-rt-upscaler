@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
-from ..controls import ComboRow
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -45,15 +44,12 @@ class AdvancedTab(SettingsTab):
 
         # ---- Vulkan Rendering ----
         self._add_section("Vulkan Rendering")
-        self._present_combo = ComboRow(
+        self._present_combo = self._add_combo(
             "Present Mode",
-            self.gui_config,
             ["fifo", "mailbox", "immediate"],
             self._config.vulkan_present_mode,
+            self._on_present_mode,
         )
-        self._present_combo.currentTextChanged.connect(self._on_present_mode)
-        self.content_layout.addWidget(self._present_combo)
-
         self._buffer_pool = self._add_slider(
             "Buffer Pool Size",
             2,
@@ -62,12 +58,11 @@ class AdvancedTab(SettingsTab):
             self._on_buffer_pool,
             show_val=True,
         )
-        timeout_ms = max(1, self._config.frame_timeout // 1_000_000)
         self._frame_timeout = self._add_slider(
             "Frame Timeout (ms)",
             1,
             1000,
-            timeout_ms,
+            max(1, self._config.frame_timeout // 1_000_000),
             self._on_frame_timeout,
             show_val=True,
         )

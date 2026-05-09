@@ -4,13 +4,11 @@ from typing import TYPE_CHECKING
 
 from .common import IconSidebarBase
 from .tabs import (
-    CaptureTab,
     DisplayTab,
     EffectsTab,
     GeneralTab,
-    OSDTab,
     AdvancedTab,
-    ScreenshotsTab,
+    ExtrasTab,
 )
 
 if TYPE_CHECKING:
@@ -28,9 +26,7 @@ class SettingsSidebar(IconSidebarBase):
             (GeneralTab(gui_config, config), "general", "General"),
             (DisplayTab(gui_config, config), "display", "Display"),
             (EffectsTab(gui_config, config), "effects", "Effects"),
-            (CaptureTab(gui_config, config), "capture", "Capture"),
-            (ScreenshotsTab(gui_config, config), "screenshot", "Screenshots"),
-            (OSDTab(gui_config, config), "osd", "OSD"),
+            (ExtrasTab(gui_config, config), "extras", "Extras"),
             (AdvancedTab(gui_config, config), "advanced", "Advanced"),
         ]
 

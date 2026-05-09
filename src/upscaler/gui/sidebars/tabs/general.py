@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
-from ..controls import CheckBox, ComboRow, SectionLabel
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -17,10 +16,9 @@ class GeneralTab(SettingsTab):
 
     def _build_content(self) -> None:
         # ---- Model & double upscale ----
-        self.content_layout.addWidget(SectionLabel("Upscaling Model", self.gui_config))
-        self._model_combo = ComboRow(
+        self._add_section("Upscaling Model")
+        self._model_combo = self._add_combo(
             "Model",
-            self.gui_config,
             [
                 "fast",
                 "faster",
@@ -33,26 +31,33 @@ class GeneralTab(SettingsTab):
                 "8x32",
             ],
             self._config.model,
+            self._on_model_changed,
         )
-        self._model_combo.currentTextChanged.connect(self._on_model_changed)
-        self.content_layout.addWidget(self._model_combo)
-
-        self._double_cb = CheckBox(
-            "Double Upscale (4x)", self.gui_config, self._config.double_upscale
+        self._double_cb = self._add_cb(
+            "Double Upscale (4x)",
+            self._config.double_upscale,
+            self._on_double_changed,
         )
-        self._double_cb.stateChanged.connect(self._on_double_changed)
-        self.content_layout.addWidget(self._double_cb)
 
         # ---- Output Geometry ----
-        self.content_layout.addWidget(SectionLabel("Output Geometry", self.gui_config))
-        self._geom_combo = ComboRow(
+        self._add_section("Output Geometry")
+        self._geom_combo = self._add_combo(
             "Scaling mode",
-            self.gui_config,
             ["fit", "stretch", "cover"],
             self._config.output_geometry,
+            self._on_geometry_changed,
         )
-        self._geom_combo.currentTextChanged.connect(self._on_geometry_changed)
-        self.content_layout.addWidget(self._geom_combo)
+
+        # ---- Focus Tracking ----
+        self._add_section("Focus Tracking")
+        self._follow_focus_cb = self._add_cb(
+            "Follow Focus", self._config.follow_focus, self._on_follow_focus
+        )
+        self._pause_focus_loss_cb = self._add_cb(
+            "Pause on Focus Loss",
+            self._config.pause_on_focus_loss,
+            self._on_pause_focus_loss,
+        )
 
     def _on_model_changed(self, text: str) -> None:
         self._config.model = text
@@ -64,4 +69,12 @@ class GeneralTab(SettingsTab):
 
     def _on_geometry_changed(self, text: str) -> None:
         self._config.output_geometry = text
+        self.config_changed.emit()
+
+    def _on_follow_focus(self, state):
+        self._config.follow_focus = bool(state)
+        self.config_changed.emit()
+
+    def _on_pause_focus_loss(self, state):
+        self._config.pause_on_focus_loss = bool(state)
         self.config_changed.emit()

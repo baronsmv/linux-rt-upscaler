@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtGui import QColor
 
 from ..common import SettingsTab
-from ..controls import ColorPickerRow, ComboRow
+from ..controls import ComboRow
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -20,25 +20,27 @@ class DisplayTab(SettingsTab):
     def _build_content(self) -> None:
         # ---- Monitor & Scale ----
         self._add_section("Monitor")
-        self._monitor_combo = ComboRow(
+        self._monitor_combo = self._add_combo(
             "Monitor",
-            self.gui_config,
             ["primary", "all", "HDMI-1", "HDMI-2", "DP-1", "DP-2", "eDP-1"],
             self._config.monitor,
+            self._on_monitor_changed,
         )
-        self._monitor_combo.currentTextChanged.connect(self._on_monitor_changed)
-        self.content_layout.addWidget(self._monitor_combo)
 
-        # Handle scale_factor = None (automatic)
-        scale = self._config.scale_factor
-        if scale is None:
-            scale = 1.0  # default display value when automatic
-        self._scale_factor = self._add_slider(
-            "Scale Factor",
+        # ---- Scale Factor ----
+        self._add_section("Scale Factor")
+        auto = self._config.scale_factor is None
+        self._auto_scale_cb = self._add_cb(
+            "Auto Scale",
+            self._config.scale_factor is None,
+            self._on_auto_scale_changed,
+        )
+        self._scale_slider = self._add_slider(
+            "Scale Factor %",
             100,
             400,
-            max(100, int(scale * 100)),
-            self._on_scale_factor,
+            int((self._config.scale_factor or 1.0) * 100),
+            self._on_scale_slider_changed,
             show_val=True,
         )
 
@@ -107,22 +109,30 @@ class DisplayTab(SettingsTab):
             if qc.isValid():
                 bg = qc.name(QColor.HexArgb)
 
-        self._bg_picker = ColorPickerRow(
+        self._bg_picker = self._add_color_picker(
             "Color",
-            self.gui_config,
-            initial_color=bg,
+            bg,
+            self._on_bg_color,
         )
-        self._bg_picker.colorChanged.connect(self._on_bg_color)
-        self.content_layout.addWidget(self._bg_picker)
 
     def _on_monitor_changed(self, text):
         self._config.monitor = text
         self.config_changed.emit()
 
-    def _on_scale_factor(self, val):
-        # Convert slider int (e.g., 150) to float (1.5)
-        self._config.scale_factor = val / 100.0
+    def _on_auto_scale_changed(self, state: int) -> None:
+        auto = bool(state)
+        self._scale_slider.setEnabled(not auto)
+        if auto:
+            self._config.scale_factor = None
+        else:
+            # When disabled, set the config to the current slider value
+            self._config.scale_factor = self._scale_slider.value() / 100.0
         self.config_changed.emit()
+
+    def _on_scale_slider_changed(self, val: int) -> None:
+        if self._scale_slider.isEnabled():
+            self._config.scale_factor = val / 100.0
+            self.config_changed.emit()
 
     def _on_overlay_mode(self, text):
         self._config.overlay_mode = text

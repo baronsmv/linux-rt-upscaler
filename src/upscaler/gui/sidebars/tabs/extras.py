@@ -9,13 +9,29 @@ if TYPE_CHECKING:
     from ....config import Config
 
 
-class OSDTab(SettingsTab):
+class ExtrasTab(SettingsTab):
     def __init__(self, gui_config: GUIConfig, config: Config, parent=None) -> None:
         self._config = config
-        super().__init__(gui_config, "OSD", parent)
+        super().__init__(gui_config, "Extras", parent)
 
     def _build_content(self) -> None:
-        self._add_section("On‑Screen Display")
+        # ---- Screenshot Location ----
+        self._add_section("Screenshot Location")
+        self._dir_picker = self._add_path_picker(
+            "Directory",
+            self._config.screenshot_dir,
+            self._on_dir_changed,
+        )
+
+        self._add_section("Filename Template")
+        self._file_input = self._add_text(
+            "Template",
+            self._config.screenshot_filename,
+            self._on_file_changed,
+        )
+
+        # ---- On-Screen Display ----
+        self._add_section("On-Screen Display")
         self._osd_enabled = self._add_cb(
             "Show OSD", self._config.show_osd, self._on_osd_enabled
         )
@@ -27,6 +43,14 @@ class OSDTab(SettingsTab):
             self._on_osd_duration,
             show_val=True,
         )
+
+    def _on_dir_changed(self, path: str) -> None:
+        self._config.screenshot_dir = path
+        self.config_changed.emit()
+
+    def _on_file_changed(self, text: str) -> None:
+        self._config.screenshot_filename = text
+        self.config_changed.emit()
 
     def _on_osd_enabled(self, state):
         self._config.show_osd = bool(state)

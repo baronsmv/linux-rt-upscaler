@@ -13,7 +13,15 @@ from PySide6.QtWidgets import (
 )
 
 from . import styles
-from ..controls import CheckBox, SectionLabel, SliderRow
+from ..controls import (
+    CheckBox,
+    ColorPickerRow,
+    ComboRow,
+    LineEditRow,
+    PathPickerRow,
+    SectionLabel,
+    SliderRow,
+)
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -128,3 +136,52 @@ class SettingsTab(QWidget):
         slider.valueChanged.connect(slot)
         self.content_layout.addWidget(slider)
         return slider
+
+    def _add_combo(
+        self,
+        label: str,
+        items: list[str],
+        current: str | None,
+        slot,
+    ) -> ComboRow:
+        """Add a labelled combo box row and return it."""
+        combo = ComboRow(label, self.gui_config, items, current)
+        combo.currentTextChanged.connect(slot)
+        self.content_layout.addWidget(combo)
+        return combo
+
+    def _add_text(
+        self,
+        label: str,
+        text: str,
+        slot,
+    ) -> LineEditRow:
+        """Add a labelled single‑line text edit and return it."""
+        editor = LineEditRow(label, self.gui_config, text)
+        editor.textChanged.connect(slot)
+        self.content_layout.addWidget(editor)
+        return editor
+
+    def _add_path_picker(
+        self,
+        label: str,
+        initial_path: str,
+        slot,
+    ) -> PathPickerRow:
+        """Add a directory picker row (line edit + browse) and return it."""
+        picker = PathPickerRow(label, self.gui_config, initial_path)
+        picker.pathChanged.connect(slot)
+        self.content_layout.addWidget(picker)
+        return picker
+
+    def _add_color_picker(
+        self,
+        label: str,
+        initial_color: str,
+        slot,
+    ) -> ColorPickerRow:
+        """Add a colour picker row (swatch + dialog) and return it."""
+        picker = ColorPickerRow(label, self.gui_config, initial_color)
+        picker.colorChanged.connect(slot)
+        self.content_layout.addWidget(picker)
+        return picker

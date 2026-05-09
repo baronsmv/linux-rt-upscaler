@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
-from ..controls import ComboRow
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -85,9 +84,8 @@ class EffectsTab(SettingsTab):
         self._lut_cb = self._add_cb(
             "Enable LUT", self._config.lut_enabled, self._on_lut_enabled
         )
-        self._lut_combo = ComboRow(
+        self._lut_combo = self._add_combo(
             "Preset",
-            self.gui_config,
             [
                 "identity",
                 "warm",
@@ -103,9 +101,8 @@ class EffectsTab(SettingsTab):
                 "cyano",
             ],
             self._config.lut_preset,
+            self._on_lut_preset,
         )
-        self._lut_combo.currentTextChanged.connect(self._on_lut_preset)
-        self.content_layout.addWidget(self._lut_combo)
 
         # ---- Film Grain ----
         self._add_section("Film Grain")
