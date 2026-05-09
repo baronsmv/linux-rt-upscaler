@@ -186,7 +186,8 @@ class SettingsTab(QWidget):
             editable=editable,
             tooltip=help,
         )
-        slider.valueChanged.connect(slot)
+        # Map the integer index back to the name before calling the slot
+        slider.valueChanged.connect(lambda val: slot(names[val]))
         self.content_layout.addWidget(slider)
         return slider
 
