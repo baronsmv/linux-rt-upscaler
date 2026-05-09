@@ -89,7 +89,7 @@ class AdvancedTab(SettingsTab):
             1000,
             max(1, self._config.frame_timeout // 1_000_000),
             self._on_frame_timeout,
-            baseline=self.baseline_config.frame_timeout,
+            baseline=self.baseline_config.frame_timeout // 1_000_000,
             help="Maximum time (in milliseconds) to wait for the GPU to finish the previous frame.\n"
             "Lower values reduce CPU blocking but may drop frames under heavy load.\n"
             "Recommended range: 17 (1/60 s) – 1000 (1 s).",
@@ -153,9 +153,11 @@ class AdvancedTab(SettingsTab):
             0,
             100,
             int(self._config.area_threshold * 100),
-            self._on_area_threshold,
+            scale_factor=100,
+            float_slot=self._on_area_threshold,
             baseline=self.baseline_config.area_threshold,
-            help="Fraction of the window area (in %) that, when dirty, forces a fallback to full‑frame processing.\n"
+            help="Fraction of the window area (in %) that, when dirty, forces a fallback to "
+            "full‑frame processing.\n"
             "Smaller values fall back earlier, preventing too many tiny tile dispatches.\n"
             "Recommended range: 15% – 50%.",
         )

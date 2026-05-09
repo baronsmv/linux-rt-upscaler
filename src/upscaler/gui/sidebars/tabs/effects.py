@@ -107,41 +107,6 @@ class EffectsTab(SettingsTab):
         )
         self._bloom_radius.setEnabled(self._config.bloom_enabled)
 
-        # ---- Film Grain ----
-        self._add_section("Film Grain")
-        self._grain_cb = self._add_cb(
-            "Enable Grain",
-            self._config.grain_enabled,
-            self._on_grain_enabled,
-            baseline=self.baseline_config.grain_enabled,
-            help="Simulated film grain for a photochemical, organic look.",
-        )
-        self._grain_str = self._add_slider(
-            "Strength",
-            0,
-            100,
-            int(self._config.grain_strength * 100),
-            scale_factor=100,
-            float_slot=self._on_grain_strength,
-            baseline=self.baseline_config.grain_strength,
-            help="Grain intensity (0 = off, 1 = max). Low values (0.1‑0.2) mimic "
-            "fine photochemical grain.",
-        )
-        self._grain_str.setEnabled(self._config.grain_enabled)
-
-        self._grain_size = self._add_slider(
-            "Size",
-            100,
-            1000,
-            int(self._config.grain_size * 100),
-            scale_factor=100,
-            float_slot=self._on_grain_size_changed,
-            baseline=self.baseline_config.grain_size,
-            help="Apparent particle size of the grain. Larger values produce "
-            "coarser, more visible grain.",
-        )
-        self._grain_size.setEnabled(self._config.grain_enabled)
-
         # ---- Vignette ----
         self._add_section("Vignette")
         self._vignette_cb = self._add_cb(

@@ -33,7 +33,6 @@ class DisplayTab(SettingsTab):
 
         # ---- Scale Factor ----
         self._add_section("Scale Factor")
-        # Auto Scale checkbox: baseline is True if baseline_config.scale_factor is None
         self._auto_scale_cb = self._add_cb(
             "Auto Scale",
             self._config.scale_factor is None,
@@ -42,12 +41,6 @@ class DisplayTab(SettingsTab):
             help="Let the application automatically detect the correct scale factor "
             "based on the physical monitor resolution.",
         )
-        # Scale slider baseline: convert baseline_config.scale_factor to slider value
-        baseline_scale = self.baseline_config.scale_factor
-        if baseline_scale is not None:
-            baseline_scale_val = max(100, int(baseline_scale * 100))
-        else:
-            baseline_scale_val = None
         self._scale_slider = self._add_slider(
             "Scale Factor %",
             100,
@@ -55,7 +48,11 @@ class DisplayTab(SettingsTab):
             max(100, int((self._config.scale_factor or 1.0) * 100)),
             scale_factor=100,
             float_slot=self._on_scale_slider_changed,
-            baseline=baseline_scale_val,
+            baseline=(
+                self.baseline_config.scale_factor
+                if self.baseline_config.scale_factor is not None
+                else 1.0
+            ),
             help="Manual scale factor (e.g., 1.50 for 150% scaling). "
             "Only available when 'Auto Scale' is disabled.",
         )

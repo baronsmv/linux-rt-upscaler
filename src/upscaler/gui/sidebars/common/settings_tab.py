@@ -154,7 +154,7 @@ class SettingsTab(QWidget):
         editable: bool = True,
         scale_factor: int = 1,
         float_slot: Optional[Callable] = None,
-        baseline: Optional[int] = None,
+        baseline: Optional[float] = None,
         help: Optional[str] = None,
     ) -> SliderRow:
         """Add a slider row, optionally with float output and editable field."""
