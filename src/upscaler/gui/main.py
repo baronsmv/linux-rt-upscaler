@@ -69,6 +69,7 @@ class MainWindow(QMainWindow):
         self.right_sidebar = SettingsSidebar(self.gui_config, self.config)
         self.right_sidebar.save_settings.connect(self._on_save_settings)
         self.right_sidebar.reset_settings.connect(self._on_reset_settings)
+        self.right_sidebar.restore_defaults.connect(self._on_restore_defaults)
 
         # ---- Assemble splitter ----
         splitter = StyledSplitter(Qt.Horizontal, self.gui_config)
@@ -153,19 +154,17 @@ class MainWindow(QMainWindow):
     def _on_save_settings(self) -> None:
         """Save the current configuration (placeholder)."""
         logger.info("Save settings requested")
-        # Here you would save the config to YAML (general or profile)
-        # After saving, you may want to reset the baseline and dirty state.
-        # For now, just accept the change as the new baseline.
-        # self.right_sidebar.set_baseline_to_current()  # (future method)
-        # self.right_sidebar._check_dirty()
+        # TODO
 
     def _on_reset_settings(self) -> None:
         """Reset all settings to the baseline (placeholder)."""
         logger.info("Reset settings requested")
-        # Here you would copy baseline config values back into self.config
-        # Then you would need to refresh all SettingsTabs.
-        # For now, just emit a signal that could trigger a full reload.
-        # A real implementation would iterate over fields and setattr, then refresh the whole sidebar.
+        # TODO
+
+    def _on_restore_defaults(self) -> None:
+        """Reset the live config to system defaults, then refresh the sidebar."""
+        logger.info("Restore defaults requested")
+        # TODO
 
     # ------------------------------------------------------------------
     #  Pipeline launch

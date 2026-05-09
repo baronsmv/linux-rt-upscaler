@@ -3,8 +3,14 @@ from __future__ import annotations
 import copy
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from .common import IconSidebarBase
 from .tabs import (
@@ -14,7 +20,6 @@ from .tabs import (
     AdvancedTab,
     ExtrasTab,
 )
-from ...config import DEFAULT_CONFIG, parse_config
 
 if TYPE_CHECKING:
     from ..config import GUIConfig
@@ -26,13 +31,13 @@ class SettingsSidebar(IconSidebarBase):
 
     save_settings = Signal()
     reset_settings = Signal()
+    restore_defaults = Signal()
 
     def __init__(self, gui_config: GUIConfig, config: Config, parent=None) -> None:
         super().__init__(gui_config, parent)
 
-        # ---- Baseline = system defaults ----
-        self._bc = copy.deepcopy(DEFAULT_CONFIG)
-        parse_config(self._bc)
+        # ---- Baseline = snapshot of the currently loaded config ----
+        self._bc = copy.deepcopy(config)
 
         self._config = config
         self._dirty = False
@@ -49,7 +54,7 @@ class SettingsSidebar(IconSidebarBase):
             self.add_tab(tab, f"tabs/{icon}", tooltip)
             tab.config_changed.connect(self._on_config_changed)
 
-        # ---- Footer with Save & Reset buttons ----
+        # ---- Footer with Save & Reset buttons + Restore Defaults link ----
         footer = self._create_footer()
         self.layout().addWidget(footer)
 
@@ -91,14 +96,18 @@ class SettingsSidebar(IconSidebarBase):
     #  Footer
     # ------------------------------------------------------------------
     def _create_footer(self) -> QWidget:
-        from PySide6.QtCore import Qt
-        from PySide6.QtWidgets import QPushButton, QWidget, QHBoxLayout
-
         cfg = self.gui_config
-        footer = QWidget()
-        layout = QHBoxLayout(footer)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+
+        outer = QWidget()
+        outer_layout = QVBoxLayout(outer)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(4)
+
+        # ---- Button row ----
+        button_widget = QWidget()
+        button_layout = QHBoxLayout(button_widget)
+        button_layout.setContentsMargins(8, 8, 8, 8)
+        button_layout.setSpacing(8)
 
         # Save button
         self._save_btn = QPushButton("Save")
@@ -130,7 +139,7 @@ class SettingsSidebar(IconSidebarBase):
             }}
         """
         )
-        layout.addWidget(self._save_btn, 1)
+        button_layout.addWidget(self._save_btn, 1)
 
         # Reset button
         self._reset_btn = QPushButton("Reset")
@@ -162,6 +171,26 @@ class SettingsSidebar(IconSidebarBase):
             }}
         """
         )
-        layout.addWidget(self._reset_btn, 1)
+        button_layout.addWidget(self._reset_btn, 1)
 
-        return footer
+        outer_layout.addWidget(button_widget)
+
+        # ---- "Restore System Defaults" link ----
+        restore_label = QLabel("<a href='#'>Restore System Defaults</a>")
+        restore_label.setAlignment(Qt.AlignCenter)
+        restore_label.setCursor(Qt.PointingHandCursor)
+        restore_label.setStyleSheet(
+            f"""
+            QLabel {{
+                color: {cfg.sidebar_section_title_color};
+                font-size: {cfg.sidebar_tab_font_size - 2}px;
+            }}
+            QLabel:hover {{
+                color: {cfg.highlight_label_color};
+            }}
+        """
+        )
+        restore_label.linkActivated.connect(self.restore_defaults.emit)
+        outer_layout.addWidget(restore_label)
+
+        return outer
