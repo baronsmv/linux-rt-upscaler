@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
-from ..controls import LineEditRow, SectionLabel
+from ..controls import LineEditRow, PathPickerRow, SectionLabel
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -17,13 +17,13 @@ class ScreenshotsTab(SettingsTab):
 
     def _build_content(self) -> None:
         self._add_section("Screenshot Location")
-        self._dir_input = LineEditRow(
+        self._dir_picker = PathPickerRow(
             "Directory",
             self.gui_config,
-            self._config.screenshot_dir,
+            initial_path=self._config.screenshot_dir,
         )
-        self._dir_input.textChanged.connect(self._on_dir_changed)
-        self.content_layout.addWidget(self._dir_input)
+        self._dir_picker.pathChanged.connect(self._on_dir_changed)
+        self.content_layout.addWidget(self._dir_picker)
 
         self._add_section("Filename Template")
         self._file_input = LineEditRow(
@@ -37,8 +37,8 @@ class ScreenshotsTab(SettingsTab):
     def _add_section(self, title: str) -> None:
         self.content_layout.addWidget(SectionLabel(title, self.gui_config))
 
-    def _on_dir_changed(self, text: str) -> None:
-        self._config.screenshot_dir = text
+    def _on_dir_changed(self, path: str) -> None:
+        self._config.screenshot_dir = path
         self.config_changed.emit()
 
     def _on_file_changed(self, text: str) -> None:
