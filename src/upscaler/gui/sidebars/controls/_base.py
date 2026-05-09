@@ -135,3 +135,73 @@ class BaseRow(QWidget):
         when the row is enabled or disabled.
         """
         pass
+
+    def _make_input_style(self, enabled: bool, extra: str = "") -> str:
+        """Return a common stylesheet for QLineEdit-based controls."""
+        cfg = self._cfg
+        bg = cfg.edit_background if enabled else cfg.edit_background_disabled
+        text_color = cfg.edit_text_color if enabled else cfg.edit_text_color_disabled
+        border = cfg.edit_border_color if enabled else cfg.control_disabled_border
+        focus = cfg.edit_border_focus_color if enabled else cfg.control_disabled_border
+        hover = cfg.edit_border_hover_color if enabled else cfg.control_disabled_border
+        selection = cfg.edit_selection_background
+        return f"""
+            QLineEdit {{
+                background: {bg};
+                border: 1px solid {border};
+                border-radius: {cfg.edit_border_radius}px;
+                padding: {cfg.edit_padding_v}px {cfg.edit_padding_h}px;
+                color: {text_color};
+                font-size: {cfg.sidebar_tab_font_size}px;
+                selection-background-color: {selection};
+            }}
+            QLineEdit:hover {{
+                border-color: {hover};
+            }}
+            QLineEdit:focus {{
+                border-color: {focus};
+            }}
+            {extra}
+        """
+
+    def _make_combo_style(self, enabled: bool) -> str:
+        """Return a common stylesheet for QComboBox-based controls."""
+        cfg = self._cfg
+        bg = cfg.combo_background if enabled else cfg.combo_background_disabled
+        text_color = cfg.combo_text_color if enabled else cfg.combo_text_color_disabled
+        border = cfg.combo_border_color if enabled else cfg.combo_border_color_disabled
+        focus = cfg.combo_border_focus_color if enabled else cfg.control_disabled_border
+        hover = cfg.combo_border_hover_color if enabled else cfg.control_disabled_border
+        popup_bg = cfg.combo_popup_background
+        popup_selection = cfg.combo_popup_selection_background
+        popup_text = cfg.combo_popup_text_color
+        return f"""
+            QComboBox {{
+                background: {bg};
+                border: 1px solid {border};
+                border-radius: {cfg.combo_border_radius}px;
+                padding: {cfg.combo_padding_v}px {cfg.combo_padding_h}px;
+                color: {text_color};
+                font-size: {cfg.sidebar_tab_font_size}px;
+            }}
+            QComboBox:hover {{
+                border-color: {hover};
+            }}
+            QComboBox:focus {{
+                border-color: {focus};
+            }}
+            QComboBox::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: {cfg.combo_dropdown_width}px;
+                border-left: 1px solid {border};
+                border-top-right-radius: {cfg.combo_border_radius}px;
+                border-bottom-right-radius: {cfg.combo_border_radius}px;
+            }}
+            QComboBox QAbstractItemView {{
+                background: {popup_bg};
+                border: 1px solid {border};
+                selection-background-color: {popup_selection};
+                color: {popup_text};
+            }}
+        """

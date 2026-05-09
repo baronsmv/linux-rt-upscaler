@@ -92,31 +92,7 @@ class PathPickerRow(BaseRow):
     #  Style helpers
     # ------------------------------------------------------------------
     def _apply_style(self) -> None:
-        cfg = self._cfg
-        enabled = self.isEnabled()
-        bg = cfg.edit_background if enabled else cfg.edit_background_disabled
-        text_color = cfg.edit_text_color if enabled else cfg.edit_text_color_disabled
-        border = (
-            cfg.sidebar_combo_border_color if enabled else cfg.control_disabled_border
-        )
-        focus = (
-            cfg.sidebar_combo_border_focus if enabled else cfg.control_disabled_border
-        )
-        self._edit.setStyleSheet(
-            f"""
-            QLineEdit {{
-                background: {bg};
-                border: 1px solid {border};
-                border-radius: {cfg.edit_border_radius}px;
-                padding: {cfg.edit_padding_v}px {cfg.edit_padding_h}px;
-                color: {text_color};
-                font-size: {cfg.sidebar_tab_font_size}px;
-            }}
-            QLineEdit:focus {{
-                border-color: {focus};
-            }}
-        """
-        )
+        self._edit.setStyleSheet(self._make_input_style(self.isEnabled()))
 
     def _browse(self) -> None:
         current = self._edit.text() or os.path.expanduser("~")

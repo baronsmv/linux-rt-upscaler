@@ -126,7 +126,10 @@ class GUIConfig:
     combo_background_disabled: str = "#1e1e1e"
     combo_text_color: str = "#ddd"
     combo_text_color_disabled: str = "#555"
+    combo_border_color: str = "#3a3a3c"
     combo_border_color_disabled: str = "#444"
+    combo_border_hover_color: str = "#555555"
+    combo_border_focus_color: str = "#4a9eff"
     combo_padding_h: int = 8
     combo_padding_v: int = 4
     combo_border_radius: int = 6
@@ -152,6 +155,10 @@ class GUIConfig:
     edit_border_radius: int = 6
     edit_padding_h: int = 8
     edit_padding_v: int = 4
+    edit_border_color: str = "#3a3a3c"
+    edit_border_focus_color: str = "#4a9eff"
+    edit_border_hover_color: str = "#555555"
+    edit_selection_background: str = "#4a9eff"
 
     # ---- Color swatch button ---------------------------------------------
     color_swatch_width: int = 36
