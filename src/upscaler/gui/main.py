@@ -3,19 +3,20 @@ from __future__ import annotations
 import logging
 from typing import List, Optional
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
-    QHBoxLayout,
     QSplitter,
     QMessageBox,
     QApplication,
+    QHBoxLayout,
 )
 
 from .config import GUIConfig
-from .widgets import ProfilesSidebar, SettingsSidebar, WindowGridScene, WindowGridView
+from .grid import WindowGridScene, WindowGridView
+from .sidebars import ProfilesSidebar, SettingsSidebar
 from ..config import Config
 from ..pipeline.launcher import create_pipeline_session
 from ..window import WindowInfo, activate_window, list_windows
@@ -40,29 +41,25 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # ---- Left sidebar ----
+        # ---- Left sidebar (Profiles / Filter) ----
         self.left_sidebar = ProfilesSidebar(self.gui_config)
-        self.left_sidebar.filter_bar.filter_changed.connect(self._on_filter_changed)
-        self.left_sidebar.filter_bar.focus_grid_requested.connect(self._focus_grid)
+        # connect filter signals
+        self.filter_bar = self.left_sidebar.filter_bar
+        self.filter_bar.filter_changed.connect(self._on_filter_changed)
+        self.filter_bar.focus_grid_requested.connect(self._focus_grid)
 
-        # ---- Central grid (the main content) ----
+        # ---- Central grid ----
         self._scene = WindowGridScene(self.gui_config)
         self._view = WindowGridView(self._scene, self.gui_config)
-
-        # Forward scene signals
         self._scene.window_selected.connect(self._on_window_selected)
-        self._scene.focus_filter_requested.connect(
-            self.left_sidebar.filter_bar.set_focus
-        )
-        self._view.focus_filter_requested.connect(
-            self.left_sidebar.filter_bar.set_focus
-        )
+        self._scene.focus_filter_requested.connect(self.filter_bar.set_focus)
+        self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
 
-        # ---- Right sidebar (settings) ----
+        # ---- Right sidebar (Settings) ----
         self.right_sidebar = SettingsSidebar(self.gui_config, self.config)
-        self.right_sidebar.config_changed.connect(lambda: None)  # for future
+        self.right_sidebar.config_changed.connect(print)  # or lambda: None
 
-        # Assemble splitter
+        # Assemble in a splitter
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self.left_sidebar)
         splitter.addWidget(self._view)
@@ -70,15 +67,15 @@ class MainWindow(QMainWindow):
         splitter.setSizes(
             [
                 self.gui_config.sidebar_width,
-                self.width() - 2 * self.gui_config.sidebar_width,
+                400,  # initial central width (auto-resizes)
                 self.gui_config.sidebar_width,
             ]
         )
 
         main_layout.addWidget(splitter)
 
-        # Ctrl+F shortcut (focus filter)
-        QShortcut(QKeySequence("Ctrl+F"), self, self.left_sidebar.filter_bar.set_focus)
+        # Ctrl+F shortcut
+        QShortcut(QKeySequence("Ctrl+F"), self, self.filter_bar.set_focus)
 
         # Auto‑refresh timer
         self._refresh_timer = QTimer(self)
@@ -123,7 +120,7 @@ class MainWindow(QMainWindow):
         self._scene.set_windows(filtered)
 
     def _auto_refresh(self) -> None:
-        self._populate_grid(self.left_sidebar.filter_bar.text())
+        self._populate_grid(self.filter_bar.text())
 
     # ------------------------------------------------------------------
     #  Focus helpers
@@ -151,8 +148,8 @@ class MainWindow(QMainWindow):
 
         win_info = self._selected_win_info
         logger.info("Starting upscale for: %s", win_info.title)
-        activate_window(win_info.handle)
 
+        activate_window(win_info.handle)
         self.hide()
         self._scene.clear_all()
 

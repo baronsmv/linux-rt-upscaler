@@ -9,7 +9,7 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
 
 from .item import WindowTileItem
-from ....window import WindowInfo
+from ...window import WindowInfo
 
 logger = logging.getLogger(__name__)
 

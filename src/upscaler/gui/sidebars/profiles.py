@@ -1,16 +1,22 @@
+"""Left sidebar: Filter and Profiles tabs."""
+
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
-from ..utils import SidebarBase
-from ...filter_bar import FilterBar
-from ....config import GUIConfig
+from .common import SidebarBase
+from ..grid import FilterBar
+
+if TYPE_CHECKING:
+    from ..config import GUIConfig
 
 
 class ProfilesSidebar(SidebarBase):
-    """Left sidebar with Filter and Profiles tabs."""
+    """Left sidebar containing the Filter bar and a Profiles placeholder."""
 
-    def __init__(self, gui_config: GUIConfig, parent=None):
+    def __init__(self, gui_config: GUIConfig, parent: QWidget | None = None) -> None:
         super().__init__(gui_config, parent)
 
         # ---- Filter tab ----
@@ -25,6 +31,7 @@ class ProfilesSidebar(SidebarBase):
         profiles_tab = QWidget()
         profiles_layout = QVBoxLayout(profiles_tab)
         profiles_layout.setContentsMargins(12, 12, 12, 12)
+        # (Add profile widgets here later)
         profiles_layout.addStretch()
 
         self.add_tab(filter_tab, "Filter")

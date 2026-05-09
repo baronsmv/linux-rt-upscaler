@@ -7,8 +7,8 @@ from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QPixmap, QImage, QPainter
 from PySide6.QtWidgets import QWidget
 
-from ....capture import FrameGrabber
-from ....window import WindowInfo
+from ...capture import FrameGrabber
+from ...window import WindowInfo
 
 logger = logging.getLogger(__name__)
 
