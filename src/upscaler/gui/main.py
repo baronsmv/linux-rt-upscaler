@@ -12,10 +12,11 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QApplication,
     QHBoxLayout,
+    QVBoxLayout,
 )
 
 from .config import GUIConfig
-from .grid import WindowGridScene, WindowGridView
+from .grid import WindowGridScene, WindowGridView, FilterBar
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from ..config import Config
 from ..pipeline.launcher import create_pipeline_session
@@ -41,33 +42,41 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # ---- Left sidebar (Profiles / Filter) ----
+        # ---- Left sidebar (Profiles) ----
         self.left_sidebar = ProfilesSidebar(self.gui_config)
-        # connect filter signals
-        self.filter_bar = self.left_sidebar.filter_bar
+
+        # ---- Central column: filter bar + grid ----
+        central_widget = QWidget()
+        central_layout = QVBoxLayout(central_widget)
+        central_layout.setContentsMargins(
+            0, self.gui_config.filter_vertical_margin, 0, 0
+        )
+        central_layout.setSpacing(0)
+
+        self.filter_bar = FilterBar(self.gui_config)
         self.filter_bar.filter_changed.connect(self._on_filter_changed)
         self.filter_bar.focus_grid_requested.connect(self._focus_grid)
+        central_layout.addWidget(self.filter_bar)
 
-        # ---- Central grid ----
         self._scene = WindowGridScene(self.gui_config)
         self._view = WindowGridView(self._scene, self.gui_config)
         self._scene.window_selected.connect(self._on_window_selected)
         self._scene.focus_filter_requested.connect(self.filter_bar.set_focus)
         self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
+        central_layout.addWidget(self._view, stretch=1)
 
         # ---- Right sidebar (Settings) ----
         self.right_sidebar = SettingsSidebar(self.gui_config, self.config)
-        self.right_sidebar.config_changed.connect(print)  # or lambda: None
 
-        # Assemble in a splitter
+        # ---- Assemble splitter ----
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self.left_sidebar)
-        splitter.addWidget(self._view)
+        splitter.addWidget(central_widget)
         splitter.addWidget(self.right_sidebar)
         splitter.setSizes(
             [
                 self.gui_config.sidebar_width,
-                400,  # initial central width (auto-resizes)
+                400,  # central area initial width
                 self.gui_config.sidebar_width,
             ]
         )
