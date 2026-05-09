@@ -95,7 +95,7 @@ class DisplayTab(SettingsTab):
             200,
             self._config.crop_top,
             self._on_crop_top,
-            help="Pixels to crop from the top border.",
+            help="Pixels to crop from the top border of the target window.",
         )
         self._crop_right = self._add_slider(
             "Right",
@@ -103,7 +103,7 @@ class DisplayTab(SettingsTab):
             200,
             self._config.crop_right,
             self._on_crop_right,
-            help="Pixels to crop from the right border.",
+            help="Pixels to crop from the right border of the target window.",
         )
         self._crop_bottom = self._add_slider(
             "Bottom",
@@ -111,7 +111,7 @@ class DisplayTab(SettingsTab):
             200,
             self._config.crop_bottom,
             self._on_crop_bottom,
-            help="Pixels to crop from the bottom border.",
+            help="Pixels to crop from the bottom border of the target window.",
         )
 
         # ---- Offsets ----
