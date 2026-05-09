@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QCheckBox
@@ -23,13 +23,17 @@ class CheckBox(QCheckBox):
         text: str,
         gui_config: GUIConfig,
         checked: bool = False,
-        parent: QWidget | None = None,
+        tooltip: Optional[str] = None,
+        parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(text, parent)
         self._cfg = gui_config
         self.setChecked(checked)
         self.setCursor(Qt.PointingHandCursor)
         self.setStyleSheet(self._make_style())
+
+        if tooltip:
+            self.setToolTip(tooltip)
 
     def _make_style(self) -> str:
         """Build the full stylesheet string for the checkbox."""

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -13,7 +14,9 @@ from PySide6.QtWidgets import (
 )
 
 from ..common import styles
-from ...config import GUIConfig
+
+if TYPE_CHECKING:
+    from ...config import GUIConfig
 
 
 class PathPickerRow(QWidget):
@@ -26,6 +29,7 @@ class PathPickerRow(QWidget):
         label: str,
         gui_config: GUIConfig,
         initial_path: str = "",
+        tooltip: Optional[str] = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -39,6 +43,9 @@ class PathPickerRow(QWidget):
         lbl.setFixedHeight(gui_config.sidebar_row_height)
         lbl.setAlignment(Qt.AlignVCenter)
         layout.addWidget(lbl)
+
+        if tooltip:
+            self.setToolTip(tooltip)
 
         self._edit = QLineEdit(initial_path)
         self._edit.setReadOnly(True)

@@ -115,8 +115,14 @@ class SettingsTab(QWidget):
     def _add_section(self, title: str) -> None:
         self.content_layout.addWidget(SectionLabel(title, self.gui_config))
 
-    def _add_cb(self, label: str, checked: bool, slot) -> CheckBox:
-        cb = CheckBox(label, self.gui_config, checked)
+    def _add_cb(
+        self,
+        label: str,
+        checked: bool,
+        slot: Callable,
+        help: Optional[str] = None,
+    ) -> CheckBox:
+        cb = CheckBox(label, self.gui_config, checked, tooltip=help)
         cb.stateChanged.connect(slot)
         self.content_layout.addWidget(cb)
         return cb
@@ -132,6 +138,7 @@ class SettingsTab(QWidget):
         editable: bool = True,
         scale_factor: int = 1,
         float_slot: Optional[Callable] = None,
+        help: Optional[str] = None,
     ) -> SliderRow:
         """Add a slider row, optionally with float output and editable field."""
         slider = SliderRow(
@@ -143,6 +150,7 @@ class SettingsTab(QWidget):
             show_value=show_val or editable,
             editable=editable,
             scale_factor=scale_factor,
+            tooltip=help,
         )
         slider.valueChanged.connect(slot)
         if float_slot is not None:
@@ -157,6 +165,7 @@ class SettingsTab(QWidget):
         current_name: str,
         slot: Callable,
         editable: bool = False,
+        help: Optional[str] = None,
     ) -> SliderRow:
         """Add a slider that displays a name from a list instead of a number."""
         try:
@@ -175,6 +184,7 @@ class SettingsTab(QWidget):
             show_value=True,
             value_formatter=formatter,
             editable=editable,
+            tooltip=help,
         )
         slider.valueChanged.connect(slot)
         self.content_layout.addWidget(slider)
@@ -186,9 +196,10 @@ class SettingsTab(QWidget):
         items: list[str],
         current: str | None,
         slot: Callable,
+        help: Optional[str] = None,
     ) -> ComboRow:
         """Add a labelled combo box row and return it."""
-        combo = ComboRow(label, self.gui_config, items, current)
+        combo = ComboRow(label, self.gui_config, items, current, tooltip=help)
         combo.currentTextChanged.connect(slot)
         self.content_layout.addWidget(combo)
         return combo
@@ -198,9 +209,10 @@ class SettingsTab(QWidget):
         label: str,
         text: str,
         slot: Callable,
+        help: Optional[str] = None,
     ) -> LineEditRow:
         """Add a labelled single‑line text edit and return it."""
-        editor = LineEditRow(label, self.gui_config, text)
+        editor = LineEditRow(label, self.gui_config, text, tooltip=help)
         editor.textChanged.connect(slot)
         self.content_layout.addWidget(editor)
         return editor
@@ -210,9 +222,10 @@ class SettingsTab(QWidget):
         label: str,
         initial_path: str,
         slot: Callable,
+        help: Optional[str] = None,
     ) -> PathPickerRow:
         """Add a directory picker row (line edit + browse) and return it."""
-        picker = PathPickerRow(label, self.gui_config, initial_path)
+        picker = PathPickerRow(label, self.gui_config, initial_path, tooltip=help)
         picker.pathChanged.connect(slot)
         self.content_layout.addWidget(picker)
         return picker
@@ -222,9 +235,10 @@ class SettingsTab(QWidget):
         label: str,
         initial_color: str,
         slot: Callable,
+        help: Optional[str] = None,
     ) -> ColorPickerRow:
         """Add a colour picker row (swatch + dialog) and return it."""
-        picker = ColorPickerRow(label, self.gui_config, initial_color)
+        picker = ColorPickerRow(label, self.gui_config, initial_color, tooltip=help)
         picker.colorChanged.connect(slot)
         self.content_layout.addWidget(picker)
         return picker

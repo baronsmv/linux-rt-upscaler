@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QLineEdit
@@ -21,6 +21,7 @@ class LineEditRow(QWidget):
         label: str,
         gui_config: GUIConfig,
         text: str = "",
+        tooltip: Optional[str] = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -34,6 +35,9 @@ class LineEditRow(QWidget):
         lbl.setFixedHeight(gui_config.sidebar_row_height)
         lbl.setAlignment(Qt.AlignVCenter)
         layout.addWidget(lbl)
+
+        if tooltip:
+            self.setToolTip(tooltip)
 
         self._edit = QLineEdit(text)
         self._edit.setStyleSheet(

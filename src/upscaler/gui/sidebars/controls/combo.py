@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QComboBox
@@ -26,6 +26,7 @@ class ComboRow(QWidget):
         gui_config: GUIConfig,
         items: list[str],
         current: str | None = None,
+        tooltip: Optional[str] = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -49,6 +50,9 @@ class ComboRow(QWidget):
         self._combo.setMinimumWidth(100)
         self._combo.setStyleSheet(self._combo_style())
         self._combo.currentTextChanged.connect(self.currentTextChanged.emit)
+
+        if tooltip:
+            self.setToolTip(tooltip)
 
         layout.addWidget(self._label)
         layout.addStretch()

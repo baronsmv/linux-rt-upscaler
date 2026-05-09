@@ -23,22 +23,32 @@ class GeneralTab(SettingsTab):
             UPSCALING_MODELS,
             self._config.model,
             self._on_model_changed,
+            help="Upscaling model to use. Models are ordered from worst to best quality. "
+            "Larger numbers indicate deeper networks (slower, higher quality).",
         )
         self._double_cb = self._add_cb(
             "Double Upscale (4x)",
             self._config.double_upscale,
             self._on_double_changed,
+            help="Perform two 2x passes (total 4x) for higher resolution screens (4k, 1440p) "
+            "or low-resolution sources. Uses more GPU resources.",
         )
 
         # ---- Focus Tracking ----
         self._add_section("Focus Tracking")
         self._follow_focus_cb = self._add_cb(
-            "Follow Focus", self._config.follow_focus, self._on_follow_focus
+            "Follow Focus",
+            self._config.follow_focus,
+            self._on_follow_focus,
+            help="Automatically switch the upscaling target to the currently focused window. "
+            "Useful when moving between multiple windows.",
         )
         self._pause_focus_loss_cb = self._add_cb(
             "Pause on Focus Loss",
             self._config.pause_on_focus_loss,
             self._on_pause_focus_loss,
+            help="When the target window loses focus, hide the overlay until it regains focus. "
+            "Uncheck to keep the overlay always visible.",
         )
 
     def _on_model_changed(self, text: str) -> None:

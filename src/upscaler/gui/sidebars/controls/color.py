@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from typing import Optional, TYPE_CHECKING
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QColorDialog, QHBoxLayout, QLabel, QPushButton, QWidget
+from PySide6.QtWidgets import QColorDialog, QPushButton
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel
 
 from ..common import styles
-from ...config import GUIConfig
+
+if TYPE_CHECKING:
+    from ...config import GUIConfig
 
 
 class ColorPickerRow(QWidget):
@@ -18,6 +23,7 @@ class ColorPickerRow(QWidget):
         label: str,
         gui_config: GUIConfig,
         initial_color: str = "#000000",
+        tooltip: Optional[str] = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -37,6 +43,9 @@ class ColorPickerRow(QWidget):
         lbl.setAlignment(Qt.AlignVCenter)
         layout.addWidget(lbl)
         layout.addStretch()
+
+        if tooltip:
+            self.setToolTip(tooltip)
 
         self._button = QPushButton()
         self._button.setFixedSize(36, 24)

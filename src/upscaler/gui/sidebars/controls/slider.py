@@ -26,6 +26,7 @@ class SliderRow(QWidget):
         value_formatter: Optional[Callable[[int], str]] = None,
         scale_factor: int = 1,
         editable: bool = False,
+        tooltip: Optional[str] = None,
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
@@ -53,6 +54,9 @@ class SliderRow(QWidget):
         self._slider.setCursor(Qt.PointingHandCursor)
         self._slider.valueChanged.connect(self._on_value_changed)
         layout.addWidget(self._slider, stretch=1)
+
+        if tooltip:
+            self._slider.setToolTip(tooltip)
 
         # -- Value display / editable field --
         self._value_label = None
