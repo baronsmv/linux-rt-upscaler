@@ -40,10 +40,14 @@ class DisplayTab(SettingsTab):
             "Scale Factor %",
             100,
             400,
-            int((self._config.scale_factor or 1.0) * 100),
-            self._on_scale_slider_changed,
+            max(100, int((self._config.scale_factor or 1.0) * 100)),
+            slot=lambda v: None,
             show_val=True,
+            editable=True,
+            scale_factor=100,
+            float_slot=self._on_scale_slider_changed,
         )
+        self._scale_slider.setEnabled(self._config.scale_factor is not None)
 
         # ---- Overlay Mode ----
         self._add_section("Overlay Mode")
@@ -137,9 +141,9 @@ class DisplayTab(SettingsTab):
             self._config.scale_factor = self._scale_slider.value() / 100.0
         self.config_changed.emit()
 
-    def _on_scale_slider_changed(self, val: int) -> None:
+    def _on_scale_slider_changed(self, val: float) -> None:
         if self._scale_slider.isEnabled():
-            self._config.scale_factor = val / 100.0
+            self._config.scale_factor = val
             self.config_changed.emit()
 
     def _on_overlay_mode(self, text):

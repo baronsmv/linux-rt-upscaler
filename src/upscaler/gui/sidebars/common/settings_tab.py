@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, List, TYPE_CHECKING
+from typing import Callable, List, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -129,34 +129,43 @@ class SettingsTab(QWidget):
         value: int,
         slot: Callable,
         show_val: bool = False,
-        editable: bool = True,
+        editable: bool = False,
+        scale_factor: int = 1,
+        float_slot=Optional[Callable],
     ) -> SliderRow:
+        """Add a slider row, optionally with float output and editable field."""
         slider = SliderRow(
             label,
             self.gui_config,
             min_val,
             max_val,
             value,
-            show_value=show_val,
+            show_value=show_val or editable,
             editable=editable,
+            scale_factor=scale_factor,
         )
         slider.valueChanged.connect(slot)
+        if float_slot is not None:
+            slider.floatValueChanged.connect(float_slot)
         self.content_layout.addWidget(slider)
         return slider
 
     def _add_named_slider(
         self,
         label: str,
-        names: List,
+        names: List[str],
         current_name: str,
         slot: Callable,
         editable: bool = False,
     ) -> SliderRow:
+        """Add a slider that displays a name from a list instead of a number."""
         try:
             index = names.index(current_name)
         except ValueError:
             index = 0
+
         formatter = lambda v: names[v] if 0 <= v < len(names) else "?"
+
         slider = SliderRow(
             label,
             self.gui_config,
