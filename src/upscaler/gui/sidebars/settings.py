@@ -8,8 +8,10 @@ from .tabs import (
     DisplayTab,
     EffectsTab,
     GeneralTab,
+    OSDTab,
     PerformanceTab,
     ScalerTab,
+    ScreenshotsTab,
     TilesTab,
 )
 
@@ -29,6 +31,8 @@ class SettingsSidebar(IconSidebarBase):
             (DisplayTab(gui_config, config), "display", "Display"),
             (EffectsTab(gui_config, config), "effects", "Effects"),
             (CaptureTab(gui_config, config), "capture", "Capture"),
+            (ScreenshotsTab(gui_config, config), "screenshot", "Screenshots"),
+            (OSDTab(gui_config, config), "osd", "OSD"),
             (ScalerTab(gui_config, config), "lanczos", "Scaler"),
             (PerformanceTab(gui_config, config), "performance", "Performance"),
             (TilesTab(gui_config, config), "tiles", "Tiles"),
