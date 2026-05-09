@@ -59,6 +59,22 @@ class LineEditRow(QWidget):
         self._edit.textChanged.connect(self.textChanged.emit)
         layout.addWidget(self._edit, stretch=1)
 
+    def setEnabled(self, enabled: bool) -> None:
+        super().setEnabled(enabled)
+        self._edit.setReadOnly(not enabled)
+        self._edit.setStyleSheet(
+            self._edit_style()
+            if enabled
+            else self._edit_style()
+            .replace("#ddd", "#555")
+            .replace("#2a2a2c", "#1e1e1e")
+        )
+        self._label.setStyleSheet(
+            styles.row_label(self._cfg)
+            if enabled
+            else f"color: #555; font-size: {self._cfg.sidebar_tab_font_size}px;"
+        )
+
     def text(self) -> str:
         return self._edit.text()
 

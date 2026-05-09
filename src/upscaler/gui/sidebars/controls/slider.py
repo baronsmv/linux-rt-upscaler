@@ -81,8 +81,10 @@ class SliderRow(QWidget):
                 layout.addWidget(self._value_label)
 
     def setEnabled(self, enabled: bool) -> None:
-        """Disable the slider and grey out the label / edit field."""
+        """Disable slider components and apply dimmed colour palette."""
         super().setEnabled(enabled)
+        self._slider.setStyleSheet(self._slider_style(enabled))
+
         if hasattr(self, "_label") and self._label is not None:
             self._label.setStyleSheet(
                 styles.row_label(self._cfg)
@@ -144,27 +146,30 @@ class SliderRow(QWidget):
         # Self._on_value_changed will update label, but we can also set display to format
         self._value_edit.setText(self._format(clamped))
 
-    def _slider_style(self) -> str:
-        cfg = self._cfg
+    def _slider_style(self, enabled: bool = True) -> str:
+        groove_bg = "#333" if enabled else "#222"
+        handle_bg = self._cfg.sidebar_slider_color if enabled else "#555"
+        sub_page = self._cfg.sidebar_slider_color if enabled else "#444"
+        hover_bg = "#6aade5" if enabled else "#555"
         return f"""
             QSlider::groove:horizontal {{
                 border: none;
                 height: 4px;
-                background: #333;
+                background: {groove_bg};
                 border-radius: 2px;
             }}
             QSlider::handle:horizontal {{
-                background: {cfg.sidebar_slider_color};
+                background: {handle_bg};
                 width: 16px;
                 height: 16px;
                 margin: -6px 0;
                 border-radius: 8px;
             }}
             QSlider::handle:horizontal:hover {{
-                background: #6aade5;
+                background: {hover_bg};
             }}
             QSlider::sub-page:horizontal {{
-                background: {cfg.sidebar_slider_color};
+                background: {sub_page};
                 border-radius: 2px;
             }}
         """

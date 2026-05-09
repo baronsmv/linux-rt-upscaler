@@ -38,11 +38,11 @@ class PathPickerRow(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        lbl = QLabel(label)
-        lbl.setStyleSheet(styles.row_label(gui_config))
-        lbl.setFixedHeight(gui_config.sidebar_row_height)
-        lbl.setAlignment(Qt.AlignVCenter)
-        layout.addWidget(lbl)
+        self._label = QLabel(label)
+        self._label.setStyleSheet(styles.row_label(gui_config))
+        self._label.setFixedHeight(gui_config.sidebar_row_height)
+        self._label.setAlignment(Qt.AlignVCenter)
+        layout.addWidget(self._label)
 
         if tooltip:
             self.setToolTip(tooltip)
@@ -50,30 +50,49 @@ class PathPickerRow(QWidget):
         self._edit = QLineEdit(initial_path)
         self._edit.setReadOnly(True)
         self._edit.setPlaceholderText("Select directory…")
-        self._edit.setStyleSheet(
-            f"""
+        self._edit.setStyleSheet(self._edit_style())
+        layout.addWidget(self._edit, stretch=1)
+
+        self._browse_btn = QPushButton("…")
+        self._browse_btn.setFixedSize(32, gui_config.sidebar_row_height)
+        self._browse_btn.setToolTip("Browse for directory")
+        self._browse_btn.setCursor(Qt.PointingHandCursor)
+        self._browse_btn.clicked.connect(self._browse)
+        layout.addWidget(self._browse_btn)
+
+    def _edit_style(self) -> str:
+        cfg = self._cfg
+        return f"""
             QLineEdit {{
                 background: #2a2a2c;
-                border: 1px solid {gui_config.sidebar_combo_border_color};
+                border: 1px solid {cfg.sidebar_combo_border_color};
                 border-radius: 6px;
                 padding: 4px 8px;
                 color: #ddd;
-                font-size: {gui_config.sidebar_tab_font_size}px;
+                font-size: {cfg.sidebar_tab_font_size}px;
             }}
             QLineEdit:focus {{
-                border-color: {gui_config.sidebar_combo_border_focus};
+                border-color: {cfg.sidebar_combo_border_focus};
             }}
         """
-        )
-        self._edit.setFixedHeight(gui_config.sidebar_row_height)
-        layout.addWidget(self._edit, stretch=1)
 
-        browse_btn = QPushButton("…")
-        browse_btn.setFixedSize(32, gui_config.sidebar_row_height)
-        browse_btn.setToolTip("Browse for directory")
-        browse_btn.setCursor(Qt.PointingHandCursor)
-        browse_btn.clicked.connect(self._browse)
-        layout.addWidget(browse_btn)
+    def setEnabled(self, enabled: bool) -> None:
+        super().setEnabled(enabled)
+        self._edit.setReadOnly(not enabled)
+        self._edit.setStyleSheet(
+            self._edit_style()
+            if enabled
+            else self._edit_style()
+            .replace("#ddd", "#555")
+            .replace("#2a2a2c", "#1e1e1e")
+        )
+        # The browse button already uses the native disabled look, but we can dim it further
+        self._browse_btn.setEnabled(enabled)
+        self._label.setStyleSheet(
+            styles.row_label(self._cfg)
+            if enabled
+            else f"color: #555; font-size: {self._cfg.sidebar_tab_font_size}px;"
+        )
 
     def _browse(self) -> None:
         current = self._edit.text() or os.path.expanduser("~")

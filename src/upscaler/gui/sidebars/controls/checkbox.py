@@ -28,38 +28,37 @@ class CheckBox(QCheckBox):
     ) -> None:
         super().__init__(text, parent)
         self._cfg = gui_config
+        self._checked_color = gui_config.sidebar_checkbox_color
         self.setChecked(checked)
         self.setCursor(Qt.PointingHandCursor)
-        self.setStyleSheet(self._make_style())
-
         if tooltip:
             self.setToolTip(tooltip)
+        self.setStyleSheet(self._make_style(True))
 
-    def _make_style(self) -> str:
-        """Build the full stylesheet string for the checkbox."""
-        cfg = self._cfg
+    def setEnabled(self, enabled: bool) -> None:
+        super().setEnabled(enabled)
+        self.setStyleSheet(self._make_style(enabled))
+
+    def _make_style(self, enabled: bool) -> str:
+        color = self._checked_color if enabled else "#555"
+        text_color = self._cfg.sidebar_tab_text_color if enabled else "#555"
+        border = self._cfg.sidebar_checkbox_color if enabled else "#555"
         return f"""
             QCheckBox {{
                 spacing: 8px;
-                color: {cfg.sidebar_tab_text_color};
-                font-size: {cfg.sidebar_tab_font_size}px;
+                color: {text_color};
+                font-size: {self._cfg.sidebar_tab_font_size}px;
                 padding: 4px 0;
             }}
             QCheckBox::indicator {{
                 width: 18px;
                 height: 18px;
-                border: 2px solid #555;
+                border: 2px solid {border};
                 border-radius: 4px;
                 background: transparent;
             }}
             QCheckBox::indicator:checked {{
-                background-color: {cfg.sidebar_checkbox_color};
-                border-color: {cfg.sidebar_checkbox_color};
-            }}
-            QCheckBox::indicator:hover {{
-                border-color: {cfg.sidebar_checkbox_color};
-            }}
-            QCheckBox::disabled {{
-                color: #666;
+                background-color: {color};
+                border-color: {color};
             }}
         """

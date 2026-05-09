@@ -37,11 +37,11 @@ class ColorPickerRow(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        lbl = QLabel(label)
-        lbl.setStyleSheet(styles.row_label(gui_config))
-        lbl.setFixedHeight(gui_config.sidebar_row_height)
-        lbl.setAlignment(Qt.AlignVCenter)
-        layout.addWidget(lbl)
+        self._label = QLabel(label)
+        self._label.setStyleSheet(styles.row_label(gui_config))
+        self._label.setFixedHeight(gui_config.sidebar_row_height)
+        self._label.setAlignment(Qt.AlignVCenter)
+        layout.addWidget(self._label)
         layout.addStretch()
 
         if tooltip:
@@ -53,6 +53,27 @@ class ColorPickerRow(QWidget):
         self._button.clicked.connect(self._pick_color)
         self._apply_color()
         layout.addWidget(self._button)
+
+    def setEnabled(self, enabled: bool) -> None:
+        super().setEnabled(enabled)
+        self._button.setEnabled(enabled)
+        if enabled:
+            self._apply_color()
+        else:
+            self._button.setStyleSheet(
+                """
+                QPushButton {
+                    background-color: #555;
+                    border: 1px solid #444;
+                    border-radius: 4px;
+                }
+            """
+            )
+        self._label.setStyleSheet(
+            styles.row_label(self._cfg)
+            if enabled
+            else f"color: #555; font-size: {self._cfg.sidebar_tab_font_size}px;"
+        )
 
     def _pick_color(self) -> None:
         color = QColorDialog.getColor(

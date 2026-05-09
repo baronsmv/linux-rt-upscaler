@@ -58,36 +58,50 @@ class ComboRow(QWidget):
         layout.addStretch()
         layout.addWidget(self._combo)
 
-    def _combo_style(self) -> str:
-        """Return the QSS string for the combo box."""
+    def setEnabled(self, enabled: bool) -> None:
+        super().setEnabled(enabled)
+        self._combo.setEnabled(enabled)
+        self._combo.setStyleSheet(self._combo_style(enabled))
+        # Label update
+        self._label.setStyleSheet(
+            styles.row_label(self._cfg)
+            if enabled
+            else f"color: #555; font-size: {self._cfg.sidebar_tab_font_size}px;"
+        )
+
+    def _combo_style(self, enabled: bool = True) -> str:
         cfg = self._cfg
+        bg = "#2a2a2c" if enabled else "#1e1e1e"
+        text_color = "#ddd" if enabled else "#555"
+        border = cfg.sidebar_combo_border_color if enabled else "#444"
+        focus_border = cfg.sidebar_combo_border_focus if enabled else "#444"
         return f"""
             QComboBox {{
-                background: #2a2a2c;
-                border: 1px solid {cfg.sidebar_combo_border_color};
+                background: {bg};
+                border: 1px solid {border};
                 border-radius: 6px;
                 padding: 4px 8px;
-                color: #ddd;
+                color: {text_color};
                 font-size: {cfg.sidebar_tab_font_size}px;
             }}
             QComboBox:hover {{
-                border-color: {cfg.sidebar_combo_border_focus};
+                border-color: {focus_border};
             }}
             QComboBox:focus {{
-                border-color: {cfg.sidebar_combo_border_focus};
+                border-color: {focus_border};
             }}
             QComboBox::drop-down {{
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 20px;
-                border-left: 1px solid {cfg.sidebar_combo_border_color};
+                border-left: 1px solid {border};
                 border-top-right-radius: 6px;
                 border-bottom-right-radius: 6px;
             }}
             QComboBox QAbstractItemView {{
                 background: #2a2a2c;
-                border: 1px solid {cfg.sidebar_combo_border_color};
-                selection-background-color: {cfg.sidebar_combo_border_focus};
+                border: 1px solid {border};
+                selection-background-color: {focus_border};
                 color: #ddd;
             }}
         """
