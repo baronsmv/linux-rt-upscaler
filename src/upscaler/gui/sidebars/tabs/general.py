@@ -18,7 +18,7 @@ class GeneralTab(SettingsTab):
     def _build_content(self) -> None:
         # ---- Model & double upscale ----
         self._add_section("Upscaling Model")
-        self._model_combo = self._add_combo(
+        self._add_named_slider(
             "Model",
             UPSCALING_MODELS,
             self._config.model,

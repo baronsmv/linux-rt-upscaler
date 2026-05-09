@@ -94,12 +94,12 @@ class GUIConfig:
     sidebar_tab_background_active: str = "#2c2c2c"
     sidebar_tab_text_color: str = "#cccccc"
     sidebar_tab_text_color_active: str = "#ffffff"
-    sidebar_tab_font_size: int = 16
-    sidebar_tab_icon_size: int = 18
+    sidebar_tab_font_size: int = 18
+    sidebar_tab_icon_size: int = 20
     sidebar_tab_indicator_color: str = "#4a9eff"
     sidebar_tab_indicator_width: int = 3
     sidebar_section_title_color: str = "#888888"
-    sidebar_section_title_size: int = 16
+    sidebar_section_title_size: int = 18
     sidebar_row_height: int = 32
     sidebar_checkbox_color: str = "#4a9eff"
     sidebar_slider_color: str = "#4a9eff"

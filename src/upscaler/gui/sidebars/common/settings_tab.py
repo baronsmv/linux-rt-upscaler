@@ -137,6 +137,32 @@ class SettingsTab(QWidget):
         self.content_layout.addWidget(slider)
         return slider
 
+    def _add_named_slider(
+        self,
+        label: str,
+        names: list[str],
+        current_name: str,
+        slot,
+    ) -> SliderRow:
+        """A slider whose value readout displays a string from *names*."""
+        try:
+            index = names.index(current_name)
+        except ValueError:
+            index = 0
+
+        slider = SliderRow(
+            label,
+            self.gui_config,
+            0,
+            len(names) - 1,
+            index,
+            show_value=True,
+            value_formatter=lambda v: names[v] if 0 <= v < len(names) else "?",
+        )
+        slider.valueChanged.connect(slot)
+        self.content_layout.addWidget(slider)
+        return slider
+
     def _add_combo(
         self,
         label: str,

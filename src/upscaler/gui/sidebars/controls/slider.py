@@ -12,12 +12,6 @@ if TYPE_CHECKING:
 
 
 class SliderRow(QWidget):
-    """
-    A horizontal row containing a label, a QSlider, and optionally a
-    trailing label that shows the current value. The slider's
-    ``valueChanged(int)`` signal is re‑emitted directly.
-    """
-
     valueChanged = Signal(int)
 
     def __init__(
@@ -28,40 +22,55 @@ class SliderRow(QWidget):
         max_val: int = 100,
         value: int = 50,
         show_value: bool = False,
+        value_formatter: callable | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._cfg = gui_config
+        self._formatter = value_formatter
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # Label
+        # -- Label --
         self._label = QLabel(label)
         self._label.setStyleSheet(styles.row_label(gui_config))
         self._label.setFixedHeight(gui_config.sidebar_row_height)
         self._label.setAlignment(Qt.AlignVCenter)
 
-        # Slider
+        # -- Slider --
         self._slider = QSlider(Qt.Horizontal)
         self._slider.setRange(min_val, max_val)
         self._slider.setValue(value)
         self._slider.setFixedHeight(gui_config.sidebar_row_height)
         self._slider.setStyleSheet(self._slider_style())
-        self._slider.valueChanged.connect(self.valueChanged.emit)
+        self._slider.valueChanged.connect(self._on_value_changed)
 
         layout.addWidget(self._label)
         layout.addWidget(self._slider, stretch=1)
 
-        # Optional value readout
+        # -- Optional value readout --
         if show_value:
-            self._value_label = QLabel(str(value))
+            display = self._format(value)
+            self._value_label = QLabel(display)
             self._value_label.setFixedHeight(gui_config.sidebar_row_height)
             self._value_label.setStyleSheet(styles.row_label(gui_config))
-            self._slider.valueChanged.connect(
-                lambda v: self._value_label.setText(str(v))
-            )
             layout.addWidget(self._value_label)
+        else:
+            self._value_label = None
+
+    # ----------------------------------------------------------------
+    #  Internal helpers
+    # ----------------------------------------------------------------
+    def _format(self, val: int) -> str:
+        if self._formatter is not None:
+            return self._formatter(val)
+        return str(val)
+
+    def _on_value_changed(self, val: int) -> None:
+        if self._value_label is not None:
+            self._value_label.setText(self._format(val))
+        self.valueChanged.emit(val)
 
     def _slider_style(self) -> str:
         """Return the QSS string for the slider."""
@@ -89,6 +98,7 @@ class SliderRow(QWidget):
             }}
         """
 
+    # Public getter / setter
     def value(self) -> int:
         return self._slider.value()
 
