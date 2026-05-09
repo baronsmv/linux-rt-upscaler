@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .common import SidebarBase
+from .common import IconSidebarBase
 from .tabs import AdvancedTab, EffectsTab, GeneralTab
 
 if TYPE_CHECKING:
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from ...config import Config
 
 
-class SettingsSidebar(SidebarBase):
+class SettingsSidebar(IconSidebarBase):
     """Right sidebar with three intuitive categories."""
 
     def __init__(self, gui_config: GUIConfig, config: Config, parent=None) -> None:
@@ -22,9 +22,9 @@ class SettingsSidebar(SidebarBase):
         advanced = AdvancedTab(gui_config, config)
 
         # Add to sidebar
-        self.add_tab(general, "General")
-        self.add_tab(effects, "Effects")
-        self.add_tab(advanced, "Advanced")
+        self.add_tab(general, "tabs/general", "General")
+        self.add_tab(effects, "tabs/effects", "Effects")
+        self.add_tab(advanced, "tabs/advanced", "Advanced")
 
         # Forward their change signals to the sidebar's config_changed signal
         general.config_changed.connect(self.config_changed.emit)

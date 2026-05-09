@@ -46,12 +46,12 @@ class FilterBar(QWidget):
         # ----- Search icon (QLabel) -----
         self._search_icon = QLabel(self)
         self._search_icon.setFixedSize(icon_size, icon_size)
-        self._search_icon.setPixmap(load_pixmap("search", icon_size, icon_size))
+        self._search_icon.setPixmap(load_pixmap("bar/search", icon_size, icon_size))
 
         # ----- Clear button -----
         self._clear_button = QPushButton(self)
         self._clear_button.setFixedSize(icon_size, icon_size)
-        self._clear_button.setIcon(load_icon("clear", icon_size))
+        self._clear_button.setIcon(load_icon("bar/clear", icon_size))
         self._clear_button.setFlat(True)
         self._clear_button.setCursor(Qt.PointingHandCursor)
         self._clear_button.clicked.connect(self._line_edit.clear)

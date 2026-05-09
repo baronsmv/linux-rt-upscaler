@@ -27,7 +27,7 @@ def main() -> None:
     )
 
     app = QApplication(sys.argv)
-    app.setWindowIcon(load_icon("app", 256, 256))
+    app.setWindowIcon(load_icon("app/app", 256, 256))
     app.setApplicationName("upscaler-gui")
 
     # The main window will stay visible until the user starts.
