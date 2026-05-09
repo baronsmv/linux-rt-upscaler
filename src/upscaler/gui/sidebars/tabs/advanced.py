@@ -23,14 +23,16 @@ class AdvancedTab(SettingsTab):
             1,
             200,
             max(1, int(self._config.lanczos_blur * 100)),
-            self._on_blur,
+            scale_factor=100,
+            float_slot=self._on_blur,
         )
         self._antiring = self._add_slider(
             "Antiring Strength",
             0,
             100,
             int(self._config.lanczos_antiring_strength * 100),
-            self._on_antiring,
+            scale_factor=100,
+            float_slot=self._on_antiring,
         )
         self._linear_cb = self._add_cb(
             "Linear Light", self._config.lanczos_linear_light, self._on_linear_light
