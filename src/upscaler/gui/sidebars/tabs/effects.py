@@ -25,7 +25,8 @@ class EffectsTab(SettingsTab):
             0,
             100,
             int(self._config.deband_strength * 100),
-            self._on_deband_strength,
+            scale_factor=100,
+            float_slot=self._on_deband_strength,
         )
         self._deband_str.setEnabled(self._config.deband_enabled)
 
@@ -39,7 +40,8 @@ class EffectsTab(SettingsTab):
             0,
             100,
             int(self._config.cas_strength * 100),
-            self._on_cas_strength,
+            scale_factor=100,
+            float_slot=self._on_cas_strength,
         )
         self._cas_str.setEnabled(self._config.cas_enabled)
 
@@ -53,7 +55,8 @@ class EffectsTab(SettingsTab):
             0,
             100,
             int(self._config.bloom_strength * 100),
-            self._on_bloom_strength,
+            scale_factor=100,
+            float_slot=self._on_bloom_strength,
         )
         self._bloom_str.setEnabled(self._config.bloom_enabled)
 
@@ -62,7 +65,8 @@ class EffectsTab(SettingsTab):
             0,
             100,
             int(self._config.bloom_threshold * 100),
-            self._on_bloom_threshold,
+            scale_factor=100,
+            float_slot=self._on_bloom_threshold,
         )
         self._bloom_thresh.setEnabled(self._config.bloom_enabled)
 
@@ -76,7 +80,8 @@ class EffectsTab(SettingsTab):
             0,
             100,
             int(self._config.vignette_strength * 100),
-            self._on_vignette_strength,
+            scale_factor=100,
+            float_slot=self._on_vignette_strength,
         )
         self._vignette_str.setEnabled(self._config.vignette_enabled)
 
@@ -116,7 +121,8 @@ class EffectsTab(SettingsTab):
             0,
             100,
             int(self._config.grain_strength * 100),
-            self._on_grain_strength,
+            scale_factor=100,
+            float_slot=self._on_grain_strength,
         )
         self._grain_str.setEnabled(self._config.grain_enabled)
 
