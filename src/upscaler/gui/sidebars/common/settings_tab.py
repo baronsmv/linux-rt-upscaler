@@ -22,9 +22,11 @@ from ..controls import (
     SectionLabel,
     SliderRow,
 )
+from ....config import DEFAULT_CONFIG
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
+    from ....config import Config
 
 
 class SettingsTab(QWidget):
@@ -42,10 +44,17 @@ class SettingsTab(QWidget):
     config_changed = Signal()
 
     def __init__(
-        self, gui_config: GUIConfig, title: str, parent: QWidget | None = None
+        self,
+        gui_config: GUIConfig,
+        title: str,
+        baseline_config: Optional[Config] = None,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.gui_config = gui_config
+        self.baseline_config = (
+            baseline_config if baseline_config is not None else DEFAULT_CONFIG
+        )
         self.title = title
 
         self.setContentsMargins(0, 0, 0, 0)
@@ -120,9 +129,16 @@ class SettingsTab(QWidget):
         label: str,
         checked: bool,
         slot: Callable,
+        baseline: Optional[bool] = None,
         help: Optional[str] = None,
     ) -> CheckBox:
-        cb = CheckBox(label, self.gui_config, checked, tooltip=help)
+        cb = CheckBox(
+            label,
+            self.gui_config,
+            checked,
+            baseline=baseline,
+            tooltip=help,
+        )
         cb.stateChanged.connect(slot)
         self.content_layout.addWidget(cb)
         return cb
@@ -138,6 +154,7 @@ class SettingsTab(QWidget):
         editable: bool = True,
         scale_factor: int = 1,
         float_slot: Optional[Callable] = None,
+        baseline: Optional[int] = None,
         help: Optional[str] = None,
     ) -> SliderRow:
         """Add a slider row, optionally with float output and editable field."""
@@ -150,6 +167,7 @@ class SettingsTab(QWidget):
             show_value=show_val or editable,
             editable=editable,
             scale_factor=scale_factor,
+            baseline=baseline,
             tooltip=help,
         )
         slider.valueChanged.connect(slot)
@@ -197,10 +215,18 @@ class SettingsTab(QWidget):
         items: list[str],
         current: str | None,
         slot: Callable,
+        baseline: Optional[str] = None,
         help: Optional[str] = None,
     ) -> ComboRow:
-        """Add a labelled combo box row and return it."""
-        combo = ComboRow(label, self.gui_config, items, current, tooltip=help)
+        """Add a labeled combo box row and return it."""
+        combo = ComboRow(
+            label,
+            self.gui_config,
+            items,
+            current,
+            baseline=baseline,
+            tooltip=help,
+        )
         combo.currentTextChanged.connect(slot)
         self.content_layout.addWidget(combo)
         return combo
@@ -212,7 +238,7 @@ class SettingsTab(QWidget):
         slot: Callable,
         help: Optional[str] = None,
     ) -> LineEditRow:
-        """Add a labelled single‑line text edit and return it."""
+        """Add a labeled single‑line text edit and return it."""
         editor = LineEditRow(label, self.gui_config, text, tooltip=help)
         editor.textChanged.connect(slot)
         self.content_layout.addWidget(editor)
@@ -223,10 +249,17 @@ class SettingsTab(QWidget):
         label: str,
         initial_path: str,
         slot: Callable,
+        baseline: Optional[str] = None,
         help: Optional[str] = None,
     ) -> PathPickerRow:
         """Add a directory picker row (line edit + browse) and return it."""
-        picker = PathPickerRow(label, self.gui_config, initial_path, tooltip=help)
+        picker = PathPickerRow(
+            label,
+            self.gui_config,
+            initial_path,
+            baseline=baseline,
+            tooltip=help,
+        )
         picker.pathChanged.connect(slot)
         self.content_layout.addWidget(picker)
         return picker
@@ -236,10 +269,17 @@ class SettingsTab(QWidget):
         label: str,
         initial_color: str,
         slot: Callable,
+        baseline: Optional[str] = None,
         help: Optional[str] = None,
     ) -> ColorPickerRow:
-        """Add a colour picker row (swatch + dialog) and return it."""
-        picker = ColorPickerRow(label, self.gui_config, initial_color, tooltip=help)
+        """Add a color picker row (swatch + dialog) and return it."""
+        picker = ColorPickerRow(
+            label,
+            self.gui_config,
+            initial_color,
+            baseline=baseline,
+            tooltip=help,
+        )
         picker.colorChanged.connect(slot)
         self.content_layout.addWidget(picker)
         return picker

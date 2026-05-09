@@ -166,3 +166,6 @@ class Config:
 
     # Hotkeys
     hotkeys: Dict[str, str] = field(default_factory=lambda: DEFAULT_HOTKEYS.copy())
+
+
+DEFAULT_CONFIG: Config = Config()

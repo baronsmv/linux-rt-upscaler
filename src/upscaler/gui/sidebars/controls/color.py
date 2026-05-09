@@ -4,19 +4,22 @@ from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QColorDialog, QPushButton
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel
+from PySide6.QtWidgets import QColorDialog, QPushButton, QHBoxLayout, QWidget
 
-from ..common import styles
+from ._base import BaseRow
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
 
 
-class ColorPickerRow(QWidget):
-    """A row with a label and a color‑swatch button."""
+class ColorPickerRow(BaseRow):
+    """
+    A row with a label and a color‑swatch button, plus highlight support.
 
-    colorChanged = Signal(str)  # emits a hex string (e.g., "#FF0000")
+    Emits ``colorChanged(str)`` with a hex string (e.g., "#AARRGGBB").
+    """
+
+    colorChanged = Signal(str)
 
     def __init__(
         self,
@@ -24,10 +27,10 @@ class ColorPickerRow(QWidget):
         gui_config: GUIConfig,
         initial_color: str = "#000000",
         tooltip: Optional[str] = None,
-        parent: QWidget | None = None,
+        baseline: Optional[str] = None,
+        parent: Optional[QWidget] = None,
     ) -> None:
-        super().__init__(parent)
-        self._cfg = gui_config
+        super().__init__(gui_config, baseline, parent)
         self._current_color = (
             QColor(initial_color)
             if QColor.isValidColor(initial_color)
@@ -36,24 +39,31 @@ class ColorPickerRow(QWidget):
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        self._label = QLabel(label)
-        self._label.setStyleSheet(styles.row_label(gui_config))
-        self._label.setFixedHeight(gui_config.sidebar_row_height)
-        self._label.setAlignment(Qt.AlignVCenter)
-        layout.addWidget(self._label)
+        # Indicator and label
+        indicator = self._init_indicator()
+        layout.addWidget(indicator)
+        label_w = self._init_label(label)
+        layout.addWidget(label_w)
         layout.addStretch()
 
         if tooltip:
             self.setToolTip(tooltip)
 
+        # Swatch button
         self._button = QPushButton()
         self._button.setFixedSize(36, 24)
         self._button.setCursor(Qt.PointingHandCursor)
         self._button.clicked.connect(self._pick_color)
-        self._apply_color()
         layout.addWidget(self._button)
 
+        self._apply_color()
+        self._update_highlight()
+
+    # ------------------------------------------------------------------
+    #  Public API
+    # ------------------------------------------------------------------
     def setEnabled(self, enabled: bool) -> None:
         super().setEnabled(enabled)
         self._button.setEnabled(enabled)
@@ -61,34 +71,41 @@ class ColorPickerRow(QWidget):
             self._apply_color()
         else:
             self._button.setStyleSheet(
-                """
-                QPushButton {
-                    background-color: #555;
-                    border: 1px solid #444;
-                    border-radius: 4px;
-                }
-            """
+                "QPushButton { background-color: #555; border: 1px solid #444; border-radius: 4px; }"
             )
-        self._label.setStyleSheet(
-            styles.row_label(self._cfg)
-            if enabled
-            else f"color: #555; font-size: {self._cfg.sidebar_tab_font_size}px;"
+
+    # ------------------------------------------------------------------
+    #  BaseRow overrides
+    # ------------------------------------------------------------------
+    def _is_highlighted(self) -> bool:
+        if self._baseline is None:
+            return False
+        return (
+            self._current_color.name(QColor.HexArgb).lower() != self._baseline.lower()
         )
 
+    def _apply_highlight_style(self, highlighted: bool) -> None:
+        """ColorPickerRow already uses the label; the base handles label text colour."""
+        super()._apply_highlight_style(highlighted)
+
+    # ------------------------------------------------------------------
+    #  Colour picking
+    # ------------------------------------------------------------------
     def _pick_color(self) -> None:
         color = QColorDialog.getColor(
             initial=self._current_color,
             parent=self,
             title="Choose Background Color",
-            options=QColorDialog.ShowAlphaChannel,
+            options=QColorDialog.DontUseNativeDialog,
         )
         if color.isValid():
             self._current_color = color
             self._apply_color()
             self.colorChanged.emit(color.name(QColor.HexArgb))
+            self._update_highlight()
 
     def _apply_color(self) -> None:
-        """Update the button's background to the current color."""
+        """Update the button's background to the current colour."""
         self._button.setStyleSheet(
             f"""
             QPushButton {{

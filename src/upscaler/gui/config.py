@@ -108,7 +108,12 @@ class GUIConfig:
     sidebar_icon_columns: int = 5
     sidebar_icon_size: int = 32
 
-    # ---- Splitter handle style ----
+    # ---- Splitter handle style ---------------------------------------
     splitter_handle_width: int = 3
     splitter_handle_color: str = "#2a2a2a"
     splitter_handle_hover_color: str = "#2a2a2a"
+
+    # ---- Visual hints for non‑default values -------------------------
+    highlight_border_width: int = 3
+    highlight_border_color: str = "#4a9eff"
+    highlight_label_color: str = "#4a9eff"

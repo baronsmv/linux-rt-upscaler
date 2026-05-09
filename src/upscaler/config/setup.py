@@ -5,9 +5,9 @@ import sys
 from subprocess import Popen
 from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
-from .args import DEFAULT_CONFIG, apply_overrides, parse_args
+from .args import apply_overrides, parse_args
 from .logging import setup_logging
-from .models import Config
+from .models import Config, DEFAULT_CONFIG
 from .parsers import parse_config
 from .profiles import find_profile, apply_window_profile
 from .validators import validate_config, validate_overrides

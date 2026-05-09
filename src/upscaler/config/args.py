@@ -5,12 +5,10 @@ from importlib.metadata import version, PackageNotFoundError
 from typing import Tuple, Dict, Optional, Any
 
 from .logging import setup_logging
-from .models import Config, OverlayMode, UPSCALING_MODELS
+from .models import Config, OverlayMode, DEFAULT_CONFIG, UPSCALING_MODELS
 from ..shaders import BUILT_IN_PRESETS
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_CONFIG: Config = Config()
 
 
 class FilteredHelpAction(argparse._HelpAction):
