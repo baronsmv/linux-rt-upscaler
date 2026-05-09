@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
+from ....shaders import BUILT_IN_PRESETS
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -92,20 +93,7 @@ class EffectsTab(SettingsTab):
         )
         self._lut_combo = self._add_combo(
             "Preset",
-            [
-                "identity",
-                "warm",
-                "cool",
-                "split",
-                "vivid",
-                "pastel",
-                "lofi",
-                "bleach",
-                "film",
-                "noir",
-                "sepia",
-                "cyano",
-            ],
+            list(BUILT_IN_PRESETS.keys()),
             self._config.lut_preset,
             self._on_lut_preset,
         )
