@@ -3,7 +3,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .common import IconSidebarBase
-from .tabs import AdvancedTab, EffectsTab, GeneralTab
+from .tabs import (
+    CaptureTab,
+    DisplayTab,
+    EffectsTab,
+    GeneralTab,
+    PerformanceTab,
+    ScalerTab,
+    TilesTab,
+)
 
 if TYPE_CHECKING:
     from ..config import GUIConfig
@@ -16,17 +24,16 @@ class SettingsSidebar(IconSidebarBase):
     def __init__(self, gui_config: GUIConfig, config: Config, parent=None) -> None:
         super().__init__(gui_config, parent)
 
-        # Create tabs
-        general = GeneralTab(gui_config, config)
-        effects = EffectsTab(gui_config, config)
-        advanced = AdvancedTab(gui_config, config)
+        tabs = [
+            (GeneralTab(gui_config, config), "general", "General"),
+            (DisplayTab(gui_config, config), "display", "Display"),
+            (EffectsTab(gui_config, config), "effects", "Effects"),
+            (CaptureTab(gui_config, config), "capture", "Capture"),
+            (ScalerTab(gui_config, config), "lanczos", "Scaler"),
+            (PerformanceTab(gui_config, config), "performance", "Performance"),
+            (TilesTab(gui_config, config), "tiles", "Tiles"),
+        ]
 
-        # Add to sidebar
-        self.add_tab(general, "tabs/general", "General")
-        self.add_tab(effects, "tabs/effects", "Effects")
-        self.add_tab(advanced, "tabs/advanced", "Advanced")
-
-        # Forward their change signals to the sidebar's config_changed signal
-        general.config_changed.connect(self.config_changed.emit)
-        effects.config_changed.connect(self.config_changed.emit)
-        advanced.config_changed.connect(self.config_changed.emit)
+        for tab, icon, tooltip in tabs:
+            self.add_tab(tab, f"tabs/{icon}", tooltip)
+            tab.config_changed.connect(self.config_changed.emit)

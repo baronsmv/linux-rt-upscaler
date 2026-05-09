@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
-from ..controls import SectionLabel, StyledCheckBox, ComboRow
+from ..controls import ComboRow, SectionLabel, StyledCheckBox
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
