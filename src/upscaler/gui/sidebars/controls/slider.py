@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QSlider
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QSlider, QLineEdit
 
 from ..common import styles
 
@@ -22,12 +22,14 @@ class SliderRow(QWidget):
         max_val: int = 100,
         value: int = 50,
         show_value: bool = False,
-        value_formatter: callable | None = None,
-        parent: QWidget | None = None,
+        value_formatter: Optional[Callable[[int], str]] = None,
+        editable: bool = False,
+        parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
         self._cfg = gui_config
         self._formatter = value_formatter
+        self._editable = editable
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -37,6 +39,7 @@ class SliderRow(QWidget):
         self._label.setStyleSheet(styles.row_label(gui_config))
         self._label.setFixedHeight(gui_config.sidebar_row_height)
         self._label.setAlignment(Qt.AlignVCenter)
+        layout.addWidget(self._label)
 
         # -- Slider --
         self._slider = QSlider(Qt.Horizontal)
@@ -46,22 +49,28 @@ class SliderRow(QWidget):
         self._slider.setStyleSheet(self._slider_style())
         self._slider.setCursor(Qt.PointingHandCursor)
         self._slider.valueChanged.connect(self._on_value_changed)
-
-        layout.addWidget(self._label)
         layout.addWidget(self._slider, stretch=1)
 
-        # -- Optional value readout --
-        if show_value:
-            display = self._format(value)
-            self._value_label = QLabel(display)
-            self._value_label.setFixedHeight(gui_config.sidebar_row_height)
-            self._value_label.setStyleSheet(styles.row_label(gui_config))
-            layout.addWidget(self._value_label)
-        else:
-            self._value_label = None
+        # -- Value display / editable field --
+        if show_value or editable:
+            if editable:
+                self._value_edit = QLineEdit(self._format(value))
+                self._value_edit.setFixedWidth(60)
+                self._value_edit.setFixedHeight(gui_config.sidebar_row_height)
+                self._value_edit.setStyleSheet(self._edit_style())
+                self._value_edit.setAlignment(Qt.AlignCenter)
+                self._value_edit.editingFinished.connect(self._on_edit_finished)
+                self._value_label = None
+                layout.addWidget(self._value_edit)
+            else:
+                self._value_label = QLabel(self._format(value))
+                self._value_label.setFixedHeight(gui_config.sidebar_row_height)
+                self._value_label.setStyleSheet(styles.row_label(gui_config))
+                self._value_edit = None
+                layout.addWidget(self._value_label)
 
     # ----------------------------------------------------------------
-    #  Internal helpers
+    #  Formatting & style
     # ----------------------------------------------------------------
     def _format(self, val: int) -> str:
         if self._formatter is not None:
@@ -71,7 +80,25 @@ class SliderRow(QWidget):
     def _on_value_changed(self, val: int) -> None:
         if self._value_label is not None:
             self._value_label.setText(self._format(val))
+        if self._value_edit is not None:
+            # Avoid feedback loop
+            self._value_edit.blockSignals(True)
+            self._value_edit.setText(str(val))
+            self._value_edit.blockSignals(False)
         self.valueChanged.emit(val)
+
+    def _on_edit_finished(self) -> None:
+        text = self._value_edit.text().strip()
+        try:
+            num = int(text)
+        except ValueError:
+            # Restore previous slider value
+            self._value_edit.setText(str(self._slider.value()))
+            return
+        clamped = max(self._slider.minimum(), min(self._slider.maximum(), num))
+        if clamped != num:
+            self._value_edit.setText(str(clamped))
+        self._slider.setValue(clamped)
 
     def _slider_style(self) -> str:
         """Return the QSS string for the slider."""
@@ -99,7 +126,22 @@ class SliderRow(QWidget):
             }}
         """
 
-    # Public getter / setter
+    def _edit_style(self) -> str:
+        cfg = self._cfg
+        return f"""
+            QLineEdit {{
+                background: #2a2a2c;
+                border: 1px solid {cfg.sidebar_combo_border_color};
+                border-radius: 6px;
+                padding: 4px 6px;
+                color: #ddd;
+                font-size: {cfg.sidebar_tab_font_size}px;
+            }}
+            QLineEdit:focus {{
+                border-color: {cfg.sidebar_combo_border_focus};
+            }}
+        """
+
     def value(self) -> int:
         return self._slider.value()
 

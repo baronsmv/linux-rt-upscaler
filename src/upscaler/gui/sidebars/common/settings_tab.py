@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Callable, List, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -127,11 +127,18 @@ class SettingsTab(QWidget):
         min_val: int,
         max_val: int,
         value: int,
-        slot,
+        slot: Callable,
         show_val: bool = False,
+        editable: bool = True,
     ) -> SliderRow:
         slider = SliderRow(
-            label, self.gui_config, min_val, max_val, value, show_value=show_val
+            label,
+            self.gui_config,
+            min_val,
+            max_val,
+            value,
+            show_value=show_val,
+            editable=editable,
         )
         slider.valueChanged.connect(slot)
         self.content_layout.addWidget(slider)
@@ -140,24 +147,25 @@ class SettingsTab(QWidget):
     def _add_named_slider(
         self,
         label: str,
-        names: list[str],
+        names: List,
         current_name: str,
-        slot,
+        slot: Callable,
+        editable: bool = False,
     ) -> SliderRow:
-        """A slider whose value readout displays a string from *names*."""
         try:
             index = names.index(current_name)
         except ValueError:
             index = 0
-
+        formatter = lambda v: names[v] if 0 <= v < len(names) else "?"
         slider = SliderRow(
             label,
             self.gui_config,
-            0,
-            len(names) - 1,
-            index,
+            min_val=0,
+            max_val=len(names) - 1,
+            value=index,
             show_value=True,
-            value_formatter=lambda v: names[v] if 0 <= v < len(names) else "?",
+            value_formatter=formatter,
+            editable=editable,
         )
         slider.valueChanged.connect(slot)
         self.content_layout.addWidget(slider)
@@ -168,7 +176,7 @@ class SettingsTab(QWidget):
         label: str,
         items: list[str],
         current: str | None,
-        slot,
+        slot: Callable,
     ) -> ComboRow:
         """Add a labelled combo box row and return it."""
         combo = ComboRow(label, self.gui_config, items, current)
@@ -180,7 +188,7 @@ class SettingsTab(QWidget):
         self,
         label: str,
         text: str,
-        slot,
+        slot: Callable,
     ) -> LineEditRow:
         """Add a labelled single‑line text edit and return it."""
         editor = LineEditRow(label, self.gui_config, text)
@@ -192,7 +200,7 @@ class SettingsTab(QWidget):
         self,
         label: str,
         initial_path: str,
-        slot,
+        slot: Callable,
     ) -> PathPickerRow:
         """Add a directory picker row (line edit + browse) and return it."""
         picker = PathPickerRow(label, self.gui_config, initial_path)
@@ -204,7 +212,7 @@ class SettingsTab(QWidget):
         self,
         label: str,
         initial_color: str,
-        slot,
+        slot: Callable,
     ) -> ColorPickerRow:
         """Add a colour picker row (swatch + dialog) and return it."""
         picker = ColorPickerRow(label, self.gui_config, initial_color)
