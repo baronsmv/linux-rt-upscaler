@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QWidget
 
 from ._base import BaseRow
@@ -20,6 +20,9 @@ class CheckBox(BaseRow):
     is used. Highlight state changes the checkbox text and border color
     instead of a label.
     """
+
+    # Signal emitted when the checkbox state changes (int: 0 = unchecked, 2 = checked)
+    stateChanged = Signal(int)
 
     def __init__(
         self,
@@ -85,6 +88,7 @@ class CheckBox(BaseRow):
     # ------------------------------------------------------------------
     def _on_state_changed(self, state: int) -> None:
         self._update_highlight()
+        self.stateChanged.emit(state)
 
     def _apply_style(self, highlighted: Optional[bool] = None) -> None:
         if highlighted is None:
