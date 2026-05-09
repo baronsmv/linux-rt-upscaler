@@ -165,6 +165,7 @@ class BaseRow(QWidget):
         """
 
     def _make_combo_style(self, enabled: bool) -> str:
+        """Return a common stylesheet for QComboBox-based controls."""
         cfg = self._cfg
         bg = cfg.combo_background if enabled else cfg.combo_background_disabled
         text_color = cfg.combo_text_color if enabled else cfg.combo_text_color_disabled
