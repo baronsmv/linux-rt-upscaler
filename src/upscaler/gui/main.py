@@ -8,7 +8,6 @@ from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
-    QSplitter,
     QMessageBox,
     QApplication,
     QHBoxLayout,
@@ -18,8 +17,9 @@ from PySide6.QtWidgets import (
 from .config import GUIConfig
 from .grid import WindowGridScene, WindowGridView, FilterBar
 from .sidebars import ProfilesSidebar, SettingsSidebar
+from .widgets import StyledSplitter
 from ..config import Config
-from ..pipeline.launcher import create_pipeline_session
+from ..pipeline import create_pipeline_session
 from ..window import WindowInfo, activate_window, list_windows
 
 logger = logging.getLogger(__name__)
@@ -69,14 +69,14 @@ class MainWindow(QMainWindow):
         self.right_sidebar = SettingsSidebar(self.gui_config, self.config)
 
         # ---- Assemble splitter ----
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = StyledSplitter(Qt.Horizontal, self.gui_config)
         splitter.addWidget(self.left_sidebar)
         splitter.addWidget(central_widget)
         splitter.addWidget(self.right_sidebar)
         splitter.setSizes(
             [
                 self.gui_config.sidebar_width,
-                400,  # central area initial width
+                400,
                 self.gui_config.sidebar_width,
             ]
         )

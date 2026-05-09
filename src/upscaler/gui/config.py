@@ -107,3 +107,8 @@ class GUIConfig:
     sidebar_combo_border_focus: str = "#4a9eff"
     sidebar_icon_columns: int = 5
     sidebar_icon_size: int = 32
+
+    # ---- Splitter handle style ----
+    splitter_handle_width: int = 3
+    splitter_handle_color: str = "#2a2a2a"
+    splitter_handle_hover_color: str = "#4a9eff"
