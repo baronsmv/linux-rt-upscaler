@@ -10,9 +10,20 @@ if TYPE_CHECKING:
 
 
 class ExtrasTab(SettingsTab):
-    def __init__(self, gui_config: GUIConfig, config: Config, parent=None) -> None:
+    def __init__(
+        self,
+        gui_config: GUIConfig,
+        config: Config,
+        baseline_config: Config,
+        parent=None,
+    ) -> None:
         self._config = config
-        super().__init__(gui_config, "Extras", parent)
+        super().__init__(
+            gui_config,
+            title="Extras",
+            baseline_config=baseline_config,
+            parent=parent,
+        )
 
     def _build_content(self) -> None:
         # ---- Screenshot Location ----

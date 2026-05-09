@@ -11,9 +11,21 @@ if TYPE_CHECKING:
 
 
 class AdvancedTab(SettingsTab):
-    def __init__(self, gui_config: GUIConfig, config: Config, parent=None) -> None:
+
+    def __init__(
+        self,
+        gui_config: GUIConfig,
+        config: Config,
+        baseline_config: Config,
+        parent=None,
+    ) -> None:
         self._config = config
-        super().__init__(gui_config, "Advanced", parent)
+        super().__init__(
+            gui_config,
+            title="General",
+            baseline_config=baseline_config,
+            parent=parent,
+        )
 
     def _build_content(self) -> None:
         # ---- Lanczos Resampler ----
