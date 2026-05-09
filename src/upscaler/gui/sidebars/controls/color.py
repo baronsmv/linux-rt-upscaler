@@ -46,13 +46,16 @@ class ColorPickerRow(QWidget):
         layout.addWidget(self._button)
 
     def _pick_color(self) -> None:
-        dialog = QColorDialog(self._current_color, self)
-        dialog.setOption(QColorDialog.ShowAlphaChannel, True)
-        if dialog.exec() == QColorDialog.Accepted:
-            self._current_color = dialog.currentColor()
+        color = QColorDialog.getColor(
+            initial=self._current_color,
+            parent=self,
+            title="Choose Background Color",
+            options=QColorDialog.ShowAlphaChannel,
+        )
+        if color.isValid():
+            self._current_color = color
             self._apply_color()
-            hex_str = self._current_color.name(QColor.HexArgb)  # #AARRGGBB
-            self.colorChanged.emit(hex_str)
+            self.colorChanged.emit(color.name(QColor.HexArgb))
 
     def _apply_color(self) -> None:
         """Update the button's background to the current color."""

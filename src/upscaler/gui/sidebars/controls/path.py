@@ -71,7 +71,10 @@ class PathPickerRow(QWidget):
     def _browse(self) -> None:
         current = self._edit.text() or os.path.expanduser("~")
         chosen = QFileDialog.getExistingDirectory(
-            self, "Choose Screenshot Directory", current
+            parent=self,
+            caption="Choose Screenshot Directory",
+            dir=current,
+            options=QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks,
         )
         if chosen:
             self._edit.setText(chosen)
