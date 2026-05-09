@@ -158,6 +158,7 @@ class MainWindow(QMainWindow):
         win_info = self._selected_win_info
         logger.info("Starting upscale for: %s", win_info.title)
 
+        self._refresh_timer.stop()
         activate_window(win_info.handle)
         self.hide()
         self._scene.clear_all()
