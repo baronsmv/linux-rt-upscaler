@@ -88,7 +88,7 @@ class GUIConfig:
     scroll_margin: int = 20  # extra space for scroll‑into‑view
 
     # ---- Right and Left Sidebars -------------------------------------
-    sidebar_width: int = 360
+    sidebar_width: int = 400
     sidebar_background: str = "#161616"
     sidebar_tab_background: str = "#1e1e1e"
     sidebar_tab_background_active: str = "#2c2c2c"
@@ -111,4 +111,4 @@ class GUIConfig:
     # ---- Splitter handle style ----
     splitter_handle_width: int = 3
     splitter_handle_color: str = "#2a2a2a"
-    splitter_handle_hover_color: str = "#4a9eff"
+    splitter_handle_hover_color: str = "#2a2a2a"
