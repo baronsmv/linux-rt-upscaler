@@ -43,7 +43,6 @@ class MainWindow(QMainWindow):
         config: Config,
         config_path: str,
         profile_name: str,
-        profiles: dict,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
@@ -447,8 +446,25 @@ class MainWindow(QMainWindow):
 
     def _on_restore_defaults(self):
         if self._active_profile:
+            # Capture the current baseline *before* clearing options
+            old_baseline = copy.deepcopy(self._baseline_config)
+
+            # Clear the profile’s explicit options (in memory only)
             self.profiles[self._active_profile]["options"] = {}
-            self._apply_profile(self._active_profile)
+
+            # Build the live config from top‑level YAML only (no profile overrides)
+            self.config = Config()
+            for k, v in self._general_opts.items():
+                if hasattr(self.config, k) and k not in ("log_level", "log_file"):
+                    setattr(self.config, k, v)
+            parse_config(self.config)
+
+            # Use the old baseline so the sidebar sees a difference
+            self._baseline_config = old_baseline
+            self._profile_has_options = False
+
+            self._recreate_right_sidebar()
+            self.left_sidebar.set_active_item(self._active_profile)
             logger.info("Profile overrides cleared.")
         else:
             # Global config: true system defaults

@@ -20,7 +20,7 @@ def main() -> None:
     overrides, profile_name, config_path = parse_args()
     validate_overrides(overrides)
 
-    config, profiles = load_config(
+    config, _ = load_config(
         profile_name=profile_name,
         config_path=config_path,
         overrides=overrides,
@@ -45,7 +45,6 @@ def main() -> None:
         config,
         config_path=config_path,
         profile_name=profile_name,
-        profiles=profiles,
     )
     window.show()
 
