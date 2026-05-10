@@ -44,6 +44,8 @@ class SettingsSidebar(IconSidebarBase):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(gui_config, parent)
+        self._dirty_yaml = False
+        self._dirty_system = False
 
         # ---- Baseline = snapshot of the currently loaded config ----
         self._config = config
@@ -82,15 +84,18 @@ class SettingsSidebar(IconSidebarBase):
     # ------------------------------------------------------------------
     def _check_dirty(self) -> None:
         """Enable buttons only if at least one setting differs from the baseline."""
-        dirty_yaml = self._has_changes(self._bc)  # vs YAML baseline
-        dirty_system = self._has_changes(self._system_defaults)  # vs factory defaults
+        self._dirty_yaml = self._has_changes(self._bc)
+        self._dirty_system = self._has_changes(self._system_defaults)
 
-        # Save button is only meaningful for YAML delta
-        self._save_btn.setEnabled(dirty_yaml)
-        self._reset_btn.setEnabled(dirty_yaml or dirty_system)
+        self._save_btn.setEnabled(self._dirty_yaml)
+        self._reset_btn.setEnabled(self._dirty_yaml or self._dirty_system)
+        self._restore_action.setEnabled(self._dirty_system)
 
-        # Gray out the restore action if already at system defaults
-        self._restore_action.setEnabled(dirty_system)
+        self._reset_btn.setProperty(
+            "dropdownActive", self._dirty_system and not self._dirty_yaml
+        )
+        self._reset_btn.style().unpolish(self._reset_btn)
+        self._reset_btn.style().polish(self._reset_btn)
 
         self._update_reset_button_style()
 
@@ -203,19 +208,43 @@ class SettingsSidebar(IconSidebarBase):
     def _update_reset_button_style(self) -> None:
         """Re-apply the Reset button stylesheet with the correct split-line color."""
         cfg = self.gui_config
+        main_active = self._dirty_yaml
         enabled = self._reset_btn.isEnabled()
-        split = (
+
+        # Colors when the main action is available
+        bg = cfg.footer_reset_bg if main_active else cfg.footer_reset_disabled_bg
+        text = cfg.footer_reset_text if main_active else cfg.footer_reset_disabled_text
+        border = (
+            cfg.footer_reset_border if main_active else cfg.footer_reset_disabled_border
+        )
+        hover_bg = (
+            cfg.footer_reset_hover_bg if main_active else cfg.footer_reset_disabled_bg
+        )
+        hover_border = (
+            cfg.footer_reset_hover_border
+            if main_active
+            else cfg.footer_reset_disabled_border
+        )
+        split_color = (
             cfg.footer_reset_split_border
-            if enabled
+            if main_active
             else cfg.footer_reset_disabled_border
         )
 
-        self._reset_btn.setStyleSheet(
-            f"""
+        # If button is fully disabled, override with disabled colors
+        if not enabled:
+            bg = cfg.footer_reset_disabled_bg
+            text = cfg.footer_reset_disabled_text
+            border = cfg.footer_reset_disabled_border
+            hover_bg = cfg.footer_reset_disabled_bg
+            hover_border = cfg.footer_reset_disabled_border
+            split_color = cfg.footer_reset_disabled_border
+
+        style = f"""
             QToolButton {{
-                background: {cfg.footer_reset_bg};
-                color: {cfg.footer_reset_text};
-                border: 2px solid {cfg.footer_reset_border};
+                background: {bg};
+                color: {text};
+                border: 2px solid {border};
                 border-radius: {cfg.footer_button_radius}px;
                 padding: {cfg.footer_button_padding_v}px {cfg.footer_button_padding_h}px;
                 font-size: {cfg.sidebar_tab_font_size}px;
@@ -223,22 +252,17 @@ class SettingsSidebar(IconSidebarBase):
                 height: {cfg.footer_button_height}px;
             }}
             QToolButton:hover {{
-                background: {cfg.footer_reset_hover_bg};
-                border-color: {cfg.footer_reset_hover_border};
+                background: {hover_bg};
+                border-color: {hover_border};
             }}
             QToolButton:pressed {{
-                background: {cfg.footer_reset_hover_bg};
-                border-color: {cfg.footer_reset_border};
-            }}
-            QToolButton:disabled {{
-                background: {cfg.footer_reset_disabled_bg};
-                color: {cfg.footer_reset_disabled_text};
-                border-color: {cfg.footer_reset_disabled_border};
+                background: {hover_bg};
+                border-color: {border};
             }}
             QToolButton::menu-button {{
                 background: transparent;
                 border: none;
-                border-left: 1px solid {split};
+                border-left: 1px solid {split_color};
                 width: 20px;
             }}
             QToolButton::menu-arrow {{
@@ -246,4 +270,18 @@ class SettingsSidebar(IconSidebarBase):
                 height: 12px;
             }}
         """
-        )
+
+        # Append styling for the menu-button when dropdown is the only active action
+        if self._reset_btn.property("dropdownActive"):
+            style += f"""
+                    QToolButton[dropdownActive="true"]::menu-button {{
+                        background: transparent;
+                        border: 2px solid {cfg.footer_reset_border};
+                        border-radius: {cfg.footer_button_radius}px;
+                        border-top-left-radius: 0px;
+                        border-bottom-left-radius: 0px;
+                        color: {cfg.footer_reset_text};
+                    }}
+                """
+
+        self._reset_btn.setStyleSheet(style)
