@@ -42,12 +42,14 @@ class SettingsSidebar(IconSidebarBase):
         config: Config,
         baseline_config: Config,
         profile_active: bool = False,
+        profile_has_options: bool = False,
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(gui_config, parent)
         self._dirty_yaml = False
         self._dirty_system = False
         self._profile_active = profile_active
+        self._profile_has_options = profile_has_options
 
         # ---- Baseline = snapshot of the currently loaded config ----
         self._config = config
@@ -93,18 +95,21 @@ class SettingsSidebar(IconSidebarBase):
         self._dirty_system = self._has_changes(self._system_defaults)
 
         self._save_btn.setEnabled(self._dirty_yaml)
-        self._reset_btn.setEnabled(self._dirty_yaml or self._dirty_system)
 
-        # Restore action logic
+        # Determine whether the restore (dropdown) action should be available
         if self._profile_active:
-            # Profile active: restore clears profile overrides
-            self._restore_action.setEnabled(self._dirty_yaml)
+            restore_enabled = self._profile_has_options
         else:
-            # Global config: restore to system defaults
-            self._restore_action.setEnabled(self._dirty_system)
+            restore_enabled = self._dirty_system
 
+        self._restore_action.setEnabled(restore_enabled)
+
+        # Reset button is enabled when its own action or the dropdown is usable
+        self._reset_btn.setEnabled(self._dirty_yaml or restore_enabled)
+
+        # Visual indicator for the dropdown
         self._reset_btn.setProperty(
-            "dropdownActive", self._dirty_system and not self._dirty_yaml
+            "dropdownActive", restore_enabled and not self._dirty_yaml
         )
         self._reset_btn.style().unpolish(self._reset_btn)
         self._reset_btn.style().polish(self._reset_btn)

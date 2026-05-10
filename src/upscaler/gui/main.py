@@ -50,11 +50,19 @@ class MainWindow(QMainWindow):
 
         self.config = config
         self.config_path = config_path
+
         self._profile_name = profile_name
         self._active_profile = profile_name if profile_name else None
         self._general_opts, profiles = load_yaml_config(self.config_path)
         self.profiles = collections.OrderedDict(profiles)
         self._profile_order = list(self.profiles.keys())
+
+        self._profile_has_options = (
+            bool(self.profiles[profile_name].get("options"))
+            if profile_name and profile_name in self.profiles
+            else False
+        )
+
         self._baseline_config = self._compute_yaml_baseline()
         self.gui_config = GUIConfig()
 
@@ -105,6 +113,7 @@ class MainWindow(QMainWindow):
             self.config,
             self._baseline_config,
             profile_active=bool(self._active_profile),
+            profile_has_options=self._profile_has_options,
         )
         self.right_sidebar.save_settings.connect(self._on_save_settings)
         self.right_sidebar.reset_settings.connect(self._on_reset_settings)
@@ -230,6 +239,12 @@ class MainWindow(QMainWindow):
                     setattr(self.config, k, v)
 
         parse_config(self.config)
+
+        if name:
+            opts = self.profiles[name].get("options", {})
+            self._profile_has_options = bool(opts)
+        else:
+            self._profile_has_options = False
 
         self._baseline_config = self._compute_yaml_baseline()
         self._recreate_right_sidebar()
@@ -375,6 +390,7 @@ class MainWindow(QMainWindow):
             self.config,
             self._baseline_config,
             profile_active=bool(self._active_profile),
+            profile_has_options=self._profile_has_options,
         )
         new.save_settings.connect(self._on_save_settings)
         new.reset_settings.connect(self._on_reset_settings)
@@ -410,8 +426,12 @@ class MainWindow(QMainWindow):
                 # Keep general options as they are on disk
                 general_opts, _ = load_yaml_config(self.config_path)
                 save_yaml_config(general_opts, dict(self.profiles), self.config_path)
+                self._profile_has_options = bool(
+                    self.profiles[self._active_profile].get("options")
+                )
             else:
                 save_yaml_config(config_dict, dict(self.profiles), self.config_path)
+                self._profile_has_options = False
 
             self._baseline_config = copy.deepcopy(self.config)
             QTimer.singleShot(0, self._recreate_right_sidebar)
