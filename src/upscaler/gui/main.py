@@ -207,29 +207,30 @@ class MainWindow(QMainWindow):
     #  Profile helpers
     # ------------------------------------------------------------------
     def _apply_profile(self, name: Optional[str]) -> None:
-        """Replace the live config with the chosen profile’s options (or global defaults)."""
-        if name == self._active_profile:
-            return
-
+        """
+        Replace the live config with the chosen profile's options, inheriting
+        any missing fields from the top-level YAML (general) options.
+        """
         self._active_profile = name
+
+        # Base = general (top-level) YAML options, not system defaults
+        self.config = Config()
+        for k, v in self._general_opts.items():
+            if hasattr(self.config, k) and k not in ("log_level", "log_file"):
+                setattr(self.config, k, v)
+
         if name:
+            # Layer the profile's explicit options on top
             opts = self.profiles[name].get("options", {})
-            self.config = Config()
             for k, v in opts.items():
                 if hasattr(self.config, k):
                     setattr(self.config, k, v)
-            parse_config(self.config)
-        else:
-            # Global: use cached general options, no file read
-            self.config = Config()
-            for k, v in self._general_opts.items():
-                if hasattr(self.config, k) and k not in ("log_level", "log_file"):
-                    setattr(self.config, k, v)
-            parse_config(self.config)
+
+        parse_config(self.config)
 
         self._baseline_config = self._compute_yaml_baseline()
         self._recreate_right_sidebar()
-        self.left_sidebar.populate_list(active_name=name)
+        self.left_sidebar.set_active_item(name)
 
     def _save_profiles_to_disk(self):
         """Write the current profile list to YAML, leaving general options untouched."""
