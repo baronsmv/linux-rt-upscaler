@@ -1,0 +1,184 @@
+from __future__ import annotations
+
+from typing import List, Optional, Tuple, Dict
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
+
+from .window import WindowPickerDialog
+
+MATCH_TYPES = {
+    "title_contains": "Title contains",
+    "title_regex": "Title regex",
+    "title_exact": "Title exact",
+    "class_contains": "Class contains",
+    "class_regex": "Class regex",
+    "class_exact": "Class exact",
+}
+
+
+class MatchCriterion:
+    def __init__(self, key: str, value: str):
+        self.key = key
+        self.value = value
+
+    def to_tuple(self) -> Tuple[str, str]:
+        return self.key, self.value
+
+
+class ProfileDialog(QDialog):
+    """Dialog for adding or editing a profile’s match criteria."""
+
+    def __init__(
+        self,
+        profile_name: str = "",
+        match: Optional[Dict[str, str]] = None,
+        parent=None,
+    ):
+        super().__init__(parent)
+        self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
+        self.setMinimumWidth(400)
+        self._match_criteria: List[MatchCriterion] = []
+
+        layout = QVBoxLayout(self)
+
+        # Name
+        name_layout = QHBoxLayout()
+        name_layout.addWidget(QLabel("Name:"))
+        self._name_edit = QLineEdit(profile_name)
+        name_layout.addWidget(self._name_edit)
+        layout.addLayout(name_layout)
+
+        # Match criteria group
+        crit_group = QGroupBox("Match criteria")
+        crit_layout = QVBoxLayout(crit_group)
+
+        # List of criteria
+        self._crit_list = QListWidget()
+        self._crit_list.setAlternatingRowColors(True)
+        crit_layout.addWidget(self._crit_list)
+
+        # Add criterion row
+        add_layout = QHBoxLayout()
+        self._type_combo = QComboBox()
+        for key, label in MATCH_TYPES.items():
+            self._type_combo.addItem(label, key)
+        add_layout.addWidget(self._type_combo)
+        self._value_edit = QLineEdit()
+        self._value_edit.setPlaceholderText("Value")
+        add_layout.addWidget(self._value_edit)
+        add_btn = QPushButton("Add")
+        add_btn.clicked.connect(self._add_criterion)
+        add_layout.addWidget(add_btn)
+
+        crit_layout.addLayout(add_layout)
+        layout.addWidget(crit_group)
+
+        # Buttons
+        btn_layout = QHBoxLayout()
+        capture_btn = QPushButton("Capture from window")
+        capture_btn.clicked.connect(self._capture)
+        btn_layout.addWidget(capture_btn)
+        btn_layout.addStretch()
+        self._button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        self._button_box.accepted.connect(self._validate_and_accept)
+        self._button_box.rejected.connect(self.reject)
+        btn_layout.addWidget(self._button_box)
+        layout.addLayout(btn_layout)
+
+        # Populate existing criteria
+        if match:
+            for key, value in match.items():
+                if key in MATCH_TYPES:
+                    self._match_criteria.append(MatchCriterion(key, value))
+        self._refresh_list()
+
+    def _add_criterion(self):
+        key = self._type_combo.currentData()
+        value = self._value_edit.text().strip()
+        if not value:
+            QMessageBox.warning(
+                self, "Missing value", "Enter a value for the criterion."
+            )
+            return
+        self._match_criteria.append(MatchCriterion(key, value))
+        self._value_edit.clear()
+        self._refresh_list()
+
+    def _refresh_list(self):
+        self._crit_list.clear()
+        for crit in self._match_criteria:
+            label = f"{MATCH_TYPES[crit.key]}: {crit.value}"
+            item = QListWidgetItem(label)
+            item.setData(Qt.UserRole, crit)
+            self._crit_list.addItem(item)
+
+    def _remove_selected(self):
+        for item in self._crit_list.selectedItems():
+            crit = item.data(Qt.UserRole)
+            self._match_criteria.remove(crit)
+            self._crit_list.takeItem(self._crit_list.row(item))
+
+    def _capture(self):
+        """Open a window picker dialog and auto‑fill criteria."""
+        picker = WindowPickerDialog(self)
+        if picker.exec() == QDialog.Accepted:
+            win_info = picker.selected_window()
+            if win_info:
+                # Auto‑fill: title contains and class exact
+                self._match_criteria.append(
+                    MatchCriterion("title_contains", win_info.title)
+                )
+                # Get WM_CLASS, TODO: further implement window-class
+                class_name = "unknown"
+                try:
+                    from ...window.info import (
+                        get_window_class,
+                        AtomCache,
+                        open_xcb_connection,
+                        close_xcb_connection,
+                    )
+
+                    conn = open_xcb_connection()
+                    if conn:
+                        atoms = AtomCache(conn)
+                        klass = get_window_class(conn, win_info.handle, atoms)
+                        if klass:
+                            class_name = klass[1]  # the class part
+                        close_xcb_connection(conn)
+                except Exception:
+                    pass
+                self._match_criteria.append(MatchCriterion("class_exact", class_name))
+                self._refresh_list()
+
+    def _validate_and_accept(self):
+        name = self._name_edit.text().strip()
+        if not name:
+            QMessageBox.warning(self, "Missing name", "Profile name cannot be empty.")
+            return
+        self._profile_name = name
+        self._match_dict = {}
+        for crit in self._match_criteria:
+            self._match_dict[crit.key] = crit.value
+        self.accept()
+
+    def profile_name(self) -> str:
+        return self._profile_name
+
+    def match_criteria(self) -> Dict[str, str]:
+        return self._match_dict
