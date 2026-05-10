@@ -231,6 +231,14 @@ class MainWindow(QMainWindow):
         self._recreate_right_sidebar()
         self.left_sidebar.populate_list(active_name=name)
 
+    def _save_profiles_to_disk(self):
+        """Write the current profile list to YAML, leaving general options untouched."""
+        try:
+            general_opts, _ = load_yaml_config(self.config_path)
+            save_yaml_config(general_opts, dict(self.profiles), self.config_path)
+        except Exception:
+            logger.exception("Failed to auto-save profiles")
+
     def _maybe_save_before_switch(self) -> bool:
         """Return False if user cancels."""
         if self.right_sidebar.is_dirty():
@@ -280,6 +288,7 @@ class MainWindow(QMainWindow):
                 self.profiles[name] = {"match": match, "options": {}}
                 self._profile_order.append(name)
                 self.left_sidebar.populate_list(active_name=name)
+                self._save_profiles_to_disk()
                 QTimer.singleShot(0, lambda n=name: self._safe_apply_profile(n))
         except Exception:
             logger.exception("Failed to add profile")
@@ -298,6 +307,7 @@ class MainWindow(QMainWindow):
                     self._profile_order[self._profile_order.index(name)] = new_name
                 self.profiles[new_name]["match"] = new_match
                 self.left_sidebar.populate_list(active_name=new_name)
+                self._save_profiles_to_disk()
         except Exception:
             logger.exception("Failed to edit profile")
             QMessageBox.critical(self, "Error", "Could not edit profile.")
@@ -314,6 +324,7 @@ class MainWindow(QMainWindow):
                 del self.profiles[name]
                 self._profile_order.remove(name)
                 self.left_sidebar.populate_list(active_name=None)
+                self._save_profiles_to_disk()
                 if self._active_profile == name:
                     QTimer.singleShot(0, lambda: self._safe_apply_profile(""))
         except Exception:
@@ -326,6 +337,7 @@ class MainWindow(QMainWindow):
             self._profile_order = list(self.profiles.keys())
             self.left_sidebar.update_profiles(self.profiles)
             self.left_sidebar.populate_list(active_name=name)
+            self._save_profiles_to_disk()
         except Exception:
             logger.exception("Failed to move profile up")
             QMessageBox.critical(self, "Error", "Could not reorder profiles.")
@@ -336,6 +348,7 @@ class MainWindow(QMainWindow):
             self._profile_order = list(self.profiles.keys())
             self.left_sidebar.update_profiles(self.profiles)
             self.left_sidebar.populate_list(active_name=name)
+            self._save_profiles_to_disk()
         except Exception:
             logger.exception("Failed to move profile down")
             QMessageBox.critical(self, "Error", "Could not reorder profiles.")

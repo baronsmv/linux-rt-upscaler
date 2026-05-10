@@ -150,7 +150,9 @@ def save_yaml_config(
     # ---- Write the new file ----
     try:
         with open(config_path, "w", encoding="utf-8") as f:
-            yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
+            yaml.dump(
+                data, f, default_flow_style=False, allow_unicode=True, sort_keys=False
+            )
     except OSError as e:
         logger.error("Failed to write config to %s: %s", config_path, e)
         raise
