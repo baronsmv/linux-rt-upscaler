@@ -39,8 +39,8 @@ class ProfilesSidebar(QWidget):
         self._profiles = profiles
         self._current_index = -1
         self.setObjectName("sidebar_container")
-        self.setFixedWidth(gui_config.sidebar_width)
         self.setStyleSheet(styles.sidebar_container(gui_config))
+        self.setFixedWidth(gui_config.sidebar_width)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
@@ -49,9 +49,9 @@ class ProfilesSidebar(QWidget):
         # ---- Title ----
         title = QLabel("Profiles")
         title.setStyleSheet(
-            f"color: {gui_config.profile_title_color}; "
-            f"font-size: {gui_config.profile_title_font_size}px; "
-            f"font-weight: {gui_config.profile_title_font_weight};"
+            f"color: {gui_config.sidebar_section_title_color}; "
+            f"font-size: {gui_config.sidebar_section_title_size}px; "
+            f"font-weight: bold;"
         )
         layout.addWidget(title)
 
@@ -64,6 +64,7 @@ class ProfilesSidebar(QWidget):
         self._list.setSpacing(gui_config.profile_item_spacing)
         self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._list.currentItemChanged.connect(self._on_current_item_changed)
+        self._list.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self._list, stretch=1)
 
         # ---- Toolbar ----
@@ -225,6 +226,18 @@ class ProfilesSidebar(QWidget):
             self._delete_btn.setEnabled(False)
             self._up_btn.setEnabled(False)
             self._down_btn.setEnabled(False)
+
+    def _on_item_double_clicked(self, item: QListWidgetItem) -> None:
+        """Open the edit dialog when a profile is double‑clicked."""
+        if item is None:
+            return
+
+        # Ignore the (default) entry and any item without a real profile name
+        name = item.data(Qt.UserRole)
+        if not name:
+            return
+
+        self.edit_profile_requested.emit(name)
 
     def _emit_edit(self):
         item = self._list.currentItem()
