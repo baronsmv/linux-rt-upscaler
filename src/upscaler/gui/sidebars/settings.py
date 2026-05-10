@@ -82,6 +82,9 @@ class SettingsSidebar(IconSidebarBase):
     # ------------------------------------------------------------------
     #  Dirty-state logic
     # ------------------------------------------------------------------
+    def is_dirty(self) -> bool:
+        return self._dirty_yaml
+
     def _check_dirty(self) -> None:
         """Enable buttons only if at least one setting differs from the baseline."""
         self._dirty_yaml = self._has_changes(self._bc)

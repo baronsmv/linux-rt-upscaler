@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections
 import copy
 import logging
 from typing import List, Optional
@@ -7,6 +8,7 @@ from typing import List, Optional
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
+    QDialog,
     QMainWindow,
     QWidget,
     QMessageBox,
@@ -16,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from .config import GUIConfig
+from .dialogs import ProfileDialog
 from .grid import WindowGridScene, WindowGridView, FilterBar
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .widgets import StyledSplitter
@@ -23,6 +26,8 @@ from ..config import (
     Config,
     find_profile,
     load_yaml_config,
+    move_profile_down,
+    move_profile_up,
     parse_config,
     save_yaml_config,
 )
@@ -42,10 +47,13 @@ class MainWindow(QMainWindow):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
+
         self.config = config
-        self.profiles = profiles
         self.config_path = config_path
         self._profile_name = profile_name
+        self._active_profile = profile_name if profile_name else None
+        self.profiles = collections.OrderedDict(profiles)
+        self._profile_order = list(self.profiles.keys())
         self._baseline_config = self._compute_yaml_baseline()
         self.gui_config = GUIConfig()
 
@@ -60,7 +68,15 @@ class MainWindow(QMainWindow):
         main_layout.setSpacing(0)
 
         # ---- Left sidebar (Profiles) ----
-        self.left_sidebar = ProfilesSidebar(self.gui_config)
+        self.left_sidebar = ProfilesSidebar(
+            self.gui_config, self.profiles, self._active_profile
+        )
+        self.left_sidebar.profile_selected.connect(self._on_profile_selected)
+        self.left_sidebar.add_profile_requested.connect(self._on_add_profile)
+        self.left_sidebar.edit_profile_requested.connect(self._on_edit_profile)
+        self.left_sidebar.delete_profile_requested.connect(self._on_delete_profile)
+        self.left_sidebar.move_up_requested.connect(self._on_move_up)
+        self.left_sidebar.move_down_requested.connect(self._on_move_down)
 
         # ---- Central column: filter bar + grid ----
         central_widget = QWidget()
@@ -158,23 +174,133 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _compute_yaml_baseline(self) -> Config:
         """Return a Config reflecting the YAML file + selected profile, without CLI overrides."""
-        general_opts, _ = load_yaml_config(self.config_path)
+        general_opts, profs = load_yaml_config(self.config_path)
         baseline = Config()
+
         # Apply YAML general options (skip log fields)
         for k, v in general_opts.items():
             if hasattr(baseline, k) and k not in ("log_level", "log_file"):
                 setattr(baseline, k, v)
+
+        # If a profile is active, use its saved options as baseline
+        if self._active_profile and self._active_profile in self.profiles:
+            profile_data = self.profiles[self._active_profile]
+            if profile_data:
+                opts = profile_data.get("options", {})
+                for k, v in opts.items():
+                    if hasattr(baseline, k) and k not in ("log_level", "log_file"):
+                        setattr(baseline, k, v)
+
         # Apply explicit profile if one was chosen
-        if self._profile_name:  # store profile_name as attr
+        elif self._profile_name:  # CLI manual profile, not yet active
             profile_data = find_profile(self.profiles, self._profile_name)
             if profile_data:
                 opts = profile_data.get("options", {})
                 for k, v in opts.items():
                     if hasattr(baseline, k) and k not in ("log_level", "log_file"):
                         setattr(baseline, k, v)
+
         # Parse colors to make comparisons consistent (tuple vs tuple)
         parse_config(baseline)
         return baseline
+
+    # ------------------------------------------------------------------
+    #  Profile helpers
+    # ------------------------------------------------------------------
+    def _apply_profile(self, name: Optional[str]) -> None:
+        """Replace the live config with the chosen profile’s options (or global defaults)."""
+        self._active_profile = name
+        if name:
+            opts = self.profiles[name].get("options", {})
+            self.config = Config()
+            for k, v in opts.items():
+                if hasattr(self.config, k):
+                    setattr(self.config, k, v)
+            parse_config(self.config)
+        else:
+            # Global: reload YAML general options
+            general_opts, _ = load_yaml_config(self.config_path)
+            self.config = Config()
+            for k, v in general_opts.items():
+                if hasattr(self.config, k) and k not in ("log_level", "log_file"):
+                    setattr(self.config, k, v)
+            parse_config(self.config)
+
+        self._baseline_config = self._compute_yaml_baseline()
+        self._recreate_right_sidebar()
+        self.left_sidebar.populate_list(active_name=name)
+
+    def _maybe_save_before_switch(self) -> bool:
+        """Return False if user cancels."""
+        if self.right_sidebar.is_dirty():
+            reply = QMessageBox.question(
+                self,
+                "Unsaved changes",
+                "Save changes before switching profile?",
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+            )
+            if reply == QMessageBox.Save:
+                self._on_save_settings()
+                return True
+            elif reply == QMessageBox.Discard:
+                return True
+            else:
+                return False
+        return True
+
+    def _on_profile_selected(self, name: str):
+        if not self._maybe_save_before_switch():
+            return
+        self._apply_profile(name if name != "" else None)
+
+    def _on_add_profile(self):
+        dlg = ProfileDialog(parent=self)
+        if dlg.exec() == QDialog.Accepted:
+            name = dlg.profile_name()
+            match = dlg.match_criteria()
+            self.profiles[name] = {"match": match, "options": {}}
+            self._profile_order.append(name)
+            self.left_sidebar.populate_list(active_name=name)
+            self._apply_profile(name)
+
+    def _on_edit_profile(self, name: str):
+        current_match = self.profiles[name].get("match", {})
+        dlg = ProfileDialog(profile_name=name, match=current_match, parent=self)
+        if dlg.exec() == QDialog.Accepted:
+            new_name = dlg.profile_name()
+            new_match = dlg.match_criteria()
+            if new_name != name:
+                data = self.profiles.pop(name)
+                self.profiles[new_name] = data
+                self._profile_order[self._profile_order.index(name)] = new_name
+            self.profiles[new_name]["match"] = new_match
+            self.left_sidebar.populate_list(active_name=new_name)
+
+    def _on_delete_profile(self, name: str):
+        reply = QMessageBox.question(
+            self,
+            "Delete profile",
+            f"Delete profile '{name}'?",
+            QMessageBox.Yes | QMessageBox.No,
+        )
+        if reply == QMessageBox.Yes:
+            del self.profiles[name]
+            self._profile_order.remove(name)
+            self.left_sidebar.populate_list(active_name=None)
+            if self._active_profile == name:
+                self._apply_profile(None)
+
+    def _on_move_up(self, name: str):
+        self.profiles = move_profile_up(self.profiles, name)
+        self._profile_order = list(self.profiles.keys())
+        self.left_sidebar.update_profiles(self.profiles)
+        self.left_sidebar.populate_list(active_name=name)
+
+    def _on_move_down(self, name: str):
+        self.profiles = move_profile_down(self.profiles, name)
+        self._profile_order = list(self.profiles.keys())
+        self.left_sidebar.update_profiles(self.profiles)
+        self.left_sidebar.populate_list(active_name=name)
 
     # ------------------------------------------------------------------
     #  Focus helpers
@@ -218,10 +344,16 @@ class MainWindow(QMainWindow):
         """Save the current config to the YAML file."""
         config_dict = self.config.to_dict(diff_only=True)
         try:
-            save_yaml_config(config_dict, self.profiles, self.config_path)
-            logger.info("Configuration saved.")
+            if self._active_profile:
+                # Merge options into the active profile
+                self.profiles[self._active_profile]["options"] = config_dict
+                # Keep general options as they are on disk
+                general_opts, _ = load_yaml_config(self.config_path)
+                save_yaml_config(general_opts, self.profiles, self.config_path)
+            else:
+                save_yaml_config(config_dict, self.profiles, self.config_path)
+
             self._baseline_config = copy.deepcopy(self.config)
-            # Re‑create the sidebar so the “dirty” indicators are cleared
             self._recreate_right_sidebar()
         except Exception as e:
             logger.exception("Failed to save configuration")
