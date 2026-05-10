@@ -12,7 +12,7 @@ from .models import (
     ZOOM_LEVELS,
 )
 from .parsers import parse_config
-from .profiles import find_profile
+from .profiles import find_profile, move_profile_down, move_profile_up
 from .setup import load_config, setup_config
 from .validators import validate_overrides
 from .yaml import load_yaml_config, save_yaml_config
@@ -29,6 +29,8 @@ __all__ = [
     "find_profile",
     "load_config",
     "load_yaml_config",
+    "move_profile_down",
+    "move_profile_up",
     "parse_args",
     "parse_config",
     "validate_overrides",
