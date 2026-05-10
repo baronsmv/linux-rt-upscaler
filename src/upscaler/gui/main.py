@@ -3,6 +3,7 @@ from __future__ import annotations
 import collections
 import copy
 import logging
+from dataclasses import fields
 from typing import List, Optional
 
 from PySide6.QtCore import Qt, QTimer
@@ -286,6 +287,132 @@ class MainWindow(QMainWindow):
                 "An unexpected error occurred while switching profiles.",
             )
 
+    def _profile_options_diff(self) -> dict:
+        """Return a dict of options that differ from the top‑level YAML baseline."""
+        baseline = Config()
+        for k, v in self._general_opts.items():
+            if hasattr(baseline, k) and k not in ("log_level", "log_file"):
+                setattr(baseline, k, v)
+        parse_config(baseline)  # ensure background_color is a tuple
+
+        diff = {}
+        for field in fields(self.config):
+            name = field.name
+            if name in ("config_file", "log_level", "log_file", "program"):
+                continue
+            value = getattr(self.config, name)
+            baseline_value = getattr(baseline, name)
+            if value != baseline_value:
+                diff[name] = value
+
+        return diff
+
+    # ------------------------------------------------------------------
+    #  Focus helpers
+    # ------------------------------------------------------------------
+    def _focus_grid(self) -> None:
+        self._view.setFocus()
+        self._scene.focus_first_tile()
+
+    # ------------------------------------------------------------------
+    #  Sidebar helpers
+    # ------------------------------------------------------------------
+    def _recreate_right_sidebar(self) -> None:
+        old = self.right_sidebar
+        tab_index = old.current_tab_index
+        new = SettingsSidebar(
+            self.gui_config,
+            self.config,
+            self._baseline_config,
+            profile_active=bool(self._active_profile),
+            profile_has_options=self._profile_has_options,
+        )
+        new.save_settings.connect(self._on_save_settings)
+        new.reset_settings.connect(self._on_reset_settings)
+        new.restore_defaults.connect(self._on_restore_defaults)
+
+        idx = self.splitter.indexOf(old)
+        if idx != -1:
+            self.splitter.replaceWidget(idx, new)
+            old.deleteLater()
+        else:
+            self.splitter.addWidget(new)
+        self.right_sidebar = new
+
+        new.current_tab_index = tab_index
+
+    # ------------------------------------------------------------------
+    #  Slots
+    # ------------------------------------------------------------------
+    def _on_filter_changed(self, text: str) -> None:
+        self._populate_grid(text)
+
+    def _on_window_selected(self, win_info: WindowInfo) -> None:
+        self._selected_win_info = win_info
+        QTimer.singleShot(0, self._start_pipeline)
+
+    def _on_save_settings(self):
+        """Save the current config to the YAML file."""
+        try:
+            if self._active_profile:
+                # Profile options = diff from top‑level YAML, not from system defaults
+                self.profiles[self._active_profile][
+                    "options"
+                ] = self._profile_options_diff()
+                general_opts, _ = load_yaml_config(self.config_path)
+                save_yaml_config(general_opts, dict(self.profiles), self.config_path)
+                self._profile_has_options = bool(
+                    self.profiles[self._active_profile].get("options")
+                )
+            else:
+                config_dict = self.config.to_dict(diff_only=True)
+                save_yaml_config(config_dict, dict(self.profiles), self.config_path)
+                # Reload the top‑level options so they stay up‑to‑date
+                general_opts, _ = load_yaml_config(self.config_path)
+                self._general_opts = general_opts
+                self._profile_has_options = False
+
+            self._baseline_config = copy.deepcopy(self.config)
+            QTimer.singleShot(0, self._recreate_right_sidebar)
+        except Exception as e:
+            logger.exception("Failed to save configuration")
+            QMessageBox.critical(self, "Save Error", f"Could not save:\n{e}")
+
+    def _on_reset_settings(self):
+        """Revert all settings back to what was loaded from the file."""
+        logger.info("Resetting settings to saved state.")
+        self.config = copy.deepcopy(self._baseline_config)
+        self._recreate_right_sidebar()
+
+    def _on_restore_defaults(self):
+        if self._active_profile:
+            # Capture the current baseline *before* clearing options
+            old_baseline = copy.deepcopy(self._baseline_config)
+
+            # Clear the profile’s explicit options (in memory only)
+            self.profiles[self._active_profile]["options"] = {}
+
+            # Build the live config from top‑level YAML only (no profile overrides)
+            self.config = Config()
+            for k, v in self._general_opts.items():
+                if hasattr(self.config, k) and k not in ("log_level", "log_file"):
+                    setattr(self.config, k, v)
+            parse_config(self.config)
+
+            # Use the old baseline so the sidebar sees a difference
+            self._baseline_config = old_baseline
+            self._profile_has_options = False
+
+            self._recreate_right_sidebar()
+            self.left_sidebar.set_active_item(self._active_profile)
+            logger.info("Profile overrides cleared.")
+        else:
+            # Global config: true system defaults
+            self.config = Config()
+            parse_config(self.config)
+            self._recreate_right_sidebar()
+            logger.info("Restoring system defaults.")
+
     def _on_profile_selected(self, name: str):
         # Skip if the profile is already active
         active = self._active_profile if self._active_profile else ""
@@ -370,108 +497,6 @@ class MainWindow(QMainWindow):
         except Exception:
             logger.exception("Failed to move profile down")
             QMessageBox.critical(self, "Error", "Could not reorder profiles.")
-
-    # ------------------------------------------------------------------
-    #  Focus helpers
-    # ------------------------------------------------------------------
-    def _focus_grid(self) -> None:
-        self._view.setFocus()
-        self._scene.focus_first_tile()
-
-    # ------------------------------------------------------------------
-    #  Sidebar helpers
-    # ------------------------------------------------------------------
-    def _recreate_right_sidebar(self) -> None:
-        old = self.right_sidebar
-        tab_index = old.current_tab_index
-        new = SettingsSidebar(
-            self.gui_config,
-            self.config,
-            self._baseline_config,
-            profile_active=bool(self._active_profile),
-            profile_has_options=self._profile_has_options,
-        )
-        new.save_settings.connect(self._on_save_settings)
-        new.reset_settings.connect(self._on_reset_settings)
-        new.restore_defaults.connect(self._on_restore_defaults)
-
-        idx = self.splitter.indexOf(old)
-        if idx != -1:
-            self.splitter.replaceWidget(idx, new)
-            old.deleteLater()
-        else:
-            self.splitter.addWidget(new)
-        self.right_sidebar = new
-
-        new.current_tab_index = tab_index
-
-    # ------------------------------------------------------------------
-    #  Slots
-    # ------------------------------------------------------------------
-    def _on_filter_changed(self, text: str) -> None:
-        self._populate_grid(text)
-
-    def _on_window_selected(self, win_info: WindowInfo) -> None:
-        self._selected_win_info = win_info
-        QTimer.singleShot(0, self._start_pipeline)
-
-    def _on_save_settings(self):
-        """Save the current config to the YAML file."""
-        config_dict = self.config.to_dict(diff_only=True)
-        try:
-            if self._active_profile:
-                # Merge options into the active profile
-                self.profiles[self._active_profile]["options"] = config_dict
-                # Keep general options as they are on disk
-                general_opts, _ = load_yaml_config(self.config_path)
-                save_yaml_config(general_opts, dict(self.profiles), self.config_path)
-                self._profile_has_options = bool(
-                    self.profiles[self._active_profile].get("options")
-                )
-            else:
-                save_yaml_config(config_dict, dict(self.profiles), self.config_path)
-                self._profile_has_options = False
-
-            self._baseline_config = copy.deepcopy(self.config)
-            QTimer.singleShot(0, self._recreate_right_sidebar)
-        except Exception as e:
-            logger.exception("Failed to save configuration")
-            QMessageBox.critical(self, "Save Error", f"Could not save:\n{e}")
-
-    def _on_reset_settings(self):
-        """Revert all settings back to what was loaded from the file."""
-        logger.info("Resetting settings to saved state.")
-        self.config = copy.deepcopy(self._baseline_config)
-        self._recreate_right_sidebar()
-
-    def _on_restore_defaults(self):
-        if self._active_profile:
-            # Capture the current baseline *before* clearing options
-            old_baseline = copy.deepcopy(self._baseline_config)
-
-            # Clear the profile’s explicit options (in memory only)
-            self.profiles[self._active_profile]["options"] = {}
-
-            # Build the live config from top‑level YAML only (no profile overrides)
-            self.config = Config()
-            for k, v in self._general_opts.items():
-                if hasattr(self.config, k) and k not in ("log_level", "log_file"):
-                    setattr(self.config, k, v)
-            parse_config(self.config)
-
-            # Use the old baseline so the sidebar sees a difference
-            self._baseline_config = old_baseline
-            self._profile_has_options = False
-
-            self._recreate_right_sidebar()
-            self.left_sidebar.set_active_item(self._active_profile)
-            logger.info("Profile overrides cleared.")
-        else:
-            # Global config: true system defaults
-            self.config = Config()
-            parse_config(self.config)
-            self._recreate_right_sidebar()
-            logger.info("Restoring system defaults.")
 
     # ------------------------------------------------------------------
     #  Pipeline launch
