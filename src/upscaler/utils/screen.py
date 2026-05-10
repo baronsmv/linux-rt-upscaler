@@ -13,7 +13,11 @@ def list_monitors() -> List[str]:
     Return a sorted list of display names known to the system.
     The special names ``"primary"`` and ``"all"`` are prepended.
     """
-    names = sorted({m.name for m in get_monitors() if m.name})
+    try:
+        names = sorted({m.name for m in get_monitors() if m.name})
+    except Exception as e:
+        logger.warning(f"Could not enumerate monitors: {e}")
+        names = []
     return ["primary", "all"] + names
 
 
