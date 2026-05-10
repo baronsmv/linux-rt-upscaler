@@ -41,11 +41,13 @@ class SettingsSidebar(IconSidebarBase):
         gui_config: GUIConfig,
         config: Config,
         baseline_config: Config,
+        profile_active: bool = False,
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(gui_config, parent)
         self._dirty_yaml = False
         self._dirty_system = False
+        self._profile_active = profile_active
 
         # ---- Baseline = snapshot of the currently loaded config ----
         self._config = config
@@ -174,7 +176,12 @@ class SettingsSidebar(IconSidebarBase):
 
         # Drop-down menu
         menu = QMenu(self._reset_btn)
-        self._restore_action = menu.addAction("Restore System Defaults")
+        restore_text = (
+            "Clear profile overrides"
+            if self._profile_active
+            else "Restore System Defaults"
+        )
+        self._restore_action = menu.addAction(restore_text)
         self._restore_action.triggered.connect(self.restore_defaults.emit)
         self._reset_btn.setMenu(menu)
 

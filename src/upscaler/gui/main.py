@@ -101,7 +101,10 @@ class MainWindow(QMainWindow):
 
         # ---- Right sidebar (Settings) ----
         self.right_sidebar = SettingsSidebar(
-            self.gui_config, self.config, self._baseline_config
+            self.gui_config,
+            self.config,
+            self._baseline_config,
+            profile_active=bool(self._active_profile),
         )
         self.right_sidebar.save_settings.connect(self._on_save_settings)
         self.right_sidebar.reset_settings.connect(self._on_reset_settings)
@@ -367,7 +370,12 @@ class MainWindow(QMainWindow):
     def _recreate_right_sidebar(self) -> None:
         old = self.right_sidebar
         tab_index = old.current_tab_index
-        new = SettingsSidebar(self.gui_config, self.config, self._baseline_config)
+        new = SettingsSidebar(
+            self.gui_config,
+            self.config,
+            self._baseline_config,
+            profile_active=bool(self._active_profile),
+        )
         new.save_settings.connect(self._on_save_settings)
         new.reset_settings.connect(self._on_reset_settings)
         new.restore_defaults.connect(self._on_restore_defaults)
