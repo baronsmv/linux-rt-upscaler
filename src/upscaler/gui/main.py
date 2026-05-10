@@ -208,6 +208,9 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _apply_profile(self, name: Optional[str]) -> None:
         """Replace the live config with the chosen profile’s options (or global defaults)."""
+        if name == self._active_profile:
+            return
+
         self._active_profile = name
         if name:
             opts = self.profiles[name].get("options", {})
@@ -258,6 +261,11 @@ class MainWindow(QMainWindow):
             )
 
     def _on_profile_selected(self, name: str):
+        # Skip if the profile is already active
+        active = self._active_profile if self._active_profile else ""
+        if active == name:
+            return
+
         if not self._maybe_save_before_switch():
             return
 

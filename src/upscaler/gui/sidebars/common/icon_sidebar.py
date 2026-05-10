@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QStackedWidget,
     QSizePolicy,
-    QGraphicsDropShadowEffect,
 )
 
 from . import styles
@@ -32,11 +31,13 @@ class IconSidebarBase(QWidget):
         self.setObjectName("sidebar_container")
         self.setStyleSheet(styles.sidebar_container(gui_config))
 
-        shadow = QGraphicsDropShadowEffect()
+        # Shadow Effect (disable for better performance,
+        # but might need to evaluate its real weight further later on
+        """shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(20)
         shadow.setColor(Qt.gray)
         shadow.setOffset(0, 2)
-        self.setGraphicsEffect(shadow)
+        self.setGraphicsEffect(shadow)"""
 
         # ---- Layout ----
         layout = QVBoxLayout(self)
