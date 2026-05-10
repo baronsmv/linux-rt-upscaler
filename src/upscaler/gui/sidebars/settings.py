@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING
+import dataclasses
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -22,10 +23,10 @@ from .tabs import (
     ExtrasTab,
     GeneralTab,
 )
+from ...config import Config
 
 if TYPE_CHECKING:
     from ..config import GUIConfig
-    from ...config import Config
 
 
 class SettingsSidebar(IconSidebarBase):
@@ -35,13 +36,19 @@ class SettingsSidebar(IconSidebarBase):
     reset_settings = Signal()
     restore_defaults = Signal()
 
-    def __init__(self, gui_config: GUIConfig, config: Config, parent=None) -> None:
+    def __init__(
+        self,
+        gui_config: GUIConfig,
+        config: Config,
+        baseline_config: Config,
+        parent: Optional[QWidget] = None,
+    ) -> None:
         super().__init__(gui_config, parent)
 
         # ---- Baseline = snapshot of the currently loaded config ----
-        self._bc = copy.deepcopy(config)
-
         self._config = config
+        self._bc = copy.deepcopy(baseline_config)
+        self._system_defaults = Config()
         self._dirty = False
 
         tabs = [
@@ -74,21 +81,23 @@ class SettingsSidebar(IconSidebarBase):
     # ------------------------------------------------------------------
     def _check_dirty(self) -> None:
         """Enable buttons only if at least one setting differs from the baseline."""
-        dirty = self._has_changes()
-        if dirty != self._dirty:
-            self._dirty = dirty
-            self._save_btn.setEnabled(dirty)
-            self._reset_btn.setEnabled(dirty)
-            self._update_reset_button_style()
+        dirty_yaml = self._has_changes(self._bc)  # vs YAML baseline
+        dirty_defaults = self._has_changes(self._system_defaults)  # vs factory defaults
 
-    def _has_changes(self) -> bool:
+        # Save button is only meaningful for YAML delta
+        self._save_btn.setEnabled(dirty_yaml)
+
+        # Reset button shows both options
+        self._reset_btn.setEnabled(dirty_yaml or dirty_defaults)
+
+        self._update_reset_button_style()
+
+    def _has_changes(self, baseline: Config) -> bool:
         """Compare the current config with the baseline config field by field."""
-        import dataclasses
-
         for field in dataclasses.fields(self._config):
             if field.name in ("config_file", "log_level", "log_file"):
                 continue
-            if getattr(self._config, field.name) != getattr(self._bc, field.name):
+            if getattr(self._config, field.name) != getattr(baseline, field.name):
                 return True
         return False
 

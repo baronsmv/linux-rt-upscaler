@@ -19,7 +19,13 @@ from .config import GUIConfig
 from .grid import WindowGridScene, WindowGridView, FilterBar
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .widgets import StyledSplitter
-from ..config import Config, save_yaml_config
+from ..config import (
+    Config,
+    find_profile,
+    load_yaml_config,
+    parse_config,
+    save_yaml_config,
+)
 from ..pipeline import create_pipeline_session
 from ..window import WindowInfo, activate_window, list_windows
 
@@ -39,7 +45,8 @@ class MainWindow(QMainWindow):
         self.config = config
         self.profiles = profiles
         self.config_path = config_path
-        self._baseline_config = copy.deepcopy(config)
+        self._profile_name = profile_name
+        self._baseline_config = self._compute_yaml_baseline()
         self.gui_config = GUIConfig()
 
         self.setWindowTitle("Linux Real-Time Upscaler")
@@ -76,7 +83,11 @@ class MainWindow(QMainWindow):
         central_layout.addWidget(self._view, stretch=1)
 
         # ---- Right sidebar (Settings) ----
-        self.right_sidebar = SettingsSidebar(self.gui_config, self.config)
+        self.right_sidebar = SettingsSidebar(
+            self.gui_config,
+            self.config,
+            baseline_config=self._baseline_config,
+        )
         self.right_sidebar.save_settings.connect(self._on_save_settings)
         self.right_sidebar.reset_settings.connect(self._on_reset_settings)
         self.right_sidebar.restore_defaults.connect(self._on_restore_defaults)
@@ -145,6 +156,29 @@ class MainWindow(QMainWindow):
         self._populate_grid(self.filter_bar.text())
 
     # ------------------------------------------------------------------
+    #  Config helpers
+    # ------------------------------------------------------------------
+    def _compute_yaml_baseline(self) -> Config:
+        """Return a Config reflecting the YAML file + selected profile, without CLI overrides."""
+        general_opts, _ = load_yaml_config(self.config_path)
+        baseline = Config()
+        # Apply YAML general options (skip log fields)
+        for k, v in general_opts.items():
+            if hasattr(baseline, k) and k not in ("log_level", "log_file"):
+                setattr(baseline, k, v)
+        # Apply explicit profile if one was chosen
+        if self._profile_name:  # store profile_name as attr
+            profile_data = find_profile(self.profiles, self._profile_name)
+            if profile_data:
+                opts = profile_data.get("options", {})
+                for k, v in opts.items():
+                    if hasattr(baseline, k) and k not in ("log_level", "log_file"):
+                        setattr(baseline, k, v)
+        # Parse colors to make comparisons consistent (tuple vs tuple)
+        parse_config(baseline)
+        return baseline
+
+    # ------------------------------------------------------------------
     #  Focus helpers
     # ------------------------------------------------------------------
     def _focus_grid(self) -> None:
@@ -156,19 +190,22 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _recreate_right_sidebar(self) -> None:
         old = self.right_sidebar
-        new = SettingsSidebar(self.gui_config, self.config)
+        new = SettingsSidebar(
+            self.gui_config,
+            self.config,
+            baseline_config=self._baseline_config,
+        )
         new.save_settings.connect(self._on_save_settings)
         new.reset_settings.connect(self._on_reset_settings)
         new.restore_defaults.connect(self._on_restore_defaults)
 
-        self.right_sidebar = new
-        idx = self.splitter.indexOf(old)
+        idx = self.splitter.indexOf(old) if old else -1
         if idx != -1:
             self.splitter.replaceWidget(idx, new)
             old.deleteLater()
         else:
-            # Should not happen, but just in case
             self.splitter.addWidget(new)
+        self.right_sidebar = new
 
     # ------------------------------------------------------------------
     #  Slots
@@ -202,9 +239,7 @@ class MainWindow(QMainWindow):
     def _on_restore_defaults(self):
         """Reset everything to the hard‑coded program defaults."""
         logger.info("Restoring system defaults.")
-        self.config = Config()  # fresh defaults
-        self._baseline_config = Config()  # update baseline to defaults
-        # Keep the existing profiles dictionary unchanged
+        self.config = Config()
         self._recreate_right_sidebar()
 
     # ------------------------------------------------------------------
