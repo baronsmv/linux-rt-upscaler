@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 from typing import List, Optional
 
@@ -18,7 +19,7 @@ from .config import GUIConfig
 from .grid import WindowGridScene, WindowGridView, FilterBar
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .widgets import StyledSplitter
-from ..config import Config
+from ..config import Config, save_yaml_config
 from ..pipeline import create_pipeline_session
 from ..window import WindowInfo, activate_window, list_windows
 
@@ -26,10 +27,19 @@ logger = logging.getLogger(__name__)
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, config: Config, profiles: dict, parent=None):
+    def __init__(
+        self,
+        config: Config,
+        config_path: str,
+        profile_name: str,
+        profiles: dict,
+        parent: Optional[QWidget] = None,
+    ):
         super().__init__(parent)
         self.config = config
         self.profiles = profiles
+        self.config_path = config_path
+        self._baseline_config = copy.deepcopy(config)
         self.gui_config = GUIConfig()
 
         self.setWindowTitle("Linux Real-Time Upscaler")
@@ -72,11 +82,11 @@ class MainWindow(QMainWindow):
         self.right_sidebar.restore_defaults.connect(self._on_restore_defaults)
 
         # ---- Assemble splitter ----
-        splitter = StyledSplitter(Qt.Horizontal, self.gui_config)
-        splitter.addWidget(self.left_sidebar)
-        splitter.addWidget(central_widget)
-        splitter.addWidget(self.right_sidebar)
-        splitter.setSizes(
+        self.splitter = StyledSplitter(Qt.Horizontal, self.gui_config)
+        self.splitter.addWidget(self.left_sidebar)
+        self.splitter.addWidget(central_widget)
+        self.splitter.addWidget(self.right_sidebar)
+        self.splitter.setSizes(
             [
                 self.gui_config.sidebar_width,
                 400,
@@ -84,7 +94,7 @@ class MainWindow(QMainWindow):
             ]
         )
 
-        main_layout.addWidget(splitter)
+        main_layout.addWidget(self.splitter)
 
         # Ctrl+F shortcut
         QShortcut(QKeySequence("Ctrl+F"), self, self.filter_bar.set_focus)
@@ -142,6 +152,25 @@ class MainWindow(QMainWindow):
         self._scene.focus_first_tile()
 
     # ------------------------------------------------------------------
+    #  Sidebar helpers
+    # ------------------------------------------------------------------
+    def _recreate_right_sidebar(self) -> None:
+        old = self.right_sidebar
+        new = SettingsSidebar(self.gui_config, self.config)
+        new.save_settings.connect(self._on_save_settings)
+        new.reset_settings.connect(self._on_reset_settings)
+        new.restore_defaults.connect(self._on_restore_defaults)
+
+        self.right_sidebar = new
+        idx = self.splitter.indexOf(old)
+        if idx != -1:
+            self.splitter.replaceWidget(idx, new)
+            old.deleteLater()
+        else:
+            # Should not happen, but just in case
+            self.splitter.addWidget(new)
+
+    # ------------------------------------------------------------------
     #  Slots
     # ------------------------------------------------------------------
     def _on_filter_changed(self, text: str) -> None:
@@ -151,20 +180,32 @@ class MainWindow(QMainWindow):
         self._selected_win_info = win_info
         QTimer.singleShot(0, self._start_pipeline)
 
-    def _on_save_settings(self) -> None:
-        """Save the current configuration (placeholder)."""
-        logger.info("Save settings requested")
-        # TODO
+    def _on_save_settings(self):
+        """Save the current config to the YAML file."""
+        config_dict = self.config.to_dict(diff_only=True)
+        try:
+            save_yaml_config(config_dict, self.profiles, self.config_path)
+            logger.info("Configuration saved.")
+            self._baseline_config = copy.deepcopy(self.config)
+            # Re‑create the sidebar so the “dirty” indicators are cleared
+            self._recreate_right_sidebar()
+        except Exception as e:
+            logger.exception("Failed to save configuration")
+            QMessageBox.critical(self, "Save Error", f"Could not save:\n{e}")
 
-    def _on_reset_settings(self) -> None:
-        """Reset all settings to the baseline (placeholder)."""
-        logger.info("Reset settings requested")
-        # TODO
+    def _on_reset_settings(self):
+        """Revert all settings back to what was loaded from the file."""
+        logger.info("Resetting settings to saved state.")
+        self.config = copy.deepcopy(self._baseline_config)
+        self._recreate_right_sidebar()
 
-    def _on_restore_defaults(self) -> None:
-        """Reset the live config to system defaults, then refresh the sidebar."""
-        logger.info("Restore defaults requested")
-        # TODO
+    def _on_restore_defaults(self):
+        """Reset everything to the hard‑coded program defaults."""
+        logger.info("Restoring system defaults.")
+        self.config = Config()  # fresh defaults
+        self._baseline_config = Config()  # update baseline to defaults
+        # Keep the existing profiles dictionary unchanged
+        self._recreate_right_sidebar()
 
     # ------------------------------------------------------------------
     #  Pipeline launch

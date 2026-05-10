@@ -14,6 +14,7 @@ from .models import (
 from .parsers import parse_config
 from .setup import load_config, setup_config
 from .validators import validate_overrides
+from .yaml import save_yaml_config
 
 __all__ = [
     "BackgroundColor",
@@ -28,5 +29,6 @@ __all__ = [
     "parse_args",
     "parse_config",
     "validate_overrides",
+    "save_yaml_config",
     "setup_config",
 ]

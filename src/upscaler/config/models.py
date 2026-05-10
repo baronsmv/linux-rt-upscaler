@@ -1,7 +1,7 @@
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from enum import Enum
-from typing import List, Optional, Tuple, Union, Dict
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from platformdirs import user_pictures_dir
 
@@ -166,6 +166,55 @@ class Config:
 
     # Hotkeys
     hotkeys: Dict[str, str] = field(default_factory=lambda: DEFAULT_HOTKEYS.copy())
+
+    # ----------------------------------------------------------------------------------
+    # Convert to a serializable dict
+    # ----------------------------------------------------------------------------------
+    def to_dict(self, diff_only: bool = True) -> Dict[str, Any]:
+        """Convert config to a dict suitable for YAML dump."""
+        from .parsers import _color_string_to_float4  # local import to avoid circular
+
+        result = {}
+        defaults = Config()
+        default_bg = _color_string_to_float4(defaults.background_color)
+
+        for f in fields(self):
+            name = f.name
+            # Fields we never save to the YAML file
+            if name in ("config_file", "log_level", "log_file", "program"):
+                continue
+
+            value = getattr(self, name)
+            default_value = getattr(defaults, name)
+
+            if diff_only:
+                if name == "background_color":
+                    # Value is already a tuple (b,g,r,a); compare with parsed default
+                    if isinstance(value, tuple) and value == default_bg:
+                        continue
+                    # Convert tuple to hex string for clean output
+                    if isinstance(value, tuple):
+                        b, g, r, a = value
+                        if a < 1.0:
+                            value = (
+                                f"#{int(r*255):02x}{int(g*255):02x}"
+                                f"{int(b*255):02x}{int(a*255):02x}"
+                            )
+                        else:
+                            value = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+                else:
+                    if value == default_value:
+                        continue
+
+            result[name] = value
+
+        # Always include hotkeys if they differ from defaults
+        if diff_only and self.hotkeys == DEFAULT_CONFIG.hotkeys:
+            result.pop("hotkeys", None)
+        else:
+            result["hotkeys"] = self.hotkeys
+
+        return result
 
 
 DEFAULT_CONFIG: Config = Config()

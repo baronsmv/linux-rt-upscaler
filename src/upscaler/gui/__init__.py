@@ -41,7 +41,12 @@ def main() -> None:
     )
 
     # The main window will stay visible until the user starts.
-    window = MainWindow(config, profiles)
+    window = MainWindow(
+        config,
+        config_path=config_path,
+        profile_name=profile_name,
+        profiles=profiles,
+    )
     window.show()
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
