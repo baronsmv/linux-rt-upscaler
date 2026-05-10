@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         self.config_path = config_path
         self._profile_name = profile_name
         self._active_profile = profile_name if profile_name else None
+        self._general_opts, profiles = load_yaml_config(self.config_path)
         self.profiles = collections.OrderedDict(profiles)
         self._profile_order = list(self.profiles.keys())
         self._baseline_config = self._compute_yaml_baseline()
@@ -173,16 +174,15 @@ class MainWindow(QMainWindow):
     #  Config helpers
     # ------------------------------------------------------------------
     def _compute_yaml_baseline(self) -> Config:
-        """Return a Config reflecting the YAML file + selected profile, without CLI overrides."""
-        general_opts, profs = load_yaml_config(self.config_path)
+        """Build baseline Config from cached YAML options + active profile."""
         baseline = Config()
 
-        # Apply YAML general options (skip log fields)
-        for k, v in general_opts.items():
+        # Apply cached general options
+        for k, v in self._general_opts.items():
             if hasattr(baseline, k) and k not in ("log_level", "log_file"):
                 setattr(baseline, k, v)
 
-        # If a profile is active, use its saved options as baseline
+        # If a profile is active, its saved options take precedence
         if self._active_profile and self._active_profile in self.profiles:
             profile_data = self.profiles[self._active_profile]
             if profile_data:
@@ -191,8 +191,8 @@ class MainWindow(QMainWindow):
                     if hasattr(baseline, k) and k not in ("log_level", "log_file"):
                         setattr(baseline, k, v)
 
-        # Apply explicit profile if one was chosen
-        elif self._profile_name:  # CLI manual profile, not yet active
+        # CLI profile (not yet active), only needed at startup
+        elif self._profile_name:
             profile_data = find_profile(self.profiles, self._profile_name)
             if profile_data:
                 opts = profile_data.get("options", {})
@@ -200,7 +200,6 @@ class MainWindow(QMainWindow):
                     if hasattr(baseline, k) and k not in ("log_level", "log_file"):
                         setattr(baseline, k, v)
 
-        # Parse colors to make comparisons consistent (tuple vs tuple)
         parse_config(baseline)
         return baseline
 
@@ -218,10 +217,9 @@ class MainWindow(QMainWindow):
                     setattr(self.config, k, v)
             parse_config(self.config)
         else:
-            # Global: reload YAML general options
-            general_opts, _ = load_yaml_config(self.config_path)
+            # Global: use cached general options, no file read
             self.config = Config()
-            for k, v in general_opts.items():
+            for k, v in self._general_opts.items():
                 if hasattr(self.config, k) and k not in ("log_level", "log_file"):
                     setattr(self.config, k, v)
             parse_config(self.config)
@@ -248,59 +246,91 @@ class MainWindow(QMainWindow):
                 return False
         return True
 
+    def _safe_apply_profile(self, name: str):
+        try:
+            self._apply_profile(name if name != "" else None)
+        except Exception:
+            logger.exception("Failed to apply profile")
+            QMessageBox.critical(
+                self,
+                "Error",
+                "An unexpected error occurred while switching profiles.",
+            )
+
     def _on_profile_selected(self, name: str):
         if not self._maybe_save_before_switch():
             return
-        self._apply_profile(name if name != "" else None)
+
+        QTimer.singleShot(0, lambda: self._safe_apply_profile(name))
 
     def _on_add_profile(self):
-        dlg = ProfileDialog(parent=self)
-        if dlg.exec() == QDialog.Accepted:
-            name = dlg.profile_name()
-            match = dlg.match_criteria()
-            self.profiles[name] = {"match": match, "options": {}}
-            self._profile_order.append(name)
-            self.left_sidebar.populate_list(active_name=name)
-            self._apply_profile(name)
+        try:
+            dlg = ProfileDialog(parent=self)
+            if dlg.exec() == QDialog.Accepted:
+                name = dlg.profile_name()
+                match = dlg.match_criteria()
+                self.profiles[name] = {"match": match, "options": {}}
+                self._profile_order.append(name)
+                self.left_sidebar.populate_list(active_name=name)
+                QTimer.singleShot(0, lambda n=name: self._safe_apply_profile(n))
+        except Exception:
+            logger.exception("Failed to add profile")
+            QMessageBox.critical(self, "Error", "Could not add profile.")
 
     def _on_edit_profile(self, name: str):
-        current_match = self.profiles[name].get("match", {})
-        dlg = ProfileDialog(profile_name=name, match=current_match, parent=self)
-        if dlg.exec() == QDialog.Accepted:
-            new_name = dlg.profile_name()
-            new_match = dlg.match_criteria()
-            if new_name != name:
-                data = self.profiles.pop(name)
-                self.profiles[new_name] = data
-                self._profile_order[self._profile_order.index(name)] = new_name
-            self.profiles[new_name]["match"] = new_match
-            self.left_sidebar.populate_list(active_name=new_name)
+        try:
+            current_match = self.profiles[name].get("match", {})
+            dlg = ProfileDialog(profile_name=name, match=current_match, parent=self)
+            if dlg.exec() == QDialog.Accepted:
+                new_name = dlg.profile_name()
+                new_match = dlg.match_criteria()
+                if new_name != name:
+                    data = self.profiles.pop(name)
+                    self.profiles[new_name] = data
+                    self._profile_order[self._profile_order.index(name)] = new_name
+                self.profiles[new_name]["match"] = new_match
+                self.left_sidebar.populate_list(active_name=new_name)
+        except Exception:
+            logger.exception("Failed to edit profile")
+            QMessageBox.critical(self, "Error", "Could not edit profile.")
 
     def _on_delete_profile(self, name: str):
-        reply = QMessageBox.question(
-            self,
-            "Delete profile",
-            f"Delete profile '{name}'?",
-            QMessageBox.Yes | QMessageBox.No,
-        )
-        if reply == QMessageBox.Yes:
-            del self.profiles[name]
-            self._profile_order.remove(name)
-            self.left_sidebar.populate_list(active_name=None)
-            if self._active_profile == name:
-                self._apply_profile(None)
+        try:
+            reply = QMessageBox.question(
+                self,
+                "Delete profile",
+                f"Delete profile '{name}'?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            if reply == QMessageBox.Yes:
+                del self.profiles[name]
+                self._profile_order.remove(name)
+                self.left_sidebar.populate_list(active_name=None)
+                if self._active_profile == name:
+                    QTimer.singleShot(0, lambda: self._safe_apply_profile(""))
+        except Exception:
+            logger.exception("Failed to delete profile")
+            QMessageBox.critical(self, "Error", "Could not delete profile.")
 
     def _on_move_up(self, name: str):
-        self.profiles = move_profile_up(self.profiles, name)
-        self._profile_order = list(self.profiles.keys())
-        self.left_sidebar.update_profiles(self.profiles)
-        self.left_sidebar.populate_list(active_name=name)
+        try:
+            self.profiles = move_profile_up(self.profiles, name)
+            self._profile_order = list(self.profiles.keys())
+            self.left_sidebar.update_profiles(self.profiles)
+            self.left_sidebar.populate_list(active_name=name)
+        except Exception:
+            logger.exception("Failed to move profile up")
+            QMessageBox.critical(self, "Error", "Could not reorder profiles.")
 
     def _on_move_down(self, name: str):
-        self.profiles = move_profile_down(self.profiles, name)
-        self._profile_order = list(self.profiles.keys())
-        self.left_sidebar.update_profiles(self.profiles)
-        self.left_sidebar.populate_list(active_name=name)
+        try:
+            self.profiles = move_profile_down(self.profiles, name)
+            self._profile_order = list(self.profiles.keys())
+            self.left_sidebar.update_profiles(self.profiles)
+            self.left_sidebar.populate_list(active_name=name)
+        except Exception:
+            logger.exception("Failed to move profile down")
+            QMessageBox.critical(self, "Error", "Could not reorder profiles.")
 
     # ------------------------------------------------------------------
     #  Focus helpers
@@ -349,12 +379,12 @@ class MainWindow(QMainWindow):
                 self.profiles[self._active_profile]["options"] = config_dict
                 # Keep general options as they are on disk
                 general_opts, _ = load_yaml_config(self.config_path)
-                save_yaml_config(general_opts, self.profiles, self.config_path)
+                save_yaml_config(general_opts, dict(self.profiles), self.config_path)
             else:
-                save_yaml_config(config_dict, self.profiles, self.config_path)
+                save_yaml_config(config_dict, dict(self.profiles), self.config_path)
 
             self._baseline_config = copy.deepcopy(self.config)
-            self._recreate_right_sidebar()
+            QTimer.singleShot(0, self._recreate_right_sidebar)
         except Exception as e:
             logger.exception("Failed to save configuration")
             QMessageBox.critical(self, "Save Error", f"Could not save:\n{e}")
