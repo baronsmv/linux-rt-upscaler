@@ -209,6 +209,7 @@ class GUIConfig:
     footer_reset_disabled_text: str = "#555"
     footer_reset_disabled_border: str = "#444"
     footer_reset_split_border: str = "#914343"
+    footer_reset_dropdown_border_inactive: str = "#6b2e2e"
 
     # Reset dropdown menu
     footer_menu_bg: str = "#2a2a2c"  # combo_popup_background

@@ -276,11 +276,7 @@ class SettingsSidebar(IconSidebarBase):
             style += f"""
                     QToolButton[dropdownActive="true"]::menu-button {{
                         background: transparent;
-                        border: 2px solid {cfg.footer_reset_border};
-                        border-radius: {cfg.footer_button_radius}px;
-                        border-top-left-radius: 0px;
-                        border-bottom-left-radius: 0px;
-                        color: {cfg.footer_reset_text};
+                        border-left: 1px solid {cfg.footer_reset_split_border};
                     }}
                 """
 
