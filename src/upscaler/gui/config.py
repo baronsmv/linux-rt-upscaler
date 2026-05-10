@@ -217,3 +217,21 @@ class GUIConfig:
     footer_menu_text: str = "#ddd"  # combo_popup_text_color
     footer_menu_selection_bg: str = "#4a9eff"  # combo_popup_selection_background
     footer_menu_selection_text: str = "#ffffff"
+
+    # ---- Profile sidebar ------------------------------------------------
+    profile_title_font_size: int = 14
+    profile_title_font_weight: str = "bold"
+    profile_title_color: str = "#cccccc"
+    profile_item_height: int = 40
+    profile_item_icon_size: int = 20
+    profile_item_text_color: str = "#cccccc"
+    profile_item_text_color_active: str = "#ffffff"
+    profile_item_background: str = "transparent"
+    profile_item_background_hover: str = "#2c2c2c"
+    profile_item_background_active: str = "#2c2c2c"
+    profile_item_border_radius: int = 6
+    profile_item_spacing: int = 2
+    profile_toolbar_button_size: int = 36
+    profile_toolbar_button_icon_size: int = 24
+    profile_toolbar_button_background_hover: str = "#2c2c2c"
+    profile_toolbar_button_border_radius: int = 8
