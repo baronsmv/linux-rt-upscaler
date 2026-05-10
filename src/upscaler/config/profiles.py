@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import collections
 import logging
 import re
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from .args import apply_overrides
 from .yaml import load_yaml_config, save_yaml_config
@@ -178,3 +179,39 @@ def apply_window_profile(
         "Auto-applied profile '%s' for window '%s'", profile_name, win_info.title
     )
     return True
+
+
+def reorder_profiles(profiles: Dict[str, Any], order: List[str]) -> Dict[str, Any]:
+    """Return a new OrderedDict with profiles in the given order."""
+    return collections.OrderedDict(
+        (name, profiles[name]) for name in order if name in profiles
+    )
+
+
+def delete_profile(profiles: Dict[str, Any], name: str) -> Optional[Dict[str, Any]]:
+    """Remove a profile by name. Returns the removed profile data or None."""
+    return profiles.pop(name, None)
+
+
+def move_profile_up(profiles: Dict[str, Any], name: str) -> Dict[str, Any]:
+    """Move profile one position up, preserving order."""
+    keys = list(profiles.keys())
+    if name not in keys:
+        return profiles
+    idx = keys.index(name)
+    if idx == 0:
+        return profiles
+    keys[idx], keys[idx - 1] = keys[idx - 1], keys[idx]
+    return reorder_profiles(profiles, keys)
+
+
+def move_profile_down(profiles: Dict[str, Any], name: str) -> Dict[str, Any]:
+    """Move profile one position down, preserving order."""
+    keys = list(profiles.keys())
+    if name not in keys:
+        return profiles
+    idx = keys.index(name)
+    if idx == len(keys) - 1:
+        return profiles
+    keys[idx], keys[idx + 1] = keys[idx + 1], keys[idx]
+    return reorder_profiles(profiles, keys)
