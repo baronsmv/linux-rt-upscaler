@@ -94,7 +94,14 @@ class SettingsSidebar(IconSidebarBase):
 
         self._save_btn.setEnabled(self._dirty_yaml)
         self._reset_btn.setEnabled(self._dirty_yaml or self._dirty_system)
-        self._restore_action.setEnabled(self._dirty_system)
+
+        # Restore action logic
+        if self._profile_active:
+            # Profile active: restore clears profile overrides
+            self._restore_action.setEnabled(self._dirty_yaml)
+        else:
+            # Global config: restore to system defaults
+            self._restore_action.setEnabled(self._dirty_system)
 
         self._reset_btn.setProperty(
             "dropdownActive", self._dirty_system and not self._dirty_yaml

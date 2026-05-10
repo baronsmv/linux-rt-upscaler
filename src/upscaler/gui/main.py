@@ -426,11 +426,16 @@ class MainWindow(QMainWindow):
         self._recreate_right_sidebar()
 
     def _on_restore_defaults(self):
-        """Reset everything to the hard‑coded program defaults."""
-        logger.info("Restoring system defaults.")
-        self.config = Config()
-        parse_config(self.config)
-        self._recreate_right_sidebar()
+        if self._active_profile:
+            self.profiles[self._active_profile]["options"] = {}
+            self._apply_profile(self._active_profile)
+            logger.info("Profile overrides cleared.")
+        else:
+            # Global config: true system defaults
+            self.config = Config()
+            parse_config(self.config)
+            self._recreate_right_sidebar()
+            logger.info("Restoring system defaults.")
 
     # ------------------------------------------------------------------
     #  Pipeline launch
