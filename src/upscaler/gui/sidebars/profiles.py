@@ -20,6 +20,27 @@ from ..icons import load_icon, load_pixmap
 
 
 class ProfilesSidebar(QWidget):
+    """
+    Left sidebar panel for managing named profiles.
+
+    Displays a title, a styled list of profiles (plus a default entry),
+    and a toolbar for adding, editing, deleting, and reordering.
+
+    Signals
+    -------
+    profile_selected(str)
+        Emitted when the user clicks a profile in the list.
+        The payload is the profile name (or "" for the default entry).
+    add_profile_requested()
+        Emitted when the user clicks the Add button.
+    edit_profile_requested(str)
+        Emitted after a profile is selected, either by clicking the Edit
+        button or by double‑clicking the profile entry.
+    delete_profile_requested(str)
+    move_up_requested(str)
+    move_down_requested(str)
+    """
+
     profile_selected = Signal(str)
     add_profile_requested = Signal()
     edit_profile_requested = Signal(str)
@@ -37,16 +58,18 @@ class ProfilesSidebar(QWidget):
         super().__init__(parent)
         self._cfg = gui_config
         self._profiles = profiles
-        self._current_index = -1
+
+        # ---- Visual identity ----
         self.setObjectName("sidebar_container")
         self.setStyleSheet(styles.sidebar_container(gui_config))
         self.setFixedWidth(gui_config.sidebar_width)
 
+        # ---- Layout ----
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(8)
 
-        # ---- Title ----
+        # Title
         title = QLabel("Profiles")
         title.setStyleSheet(
             f"color: {gui_config.sidebar_section_title_color}; "
@@ -55,11 +78,14 @@ class ProfilesSidebar(QWidget):
         )
         layout.addWidget(title)
 
-        # ---- List ----
+        # Profile list
         self._list = QListWidget()
         self._list.setStyleSheet(self._list_stylesheet())
         self._list.setIconSize(
-            QSize(gui_config.profile_item_icon_size, gui_config.profile_item_icon_size)
+            QSize(
+                gui_config.profile_item_icon_size,
+                gui_config.profile_item_icon_size,
+            )
         )
         self._list.setSpacing(gui_config.profile_item_spacing)
         self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -67,9 +93,10 @@ class ProfilesSidebar(QWidget):
         self._list.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self._list, stretch=1)
 
-        # ---- Toolbar ----
+        # Toolbar
         toolbar = QHBoxLayout()
         toolbar.setSpacing(4)
+
         btn_cfg = {
             "size": gui_config.profile_toolbar_button_size,
             "icon_size": gui_config.profile_toolbar_button_icon_size,
@@ -111,16 +138,23 @@ class ProfilesSidebar(QWidget):
 
         layout.addLayout(toolbar)
 
+        # Populate with the initial data
         self.populate_list(active_name)
 
     # ------------------------------------------------------------------
-    #  List population
+    #  Public helpers
     # ------------------------------------------------------------------
-    def populate_list(self, active_name: Optional[str] = None):
+
+    def populate_list(self, active_name: Optional[str] = None) -> None:
+        """
+        Clear and rebuild the list from *self._profiles*.
+
+        Use this after adding, deleting, or reordering profiles.
+        """
         self._list.blockSignals(True)
         self._list.clear()
 
-        # Default entry
+        # Default entry (no profile)
         default_item = QListWidgetItem("  (default)")
         default_item.setData(Qt.UserRole, "")
         default_item.setSizeHint(QSize(0, self._cfg.profile_item_height))
@@ -128,7 +162,7 @@ class ProfilesSidebar(QWidget):
         if active_name is None or active_name == "":
             self._list.setCurrentRow(0)
 
-        # Profile entries
+        # Profile entries with diamond icon
         icon = QIcon(
             load_pixmap(
                 "profiles/profile",
@@ -146,12 +180,32 @@ class ProfilesSidebar(QWidget):
 
         self._list.blockSignals(False)
 
+    def set_active_item(self, name: Optional[str]) -> None:
+        """
+        Highlight the given profile without rebuilding the list.
+
+        Use this when the list content hasn't changed – it prevents
+        unnecessary flicker and preserves the double‑click window.
+        """
+        target = name or ""
+        self._list.blockSignals(True)
+
+        for i in range(self._list.count()):
+            item = self._list.item(i)
+            if item is not None and item.data(Qt.UserRole) == target:
+                self._list.setCurrentRow(i)
+                break
+
+        self._list.blockSignals(False)
+
     def update_profiles(self, profiles: dict) -> None:
+        """Replace the internal profiles dict (used after reordering)."""
         self._profiles = profiles
 
     # ------------------------------------------------------------------
-    #  List styling
+    #  Private helpers
     # ------------------------------------------------------------------
+
     def _list_stylesheet(self) -> str:
         c = self._cfg
         return f"""
@@ -176,12 +230,15 @@ class ProfilesSidebar(QWidget):
             }}
         """
 
-    # ------------------------------------------------------------------
-    #  Toolbar button factory
-    # ------------------------------------------------------------------
     def _make_tool_button(
-        self, icon_name: str, tooltip: str, callback, cfg: Dict, enabled: bool = True
+        self,
+        icon_name: str,
+        tooltip: str,
+        callback,
+        cfg: dict,
+        enabled: bool = True,
     ) -> QPushButton:
+        """Create a flat, icon‑only toolbar button with configurable size."""
         btn = QPushButton()
         btn.setIcon(load_icon(icon_name, cfg["icon_size"]))
         btn.setIconSize(QSize(cfg["icon_size"], cfg["icon_size"]))
@@ -196,47 +253,60 @@ class ProfilesSidebar(QWidget):
             QPushButton {{
                 background: transparent;
                 border: none;
-                border-radius: {cfg["radius"]}px;
+                border-radius: {cfg['radius']}px;
             }}
             QPushButton:hover {{
-                background: {cfg["hover_bg"]};
+                background: {cfg['hover_bg']};
             }}
             QPushButton:disabled {{
                 opacity: 0.4;
             }}
-        """
+            """
         )
         return btn
 
     # ------------------------------------------------------------------
-    #  Selection handling
+    #  Slots
     # ------------------------------------------------------------------
-    def _on_current_item_changed(self, current, previous):
-        if current:
-            name = current.data(Qt.UserRole)
-            self._edit_btn.setEnabled(name != "")
-            self._delete_btn.setEnabled(name != "")
-            self._up_btn.setEnabled(name != "" and self._list.row(current) > 1)
-            self._down_btn.setEnabled(
-                name != "" and self._list.row(current) < self._list.count() - 1
-            )
-            self.profile_selected.emit(name)
-        else:
+
+    def _on_current_item_changed(
+        self, current: QListWidgetItem | None, previous: QListWidgetItem | None
+    ) -> None:
+        """
+        Update toolbar button states and emit ``profile_selected``.
+
+        The profile is applied immediately; the list is not rebuilt.
+        """
+        if current is None:
             self._edit_btn.setEnabled(False)
             self._delete_btn.setEnabled(False)
             self._up_btn.setEnabled(False)
             self._down_btn.setEnabled(False)
+            return
+
+        name = current.data(Qt.UserRole)
+
+        self._edit_btn.setEnabled(name != "")
+        self._delete_btn.setEnabled(name != "")
+        self._up_btn.setEnabled(name != "" and self._list.row(current) > 1)
+        self._down_btn.setEnabled(
+            name != "" and self._list.row(current) < self._list.count() - 1
+        )
+
+        self.profile_selected.emit(name)
 
     def _on_item_double_clicked(self, item: QListWidgetItem) -> None:
-        """Open the edit dialog when a profile is double‑clicked."""
+        """
+        Open the edit dialog for a double‑clicked profile.
+
+        The profile was already applied by the initial single click,
+        so this only requests editing.
+        """
         if item is None:
             return
-
-        # Ignore the (default) entry and any item without a real profile name
         name = item.data(Qt.UserRole)
-        if not name:
+        if not name:  # ignore default
             return
-
         self.edit_profile_requested.emit(name)
 
     def _emit_edit(self):
