@@ -100,6 +100,7 @@ class ProfilesSidebar(QWidget):
         self.populate_list(active_name)
 
     def populate_list(self, active_name: Optional[str] = None):
+        self._list.blockSignals(True)
         self._list.clear()
         # Add default entry
         default_item = QListWidgetItem("(default)")
@@ -114,6 +115,7 @@ class ProfilesSidebar(QWidget):
             self._list.addItem(item)
             if name == active_name:
                 self._list.setCurrentRow(self._list.count() - 1)
+        self._list.blockSignals(False)
 
     def update_profiles(self, profiles: dict) -> None:
         self._profiles = profiles
