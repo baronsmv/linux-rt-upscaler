@@ -176,7 +176,8 @@ class Config:
 
         result = {}
         defaults = Config()
-        default_bg = _color_string_to_float4(defaults.background_color)
+        defaults.background_color = _color_string_to_float4(defaults.background_color)
+        default_bg = defaults.background_color
 
         for f in fields(self):
             name = f.name
@@ -189,19 +190,19 @@ class Config:
 
             if diff_only:
                 if name == "background_color":
-                    # Value is already a tuple (b,g,r,a); compare with parsed default
-                    if isinstance(value, tuple) and value == default_bg:
+                    # Normalize to tuple for comparison
+                    if isinstance(value, str):
+                        value_tuple = _color_string_to_float4(value)
+                    else:
+                        value_tuple = value
+                    if value_tuple == default_bg:
                         continue
-                    # Convert tuple to hex string for clean output
-                    if isinstance(value, tuple):
-                        b, g, r, a = value
-                        if a < 1.0:
-                            value = (
-                                f"#{int(r*255):02x}{int(g*255):02x}"
-                                f"{int(b*255):02x}{int(a*255):02x}"
-                            )
-                        else:
-                            value = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+                    # Convert to hex for output
+                    b, g, r, a = value_tuple
+                    if a < 1.0:
+                        value = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}{int(a*255):02x}"
+                    else:
+                        value = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
                 else:
                     if value == default_value:
                         continue

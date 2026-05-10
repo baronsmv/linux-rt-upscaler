@@ -34,6 +34,22 @@ class IconTabBar(QWidget):
 
         self._count = 0
 
+    def count(self) -> int:
+        """Return the total number of icon tabs."""
+        return self._count
+
+    def current_index(self) -> int:
+        """Return the index of the currently checked icon, or 0 if none."""
+        checked_id = self._button_group.checkedId()
+        return checked_id if checked_id != -1 else 0
+
+    def set_current_index(self, index: int) -> None:
+        """Programmatically check the icon at the given index."""
+        if 0 <= index < self._count:
+            button = self._button_group.button(index)
+            if button is not None:
+                button.setChecked(True)
+
     def add_icon(self, icon_name: str, tooltip: str) -> QPushButton:
         """Append a new icon button and return it."""
         index = self._count

@@ -84,9 +84,7 @@ class MainWindow(QMainWindow):
 
         # ---- Right sidebar (Settings) ----
         self.right_sidebar = SettingsSidebar(
-            self.gui_config,
-            self.config,
-            baseline_config=self._baseline_config,
+            self.gui_config, self.config, self._baseline_config
         )
         self.right_sidebar.save_settings.connect(self._on_save_settings)
         self.right_sidebar.reset_settings.connect(self._on_reset_settings)
@@ -190,22 +188,21 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _recreate_right_sidebar(self) -> None:
         old = self.right_sidebar
-        new = SettingsSidebar(
-            self.gui_config,
-            self.config,
-            baseline_config=self._baseline_config,
-        )
+        tab_index = old.current_tab_index
+        new = SettingsSidebar(self.gui_config, self.config, self._baseline_config)
         new.save_settings.connect(self._on_save_settings)
         new.reset_settings.connect(self._on_reset_settings)
         new.restore_defaults.connect(self._on_restore_defaults)
 
-        idx = self.splitter.indexOf(old) if old else -1
+        idx = self.splitter.indexOf(old)
         if idx != -1:
             self.splitter.replaceWidget(idx, new)
             old.deleteLater()
         else:
             self.splitter.addWidget(new)
         self.right_sidebar = new
+
+        new.current_tab_index = tab_index
 
     # ------------------------------------------------------------------
     #  Slots
@@ -240,6 +237,7 @@ class MainWindow(QMainWindow):
         """Reset everything to the hard‑coded program defaults."""
         logger.info("Restoring system defaults.")
         self.config = Config()
+        parse_config(self.config)
         self._recreate_right_sidebar()
 
     # ------------------------------------------------------------------

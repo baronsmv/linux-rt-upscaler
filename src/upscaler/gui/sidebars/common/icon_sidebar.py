@@ -47,6 +47,16 @@ class IconSidebarBase(QWidget):
         self._stack = QStackedWidget()
         layout.addWidget(self._stack, stretch=1)
 
+    @property
+    def current_tab_index(self) -> int:
+        return self._tab_bar.current_index() if self._tab_bar else 0
+
+    @current_tab_index.setter
+    def current_tab_index(self, index: int) -> None:
+        if self._tab_bar and 0 <= index < self._tab_bar.count():
+            self._tab_bar.set_current_index(index)
+            self._stack.setCurrentIndex(index)
+
     def add_tab(self, widget: QWidget, icon_name: str, tooltip: str) -> None:
         """
         Register a new tab with an icon and tooltip. The icon bar is

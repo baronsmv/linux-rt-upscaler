@@ -23,7 +23,7 @@ from .tabs import (
     ExtrasTab,
     GeneralTab,
 )
-from ...config import Config
+from ...config import Config, parse_config
 
 if TYPE_CHECKING:
     from ..config import GUIConfig
@@ -49,6 +49,7 @@ class SettingsSidebar(IconSidebarBase):
         self._config = config
         self._bc = copy.deepcopy(baseline_config)
         self._system_defaults = Config()
+        parse_config(self._system_defaults)
         self._dirty = False
 
         tabs = [
@@ -82,13 +83,14 @@ class SettingsSidebar(IconSidebarBase):
     def _check_dirty(self) -> None:
         """Enable buttons only if at least one setting differs from the baseline."""
         dirty_yaml = self._has_changes(self._bc)  # vs YAML baseline
-        dirty_defaults = self._has_changes(self._system_defaults)  # vs factory defaults
+        dirty_system = self._has_changes(self._system_defaults)  # vs factory defaults
 
         # Save button is only meaningful for YAML delta
         self._save_btn.setEnabled(dirty_yaml)
+        self._reset_btn.setEnabled(dirty_yaml or dirty_system)
 
-        # Reset button shows both options
-        self._reset_btn.setEnabled(dirty_yaml or dirty_defaults)
+        # Gray out the restore action if already at system defaults
+        self._restore_action.setEnabled(dirty_system)
 
         self._update_reset_button_style()
 
@@ -164,8 +166,8 @@ class SettingsSidebar(IconSidebarBase):
 
         # Drop-down menu
         menu = QMenu(self._reset_btn)
-        restore_action = menu.addAction("Restore System Defaults")
-        restore_action.triggered.connect(self.restore_defaults.emit)
+        self._restore_action = menu.addAction("Restore System Defaults")
+        self._restore_action.triggered.connect(self.restore_defaults.emit)
         self._reset_btn.setMenu(menu)
 
         menu.setStyleSheet(
