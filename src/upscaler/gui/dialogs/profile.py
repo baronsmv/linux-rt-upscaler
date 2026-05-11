@@ -42,6 +42,7 @@ class ProfileDialog(QDialog):
         super().__init__(parent)
         self._cfg = gui_config
 
+        self._original_name = profile_name
         self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
         self.setMinimumWidth(520)
         self.setStyleSheet(list_stylesheet(gui_config))
@@ -153,7 +154,7 @@ class ProfileDialog(QDialog):
         )
         row1.addWidget(lbl)
         self._match_title_contains = QLineEdit()
-        self._match_title_contains.setPlaceholderText("e.g., Firefox")
+        self._match_title_contains.setPlaceholderText("e.g., VLC")
         row1.addWidget(self._match_title_contains)
         match_layout.addLayout(row1)
 
@@ -165,7 +166,7 @@ class ProfileDialog(QDialog):
         )
         row2.addWidget(lbl2)
         self._match_title_regex = QLineEdit()
-        self._match_title_regex.setPlaceholderText("e.g., .*Visual Studio.*")
+        self._match_title_regex.setPlaceholderText("e.g., (Yuzu|Ryujinx).*")
         row2.addWidget(self._match_title_regex)
         match_layout.addLayout(row2)
 
@@ -223,6 +224,41 @@ class ProfileDialog(QDialog):
         btn.setEnabled(enabled)
         btn.clicked.connect(callback)
         return btn
+
+    def _styled_msg_box(
+        self, icon: QMessageBox.Icon, title: str, text: str
+    ) -> QMessageBox:
+        """Return a QMessageBox with the dialog's dark theme applied."""
+        msg = QMessageBox(icon, title, text, QMessageBox.Ok, self)
+        cfg = self._cfg
+        msg.setStyleSheet(
+            f"""
+            QMessageBox {{
+                background-color: {cfg.dialog_background};
+                color: {cfg.dialog_text_color};
+                font-size: {cfg.dialog_label_font_size}px;
+            }}
+            QMessageBox QLabel {{
+                color: {cfg.dialog_text_color};
+                font-size: {cfg.dialog_label_font_size}px;
+            }}
+            QMessageBox QPushButton {{
+                background: {cfg.dialog_button_background};
+                border: 1px solid {cfg.dialog_button_border};
+                border-radius: {cfg.dialog_button_border_radius}px;
+                padding: {cfg.dialog_button_padding};
+                color: {cfg.dialog_text_color};
+                min-width: 60px;
+            }}
+            QMessageBox QPushButton:hover {{
+                background: {cfg.dialog_button_hover_background};
+            }}
+            QMessageBox QPushButton:pressed {{
+                background: {cfg.dialog_button_pressed_background};
+            }}
+        """
+        )
+        return msg
 
     # ------------------------------------------------------------------
     #  Match rule auto‑fill
@@ -310,6 +346,19 @@ class ProfileDialog(QDialog):
         if not name:
             QMessageBox.warning(self, "Missing name", "Profile name cannot be empty.")
             return
+
+        # Duplicate check, only if the name is different from the original (when editing)
+        if name != self._original_name:
+            parent = self.parent()
+            if parent and hasattr(parent, "profiles") and name in parent.profiles:
+                self._styled_msg_box(
+                    QMessageBox.Warning,
+                    "Duplicate name",
+                    f"A profile named '{name}' already exists.\nPlease choose a different name.",
+                ).exec()
+                self._name_edit.setFocus()
+                self._name_edit.selectAll()
+                return
 
         self._profile_name = name
         self._match_dict = {}

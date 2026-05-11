@@ -241,7 +241,7 @@ class GUIConfig:
     dialog_background: str = "#1e1e1e"
     dialog_text_color: str = "#ddd"
     dialog_label_color: str = "#ccc"
-    dialog_label_font_size: int = 14
+    dialog_label_font_size: int = 18
     dialog_input_background: str = "#2a2a2c"
     dialog_input_border: str = "#3a3a3c"
     dialog_input_focus_border: str = "#4a9eff"

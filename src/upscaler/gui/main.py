@@ -499,11 +499,29 @@ class MainWindow(QMainWindow):
                 new_name = dlg.profile_name()
                 new_match = dlg.match_criteria()
                 old_name = name
+
                 if new_name != old_name:
-                    data = self.profiles.pop(old_name)
-                    self.profiles[new_name] = data
-                    self._profile_order[self._profile_order.index(old_name)] = new_name
+                    # Prevent duplicate names
+                    if new_name in self.profiles:
+                        QMessageBox.warning(
+                            self,
+                            "Duplicate name",
+                            f"A profile named '{new_name}' already exists.",
+                        )
+                        return
+
+                    # Update order list and rebuild OrderedDict to keep position
+                    idx = self._profile_order.index(old_name)
+                    self._profile_order[idx] = new_name
+                    new_profiles = collections.OrderedDict()
+                    for n in self._profile_order:
+                        if n == new_name:
+                            new_profiles[new_name] = self.profiles[old_name]
+                        else:
+                            new_profiles[n] = self.profiles[n]
+                    self.profiles = new_profiles
                     self._rename_profile_icon(old_name, new_name)
+
                 self.profiles[new_name]["match"] = new_match
                 captured_icon = dlg.get_captured_icon()
                 if captured_icon:
