@@ -22,6 +22,15 @@ class IconTabBar(QWidget):
         self._columns = gui_config.sidebar_icon_columns
         self._icon_size = gui_config.sidebar_icon_size
 
+        self.setStyleSheet(
+            f"""
+            QWidget {{
+                background: {gui_config.icon_tab_bar_background};
+                border-radius: 8px;
+            }}
+            """
+        )
+
         layout = QGridLayout(self)
         layout.setContentsMargins(4, 8, 4, 8)
         layout.setHorizontalSpacing(6)

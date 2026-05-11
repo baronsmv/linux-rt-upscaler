@@ -236,6 +236,13 @@ class GUIConfig:
     profile_toolbar_button_background_hover: str = "#2c2c2c"
     profile_toolbar_button_border_radius: int = 8
     profile_capture_icon_size: int = 128
+    profile_header_bottom_border: str = "#333"  # line below the "Profiles" title
+    profile_toolbar_top_border: str = "#333"  # line above the toolbar
+    profile_item_indicator_color: str = "#4a9eff"  # left bar on the active profile
+    profile_item_indicator_width: int = 3
+
+    # ---- Icon tab bar (right sidebar) ---------------------------------
+    icon_tab_bar_background: str = "#1a1a1a"
 
     # ---- Dialog style constants -----------------------------------------
     dialog_background: str = "#1e1e1e"

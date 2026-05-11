@@ -6,13 +6,14 @@ from typing import Dict, Optional
 from PySide6.QtCore import Signal, Qt, QSize
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
+    QFrame,
     QHBoxLayout,
+    QLabel,
     QListWidget,
     QListWidgetItem,
     QPushButton,
-    QLabel,
+    QVBoxLayout,
+    QWidget,
 )
 
 from .common import styles
@@ -79,6 +80,13 @@ class ProfilesSidebar(QWidget):
         )
         layout.addWidget(title)
 
+        # Header separator line
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setStyleSheet(f"color: {gui_config.profile_header_bottom_border};")
+        sep.setFixedHeight(1)
+        layout.addWidget(sep)
+
         # Profile list
         self._list = QListWidget()
         self._list.setStyleSheet(self._list_stylesheet())
@@ -94,9 +102,17 @@ class ProfilesSidebar(QWidget):
         self._list.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self._list, stretch=1)
 
+        # Toolbar separator
+        toolbar_sep = QFrame()
+        toolbar_sep.setFrameShape(QFrame.HLine)
+        toolbar_sep.setStyleSheet(f"color: {gui_config.profile_toolbar_top_border};")
+        toolbar_sep.setFixedHeight(1)
+        layout.addWidget(toolbar_sep)
+
         # Toolbar
         toolbar = QHBoxLayout()
         toolbar.setSpacing(4)
+        layout.addLayout(toolbar)
 
         btn_cfg = {
             "size": gui_config.profile_toolbar_button_size,
@@ -238,6 +254,7 @@ class ProfilesSidebar(QWidget):
                 background: {c.profile_item_background};
                 border-radius: {c.profile_item_border_radius}px;
                 padding: 4px 8px;
+                border-left: {c.profile_item_indicator_width}px solid transparent;
             }}
             QListWidget::item:hover {{
                 background: {c.profile_item_background_hover};
@@ -246,6 +263,7 @@ class ProfilesSidebar(QWidget):
             QListWidget::item:selected {{
                 background: {c.profile_item_background_active};
                 color: {c.profile_item_text_color_active};
+                border-left: {c.profile_item_indicator_width}px solid {c.profile_item_indicator_color};
             }}
         """
 
