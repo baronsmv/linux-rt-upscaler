@@ -80,8 +80,8 @@ class GUIConfig:
     empty_text_size: int = 18
 
     # ---- Timing ------------------------------------------------------
-    auto_refresh_ms: int = 3000
-    tile_preview_interval_ms: int = 40  # how often live preview updates
+    auto_refresh_ms: int = 2000
+    tile_preview_interval_ms: int = 60  # how often live preview updates
 
     # ---- Scaling / layout helpers ------------------------------------
     min_columns: int = 1

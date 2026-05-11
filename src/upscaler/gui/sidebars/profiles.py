@@ -160,8 +160,6 @@ class ProfilesSidebar(QWidget):
         default_item.setData(Qt.UserRole, "")
         default_item.setSizeHint(QSize(0, self._cfg.profile_item_height))
         self._list.addItem(default_item)
-        if active_name is None or active_name == "":
-            self._list.setCurrentRow(0)
 
         # Profile entries
         for name in self._profiles.keys():
@@ -187,10 +185,19 @@ class ProfilesSidebar(QWidget):
             item.setData(Qt.UserRole, name)
             item.setSizeHint(QSize(0, self._cfg.profile_item_height))
             self._list.addItem(item)
-            if name == active_name:
-                self._list.setCurrentRow(self._list.count() - 1)
 
+        # Re‑enable signals before selecting the active item
         self._list.blockSignals(False)
+
+        # Now select the correct item – the signal will fire and update toolbar buttons
+        if active_name is None or active_name == "":
+            self._list.setCurrentRow(0)
+        else:
+            for i in range(self._list.count()):
+                item = self._list.item(i)
+                if item is not None and item.data(Qt.UserRole) == active_name:
+                    self._list.setCurrentRow(i)
+                    break
 
     def set_active_item(self, name: Optional[str]) -> None:
         """
