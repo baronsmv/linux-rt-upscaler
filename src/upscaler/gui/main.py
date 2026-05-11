@@ -296,7 +296,10 @@ class MainWindow(QMainWindow):
             )
 
     def _profile_options_diff(self) -> dict:
-        """Return a dict of options that differ from the top‑level YAML baseline."""
+        """
+        Return only the options that differ from the top‑level YAML baseline.
+        The baseline is parsed first so that colour‑tuple comparisons work.
+        """
         baseline = Config()
         for k, v in self._general_opts.items():
             if hasattr(baseline, k) and k not in ("log_level", "log_file"):
@@ -401,17 +404,16 @@ class MainWindow(QMainWindow):
 
     def _on_save_settings(self):
         """Save the current config to the YAML file."""
-        config_dict = self.config.to_dict(diff_only=True)
         try:
             if self._active_profile:
                 # Profile options = diff from top‑level YAML, not from system defaults
-                self.profiles[self._active_profile]["options"] = config_dict
+                new_options = self._profile_options_diff()
+                self.profiles[self._active_profile]["options"] = new_options
                 general_opts, _ = load_yaml_config(self.config_path)
                 save_yaml_config(general_opts, dict(self.profiles), self.config_path)
-                self._profile_has_options = bool(
-                    self.profiles[self._active_profile].get("options")
-                )
+                self._profile_has_options = bool(new_options)
             else:
+                config_dict = self.config.to_dict(diff_only=True)
                 save_yaml_config(config_dict, dict(self.profiles), self.config_path)
                 # Update the cached global config and general opts
                 self._global_config = copy.deepcopy(self.config)
