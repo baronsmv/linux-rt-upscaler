@@ -60,6 +60,22 @@ class MainWindow(QMainWindow):
         self.profiles = collections.OrderedDict(profiles)
         self._profile_order = list(self.profiles.keys())
 
+        # Capture CLI overrides (anything that differs from the YAML baseline)
+        yaml_baseline = Config()
+        for k, v in self._general_opts.items():
+            if hasattr(yaml_baseline, k) and k not in ("log_level", "log_file"):
+                setattr(yaml_baseline, k, v)
+        parse_config(yaml_baseline)
+
+        self._cli_overrides = {}
+        for field in fields(self.config):
+            name = field.name
+            if name in ("config_file", "log_level", "log_file", "program"):
+                continue
+            val = getattr(self.config, name)
+            if val != getattr(yaml_baseline, name):
+                self._cli_overrides[name] = val
+
         self._profile_has_options = (
             bool(self.profiles[profile_name].get("options"))
             if profile_name and profile_name in self.profiles
@@ -237,7 +253,7 @@ class MainWindow(QMainWindow):
         """
         self._active_profile = name
 
-        # Always start from the latest global config
+        # Start from the latest global config (top‑level YAML, not system defaults)
         self.config = copy.deepcopy(self._global_config)
 
         if name:
@@ -246,6 +262,11 @@ class MainWindow(QMainWindow):
             for k, v in opts.items():
                 if hasattr(self.config, k):
                     setattr(self.config, k, v)
+
+        # Re‑apply CLI overrides last
+        for k, v in self._cli_overrides.items():
+            if hasattr(self.config, k):
+                setattr(self.config, k, v)
 
         parse_config(self.config)
 
@@ -472,6 +493,13 @@ class MainWindow(QMainWindow):
         else:
             # Global config: true system defaults
             self.config = Config()
+            for k, v in self._general_opts.items():
+                if hasattr(self.config, k) and k not in ("log_level", "log_file"):
+                    setattr(self.config, k, v)
+            # Apply CLI overrides last (they were intended to always be present)
+            for k, v in self._cli_overrides.items():
+                if hasattr(self.config, k):
+                    setattr(self.config, k, v)
             parse_config(self.config)
             self._recreate_right_sidebar()
             logger.info("Restoring system defaults.")
