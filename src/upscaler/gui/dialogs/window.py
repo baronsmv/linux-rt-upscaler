@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -11,71 +11,24 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
     QVBoxLayout,
+    QWidget,
 )
 
+from ._styles import list_stylesheet
 from ...window import WindowInfo, list_windows
+
+if TYPE_CHECKING:
+    from ..config import GUIConfig
 
 
 class WindowPickerDialog(QDialog):
     """Dialog to select a window from the list of open windows."""
 
-    def __init__(self, parent=None):
+    def __init__(self, gui_config: GUIConfig, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setWindowTitle("Select Window")
         self.setMinimumSize(450, 350)
-
-        # Dark theme
-        self.setStyleSheet(
-            """
-            QDialog {
-                background-color: #1e1e1e;
-                color: #ddd;
-            }
-            QLineEdit {
-                background: #2a2a2c;
-                border: 1px solid #3a3a3c;
-                border-radius: 4px;
-                padding: 6px 10px;
-                color: #ddd;
-            }
-            QLineEdit:focus {
-                border-color: #4a9eff;
-            }
-            QListWidget {
-                background: #1e1e1e;
-                border: 1px solid #333;
-                border-radius: 6px;
-                outline: none;
-                color: #ddd;
-            }
-            QListWidget::item {
-                padding: 6px 10px;
-                border-radius: 4px;
-            }
-            QListWidget::item:hover {
-                background: #2c2c2c;
-                color: #fff;
-            }
-            QListWidget::item:selected {
-                background: #3a3a3c;
-                color: #fff;
-            }
-            QPushButton {
-                background: #2c2c2c;
-                border: 1px solid #444;
-                border-radius: 4px;
-                padding: 6px 16px;
-                color: #ddd;
-            }
-            QPushButton:hover {
-                background: #3a3a3c;
-                border-color: #555;
-            }
-            QPushButton:disabled {
-                color: #555;
-            }
-        """
-        )
+        self.setStyleSheet(list_stylesheet(gui_config))
 
         layout = QVBoxLayout(self)
 

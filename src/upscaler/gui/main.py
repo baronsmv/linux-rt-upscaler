@@ -473,7 +473,7 @@ class MainWindow(QMainWindow):
 
     def _on_add_profile(self):
         try:
-            dlg = ProfileDialog(parent=self)
+            dlg = ProfileDialog(self.gui_config, parent=self)
             if dlg.exec() == QDialog.Accepted:
                 name = dlg.profile_name()
                 match = dlg.match_criteria()
@@ -492,7 +492,9 @@ class MainWindow(QMainWindow):
     def _on_edit_profile(self, name: str):
         try:
             current_match = self.profiles[name].get("match", {})
-            dlg = ProfileDialog(profile_name=name, match=current_match, parent=self)
+            dlg = ProfileDialog(
+                self.gui_config, profile_name=name, match=current_match, parent=self
+            )
             if dlg.exec() == QDialog.Accepted:
                 new_name = dlg.profile_name()
                 new_match = dlg.match_criteria()

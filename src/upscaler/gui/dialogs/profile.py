@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap
@@ -17,11 +17,16 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
+from ._styles import list_stylesheet
 from .window import WindowPickerDialog
 from ..icons import load_pixmap
 from ...window import get_window_icon
+
+if TYPE_CHECKING:
+    from ..config import GUIConfig
 
 MATCH_TYPES = {
     "title_contains": "Title contains",
@@ -44,108 +49,17 @@ class ProfileDialog(QDialog):
 
     def __init__(
         self,
+        gui_config: GUIConfig,
         profile_name: str = "",
         match: Optional[Dict[str, str]] = None,
-        parent=None,
+        parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
         self.setMinimumWidth(480)
         self._match_criteria: List[MatchCriterion] = []
-
-        # ------------------------------------------------------------------
-        # Dark theme stylesheet
-        # ------------------------------------------------------------------
-        self.setStyleSheet(
-            """
-            QDialog {
-                background-color: #1e1e1e;
-                color: #ddd;
-            }
-            QLabel {
-                color: #ccc;
-                font-size: 14px;
-            }
-            QLineEdit {
-                background: #2a2a2c;
-                border: 1px solid #3a3a3c;
-                border-radius: 4px;
-                padding: 4px 8px;
-                color: #ddd;
-            }
-            QLineEdit:focus {
-                border-color: #4a9eff;
-            }
-            QComboBox {
-                background: #2a2a2c;
-                border: 1px solid #3a3a3c;
-                border-radius: 4px;
-                padding: 4px 8px;
-                color: #ddd;
-                min-width: 120px;
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 0px;
-            }
-            QComboBox QAbstractItemView {
-                background: #2a2a2c;
-                border: none;
-                color: #ddd;
-                selection-background-color: #4a9eff;
-            }
-            QPushButton {
-                background: #2c2c2c;
-                border: 1px solid #444;
-                border-radius: 4px;
-                padding: 4px 12px;
-                color: #ddd;
-            }
-            QPushButton:hover {
-                background: #3a3a3c;
-                border-color: #555;
-            }
-            QPushButton:pressed {
-                background: #222;
-            }
-            QPushButton:disabled {
-                color: #555;
-            }
-            QGroupBox {
-                font-size: 14px;
-                font-weight: bold;
-                color: #888;
-                border: 1px solid #333;
-                border-radius: 6px;
-                margin-top: 8px;
-                padding-top: 16px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 6px;
-            }
-            QListWidget {
-                background: #1e1e1e;
-                border: 1px solid #333;
-                border-radius: 6px;
-                outline: none;
-                color: #ddd;
-            }
-            QListWidget::item {
-                padding: 4px 8px;
-                border-radius: 4px;
-            }
-            QListWidget::item:hover {
-                background: #2c2c2c;
-                color: #fff;
-            }
-            QListWidget::item:selected {
-                background: #3a3a3c;
-                color: #fff;
-            }
-        """
-        )
+        self._cfg = gui_config
+        self.setStyleSheet(list_stylesheet(gui_config))
 
         layout = QVBoxLayout(self)
 
@@ -252,7 +166,7 @@ class ProfileDialog(QDialog):
 
     def _capture(self):
         """Open a window picker dialog and auto‑fill criteria."""
-        picker = WindowPickerDialog(self)
+        picker = WindowPickerDialog(self._cfg, self)
         if picker.exec() == QDialog.Accepted:
             win_info = picker.selected_window()
             if win_info:
@@ -283,7 +197,7 @@ class ProfileDialog(QDialog):
                 self._refresh_list()
 
     def _capture_icon(self):
-        picker = WindowPickerDialog(self)
+        picker = WindowPickerDialog(self._cfg, self)
         if picker.exec() == QDialog.Accepted:
             win_info = picker.selected_window()
             if win_info:

@@ -235,3 +235,32 @@ class GUIConfig:
     profile_toolbar_button_icon_size: int = 24
     profile_toolbar_button_background_hover: str = "#2c2c2c"
     profile_toolbar_button_border_radius: int = 8
+
+    # ---- Dialog style constants -----------------------------------------
+    dialog_background: str = "#1e1e1e"
+    dialog_text_color: str = "#ddd"
+    dialog_label_color: str = "#ccc"
+    dialog_label_font_size: int = 14
+    dialog_input_background: str = "#2a2a2c"
+    dialog_input_border: str = "#3a3a3c"
+    dialog_input_focus_border: str = "#4a9eff"
+    dialog_input_border_radius: int = 4
+    dialog_input_padding: str = "4px 8px"
+    dialog_combo_min_width: int = 120
+    dialog_button_background: str = "#2c2c2c"
+    dialog_button_hover_background: str = "#3a3a3c"
+    dialog_button_pressed_background: str = "#222"
+    dialog_button_border: str = "#444"
+    dialog_button_border_radius: int = 4
+    dialog_button_padding: str = "4px 12px"
+    dialog_button_disabled_color: str = "#555"
+    dialog_groupbox_title_color: str = "#888"
+    dialog_groupbox_border: str = "#333"
+    dialog_groupbox_border_radius: int = 6
+    dialog_list_background: str = "#1e1e1e"
+    dialog_list_border: str = "#333"
+    dialog_list_border_radius: int = 6
+    dialog_list_item_padding: str = "4px 8px"
+    dialog_list_item_border_radius: int = 4
+    dialog_list_item_hover_background: str = "#2c2c2c"
+    dialog_list_item_selected_background: str = "#3a3a3c"
