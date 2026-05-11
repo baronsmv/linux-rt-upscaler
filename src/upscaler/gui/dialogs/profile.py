@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Dict, List, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt
@@ -8,6 +9,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -55,41 +57,73 @@ class ProfileDialog(QDialog):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
+        self._exclude_handle = parent.winId() if parent else 0
         self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
         self.setMinimumWidth(480)
-        self._match_criteria: List[MatchCriterion] = []
         self._cfg = gui_config
+        self._match_criteria: List[MatchCriterion] = []
+        self._captured_icon: Optional[QImage] = None
+        self._icon_removed = False
+
         self.setStyleSheet(list_stylesheet(gui_config))
 
         layout = QVBoxLayout(self)
 
-        # Name
+        # ---- Name ----
         name_layout = QHBoxLayout()
         name_layout.addWidget(QLabel("Name:"))
         self._name_edit = QLineEdit(profile_name)
         name_layout.addWidget(self._name_edit)
         layout.addLayout(name_layout)
 
-        # Icon
+        # ---- Icon ----
         icon_layout = QHBoxLayout()
         icon_layout.addWidget(QLabel("Icon:"))
         self._icon_preview = QLabel()
         self._icon_preview.setFixedSize(32, 32)
         self._icon_preview.setStyleSheet("border: 1px solid #444; border-radius: 4px;")
         self._icon_preview.setAlignment(Qt.AlignCenter)
-        self._icon_preview.setPixmap(load_pixmap("profiles/profile", 32, 32))
+
+        # Try to load existing icon if profile_name is given and exists
+        existing_icon = None
+        if profile_name and parent is not None and hasattr(parent, "profiles"):
+            profile_data = parent.profiles.get(profile_name, {})
+            icon_path = profile_data.get("icon", "")
+            if icon_path and os.path.isfile(icon_path):
+                pix = QPixmap(icon_path).scaled(
+                    32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                )
+                self._icon_preview.setPixmap(pix)
+                self._captured_icon = QImage(icon_path)  # store for possible keep
+                existing_icon = True
+
+        if not existing_icon:
+            self._icon_preview.setPixmap(load_pixmap("profiles/profile", 32, 32))
+
         icon_layout.addWidget(self._icon_preview)
-        capture_icon_btn = QPushButton("Capture icon")
+
+        capture_icon_btn = QPushButton("Capture")
+        capture_icon_btn.setToolTip("Grab icon from a window")
         capture_icon_btn.clicked.connect(self._capture_icon)
         icon_layout.addWidget(capture_icon_btn)
+
+        file_btn = QPushButton("File…")
+        file_btn.setToolTip("Choose an image file")
+        file_btn.clicked.connect(self._select_icon_file)
+        icon_layout.addWidget(file_btn)
+
+        remove_btn = QPushButton("Remove")
+        remove_btn.setToolTip("Remove the current icon")
+        remove_btn.clicked.connect(self._remove_icon)
+        icon_layout.addWidget(remove_btn)
+
         icon_layout.addStretch()
         layout.addLayout(icon_layout)
 
-        # Match criteria group
+        # ---- Match criteria group ----
         crit_group = QGroupBox("Match criteria")
         crit_layout = QVBoxLayout(crit_group)
 
-        # List of criteria
         self._crit_list = QListWidget()
         self._crit_list.setAlternatingRowColors(False)
         self._crit_list.setSelectionMode(QListWidget.ExtendedSelection)
@@ -116,7 +150,7 @@ class ProfileDialog(QDialog):
         crit_layout.addLayout(add_layout)
         layout.addWidget(crit_group)
 
-        # Bottom buttons
+        # ---- Bottom buttons ----
         btn_layout = QHBoxLayout()
         capture_btn = QPushButton("Capture from window")
         capture_btn.setToolTip("Select a window and auto-fill match criteria")
@@ -138,6 +172,9 @@ class ProfileDialog(QDialog):
                     self._match_criteria.append(MatchCriterion(key, value))
         self._refresh_list()
 
+    # ------------------------------------------------------------------
+    #  Criteria handling
+    # ------------------------------------------------------------------
     def _add_criterion(self):
         key = self._type_combo.currentData()
         value = self._value_edit.text().strip()
@@ -166,11 +203,13 @@ class ProfileDialog(QDialog):
 
     def _capture(self):
         """Open a window picker dialog and auto‑fill criteria."""
-        picker = WindowPickerDialog(self._cfg, self)
+        picker = WindowPickerDialog(
+            self._cfg, self, exclude_handle=self._exclude_handle
+        )
         if picker.exec() == QDialog.Accepted:
             win_info = picker.selected_window()
             if win_info:
-                # Auto‑fill: title contains and class exact
+                # Auto-fill: title contains and class exact
                 self._match_criteria.append(
                     MatchCriterion("title_contains", win_info.title)
                 )
@@ -196,15 +235,21 @@ class ProfileDialog(QDialog):
                 self._match_criteria.append(MatchCriterion("class_exact", class_name))
                 self._refresh_list()
 
+    # ------------------------------------------------------------------
+    #  Icon handling
+    # ------------------------------------------------------------------
     def _capture_icon(self):
-        picker = WindowPickerDialog(self._cfg, self)
+        """Grab an icon from a running window."""
+        picker = WindowPickerDialog(
+            self._cfg, self, exclude_handle=self._exclude_handle
+        )
         if picker.exec() == QDialog.Accepted:
             win_info = picker.selected_window()
             if win_info:
                 icon_img = get_window_icon(win_info.handle, size=128)
                 if icon_img:
                     self._captured_icon = icon_img
-                    # Show a 32px preview in the dialog
+                    self._icon_removed = False
                     pix = QPixmap.fromImage(icon_img).scaled(
                         32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation
                     )
@@ -214,9 +259,42 @@ class ProfileDialog(QDialog):
                         self, "No icon", "The selected window has no icon."
                     )
 
-    def get_captured_icon(self) -> Optional[QImage]:
-        return getattr(self, "_captured_icon", None)
+    def _select_icon_file(self):
+        """Load an icon from a file."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Select Icon", "", "Images (*.png *.jpg *.jpeg *.bmp)"
+        )
+        if file_path:
+            img = QImage(file_path)
+            if img.isNull():
+                QMessageBox.warning(
+                    self, "Invalid image", "Could not load the selected file."
+                )
+                return
+            self._captured_icon = img
+            self._icon_removed = False
+            pix = QPixmap.fromImage(img).scaled(
+                32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation
+            )
+            self._icon_preview.setPixmap(pix)
 
+    def _remove_icon(self):
+        """Mark the icon for removal (restores default preview)."""
+        self._captured_icon = None
+        self._icon_removed = True
+        self._icon_preview.setPixmap(load_pixmap("profiles/profile", 32, 32))
+
+    def get_captured_icon(self) -> Optional[QImage]:
+        """Return the image to save as profile icon, if any."""
+        return self._captured_icon
+
+    def is_icon_removed(self) -> bool:
+        """Return True if the user requested icon removal."""
+        return self._icon_removed
+
+    # ------------------------------------------------------------------
+    #  Validation and result accessors
+    # ------------------------------------------------------------------
     def _validate_and_accept(self):
         name = self._name_edit.text().strip()
         if not name:
