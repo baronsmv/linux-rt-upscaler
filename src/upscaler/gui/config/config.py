@@ -416,7 +416,7 @@ class GUIConfig:
 
     @property
     def dialog_button_pressed_background(self) -> str:
-        return self.palette.button_pressed_bg
+        return self.palette.bg_button_pressed
 
     highlight_background_enabled: bool = True
     highlight_indicator_gap: int = 8
@@ -585,7 +585,7 @@ class GUIConfig:
     # ── Icon tab bar (right sidebar) ───────────────────────────
     @property
     def icon_tab_bar_background(self) -> str:
-        return "#1a1a1a"
+        return self.palette.bg_icon_tab_bar
 
     # ── Dialog style constants ─────────────────────────────────
     @property
@@ -630,7 +630,7 @@ class GUIConfig:
 
     @property
     def dialog_button_pressed_background(self) -> str:
-        return "#222"
+        return self.palette.bg_button_pressed
 
     @property
     def dialog_button_border(self) -> str:

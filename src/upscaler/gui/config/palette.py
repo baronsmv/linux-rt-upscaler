@@ -16,6 +16,8 @@ class GuiPalette:
     bg_filter: str = "#2a2a2a"
     bg_filter_hover: str = "#353535"
     bg_preview: str = "#2d2d2d"
+    bg_icon_tab_bar: str = "#1a1a1a"
+    bg_button_pressed: str = "#222"
 
     # ── Borders & separators ──────────────────────────────────────
     border_subtle: str = "#444"
@@ -48,7 +50,6 @@ class GuiPalette:
     scrollbar_handle: str = "#3a3a3c"
     scrollbar_handle_hover: str = "#4a4a4c"
     separator_color: str = "#333"
-    button_pressed_bg: str = "#222"
 
     # ── Fonts ─────────────────────────────────────────────────────
     font_family: str = "Segoe UI"

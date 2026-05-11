@@ -22,6 +22,7 @@ LIGHT = GuiPalette(
     border_red_hover="#dd5555",
     border_red_dim="#aa6666",
     border_profile_sep="#dddddd",
+    border_icon_preview="#aaaaaa",
     text_primary="#111111",
     text_secondary="#333333",
     text_dim="#888888",
@@ -35,7 +36,10 @@ LIGHT = GuiPalette(
     accent_icon="#555555",
     slider_groove="#cccccc",
     slider_groove_disabled="#eeeeee",
-    button_pressed_bg="#c0c0c0",
+    bg_button_pressed="#c0c0c0",
+    bg_icon_tab_bar="#e8e8e8",
+    bg_preview="#e8e8e8",
+    separator_color="#cccccc",
     shadow_color=(0, 0, 0, 40),
 )
 
@@ -69,7 +73,10 @@ CYBERPUNK = GuiPalette(
     accent_icon="#aa88ff",
     slider_groove="#3a3a5c",
     slider_groove_disabled="#1a1a2c",
-    button_pressed_bg="#2a1030",
+    bg_button_pressed="#2a1030",
+    bg_preview="#1a1a24",
+    border_icon_preview="#3a3a5c",
+    bg_icon_tab_bar="#111118",
     shadow_color=(0, 0, 0, 180),
 )
 
