@@ -66,6 +66,7 @@ class SettingsTab(QWidget):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.verticalScrollBar().setStyleSheet(styles.scrollbar(gui_config))
         scroll.setFrameShape(QScrollArea.NoFrame)
         scroll.setStyleSheet(styles.scroll_area())
 

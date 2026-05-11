@@ -100,6 +100,8 @@ class ProfilesSidebar(QWidget):
             )
         )
         self._list.setSpacing(gui_config.profile_item_spacing)
+        self._list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self._list.verticalScrollBar().setStyleSheet(styles.scrollbar(gui_config))
         self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._list.currentItemChanged.connect(self._on_current_item_changed)
         self._list.itemDoubleClicked.connect(self._on_item_double_clicked)

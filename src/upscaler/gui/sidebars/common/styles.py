@@ -81,3 +81,30 @@ def row_label(cfg: GUIConfig) -> str:
 def separator_line() -> str:
     """Thin horizontal line used under section headers."""
     return "color: #333;"
+
+
+def scrollbar(cfg: GUIConfig) -> str:
+    """Return a dark scrollbar stylesheet based on GUIConfig."""
+    return f"""
+        QScrollBar:vertical {{
+            background: {cfg.sidebar_background};
+            width: 8px;
+            margin: 0;
+        }}
+        QScrollBar::handle:vertical {{
+            background: #3a3a3c;
+            border-radius: 4px;
+            min-height: 30px;
+        }}
+        QScrollBar::handle:vertical:hover {{
+            background: #4a4a4c;
+        }}
+        QScrollBar::add-line:vertical,
+        QScrollBar::sub-line:vertical {{
+            height: 0px;
+        }}
+        QScrollBar::add-page:vertical,
+        QScrollBar::sub-page:vertical {{
+            background: none;
+        }}
+    """
