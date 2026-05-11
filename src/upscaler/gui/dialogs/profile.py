@@ -287,9 +287,10 @@ class ProfileDialog(QDialog):
         if picker.exec() == QDialog.Accepted:
             win_info = picker.selected_window()
             if win_info:
-                icon_img = get_window_icon(win_info.handle, size=32)
+                icon_img = get_window_icon(win_info.handle, size=128)
                 if icon_img:
                     self._captured_icon = icon_img
+                    # Show a 32px preview in the dialog
                     pix = QPixmap.fromImage(icon_img).scaled(
                         32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation
                     )
