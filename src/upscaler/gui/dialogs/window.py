@@ -75,6 +75,7 @@ class WindowPickerDialog(QDialog):
             "tabs/window",
             gui_config.profile_item_icon_size,
             gui_config.profile_item_icon_size,
+            color=self._cfg.icon_color,
         )
         self._fallback_icon = QIcon(pix)
 
@@ -121,12 +122,14 @@ class WindowPickerDialog(QDialog):
                         "tabs/window",
                         self._cfg.profile_item_icon_size,
                         self._cfg.profile_item_icon_size,
+                        color=self._cfg.icon_color,
                     )
             except Exception:
                 pix = load_pixmap(
                     "tabs/window",
                     self._cfg.profile_item_icon_size,
                     self._cfg.profile_item_icon_size,
+                    color=self._cfg.icon_color,
                 )
 
             item.setIcon(QIcon(pix))

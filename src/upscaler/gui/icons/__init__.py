@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 from PySide6.QtCore import QByteArray, Qt
 from PySide6.QtGui import QIcon, QPainter, QPixmap
@@ -15,9 +16,13 @@ def _load_svg(name: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def load_pixmap(name: str, width: int = 256, height: int = 256) -> QPixmap:
+def load_pixmap(
+    name: str, width: int = 256, height: int = 256, color: Optional[str] = None
+) -> QPixmap:
     """Render an SVG icon to a QPixmap of the given size."""
     svg = _load_svg(name)
+    if color is not None:
+        svg = svg.replace("#7A9EB1", color)
     renderer = QSvgRenderer(QByteArray(svg.encode()))
     pixmap = QPixmap(width, height)
     pixmap.fill(Qt.transparent)
@@ -27,6 +32,8 @@ def load_pixmap(name: str, width: int = 256, height: int = 256) -> QPixmap:
     return pixmap
 
 
-def load_icon(name: str, width: int = 24, height: int = 24) -> QIcon:
+def load_icon(
+    name: str, width: int = 24, height: int = 24, color: Optional[str] = None
+) -> QIcon:
     """Load an SVG icon as a QIcon, suitable for buttons, labels, etc."""
-    return QIcon(load_pixmap(name, width, height))
+    return QIcon(load_pixmap(name, width, height, color=color))

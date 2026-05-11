@@ -98,7 +98,9 @@ class ProfileDialog(QDialog):
                 existing_icon_loaded = True
 
         if not existing_icon_loaded:
-            self._icon_preview.setPixmap(load_pixmap("actions/profile", 32, 32))
+            self._icon_preview.setPixmap(
+                load_pixmap("actions/profile", 32, 32, color=self._cfg.icon_color)
+            )
 
         icon_col.addWidget(self._icon_preview)
         header.addLayout(icon_col)
@@ -109,7 +111,9 @@ class ProfileDialog(QDialog):
         actions_row.setSpacing(6)
 
         capture_win_btn = QPushButton("  Capture window")
-        capture_win_btn.setIcon(load_icon("actions/capture", 20))
+        capture_win_btn.setIcon(
+            load_icon("actions/capture", 20, 20, color=self._cfg.icon_color)
+        )
         capture_win_btn.setToolTip("Fill name, icon, and match rules from a window")
         capture_win_btn.clicked.connect(self._capture_full)
         actions_row.addWidget(capture_win_btn)
@@ -216,7 +220,9 @@ class ProfileDialog(QDialog):
         enabled: bool = True,
     ) -> QToolButton:
         btn = QToolButton()
-        btn.setIcon(load_icon(icon_name, icon_size))
+        btn.setIcon(
+            load_icon(icon_name, icon_size, icon_size, color=self._cfg.icon_color)
+        )
         btn.setToolTip(tooltip)
         btn.setFixedSize(size, size)
         btn.setIconSize(QSize(icon_size, icon_size))
@@ -331,7 +337,9 @@ class ProfileDialog(QDialog):
     def _remove_icon(self):
         self._captured_icon = None
         self._icon_removed = True
-        self._icon_preview.setPixmap(load_pixmap("actions/profile", 32, 32))
+        self._icon_preview.setPixmap(
+            load_pixmap("actions/profile", 32, 32, color=self._cfg.icon_color)
+        )
 
     def get_captured_icon(self) -> Optional[QImage]:
         return self._captured_icon

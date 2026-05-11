@@ -191,6 +191,7 @@ class ProfilesSidebar(QWidget):
                 "actions/profile_global",
                 self._cfg.profile_item_icon_size,
                 self._cfg.profile_item_icon_size,
+                color=self._cfg.icon_color,
             )
         )
         default_item = QListWidgetItem(default_icon, "  Global")
@@ -216,6 +217,7 @@ class ProfilesSidebar(QWidget):
                         "actions/profile",
                         self._cfg.profile_item_icon_size,
                         self._cfg.profile_item_icon_size,
+                        color=self._cfg.icon_color,
                     )
                 )
             item = QListWidgetItem(icon, f"  {name}")
@@ -298,7 +300,14 @@ class ProfilesSidebar(QWidget):
     ) -> QPushButton:
         """Create a flat, icon‑only toolbar button with configurable size."""
         btn = QPushButton()
-        btn.setIcon(load_icon(icon_name, cfg["icon_size"]))
+        btn.setIcon(
+            load_icon(
+                icon_name,
+                cfg["icon_size"],
+                cfg["icon_size"],
+                color=self._cfg.icon_color,
+            )
+        )
         btn.setIconSize(QSize(cfg["icon_size"], cfg["icon_size"]))
         btn.setToolTip(tooltip)
         btn.setFixedSize(cfg["size"], cfg["size"])

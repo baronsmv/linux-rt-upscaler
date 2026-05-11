@@ -676,6 +676,10 @@ class GUIConfig:
     def dialog_list_item_selected_background(self) -> str:
         return self.palette.bg_input
 
+    @property
+    def icon_color(self) -> str:
+        return self.palette.accent_icon
+
     dialog_match_label_font_size: int = 18
     dialog_icon_button_size: int = 32
     dialog_icon_button_icon_size: int = 24

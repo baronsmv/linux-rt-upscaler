@@ -86,7 +86,7 @@ class IconTabBar(QWidget):
 
     # ------------------------------------------------------------------
     def _load_icon(self, name: str, size: int) -> QIcon:
-        pixmap = load_pixmap(name, size, size)
+        pixmap = load_pixmap(name, size, size, color=self._cfg.icon_color)
         return QIcon(pixmap)
 
     def _button_style(self) -> str:
