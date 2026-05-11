@@ -90,6 +90,8 @@ class ProfilesSidebar(QWidget):
 
         # Profile list
         self._list = QListWidget()
+        self._list.setMouseTracking(True)
+        self._list.viewport().installEventFilter(self)
         self._list.setStyleSheet(self._list_stylesheet())
         self._list.setIconSize(
             QSize(
@@ -161,6 +163,16 @@ class ProfilesSidebar(QWidget):
     # ------------------------------------------------------------------
     #  Public helpers
     # ------------------------------------------------------------------
+    def eventFilter(self, obj, event) -> bool:
+        """Change cursor to PointingHand when the mouse is over an item."""
+        if obj is self._list.viewport() and event.type() == event.Type.MouseMove:
+            pos = event.pos()
+            item = self._list.itemAt(pos)
+            if item is not None:
+                self._list.viewport().setCursor(Qt.PointingHandCursor)
+            else:
+                self._list.viewport().setCursor(Qt.ArrowCursor)
+        return super().eventFilter(obj, event)
 
     def populate_list(self, active_name: Optional[str] = None) -> None:
         """
