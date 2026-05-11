@@ -265,3 +265,5 @@ class GUIConfig:
     dialog_list_item_border_radius: int = 4
     dialog_list_item_hover_background: str = "#2c2c2c"
     dialog_list_item_selected_background: str = "#3a3a3c"
+    dialog_icon_button_size: int = 32
+    dialog_icon_button_icon_size: int = 24
