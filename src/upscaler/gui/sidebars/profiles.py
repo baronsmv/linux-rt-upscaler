@@ -185,8 +185,15 @@ class ProfilesSidebar(QWidget):
         self._list.blockSignals(True)
         self._list.clear()
 
-        # Default entry (no profile)
-        default_item = QListWidgetItem("  (default)")
+        # Default entry (global settings)
+        default_icon = QIcon(
+            load_pixmap(
+                "actions/profile_global",
+                self._cfg.profile_item_icon_size,
+                self._cfg.profile_item_icon_size,
+            )
+        )
+        default_item = QListWidgetItem(default_icon, "  Global")
         default_item.setData(Qt.UserRole, "")
         default_item.setSizeHint(QSize(0, self._cfg.profile_item_height))
         self._list.addItem(default_item)

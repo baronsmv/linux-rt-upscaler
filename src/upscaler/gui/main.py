@@ -27,6 +27,7 @@ from .sidebars import ProfilesSidebar, SettingsSidebar
 from .widgets import StyledSplitter
 from ..config import (
     Config,
+    find_matching_profile,
     find_profile,
     load_yaml_config,
     move_profile_down,
@@ -400,6 +401,19 @@ class MainWindow(QMainWindow):
 
     def _on_window_selected(self, win_info: WindowInfo) -> None:
         self._selected_win_info = win_info
+
+        # ---- Automatic profile matching ----
+        profile_name, _ = find_matching_profile(self.profiles, win_info.title)
+        if profile_name and profile_name != self._active_profile:
+            if not self._maybe_save_before_switch():
+                return  # user canceled the unsaved‑changes dialog
+            self._apply_profile(profile_name)
+            logger.info(
+                "Auto‑applied profile '%s' for window '%s'",
+                profile_name,
+                win_info.title,
+            )
+
         QTimer.singleShot(0, self._start_pipeline)
 
     def _on_save_settings(self):
