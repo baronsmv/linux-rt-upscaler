@@ -117,6 +117,7 @@ class MainWindow(QMainWindow):
 
         # ---- Central column: filter bar + grid ----
         central_widget = QWidget()
+        # self.setStyleSheet(f"background-color: {self.gui_config.main_background};")
         central_layout = QVBoxLayout(central_widget)
         central_layout.setContentsMargins(
             0, self.gui_config.filter_vertical_margin, 0, 0
@@ -478,8 +479,8 @@ class MainWindow(QMainWindow):
 
             # Build the live config from top‑level YAML only (no profile overrides)
             self.config = Config()
-            for k, v in self._general_opts.items():
-                if hasattr(self.config, k) and k not in ("log_level", "log_file"):
+            for k, v in self._cli_overrides.items():
+                if hasattr(self.config, k):
                     setattr(self.config, k, v)
             parse_config(self.config)
 
@@ -493,10 +494,6 @@ class MainWindow(QMainWindow):
         else:
             # Global config: true system defaults
             self.config = Config()
-            for k, v in self._general_opts.items():
-                if hasattr(self.config, k) and k not in ("log_level", "log_file"):
-                    setattr(self.config, k, v)
-            # Apply CLI overrides last (they were intended to always be present)
             for k, v in self._cli_overrides.items():
                 if hasattr(self.config, k):
                     setattr(self.config, k, v)

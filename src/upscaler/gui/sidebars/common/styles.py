@@ -43,7 +43,7 @@ def tab_widget(cfg: GUIConfig) -> str:
             color: {cfg.sidebar_tab_text_color_active};
         }}
         QTabBar::tab:disabled {{
-            color: #555;
+            color: {cfg.palette.text_disabled};
         }}
     """
 
@@ -78,13 +78,12 @@ def row_label(cfg: GUIConfig) -> str:
     return f"color: {cfg.sidebar_tab_text_color}; font-size: {cfg.sidebar_tab_font_size}px;"
 
 
-def separator_line() -> str:
+def separator_line(cfg: GUIConfig) -> str:
     """Thin horizontal line used under section headers."""
-    return "color: #333;"
+    return f"color: {cfg.separator_line_color};"
 
 
 def scrollbar(cfg: GUIConfig) -> str:
-    """Return a dark scrollbar stylesheet based on GUIConfig."""
     return f"""
         QScrollBar:vertical {{
             background: {cfg.sidebar_background};
@@ -92,12 +91,12 @@ def scrollbar(cfg: GUIConfig) -> str:
             margin: 0;
         }}
         QScrollBar::handle:vertical {{
-            background: #3a3a3c;
+            background: {cfg.scrollbar_handle_color};
             border-radius: 4px;
             min-height: 30px;
         }}
         QScrollBar::handle:vertical:hover {{
-            background: #4a4a4c;
+            background: {cfg.scrollbar_handle_hover_color};
         }}
         QScrollBar::add-line:vertical,
         QScrollBar::sub-line:vertical {{

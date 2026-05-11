@@ -15,6 +15,7 @@ class GuiPalette:
     bg_input_disabled: str = "#1e1e1e"
     bg_filter: str = "#2a2a2a"
     bg_filter_hover: str = "#353535"
+    bg_preview: str = "#2d2d2d"
 
     # ── Borders & separators ──────────────────────────────────────
     border_subtle: str = "#444"
@@ -24,6 +25,7 @@ class GuiPalette:
     border_red_hover: str = "#b55a5a"
     border_red_dim: str = "#6b2e2e"
     border_profile_sep: str = "#333"
+    border_icon_preview: str = "#444"
 
     # ── Text ──────────────────────────────────────────────────────
     text_primary: str = "#ffffff"
@@ -40,9 +42,12 @@ class GuiPalette:
     accent_cyan: str = "#2b5b84"  # tile hover border
     accent_icon: str = "#7A9EB1"  # SVG icon stroke
 
-    # ── Slider, checkbox, color‑swatch ───────────────────────────
+    # ── Slider, scrollbar, checkbox, color‑swatch ─────────────────
     slider_groove: str = "#333"
     slider_groove_disabled: str = "#222"
+    scrollbar_handle: str = "#3a3a3c"
+    scrollbar_handle_hover: str = "#4a4a4c"
+    separator_color: str = "#333"
 
     # ── Fonts ─────────────────────────────────────────────────────
     font_family: str = "Segoe UI"

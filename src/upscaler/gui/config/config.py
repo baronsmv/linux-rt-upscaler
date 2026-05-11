@@ -31,6 +31,10 @@ class GUIConfig:
 
     # ── Tile‑specific colors (delegated to palette) ────────────
     @property
+    def main_background(self) -> str:
+        return self.palette.bg_deep
+
+    @property
     def tile_background(self) -> str:
         return self.palette.bg_surface
 
@@ -197,6 +201,25 @@ class GUIConfig:
     sidebar_icon_columns: int = 5
     sidebar_icon_size: int = 32
     sidebar_row_spacing: int = 6
+
+    # ── Scrollbar ──────────────────────────────────────────────
+    @property
+    def scrollbar_handle_color(self) -> str:
+        return self.palette.scrollbar_handle
+
+    @property
+    def scrollbar_handle_hover_color(self) -> str:
+        return self.palette.scrollbar_handle_hover
+
+    # ── Preview widget ─────────────────────────────────────────
+    @property
+    def preview_background(self) -> str:
+        return self.palette.bg_preview
+
+    # ── Profile dialog icon border ─────────────────────────────
+    @property
+    def icon_preview_border_color(self) -> str:
+        return self.palette.border_icon_preview
 
     # ── Controls: disabled state ───────────────────────────────
     @property
@@ -376,8 +399,16 @@ class GUIConfig:
         return self.palette.accent_blue
 
     @property
-    def highlight_background_color(self) -> str:
-        return self.palette.accent_blue_bg
+    def background_color(self) -> str:
+        return self.palette.bg_deep
+
+    @property
+    def separator_line_color(self) -> str:
+        return self.palette.separator_color
+
+    @property
+    def dialog_button_hover_border_color(self) -> str:
+        return self.palette.border_hover
 
     highlight_background_enabled: bool = True
     highlight_indicator_gap: int = 8

@@ -79,7 +79,9 @@ class ProfileDialog(QDialog):
 
         self._icon_preview = QLabel()
         self._icon_preview.setFixedSize(32, 32)
-        self._icon_preview.setStyleSheet("border: 1px solid #444; border-radius: 4px;")
+        self._icon_preview.setStyleSheet(
+            f"border: 1px solid {self._cfg.icon_preview_border_color}; border-radius: 4px;"
+        )
         self._icon_preview.setAlignment(Qt.AlignCenter)
 
         # Load existing icon
@@ -171,7 +173,6 @@ class ProfileDialog(QDialog):
         match_layout.addLayout(row2)
 
         # Title exact
-        row3 = QHBoxLayout()
         row3 = QHBoxLayout()
         lbl3 = QLabel("Title exact:")
         lbl3.setStyleSheet(

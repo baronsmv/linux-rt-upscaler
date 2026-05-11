@@ -54,7 +54,7 @@ def list_stylesheet(gui_config: GUIConfig) -> str:
         }}
         QPushButton:hover {{
             background: {c.dialog_button_hover_background};
-            border-color: #555;
+            border-color: {c.dialog_button_hover_border_color};
         }}
         QPushButton:pressed {{
             background: {c.dialog_button_pressed_background};
@@ -89,10 +89,10 @@ def list_stylesheet(gui_config: GUIConfig) -> str:
         }}
         QListWidget::item:hover {{
             background: {c.dialog_list_item_hover_background};
-            color: #fff;
+            color: {c.palette.text_primary};
         }}
         QListWidget::item:selected {{
             background: {c.dialog_list_item_selected_background};
-            color: #fff;
+            color: {c.palette.text_primary};
         }}
     """

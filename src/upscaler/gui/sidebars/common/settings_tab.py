@@ -100,7 +100,7 @@ class SettingsTab(QWidget):
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
-        line.setStyleSheet(styles.separator_line())
+        line.setStyleSheet(styles.separator_line(self.gui_config))
 
         self.content_layout.addWidget(label)
         self.content_layout.addWidget(line)

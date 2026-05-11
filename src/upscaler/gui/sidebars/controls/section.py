@@ -34,7 +34,7 @@ class SectionLabel(QWidget):
         self._line = QFrame()
         self._line.setFrameShape(QFrame.HLine)
         self._line.setFrameShadow(QFrame.Sunken)
-        self._line.setStyleSheet(styles.separator_line())
+        self._line.setStyleSheet(styles.separator_line(self._cfg))
 
         layout.addWidget(self._label)
         layout.addWidget(self._line)
