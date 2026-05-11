@@ -246,7 +246,9 @@ class ProfileDialog(QDialog):
         if picker.exec() == QDialog.Accepted:
             win_info = picker.selected_window()
             if win_info:
-                icon_img = get_window_icon(win_info.handle, size=128)
+                icon_img = get_window_icon(
+                    win_info.handle, size=self._cfg.profile_capture_icon_size
+                )
                 if icon_img:
                     self._captured_icon = icon_img
                     self._icon_removed = False

@@ -210,7 +210,7 @@ def get_window_pid(
 def get_window_icon(win_handle: int, size: int = 32) -> Optional[QImage]:
     """
     Retrieve the best‑fitting icon from `_NET_WM_ICON` for *win_handle*,
-    scaled to *size*×*size*.  Returns None if no icon is found.
+    scaled to *size*×*size*. Returns None if no icon is found.
     """
     conn = open_xcb_connection()
     if conn is None:
@@ -248,14 +248,13 @@ def get_window_icon(win_handle: int, size: int = 32) -> Optional[QImage]:
             if w <= 0 or h <= 0:
                 continue
 
-            ba = bytearray(pixels)
-            for i in range(0, len(ba), 4):
-                a, r, g, b = ba[i], ba[i + 1], ba[i + 2], ba[i + 3]
-                ba[i], ba[i + 1], ba[i + 2], ba[i + 3] = r, g, b, a
-            img = QImage(bytes(ba), w, h, w * 4, QImage.Format_RGBA8888)
-            del ba
+            # Raw bytes are BGRA on little‑endian, which matches QImage::Format_ARGB32
+            img = QImage(pixels, w, h, w * 4, QImage.Format_ARGB32)
 
-            # Choose best match
+            # Force a deep copy so the image owns its data
+            img = img.copy()
+
+            # Choose the closest icon size (prefer larger ones)
             if w >= size and h >= size and (best_icon is None or w * h < best_size):
                 best_icon = img
                 best_size = w * h
@@ -267,13 +266,8 @@ def get_window_icon(win_handle: int, size: int = 32) -> Optional[QImage]:
         if best_icon is None:
             return None
 
-        # Scale to desired size
-        return best_icon.scaled(
-            size,
-            size,
-            aspectMode=Qt.KeepAspectRatio,
-            mode=Qt.SmoothTransformation,
-        )
+        # Scale to the requested size
+        return best_icon.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
     finally:
         close_xcb_connection(conn)
 

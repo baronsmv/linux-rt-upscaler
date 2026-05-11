@@ -109,7 +109,9 @@ class WindowPickerDialog(QDialog):
 
             # Try to fetch window icon; use fallback if not available
             try:
-                img = get_window_icon(win.handle, size=self._cfg.profile_item_icon_size)
+                img = get_window_icon(
+                    win.handle, size=self._cfg.profile_capture_icon_size
+                )
                 if img and not img.isNull():
                     from PySide6.QtGui import QPixmap
 

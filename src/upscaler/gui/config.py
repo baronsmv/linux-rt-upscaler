@@ -223,7 +223,7 @@ class GUIConfig:
     profile_title_font_weight: str = "bold"
     profile_title_color: str = "#888888"
     profile_item_height: int = 40
-    profile_item_icon_size: int = 20
+    profile_item_icon_size: int = 32
     profile_item_text_color: str = "#cccccc"
     profile_item_text_color_active: str = "#ffffff"
     profile_item_background: str = "transparent"
@@ -235,6 +235,7 @@ class GUIConfig:
     profile_toolbar_button_icon_size: int = 24
     profile_toolbar_button_background_hover: str = "#2c2c2c"
     profile_toolbar_button_border_radius: int = 8
+    profile_capture_icon_size: int = 128
 
     # ---- Dialog style constants -----------------------------------------
     dialog_background: str = "#1e1e1e"
