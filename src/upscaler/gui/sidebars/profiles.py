@@ -82,11 +82,13 @@ class ProfilesSidebar(QWidget):
         layout.addWidget(title)
 
         # Header separator line
+        layout.addSpacing(8)
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
         sep.setStyleSheet(f"color: {gui_config.profile_header_bottom_border};")
         sep.setFixedHeight(1)
         layout.addWidget(sep)
+        layout.addSpacing(8)
 
         # Profile list
         self._list = QListWidget()
