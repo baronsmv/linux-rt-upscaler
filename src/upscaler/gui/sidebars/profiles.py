@@ -69,7 +69,7 @@ class ProfilesSidebar(QWidget):
         # ---- Layout ----
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        layout.setSpacing(0)
 
         # Title
         title = QLabel("Profiles")
@@ -77,6 +77,7 @@ class ProfilesSidebar(QWidget):
             f"color: {gui_config.sidebar_section_title_color}; "
             f"font-size: {gui_config.sidebar_section_title_size}px; "
             f"font-weight: bold;"
+            f"padding-left: {gui_config.profile_title_left_padding}px;"
         )
         layout.addWidget(title)
 
@@ -112,7 +113,6 @@ class ProfilesSidebar(QWidget):
         # Toolbar
         toolbar = QHBoxLayout()
         toolbar.setSpacing(4)
-        layout.addLayout(toolbar)
 
         btn_cfg = {
             "size": gui_config.profile_toolbar_button_size,

@@ -222,6 +222,7 @@ class GUIConfig:
     profile_title_font_size: int = 18
     profile_title_font_weight: str = "bold"
     profile_title_color: str = "#888888"
+    profile_title_left_padding: int = 2
     profile_item_height: int = 40
     profile_item_icon_size: int = 32
     profile_item_text_color: str = "#cccccc"
