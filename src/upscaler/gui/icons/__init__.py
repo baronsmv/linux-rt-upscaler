@@ -21,7 +21,7 @@ def load_pixmap(
 ) -> QPixmap:
     """Render an SVG icon to a QPixmap of the given size."""
     svg = _load_svg(name)
-    if color is not None:
+    if color is not None and color != "#7A9EB1":
         svg = svg.replace("#7A9EB1", color)
     renderer = QSvgRenderer(QByteArray(svg.encode()))
     pixmap = QPixmap(width, height)
