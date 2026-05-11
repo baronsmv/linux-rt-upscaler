@@ -3,11 +3,13 @@ from __future__ import annotations
 import collections
 import copy
 import logging
+import os
+import re
 from dataclasses import fields
 from typing import List, Optional
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QShortcut, QKeySequence
+from PySide6.QtCore import Qt, QStandardPaths, QTimer
+from PySide6.QtGui import QKeySequence, QImage, QShortcut
 from PySide6.QtWidgets import (
     QDialog,
     QMainWindow,
@@ -66,6 +68,14 @@ class MainWindow(QMainWindow):
         self._baseline_config = self._compute_yaml_baseline()
         self._global_config = copy.deepcopy(self.config)
         self.gui_config = GUIConfig()
+
+        # Icons directory
+        self._icons_dir = os.path.join(
+            QStandardPaths.writableLocation(QStandardPaths.ConfigLocation),
+            "linux-rt-upscaler",
+            "icons",
+        )
+        os.makedirs(self._icons_dir, exist_ok=True)
 
         self.setWindowTitle("Linux Real-Time Upscaler")
         self.setMinimumSize(1200, 600)
@@ -306,6 +316,46 @@ class MainWindow(QMainWindow):
         return diff
 
     # ------------------------------------------------------------------
+    #  Icons helpers
+    # ------------------------------------------------------------------
+    def _sanitize_profile_name(self, name: str) -> str:
+        """Return a safe filename fragment for *name*."""
+        return re.sub(r"[^\w\-_\. ]", "_", name).strip()
+
+    def _profile_icon_path(self, profile_name: str) -> str:
+        return os.path.join(
+            self._icons_dir, self._sanitize_profile_name(profile_name) + ".png"
+        )
+
+    def _set_profile_icon(self, profile_name: str, image: QImage):
+        path = self._profile_icon_path(profile_name)
+        image.save(path, "PNG")
+        self.profiles[profile_name]["icon"] = path
+        self._save_profiles_to_disk()
+
+    def _remove_profile_icon(self, profile_name: str):
+        if profile_name in self.profiles and "icon" in self.profiles[profile_name]:
+            try:
+                os.remove(self.profiles[profile_name]["icon"])
+            except OSError:
+                pass
+            del self.profiles[profile_name]["icon"]
+            self._save_profiles_to_disk()
+
+    def _rename_profile_icon(self, old_name: str, new_name: str):
+        if old_name in self.profiles and "icon" in self.profiles[old_name]:
+            old_path = self.profiles[old_name]["icon"]
+            new_path = self._profile_icon_path(new_name)
+            try:
+                os.rename(old_path, new_path)
+                self.profiles[old_name]["icon"] = new_path
+            except OSError:
+                # fallback: remove old, capture new
+                self._remove_profile_icon(old_name)
+                return
+            self._save_profiles_to_disk()
+
+    # ------------------------------------------------------------------
     #  Focus helpers
     # ------------------------------------------------------------------
     def _focus_grid(self) -> None:
@@ -429,6 +479,9 @@ class MainWindow(QMainWindow):
                 match = dlg.match_criteria()
                 self.profiles[name] = {"match": match, "options": {}}
                 self._profile_order.append(name)
+                captured_icon = dlg.get_captured_icon()
+                if captured_icon:
+                    self._set_profile_icon(name, captured_icon)
                 self.left_sidebar.populate_list(active_name=name)
                 self._save_profiles_to_disk()
                 QTimer.singleShot(0, lambda n=name: self._safe_apply_profile(n))
@@ -443,11 +496,16 @@ class MainWindow(QMainWindow):
             if dlg.exec() == QDialog.Accepted:
                 new_name = dlg.profile_name()
                 new_match = dlg.match_criteria()
-                if new_name != name:
-                    data = self.profiles.pop(name)
+                old_name = name
+                if new_name != old_name:
+                    data = self.profiles.pop(old_name)
                     self.profiles[new_name] = data
-                    self._profile_order[self._profile_order.index(name)] = new_name
+                    self._profile_order[self._profile_order.index(old_name)] = new_name
+                    self._rename_profile_icon(old_name, new_name)
                 self.profiles[new_name]["match"] = new_match
+                captured_icon = dlg.get_captured_icon()
+                if captured_icon:
+                    self._set_profile_icon(new_name, captured_icon)
                 self.left_sidebar.populate_list(active_name=new_name)
                 self._save_profiles_to_disk()
         except Exception:
@@ -463,6 +521,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.Yes | QMessageBox.No,
             )
             if reply == QMessageBox.Yes:
+                self._remove_profile_icon(name)
                 del self.profiles[name]
                 self._profile_order.remove(name)
                 self.left_sidebar.populate_list(active_name=None)

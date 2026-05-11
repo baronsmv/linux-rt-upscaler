@@ -223,34 +223,39 @@ def get_window_icon(win_handle: int, size: int = 32) -> Optional[QImage]:
             atoms.get("_NET_WM_ICON"),
             atoms.get("CARDINAL"),
             0,
-            1024 * 1024,  # enough for typical icons
+            1024 * 1024,
         )
         reply = cookie.reply()
         if not reply or reply.value_len == 0:
             return None
 
         data = reply.value.buf()
-        # _NET_WM_ICON contains one or more icons, each:
-        #   width (uint32), height (uint32), then width*height ARGB uint32 pixels.
         offset = 0
         best_icon = None
         best_size = 0
+
         while offset + 8 <= len(data):
             w = struct.unpack_from("<I", data, offset)[0]
             h = struct.unpack_from("<I", data, offset + 4)[0]
             offset += 8
             pixels_len = w * h * 4
             if offset + pixels_len > len(data):
-                break  # malformed
+                break
+
             pixels = data[offset : offset + pixels_len]
             offset += pixels_len
 
             if w <= 0 or h <= 0:
                 continue
 
-            # Convert ARGB -> QImage (ARGB32 format)
-            img = QImage(pixels, w, h, w * 4, QImage.Format_ARGB32).copy()
-            # Pick the icon closest to the desired size (but not smaller, prefer larger)
+            ba = bytearray(pixels)
+            for i in range(0, len(ba), 4):
+                a, r, g, b = ba[i], ba[i + 1], ba[i + 2], ba[i + 3]
+                ba[i], ba[i + 1], ba[i + 2], ba[i + 3] = r, g, b, a
+            img = QImage(bytes(ba), w, h, w * 4, QImage.Format_RGBA8888)
+            del ba
+
+            # Choose best match
             if w >= size and h >= size and (best_icon is None or w * h < best_size):
                 best_icon = img
                 best_size = w * h
@@ -266,8 +271,8 @@ def get_window_icon(win_handle: int, size: int = 32) -> Optional[QImage]:
         return best_icon.scaled(
             size,
             size,
-            aspectRatioMode=Qt.KeepAspectRatio,
-            transformMode=Qt.SmoothTransformation,
+            aspectMode=Qt.KeepAspectRatio,
+            mode=Qt.SmoothTransformation,
         )
     finally:
         close_xcb_connection(conn)

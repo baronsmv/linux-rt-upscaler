@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -19,6 +20,8 @@ from PySide6.QtWidgets import (
 )
 
 from .window import WindowPickerDialog
+from ..icons import load_pixmap
+from ...window import get_window_icon
 
 MATCH_TYPES = {
     "title_contains": "Title contains",
@@ -153,6 +156,21 @@ class ProfileDialog(QDialog):
         name_layout.addWidget(self._name_edit)
         layout.addLayout(name_layout)
 
+        # Icon
+        icon_layout = QHBoxLayout()
+        icon_layout.addWidget(QLabel("Icon:"))
+        self._icon_preview = QLabel()
+        self._icon_preview.setFixedSize(32, 32)
+        self._icon_preview.setStyleSheet("border: 1px solid #444; border-radius: 4px;")
+        self._icon_preview.setAlignment(Qt.AlignCenter)
+        self._icon_preview.setPixmap(load_pixmap("profiles/profile", 32, 32))
+        icon_layout.addWidget(self._icon_preview)
+        capture_icon_btn = QPushButton("Capture icon")
+        capture_icon_btn.clicked.connect(self._capture_icon)
+        icon_layout.addWidget(capture_icon_btn)
+        icon_layout.addStretch()
+        layout.addLayout(icon_layout)
+
         # Match criteria group
         crit_group = QGroupBox("Match criteria")
         crit_layout = QVBoxLayout(crit_group)
@@ -263,6 +281,26 @@ class ProfileDialog(QDialog):
                     pass
                 self._match_criteria.append(MatchCriterion("class_exact", class_name))
                 self._refresh_list()
+
+    def _capture_icon(self):
+        picker = WindowPickerDialog(self)
+        if picker.exec() == QDialog.Accepted:
+            win_info = picker.selected_window()
+            if win_info:
+                icon_img = get_window_icon(win_info.handle, size=32)
+                if icon_img:
+                    self._captured_icon = icon_img
+                    pix = QPixmap.fromImage(icon_img).scaled(
+                        32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                    )
+                    self._icon_preview.setPixmap(pix)
+                else:
+                    QMessageBox.information(
+                        self, "No icon", "The selected window has no icon."
+                    )
+
+    def get_captured_icon(self) -> Optional[QImage]:
+        return getattr(self, "_captured_icon", None)
 
     def _validate_and_accept(self):
         name = self._name_edit.text().strip()

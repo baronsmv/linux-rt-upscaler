@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import os
 from typing import Dict, Optional
 
 from PySide6.QtCore import Signal, Qt, QSize
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -162,15 +163,26 @@ class ProfilesSidebar(QWidget):
         if active_name is None or active_name == "":
             self._list.setCurrentRow(0)
 
-        # Profile entries with diamond icon
-        icon = QIcon(
-            load_pixmap(
-                "profiles/profile",
-                self._cfg.profile_item_icon_size,
-                self._cfg.profile_item_icon_size,
-            )
-        )
+        # Profile entries
         for name in self._profiles.keys():
+            profile_data = self._profiles[name]
+            icon_path = profile_data.get("icon", "")
+            if icon_path and os.path.isfile(icon_path):
+                pix = QPixmap(icon_path).scaled(
+                    self._cfg.profile_item_icon_size,
+                    self._cfg.profile_item_icon_size,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation,
+                )
+                icon = QIcon(pix)
+            else:
+                icon = QIcon(
+                    load_pixmap(
+                        "profiles/profile",
+                        self._cfg.profile_item_icon_size,
+                        self._cfg.profile_item_icon_size,
+                    )
+                )
             item = QListWidgetItem(icon, f"  {name}")
             item.setData(Qt.UserRole, name)
             item.setSizeHint(QSize(0, self._cfg.profile_item_height))
