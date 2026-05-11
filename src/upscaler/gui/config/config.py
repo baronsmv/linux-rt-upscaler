@@ -410,6 +410,14 @@ class GUIConfig:
     def dialog_button_hover_border_color(self) -> str:
         return self.palette.border_hover
 
+    @property
+    def highlight_background_color(self) -> str:
+        return self.palette.accent_blue_bg
+
+    @property
+    def dialog_button_pressed_background(self) -> str:
+        return self.palette.button_pressed_bg
+
     highlight_background_enabled: bool = True
     highlight_indicator_gap: int = 8
 

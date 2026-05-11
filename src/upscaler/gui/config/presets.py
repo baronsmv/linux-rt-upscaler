@@ -35,6 +35,7 @@ LIGHT = GuiPalette(
     accent_icon="#555555",
     slider_groove="#cccccc",
     slider_groove_disabled="#eeeeee",
+    button_pressed_bg="#c0c0c0",
     shadow_color=(0, 0, 0, 40),
 )
 
@@ -68,6 +69,7 @@ CYBERPUNK = GuiPalette(
     accent_icon="#aa88ff",
     slider_groove="#3a3a5c",
     slider_groove_disabled="#1a1a2c",
+    button_pressed_bg="#2a1030",
     shadow_color=(0, 0, 0, 180),
 )
 

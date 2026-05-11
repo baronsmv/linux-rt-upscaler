@@ -48,6 +48,7 @@ class GuiPalette:
     scrollbar_handle: str = "#3a3a3c"
     scrollbar_handle_hover: str = "#4a4a4c"
     separator_color: str = "#333"
+    button_pressed_bg: str = "#222"
 
     # ── Fonts ─────────────────────────────────────────────────────
     font_family: str = "Segoe UI"

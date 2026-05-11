@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from .config import GUIConfig
+from .config import GUIConfig, presets
 from .dialogs import ProfileDialog
 from .grid import WindowGridScene, WindowGridView, FilterBar
 from .sidebars import ProfilesSidebar, SettingsSidebar
@@ -36,6 +36,7 @@ from ..config import (
     save_yaml_config,
 )
 from ..pipeline import create_pipeline_session
+from ..utils import system_color_scheme
 from ..window import WindowInfo, activate_window, list_windows
 
 logger = logging.getLogger(__name__)
@@ -84,7 +85,11 @@ class MainWindow(QMainWindow):
 
         self._baseline_config = self._compute_yaml_baseline()
         self._global_config = copy.deepcopy(self.config)
-        self.gui_config = GUIConfig()
+        scheme = system_color_scheme()
+        if scheme == "dark":
+            self.gui_config = GUIConfig(palette=presets.DARK)
+        else:
+            self.gui_config = GUIConfig(palette=presets.LIGHT)
 
         # Icons directory
         self._icons_dir = os.path.join(
