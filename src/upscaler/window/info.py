@@ -5,6 +5,10 @@ from typing import Dict, List, Optional, Tuple
 
 import xcffib
 import xcffib.xproto
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage
+
+from .connection import open_xcb_connection, close_xcb_connection
 
 logger = logging.getLogger(__name__)
 
@@ -201,6 +205,72 @@ def get_window_pid(
         # xcffib may return a buffer or bytes; unpack as little-endian
         return int.from_bytes(raw[:4], byteorder="little")
     return None
+
+
+def get_window_icon(win_handle: int, size: int = 32) -> Optional[QImage]:
+    """
+    Retrieve the best‑fitting icon from `_NET_WM_ICON` for *win_handle*,
+    scaled to *size*×*size*.  Returns None if no icon is found.
+    """
+    conn = open_xcb_connection()
+    if conn is None:
+        return None
+    try:
+        atoms = AtomCache(conn)
+        cookie = conn.core.GetProperty(
+            False,
+            win_handle,
+            atoms.get("_NET_WM_ICON"),
+            atoms.get("CARDINAL"),
+            0,
+            1024 * 1024,  # enough for typical icons
+        )
+        reply = cookie.reply()
+        if not reply or reply.value_len == 0:
+            return None
+
+        data = reply.value.buf()
+        # _NET_WM_ICON contains one or more icons, each:
+        #   width (uint32), height (uint32), then width*height ARGB uint32 pixels.
+        offset = 0
+        best_icon = None
+        best_size = 0
+        while offset + 8 <= len(data):
+            w = struct.unpack_from("<I", data, offset)[0]
+            h = struct.unpack_from("<I", data, offset + 4)[0]
+            offset += 8
+            pixels_len = w * h * 4
+            if offset + pixels_len > len(data):
+                break  # malformed
+            pixels = data[offset : offset + pixels_len]
+            offset += pixels_len
+
+            if w <= 0 or h <= 0:
+                continue
+
+            # Convert ARGB -> QImage (ARGB32 format)
+            img = QImage(pixels, w, h, w * 4, QImage.Format_ARGB32).copy()
+            # Pick the icon closest to the desired size (but not smaller, prefer larger)
+            if w >= size and h >= size and (best_icon is None or w * h < best_size):
+                best_icon = img
+                best_size = w * h
+            elif best_icon is None and w < size and h < size and w * h > best_size:
+                # fallback: keep the largest icon smaller than size
+                best_icon = img
+                best_size = w * h
+
+        if best_icon is None:
+            return None
+
+        # Scale to desired size
+        return best_icon.scaled(
+            size,
+            size,
+            aspectRatioMode=Qt.KeepAspectRatio,
+            transformMode=Qt.SmoothTransformation,
+        )
+    finally:
+        close_xcb_connection(conn)
 
 
 def is_viewable(conn: xcffib.Connection, win: int) -> bool:
