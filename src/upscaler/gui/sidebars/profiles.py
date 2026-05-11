@@ -106,17 +106,17 @@ class ProfilesSidebar(QWidget):
         }
 
         self._add_btn = self._make_tool_button(
-            "profiles/add", "Add profile", self.add_profile_requested.emit, btn_cfg
+            "actions/add", "Add profile", self.add_profile_requested.emit, btn_cfg
         )
         self._edit_btn = self._make_tool_button(
-            "profiles/edit",
+            "actions/edit",
             "Edit match criteria",
             self._emit_edit,
             btn_cfg,
             enabled=False,
         )
         self._delete_btn = self._make_tool_button(
-            "profiles/delete",
+            "actions/delete",
             "Delete profile",
             self._emit_delete,
             btn_cfg,
@@ -129,10 +129,10 @@ class ProfilesSidebar(QWidget):
         toolbar.addStretch()
 
         self._up_btn = self._make_tool_button(
-            "profiles/up", "Move up", self._emit_move_up, btn_cfg, enabled=False
+            "actions/up", "Move up", self._emit_move_up, btn_cfg, enabled=False
         )
         self._down_btn = self._make_tool_button(
-            "profiles/down", "Move down", self._emit_move_down, btn_cfg, enabled=False
+            "actions/down", "Move down", self._emit_move_down, btn_cfg, enabled=False
         )
         toolbar.addWidget(self._up_btn)
         toolbar.addWidget(self._down_btn)
@@ -178,7 +178,7 @@ class ProfilesSidebar(QWidget):
             else:
                 icon = QIcon(
                     load_pixmap(
-                        "profiles/profile",
+                        "actions/profile",
                         self._cfg.profile_item_icon_size,
                         self._cfg.profile_item_icon_size,
                     )

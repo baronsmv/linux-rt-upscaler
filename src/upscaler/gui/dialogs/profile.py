@@ -98,7 +98,7 @@ class ProfileDialog(QDialog):
                 existing_icon = True
 
         if not existing_icon:
-            self._icon_preview.setPixmap(load_pixmap("profiles/profile", 32, 32))
+            self._icon_preview.setPixmap(load_pixmap("actions/profile", 32, 32))
 
         icon_layout.addWidget(self._icon_preview)
 
@@ -284,7 +284,7 @@ class ProfileDialog(QDialog):
         """Mark the icon for removal (restores default preview)."""
         self._captured_icon = None
         self._icon_removed = True
-        self._icon_preview.setPixmap(load_pixmap("profiles/profile", 32, 32))
+        self._icon_preview.setPixmap(load_pixmap("actions/profile", 32, 32))
 
     def get_captured_icon(self) -> Optional[QImage]:
         """Return the image to save as profile icon, if any."""
