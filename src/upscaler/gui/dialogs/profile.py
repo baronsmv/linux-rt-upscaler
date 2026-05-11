@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, Dict
+from typing import Dict, List, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -35,9 +35,6 @@ class MatchCriterion:
         self.key = key
         self.value = value
 
-    def to_tuple(self) -> Tuple[str, str]:
-        return self.key, self.value
-
 
 class ProfileDialog(QDialog):
     """Dialog for adding or editing a profile’s match criteria."""
@@ -50,8 +47,102 @@ class ProfileDialog(QDialog):
     ):
         super().__init__(parent)
         self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(480)
         self._match_criteria: List[MatchCriterion] = []
+
+        # ------------------------------------------------------------------
+        # Dark theme stylesheet
+        # ------------------------------------------------------------------
+        self.setStyleSheet(
+            """
+            QDialog {
+                background-color: #1e1e1e;
+                color: #ddd;
+            }
+            QLabel {
+                color: #ccc;
+                font-size: 14px;
+            }
+            QLineEdit {
+                background: #2a2a2c;
+                border: 1px solid #3a3a3c;
+                border-radius: 4px;
+                padding: 4px 8px;
+                color: #ddd;
+            }
+            QLineEdit:focus {
+                border-color: #4a9eff;
+            }
+            QComboBox {
+                background: #2a2a2c;
+                border: 1px solid #3a3a3c;
+                border-radius: 4px;
+                padding: 4px 8px;
+                color: #ddd;
+                min-width: 120px;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 0px;
+            }
+            QComboBox QAbstractItemView {
+                background: #2a2a2c;
+                border: none;
+                color: #ddd;
+                selection-background-color: #4a9eff;
+            }
+            QPushButton {
+                background: #2c2c2c;
+                border: 1px solid #444;
+                border-radius: 4px;
+                padding: 4px 12px;
+                color: #ddd;
+            }
+            QPushButton:hover {
+                background: #3a3a3c;
+                border-color: #555;
+            }
+            QPushButton:pressed {
+                background: #222;
+            }
+            QPushButton:disabled {
+                color: #555;
+            }
+            QGroupBox {
+                font-size: 14px;
+                font-weight: bold;
+                color: #888;
+                border: 1px solid #333;
+                border-radius: 6px;
+                margin-top: 8px;
+                padding-top: 16px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 6px;
+            }
+            QListWidget {
+                background: #1e1e1e;
+                border: 1px solid #333;
+                border-radius: 6px;
+                outline: none;
+                color: #ddd;
+            }
+            QListWidget::item {
+                padding: 4px 8px;
+                border-radius: 4px;
+            }
+            QListWidget::item:hover {
+                background: #2c2c2c;
+                color: #fff;
+            }
+            QListWidget::item:selected {
+                background: #3a3a3c;
+                color: #fff;
+            }
+        """
+        )
 
         layout = QVBoxLayout(self)
 
@@ -68,10 +159,11 @@ class ProfileDialog(QDialog):
 
         # List of criteria
         self._crit_list = QListWidget()
-        self._crit_list.setAlternatingRowColors(True)
+        self._crit_list.setAlternatingRowColors(False)
+        self._crit_list.setSelectionMode(QListWidget.ExtendedSelection)
         crit_layout.addWidget(self._crit_list)
 
-        # Add criterion row
+        # Add / Remove row
         add_layout = QHBoxLayout()
         self._type_combo = QComboBox()
         for key, label in MATCH_TYPES.items():
@@ -80,16 +172,22 @@ class ProfileDialog(QDialog):
         self._value_edit = QLineEdit()
         self._value_edit.setPlaceholderText("Value")
         add_layout.addWidget(self._value_edit)
+
         add_btn = QPushButton("Add")
         add_btn.clicked.connect(self._add_criterion)
         add_layout.addWidget(add_btn)
 
+        remove_btn = QPushButton("Remove")
+        remove_btn.clicked.connect(self._remove_selected)
+        add_layout.addWidget(remove_btn)
+
         crit_layout.addLayout(add_layout)
         layout.addWidget(crit_group)
 
-        # Buttons
+        # Bottom buttons
         btn_layout = QHBoxLayout()
         capture_btn = QPushButton("Capture from window")
+        capture_btn.setToolTip("Select a window and auto-fill match criteria")
         capture_btn.clicked.connect(self._capture)
         btn_layout.addWidget(capture_btn)
         btn_layout.addStretch()
