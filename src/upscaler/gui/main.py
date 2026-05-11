@@ -520,6 +520,7 @@ class MainWindow(QMainWindow):
                         else:
                             new_profiles[n] = self.profiles[n]
                     self.profiles = new_profiles
+                    self.left_sidebar.update_profiles(self.profiles)
                     self._rename_profile_icon(old_name, new_name)
 
                 self.profiles[new_name]["match"] = new_match
