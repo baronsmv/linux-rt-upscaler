@@ -89,7 +89,7 @@ class ConfigManager(QObject):
 
         # Snapshot of the persistent config at the last successful save.
         # Used for dirty‑state detection and "Reset" functionality.
-        self._saved_persistent_config = copy.deepcopy(self._persistent_config)
+        self.saved_persistent_config = copy.deepcopy(self._persistent_config)
 
     # ------------------------------------------------------------------
     #  Public properties
@@ -295,7 +295,7 @@ class ConfigManager(QObject):
             logger.debug("Saved global settings")
 
         # Update the saved snapshot so dirty‑state is cleared
-        self._saved_persistent_config = copy.deepcopy(self._persistent_config)
+        self.saved_persistent_config = copy.deepcopy(self._persistent_config)
         self.config_changed.emit()
 
     def reset_to_saved(self) -> None:
@@ -303,7 +303,7 @@ class ConfigManager(QObject):
         Discard any unsaved changes and revert the persistent config to the
         last saved state.
         """
-        self._persistent_config = copy.deepcopy(self._saved_persistent_config)
+        self._persistent_config = copy.deepcopy(self.saved_persistent_config)
         self._effective_config = self._compute_effective()
         self.config_changed.emit()
 
@@ -337,7 +337,7 @@ class ConfigManager(QObject):
         to the last saved state.
         """
         return self._configs_differ(
-            self._persistent_config, self._saved_persistent_config
+            self._persistent_config, self.saved_persistent_config
         )
 
     # ------------------------------------------------------------------

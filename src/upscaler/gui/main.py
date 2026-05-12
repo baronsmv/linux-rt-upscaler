@@ -196,7 +196,7 @@ class MainWindow(QMainWindow):
         sidebar = SettingsSidebar(
             self.gui_config,
             self._config_manager.persistent_config,
-            baseline_config=self._config_manager.global_baseline,
+            baseline_config=self._config_manager.saved_persistent_config,
             profile_active=self._config_manager.active_profile_name is not None,
             profile_has_options=self._active_profile_has_options(),
         )
