@@ -266,7 +266,9 @@ class MainWindow(QMainWindow):
 
     def _on_add_profile(self) -> None:
         try:
-            dlg = ProfileDialog(self.gui_config, parent=self)
+            dlg = ProfileDialog(
+                self.gui_config, profiles=self._config_manager.profiles, parent=self
+            )
             if dlg.exec() == QDialog.Accepted:
                 name = dlg.profile_name()
                 match = dlg.match_criteria()
@@ -279,6 +281,8 @@ class MainWindow(QMainWindow):
 
                 # Activate the new profile immediately (avoids double signal)
                 self._config_manager.set_active_profile(name)
+                # Sync sidebar dict, then show
+                self.left_sidebar.update_profiles(self._config_manager.profiles)
                 self.left_sidebar.populate_list(active_name=name)
 
         except Exception:
@@ -289,7 +293,11 @@ class MainWindow(QMainWindow):
         try:
             current_match = self._config_manager.profiles[name].get("match", {})
             dlg = ProfileDialog(
-                self.gui_config, profile_name=name, match=current_match, parent=self
+                self.gui_config,
+                profile_name=name,
+                match=current_match,
+                profiles=self._config_manager.profiles,
+                parent=self,
             )
             if dlg.exec() == QDialog.Accepted:
                 new_name = dlg.profile_name()
@@ -321,6 +329,8 @@ class MainWindow(QMainWindow):
                 if self._config_manager.active_profile_name == new_name:
                     self.left_sidebar.set_active_item(new_name)
 
+                # Sync and refresh
+                self.left_sidebar.update_profiles(self._config_manager.profiles)
                 self.left_sidebar.populate_list(active_name=new_name)
 
         except Exception:
@@ -336,9 +346,9 @@ class MainWindow(QMainWindow):
                 QMessageBox.Yes | QMessageBox.No,
             )
             if reply == QMessageBox.Yes:
-                # Remove icon file if any
                 self._remove_profile_icon_file(name)
                 self._config_manager.delete_profile(name)
+                self.left_sidebar.update_profiles(self._config_manager.profiles)
                 self.left_sidebar.populate_list(active_name=None)
                 if self._config_manager.active_profile_name == name:
                     self._config_manager.set_active_profile(None)

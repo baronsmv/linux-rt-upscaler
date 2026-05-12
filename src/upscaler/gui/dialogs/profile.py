@@ -37,12 +37,14 @@ class ProfileDialog(QDialog):
         gui_config: GUIConfig,
         profile_name: str = "",
         match: Optional[Dict[str, str]] = None,
+        profiles: Optional[Dict[str, dict]] = None,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self._cfg = gui_config
-
         self._original_name = profile_name
+        self._profiles = profiles or {}
+
         self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
         self.setMinimumWidth(520)
         self.setStyleSheet(list_stylesheet(gui_config))
@@ -86,8 +88,8 @@ class ProfileDialog(QDialog):
 
         # Load existing icon
         existing_icon_loaded = False
-        if profile_name and parent and hasattr(parent, "profiles"):
-            profile_data = parent.profiles.get(profile_name, {})
+        if profile_name and self._profiles:
+            profile_data = self._profiles.get(profile_name, {})
             icon_path = profile_data.get("icon", "")
             if icon_path and os.path.isfile(icon_path):
                 pix = QPixmap(icon_path).scaled(
@@ -235,7 +237,7 @@ class ProfileDialog(QDialog):
     def _styled_msg_box(
         self, icon: QMessageBox.Icon, title: str, text: str
     ) -> QMessageBox:
-        """Return a QMessageBox with the dialog's dark theme applied."""
+        """Return a themed QMessageBox."""
         msg = QMessageBox(icon, title, text, QMessageBox.Ok, self)
         cfg = self._cfg
         msg.setStyleSheet(
@@ -342,9 +344,11 @@ class ProfileDialog(QDialog):
         )
 
     def get_captured_icon(self) -> Optional[QImage]:
+        """Return the QImage of the newly selected/captured icon, or None."""
         return self._captured_icon
 
     def is_icon_removed(self) -> bool:
+        """Return True if the user explicitly removed the icon."""
         return self._icon_removed
 
     # ------------------------------------------------------------------
@@ -356,10 +360,9 @@ class ProfileDialog(QDialog):
             QMessageBox.warning(self, "Missing name", "Profile name cannot be empty.")
             return
 
-        # Duplicate check, only if the name is different from the original (when editing)
+        # Duplicate check using the provided profiles dictionary
         if name != self._original_name:
-            parent = self.parent()
-            if parent and hasattr(parent, "profiles") and name in parent.profiles:
+            if name in self._profiles:
                 self._styled_msg_box(
                     QMessageBox.Warning,
                     "Duplicate name",
@@ -387,7 +390,9 @@ class ProfileDialog(QDialog):
         self.accept()
 
     def profile_name(self) -> str:
+        """Return the entered profile name."""
         return self._profile_name
 
     def match_criteria(self) -> Dict[str, str]:
+        """Return the match criteria dictionary."""
         return self._match_dict
