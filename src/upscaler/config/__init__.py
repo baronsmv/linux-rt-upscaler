@@ -1,6 +1,6 @@
 """Utility public modules."""
 
-from .args import parse_args
+from .args import apply_overrides, parse_args
 from .models import (
     BackgroundColor,
     Config,
@@ -31,6 +31,7 @@ __all__ = [
     "OUTPUT_GEOMETRIES",
     "UPSCALING_MODELS",
     "ZOOM_LEVELS",
+    "apply_overrides",
     "find_matching_profile",
     "find_profile",
     "load_config",

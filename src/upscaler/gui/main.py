@@ -1,40 +1,27 @@
 from __future__ import annotations
 
-import collections
-import copy
 import logging
 import os
 import re
-from dataclasses import fields
 from typing import List, Optional
 
-from PySide6.QtCore import Qt, QStandardPaths, QTimer
+from PySide6.QtCore import QStandardPaths, Qt, QTimer
 from PySide6.QtGui import QKeySequence, QImage, QShortcut
 from PySide6.QtWidgets import (
-    QDialog,
-    QMainWindow,
-    QWidget,
-    QMessageBox,
     QApplication,
+    QDialog,
     QHBoxLayout,
+    QMainWindow,
+    QMessageBox,
     QVBoxLayout,
+    QWidget,
 )
 
-from .config import GUIConfig, presets
+from .config import ConfigManager, GUIConfig, presets
 from .dialogs import ProfileDialog
-from .grid import WindowGridScene, WindowGridView, FilterBar
+from .grid import FilterBar, WindowGridScene, WindowGridView
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .widgets import StyledSplitter
-from ..config import (
-    Config,
-    find_matching_profile,
-    find_profile,
-    load_yaml_config,
-    move_profile_down,
-    move_profile_up,
-    parse_config,
-    save_yaml_config,
-)
 from ..pipeline import create_pipeline_session
 from ..utils import system_color_scheme
 from ..window import WindowInfo, activate_window, list_windows
@@ -43,55 +30,32 @@ logger = logging.getLogger(__name__)
 
 
 class MainWindow(QMainWindow):
+    """
+    The primary GUI window for the upscaler.
+
+    This class coordinates the three panes (profile list, window grid,
+    settings sidebar) and delegates all configuration management to a
+    :class:`ConfigManager`.  It no longer manipulates config objects
+    directly – all layering, saving, and restoring is handled by the
+    manager.
+    """
+
     def __init__(
         self,
-        config: Config,
-        config_path: str,
-        profile_name: str,
+        config_manager: ConfigManager,
+        profile_name: Optional[str] = None,
         parent: Optional[QWidget] = None,
-    ):
+    ) -> None:
         super().__init__(parent)
+        self._config_manager = config_manager
 
-        self.config = config
-        self.config_path = config_path
-
-        self._profile_name = profile_name
-        self._active_profile = profile_name if profile_name else None
-        self._general_opts, profiles = load_yaml_config(self.config_path)
-        self.profiles = collections.OrderedDict(profiles)
-        self._profile_order = list(self.profiles.keys())
-
-        # Capture CLI overrides (anything that differs from the YAML baseline)
-        yaml_baseline = Config()
-        for k, v in self._general_opts.items():
-            if hasattr(yaml_baseline, k) and k not in ("log_level", "log_file"):
-                setattr(yaml_baseline, k, v)
-        parse_config(yaml_baseline)
-
-        self._cli_overrides = {}
-        for field in fields(self.config):
-            name = field.name
-            if name in ("config_file", "log_level", "log_file", "program"):
-                continue
-            val = getattr(self.config, name)
-            if val != getattr(yaml_baseline, name):
-                self._cli_overrides[name] = val
-
-        self._profile_has_options = (
-            bool(self.profiles[profile_name].get("options"))
-            if profile_name and profile_name in self.profiles
-            else False
+        # ---- GUI visual config (theme, dimensions) -----------------------
+        scheme = system_color_scheme()
+        self.gui_config = GUIConfig(
+            palette=presets.DARK if scheme == "dark" else presets.LIGHT
         )
 
-        self._baseline_config = self._compute_yaml_baseline()
-        self._global_config = copy.deepcopy(self.config)
-        scheme = system_color_scheme()
-        if scheme == "dark":
-            self.gui_config = GUIConfig(palette=presets.DARK)
-        else:
-            self.gui_config = GUIConfig(palette=presets.LIGHT)
-
-        # Icons directory
+        # ---- Icons directory (for profile icons) -------------------------
         self._icons_dir = os.path.join(
             QStandardPaths.writableLocation(QStandardPaths.ConfigLocation),
             "linux-rt-upscaler",
@@ -99,19 +63,22 @@ class MainWindow(QMainWindow):
         )
         os.makedirs(self._icons_dir, exist_ok=True)
 
+        # ---- UI setup ----------------------------------------------------
         self.setWindowTitle("Linux Real-Time Upscaler")
         self.setMinimumSize(1200, 600)
 
-        # ---- Central widget with horizontal splitter ----
+        # Central layout: splitter with three panels
         central = QWidget()
         self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # ---- Left sidebar (Profiles) ----
+        # Left sidebar – Profiles
         self.left_sidebar = ProfilesSidebar(
-            self.gui_config, self.profiles, self._active_profile
+            self.gui_config,
+            self._config_manager.profiles,
+            self._config_manager.active_profile_name,
         )
         self.left_sidebar.profile_selected.connect(self._on_profile_selected)
         self.left_sidebar.add_profile_requested.connect(self._on_add_profile)
@@ -120,9 +87,8 @@ class MainWindow(QMainWindow):
         self.left_sidebar.move_up_requested.connect(self._on_move_up)
         self.left_sidebar.move_down_requested.connect(self._on_move_down)
 
-        # ---- Central column: filter bar + grid ----
+        # Central column – filter bar + window grid
         central_widget = QWidget()
-        # self.setStyleSheet(f"background-color: {self.gui_config.main_background};")
         central_layout = QVBoxLayout(central_widget)
         central_layout.setContentsMargins(
             0, self.gui_config.filter_vertical_margin, 0, 0
@@ -141,51 +107,48 @@ class MainWindow(QMainWindow):
         self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
         central_layout.addWidget(self._view, stretch=1)
 
-        # ---- Right sidebar (Settings) ----
-        self.right_sidebar = SettingsSidebar(
-            self.gui_config,
-            self.config,
-            self._baseline_config,
-            profile_active=bool(self._active_profile),
-            profile_has_options=self._profile_has_options,
-        )
+        # Right sidebar – Settings
+        self.right_sidebar = self._create_right_sidebar()
         self.right_sidebar.save_settings.connect(self._on_save_settings)
         self.right_sidebar.reset_settings.connect(self._on_reset_settings)
         self.right_sidebar.restore_defaults.connect(self._on_restore_defaults)
 
-        # ---- Assemble splitter ----
+        # ---- Splitter ----------------------------------------------------
         self.splitter = StyledSplitter(Qt.Horizontal, self.gui_config)
         self.splitter.addWidget(self.left_sidebar)
         self.splitter.addWidget(central_widget)
         self.splitter.addWidget(self.right_sidebar)
         self.splitter.setSizes(
-            [
-                self.gui_config.sidebar_width,
-                400,
-                self.gui_config.sidebar_width,
-            ]
+            [self.gui_config.sidebar_width, 400, self.gui_config.sidebar_width]
         )
-
         main_layout.addWidget(self.splitter)
 
         # Ctrl+F shortcut
         QShortcut(QKeySequence("Ctrl+F"), self, self.filter_bar.set_focus)
 
-        # Auto-refresh timer
+        # Connect to config changes to refresh the right sidebar
+        self._config_manager.config_changed.connect(self._on_config_changed)
+
+        # ---- Auto-refresh timer ------------------------------------------
         self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self._auto_refresh)
         self._refresh_timer.start(self.gui_config.auto_refresh_ms)
 
-        # State
+        # ---- Pipeline state ----------------------------------------------
         self._selected_win_info: Optional[WindowInfo] = None
         self._session = None
         self._own_handle: Optional[int] = None
+
+        # Activate a profile if one was provided at startup
+        if profile_name and profile_name in self._config_manager.profiles:
+            self._config_manager.set_active_profile(profile_name)
+            self.left_sidebar.set_active_item(profile_name)
 
         self.showMaximized()
         QTimer.singleShot(0, self._initial_populate)
 
     # ------------------------------------------------------------------
-    #  Window list management
+    #  Window list helpers
     # ------------------------------------------------------------------
     def _initial_populate(self) -> None:
         self._own_handle = int(self.winId())
@@ -216,87 +179,201 @@ class MainWindow(QMainWindow):
     def _auto_refresh(self) -> None:
         self._populate_grid(self.filter_bar.text())
 
+    def _focus_grid(self) -> None:
+        self._view.setFocus()
+        self._scene.focus_first_tile()
+
     # ------------------------------------------------------------------
     #  Config helpers
     # ------------------------------------------------------------------
-    def _compute_yaml_baseline(self) -> Config:
-        """Build baseline Config from cached YAML options + active profile."""
-        baseline = Config()
-
-        # Apply cached general options
-        for k, v in self._general_opts.items():
-            if hasattr(baseline, k) and k not in ("log_level", "log_file"):
-                setattr(baseline, k, v)
-
-        # If a profile is active, its saved options take precedence
-        if self._active_profile and self._active_profile in self.profiles:
-            profile_data = self.profiles[self._active_profile]
-            if profile_data:
-                opts = profile_data.get("options", {})
-                for k, v in opts.items():
-                    if hasattr(baseline, k) and k not in ("log_level", "log_file"):
-                        setattr(baseline, k, v)
-
-        # CLI profile (not yet active), only needed at startup
-        elif self._profile_name:
-            profile_data = find_profile(self.profiles, self._profile_name)
-            if profile_data:
-                opts = profile_data.get("options", {})
-                for k, v in opts.items():
-                    if hasattr(baseline, k) and k not in ("log_level", "log_file"):
-                        setattr(baseline, k, v)
-
-        parse_config(baseline)
-        return baseline
-
-    # ------------------------------------------------------------------
-    #  Profile helpers
-    # ------------------------------------------------------------------
-    def _apply_profile(self, name: Optional[str]) -> None:
+    def _create_right_sidebar(self) -> SettingsSidebar:
         """
-        Replace the live config with the chosen profile's options, inheriting
-        any missing fields from the top-level YAML (general) options.
+        Build a new SettingsSidebar using the manager's current state.
+        The sidebar is given the global baseline for highlighting and
+        the persistent config for editing.
         """
-        self._active_profile = name
+        sidebar = SettingsSidebar(
+            self.gui_config,
+            self._config_manager.persistent_config,
+            baseline_config=self._config_manager.global_baseline,
+            profile_active=self._config_manager.active_profile_name is not None,
+            profile_has_options=self._active_profile_has_options(),
+        )
+        return sidebar
 
-        # Start from the latest global config (top‑level YAML, not system defaults)
-        self.config = copy.deepcopy(self._global_config)
+    def _active_profile_has_options(self) -> bool:
+        """Return True if the active profile has at least one option override."""
+        name = self._config_manager.active_profile_name
+        if not name:
+            return False
+        profile_data = self._config_manager.profiles.get(name, {})
+        return bool(profile_data.get("options", {}))
 
-        if name:
-            # Layer the profile's explicit options on top
-            opts = self.profiles[name].get("options", {})
-            for k, v in opts.items():
-                if hasattr(self.config, k):
-                    setattr(self.config, k, v)
-
-        # Re‑apply CLI overrides last
-        for k, v in self._cli_overrides.items():
-            if hasattr(self.config, k):
-                setattr(self.config, k, v)
-
-        parse_config(self.config)
-
-        # Update the `has options` flag
-        if name:
-            self._profile_has_options = bool(self.profiles[name].get("options"))
-        else:
-            self._profile_has_options = False
-
-        self._baseline_config = self._compute_yaml_baseline()
+    def _on_config_changed(self) -> None:
+        """Called whenever the manager's persistent config changes."""
         self._recreate_right_sidebar()
+
+    def _recreate_right_sidebar(self) -> None:
+        """Replace the right sidebar with a fresh one that reflects the new state."""
+        old = self.right_sidebar
+        idx = self.splitter.indexOf(old)
+        new_sidebar = self._create_right_sidebar()
+        new_sidebar.save_settings.connect(self._on_save_settings)
+        new_sidebar.reset_settings.connect(self._on_reset_settings)
+        new_sidebar.restore_defaults.connect(self._on_restore_defaults)
+        if idx != -1:
+            self.splitter.replaceWidget(idx, new_sidebar)
+            old.deleteLater()
+        else:
+            self.splitter.addWidget(new_sidebar)
+        self.right_sidebar = new_sidebar
+
+    # ------------------------------------------------------------------
+    #  Profile slots
+    # ------------------------------------------------------------------
+    def _on_profile_selected(self, name: str) -> None:
+        """
+        Switch to the selected profile, saving any unsaved changes first.
+        """
+        # If it's the already active profile, do nothing
+        if name == (self._config_manager.active_profile_name or ""):
+            return
+
+        if not self._maybe_save_before_switch():
+            return  # user canceled
+
+        self._config_manager.set_active_profile(name)
         self.left_sidebar.set_active_item(name)
+        # Sidebar is refreshed by the config_changed signal
 
-    def _save_profiles_to_disk(self):
-        """Write the current profile list to YAML, leaving general options untouched."""
+    def _on_add_profile(self) -> None:
         try:
-            general_opts, _ = load_yaml_config(self.config_path)
-            save_yaml_config(general_opts, dict(self.profiles), self.config_path)
-        except Exception:
-            logger.exception("Failed to auto-save profiles")
+            dlg = ProfileDialog(self.gui_config, parent=self)
+            if dlg.exec() == QDialog.Accepted:
+                name = dlg.profile_name()
+                match = dlg.match_criteria()
+                self._config_manager.add_profile(name, match)
 
+                # Handle icon
+                captured = dlg.get_captured_icon()
+                if captured:
+                    self._save_profile_icon(name, captured)
+
+                self.left_sidebar.populate_list(active_name=name)
+                QTimer.singleShot(
+                    0, lambda: self._config_manager.set_active_profile(name)
+                )
+        except Exception:
+            logger.exception("Failed to add profile")
+            QMessageBox.critical(self, "Error", "Could not add profile.")
+
+    def _on_edit_profile(self, name: str) -> None:
+        try:
+            current_match = self._config_manager.profiles[name].get("match", {})
+            dlg = ProfileDialog(
+                self.gui_config, profile_name=name, match=current_match, parent=self
+            )
+            if dlg.exec() == QDialog.Accepted:
+                new_name = dlg.profile_name()
+                new_match = dlg.match_criteria()
+
+                # Rename if needed
+                if new_name != name:
+                    if new_name in self._config_manager.profiles:
+                        QMessageBox.warning(
+                            self,
+                            "Duplicate name",
+                            f"A profile named '{new_name}' already exists.",
+                        )
+                        return
+                    self._config_manager.rename_profile(name, new_name)
+                    self._rename_profile_icon_file(name, new_name)
+                    self._config_manager.update_profile_match(new_name, new_match)
+                else:
+                    self._config_manager.update_profile_match(name, new_match)
+
+                # Update icon if captured
+                captured = dlg.get_captured_icon()
+                if captured:
+                    self._save_profile_icon(
+                        new_name if new_name != name else name, captured
+                    )
+
+                # If the active profile was renamed, update the active item
+                if self._config_manager.active_profile_name == (
+                    new_name if new_name != name else name
+                ):
+                    self.left_sidebar.set_active_item(new_name)
+
+                self.left_sidebar.populate_list(active_name=new_name)
+        except Exception:
+            logger.exception("Failed to edit profile")
+            QMessageBox.critical(self, "Error", "Could not edit profile.")
+
+    def _on_delete_profile(self, name: str) -> None:
+        try:
+            reply = QMessageBox.question(
+                self,
+                "Delete profile",
+                f"Delete profile '{name}'?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            if reply == QMessageBox.Yes:
+                # Remove icon file if any
+                self._remove_profile_icon_file(name)
+                self._config_manager.delete_profile(name)
+                self.left_sidebar.populate_list(active_name=None)
+                if self._config_manager.active_profile_name == name:
+                    self._config_manager.set_active_profile(None)
+        except Exception:
+            logger.exception("Failed to delete profile")
+            QMessageBox.critical(self, "Error", "Could not delete profile.")
+
+    def _on_move_up(self, name: str) -> None:
+        try:
+            self._config_manager.move_profile_up(name)
+            self.left_sidebar.update_profiles(self._config_manager.profiles)
+            self.left_sidebar.populate_list(active_name=name)
+        except Exception:
+            logger.exception("Failed to move profile up")
+            QMessageBox.critical(self, "Error", "Could not reorder profiles.")
+
+    def _on_move_down(self, name: str) -> None:
+        try:
+            self._config_manager.move_profile_down(name)
+            self.left_sidebar.update_profiles(self._config_manager.profiles)
+            self.left_sidebar.populate_list(active_name=name)
+        except Exception:
+            logger.exception("Failed to move profile down")
+            QMessageBox.critical(self, "Error", "Could not reorder profiles.")
+
+    # ------------------------------------------------------------------
+    #  Save / Reset / Restore (delegated)
+    # ------------------------------------------------------------------
+    def _on_save_settings(self) -> None:
+        """Save the current persistent config via the manager."""
+        try:
+            self._config_manager.save()
+        except Exception as e:
+            logger.exception("Save failed")
+            QMessageBox.critical(self, "Save Error", f"Could not save:\n{e}")
+
+    def _on_reset_settings(self) -> None:
+        """Revert to the last saved state."""
+        self._config_manager.reset_to_saved()
+
+    def _on_restore_defaults(self) -> None:
+        """Clear all overrides (profile or global)."""
+        self._config_manager.restore_defaults()
+        # Update left sidebar if a profile lost its options
+        self.left_sidebar.set_active_item(self._config_manager.active_profile_name)
+
+    # ------------------------------------------------------------------
+    #  Dirty‑check before switching profiles
+    # ------------------------------------------------------------------
     def _maybe_save_before_switch(self) -> bool:
         """Return False if user cancels."""
-        if self.right_sidebar.is_dirty():
+        if self._config_manager.is_dirty():
             reply = QMessageBox.question(
                 self,
                 "Unsaved changes",
@@ -312,116 +389,51 @@ class MainWindow(QMainWindow):
                 return False
         return True
 
-    def _safe_apply_profile(self, name: str):
-        try:
-            self._apply_profile(name if name != "" else None)
-        except Exception:
-            logger.exception("Failed to apply profile")
-            QMessageBox.critical(
-                self,
-                "Error",
-                "An unexpected error occurred while switching profiles.",
-            )
-
-    def _profile_options_diff(self) -> dict:
-        """
-        Return only the options that differ from the top‑level YAML baseline.
-        The baseline is parsed first so that colour‑tuple comparisons work.
-        """
-        baseline = Config()
-        for k, v in self._general_opts.items():
-            if hasattr(baseline, k) and k not in ("log_level", "log_file"):
-                setattr(baseline, k, v)
-        parse_config(baseline)  # ensure background_color is a tuple
-
-        diff = {}
-        for field in fields(self.config):
-            name = field.name
-            if name in ("config_file", "log_level", "log_file", "program"):
-                continue
-            value = getattr(self.config, name)
-            baseline_value = getattr(baseline, name)
-            if value != baseline_value:
-                diff[name] = value
-
-        return diff
-
     # ------------------------------------------------------------------
-    #  Icons helpers
+    #  Icon file helpers (file I/O stays in MainWindow, manager tracks path)
     # ------------------------------------------------------------------
-    def _sanitize_profile_name(self, name: str) -> str:
-        """Return a safe filename fragment for *name*."""
+    @staticmethod
+    def _sanitize_profile_name(name: str) -> str:
         return re.sub(r"[^\w\-_\. ]", "_", name).strip()
 
-    def _profile_icon_path(self, profile_name: str) -> str:
-        return os.path.join(
-            self._icons_dir, self._sanitize_profile_name(profile_name) + ".png"
-        )
+    def _profile_icon_path(self, name: str) -> str:
+        return os.path.join(self._icons_dir, self._sanitize_profile_name(name) + ".png")
 
-    def _set_profile_icon(self, profile_name: str, image: QImage):
+    def _save_profile_icon(self, profile_name: str, image: QImage) -> None:
         path = self._profile_icon_path(profile_name)
         image.save(path, "PNG")
-        self.profiles[profile_name]["icon"] = path
-        self._save_profiles_to_disk()
+        self._config_manager.set_profile_icon(profile_name, path)
 
-    def _remove_profile_icon(self, profile_name: str):
-        if profile_name in self.profiles and "icon" in self.profiles[profile_name]:
+    def _remove_profile_icon_file(self, profile_name: str) -> None:
+        # Remove the icon file from disk
+        try:
+            path = self._profile_icon_path(profile_name)
+            if os.path.isfile(path):
+                os.remove(path)
+        except OSError:
+            pass
+        self._config_manager.remove_profile_icon(profile_name)
+
+    def _rename_profile_icon_file(self, old_name: str, new_name: str) -> None:
+        """Rename the icon file on disk and update the profile entry."""
+        old_path = self._profile_icon_path(old_name)
+        if not os.path.isfile(old_path):
+            self._config_manager.remove_profile_icon(new_name)  # just in case
+            return
+        new_path = self._profile_icon_path(new_name)
+        try:
+            os.rename(old_path, new_path)
+            self._config_manager.set_profile_icon(new_name, new_path)
+        except OSError:
+            # Fallback: just remove old and let the user re-capture
+            self._config_manager.remove_profile_icon(old_name)
             try:
-                os.remove(self.profiles[profile_name]["icon"])
+                os.remove(old_path)
             except OSError:
                 pass
-            del self.profiles[profile_name]["icon"]
-            self._save_profiles_to_disk()
-
-    def _rename_profile_icon(self, old_name: str, new_name: str):
-        if old_name in self.profiles and "icon" in self.profiles[old_name]:
-            old_path = self.profiles[old_name]["icon"]
-            new_path = self._profile_icon_path(new_name)
-            try:
-                os.rename(old_path, new_path)
-                self.profiles[old_name]["icon"] = new_path
-            except OSError:
-                # fallback: remove old, capture new
-                self._remove_profile_icon(old_name)
-                return
-            self._save_profiles_to_disk()
 
     # ------------------------------------------------------------------
-    #  Focus helpers
-    # ------------------------------------------------------------------
-    def _focus_grid(self) -> None:
-        self._view.setFocus()
-        self._scene.focus_first_tile()
-
-    # ------------------------------------------------------------------
-    #  Sidebar helpers
-    # ------------------------------------------------------------------
-    def _recreate_right_sidebar(self) -> None:
-        old = self.right_sidebar
-        tab_index = old.current_tab_index
-        new = SettingsSidebar(
-            self.gui_config,
-            self.config,
-            self._baseline_config,
-            profile_active=bool(self._active_profile),
-            profile_has_options=self._profile_has_options,
-        )
-        new.save_settings.connect(self._on_save_settings)
-        new.reset_settings.connect(self._on_reset_settings)
-        new.restore_defaults.connect(self._on_restore_defaults)
-
-        idx = self.splitter.indexOf(old)
-        if idx != -1:
-            self.splitter.replaceWidget(idx, new)
-            old.deleteLater()
-        else:
-            self.splitter.addWidget(new)
-        self.right_sidebar = new
-
-        new.current_tab_index = tab_index
-
-    # ------------------------------------------------------------------
-    #  Slots
+    #  Window selection -> pipeline launch
     # ------------------------------------------------------------------
     def _on_filter_changed(self, text: str) -> None:
         self._populate_grid(text)
@@ -429,12 +441,19 @@ class MainWindow(QMainWindow):
     def _on_window_selected(self, win_info: WindowInfo) -> None:
         self._selected_win_info = win_info
 
-        # ---- Automatic profile matching ----
-        profile_name, _ = find_matching_profile(self.profiles, win_info.title)
-        if profile_name and profile_name != self._active_profile:
+        # Auto‑match profile based on window title (only if no profile is active)
+        from ..config.profiles import (
+            find_matching_profile,
+        )  # could move to manager later
+
+        profile_name, _ = find_matching_profile(
+            self._config_manager.profiles, win_info.title
+        )
+        if profile_name and profile_name != self._config_manager.active_profile_name:
             if not self._maybe_save_before_switch():
-                return  # user canceled the unsaved‑changes dialog
-            self._apply_profile(profile_name)
+                return
+            self._config_manager.set_active_profile(profile_name)
+            self.left_sidebar.set_active_item(profile_name)
             logger.info(
                 "Auto‑applied profile '%s' for window '%s'",
                 profile_name,
@@ -443,201 +462,22 @@ class MainWindow(QMainWindow):
 
         QTimer.singleShot(0, self._start_pipeline)
 
-    def _on_save_settings(self):
-        """Save the current config to the YAML file."""
-        try:
-            if self._active_profile:
-                # Profile options = diff from top‑level YAML, not from system defaults
-                new_options = self._profile_options_diff()
-                self.profiles[self._active_profile]["options"] = new_options
-                general_opts, _ = load_yaml_config(self.config_path)
-                save_yaml_config(general_opts, dict(self.profiles), self.config_path)
-                self._profile_has_options = bool(new_options)
-            else:
-                config_dict = self.config.to_dict(diff_only=True)
-                save_yaml_config(config_dict, dict(self.profiles), self.config_path)
-                # Update the cached global config and general opts
-                self._global_config = copy.deepcopy(self.config)
-                general_opts, _ = load_yaml_config(self.config_path)
-                self._general_opts = general_opts
-                self._profile_has_options = False
-
-            self._baseline_config = copy.deepcopy(self.config)
-            QTimer.singleShot(0, self._recreate_right_sidebar)
-        except Exception as e:
-            logger.exception("Failed to save configuration")
-            QMessageBox.critical(self, "Save Error", f"Could not save:\n{e}")
-
-    def _on_reset_settings(self):
-        """Revert all settings back to what was loaded from the file."""
-        logger.info("Resetting settings to saved state.")
-        self.config = copy.deepcopy(self._baseline_config)
-        self._recreate_right_sidebar()
-
-    def _on_restore_defaults(self):
-        if self._active_profile:
-            # Capture the current baseline *before* clearing options
-            old_baseline = copy.deepcopy(self._baseline_config)
-
-            # Clear the profile’s explicit options (in memory only)
-            self.profiles[self._active_profile]["options"] = {}
-
-            # Build the live config from top‑level YAML only (no profile overrides)
-            self.config = Config()
-            for k, v in self._cli_overrides.items():
-                if hasattr(self.config, k):
-                    setattr(self.config, k, v)
-            parse_config(self.config)
-
-            # Use the old baseline so the sidebar sees a difference
-            self._baseline_config = old_baseline
-            self._profile_has_options = False
-
-            self._recreate_right_sidebar()
-            self.left_sidebar.set_active_item(self._active_profile)
-            logger.info("Profile overrides cleared.")
-        else:
-            # Global config: true system defaults
-            self.config = Config()
-            for k, v in self._cli_overrides.items():
-                if hasattr(self.config, k):
-                    setattr(self.config, k, v)
-            parse_config(self.config)
-            self._recreate_right_sidebar()
-            logger.info("Restoring system defaults.")
-
-    def _on_profile_selected(self, name: str):
-        # Skip if the profile is already active
-        active = self._active_profile if self._active_profile else ""
-        if active == name:
-            return
-
-        if not self._maybe_save_before_switch():
-            return
-
-        QTimer.singleShot(0, lambda: self._safe_apply_profile(name))
-
-    def _on_add_profile(self):
-        try:
-            dlg = ProfileDialog(self.gui_config, parent=self)
-            if dlg.exec() == QDialog.Accepted:
-                name = dlg.profile_name()
-                match = dlg.match_criteria()
-                self.profiles[name] = {"match": match, "options": {}}
-                self._profile_order.append(name)
-                captured_icon = dlg.get_captured_icon()
-                if captured_icon:
-                    self._set_profile_icon(name, captured_icon)
-                self.left_sidebar.populate_list(active_name=name)
-                self._save_profiles_to_disk()
-                QTimer.singleShot(0, lambda n=name: self._safe_apply_profile(n))
-        except Exception:
-            logger.exception("Failed to add profile")
-            QMessageBox.critical(self, "Error", "Could not add profile.")
-
-    def _on_edit_profile(self, name: str):
-        try:
-            current_match = self.profiles[name].get("match", {})
-            dlg = ProfileDialog(
-                self.gui_config, profile_name=name, match=current_match, parent=self
-            )
-            if dlg.exec() == QDialog.Accepted:
-                new_name = dlg.profile_name()
-                new_match = dlg.match_criteria()
-                old_name = name
-
-                if new_name != old_name:
-                    # Prevent duplicate names
-                    if new_name in self.profiles:
-                        QMessageBox.warning(
-                            self,
-                            "Duplicate name",
-                            f"A profile named '{new_name}' already exists.",
-                        )
-                        return
-
-                    # Update order list and rebuild OrderedDict to keep position
-                    idx = self._profile_order.index(old_name)
-                    self._profile_order[idx] = new_name
-                    new_profiles = collections.OrderedDict()
-                    for n in self._profile_order:
-                        if n == new_name:
-                            new_profiles[new_name] = self.profiles[old_name]
-                        else:
-                            new_profiles[n] = self.profiles[n]
-                    self.profiles = new_profiles
-                    self.left_sidebar.update_profiles(self.profiles)
-                    self._rename_profile_icon(old_name, new_name)
-
-                self.profiles[new_name]["match"] = new_match
-                captured_icon = dlg.get_captured_icon()
-                if captured_icon:
-                    self._set_profile_icon(new_name, captured_icon)
-                self.left_sidebar.populate_list(active_name=new_name)
-                self._save_profiles_to_disk()
-        except Exception:
-            logger.exception("Failed to edit profile")
-            QMessageBox.critical(self, "Error", "Could not edit profile.")
-
-    def _on_delete_profile(self, name: str):
-        try:
-            reply = QMessageBox.question(
-                self,
-                "Delete profile",
-                f"Delete profile '{name}'?",
-                QMessageBox.Yes | QMessageBox.No,
-            )
-            if reply == QMessageBox.Yes:
-                self._remove_profile_icon(name)
-                del self.profiles[name]
-                self._profile_order.remove(name)
-                self.left_sidebar.populate_list(active_name=None)
-                self._save_profiles_to_disk()
-                if self._active_profile == name:
-                    QTimer.singleShot(0, lambda: self._safe_apply_profile(""))
-        except Exception:
-            logger.exception("Failed to delete profile")
-            QMessageBox.critical(self, "Error", "Could not delete profile.")
-
-    def _on_move_up(self, name: str):
-        try:
-            self.profiles = move_profile_up(self.profiles, name)
-            self._profile_order = list(self.profiles.keys())
-            self.left_sidebar.update_profiles(self.profiles)
-            self.left_sidebar.populate_list(active_name=name)
-            self._save_profiles_to_disk()
-        except Exception:
-            logger.exception("Failed to move profile up")
-            QMessageBox.critical(self, "Error", "Could not reorder profiles.")
-
-    def _on_move_down(self, name: str):
-        try:
-            self.profiles = move_profile_down(self.profiles, name)
-            self._profile_order = list(self.profiles.keys())
-            self.left_sidebar.update_profiles(self.profiles)
-            self.left_sidebar.populate_list(active_name=name)
-            self._save_profiles_to_disk()
-        except Exception:
-            logger.exception("Failed to move profile down")
-            QMessageBox.critical(self, "Error", "Could not reorder profiles.")
-
-    # ------------------------------------------------------------------
-    #  Pipeline launch
-    # ------------------------------------------------------------------
     def _start_pipeline(self) -> None:
         if self._selected_win_info is None:
             return
 
-        win_info = self._selected_win_info
-        logger.info("Starting upscale for: %s", win_info.title)
-
+        logger.info("Starting upscale for: %s", self._selected_win_info.title)
         self._refresh_timer.stop()
-        activate_window(win_info.handle)
+        activate_window(self._selected_win_info.handle)
         self.hide()
         self._scene.clear_all()
 
+        # The pipeline uses the effective config (includes CLI overrides)
         try:
-            self._session = create_pipeline_session(self.config, win_info)
+            self._session = create_pipeline_session(
+                self._config_manager.effective_config,
+                self._selected_win_info,
+            )
         except Exception as e:
             logger.exception("Failed to start pipeline")
             QMessageBox.critical(None, "Error", f"Could not start pipeline:\n{e}")
