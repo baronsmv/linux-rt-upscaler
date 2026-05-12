@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Dict, Optional
 
-from PySide6.QtCore import Signal, Qt, QSize
+from PySide6.QtCore import QEvent, Qt, QSize, Signal
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QFrame,
@@ -94,6 +94,7 @@ class ProfilesSidebar(QWidget):
         self._list = QListWidget()
         self._list.setMouseTracking(True)
         self._list.viewport().installEventFilter(self)
+        self._list.installEventFilter(self)
         self._list.setStyleSheet(self._list_stylesheet())
         self._list.setIconSize(
             QSize(
@@ -127,20 +128,45 @@ class ProfilesSidebar(QWidget):
             "radius": gui_config.profile_toolbar_button_border_radius,
         }
 
+        btn_cfg = {
+            "size": gui_config.profile_toolbar_button_size,
+            "icon_size": gui_config.profile_toolbar_button_icon_size,
+            "hover_bg": gui_config.profile_toolbar_button_background_hover,
+            "radius": gui_config.profile_toolbar_button_border_radius,
+        }
+
         self._add_btn = self._make_tool_button(
-            "actions/add", "Add profile", self.add_profile_requested.emit, btn_cfg
+            "actions/add",
+            "Add profile (Ctrl+N)",
+            self.add_profile_requested.emit,
+            btn_cfg,
         )
         self._edit_btn = self._make_tool_button(
             "actions/edit",
-            "Edit match criteria",
+            "Edit match criteria (Enter/F2)",
             self._emit_edit,
             btn_cfg,
             enabled=False,
         )
         self._delete_btn = self._make_tool_button(
             "actions/delete",
-            "Delete profile",
+            "Delete profile (Del)",
             self._emit_delete,
+            btn_cfg,
+            enabled=False,
+        )
+
+        self._up_btn = self._make_tool_button(
+            "actions/up",
+            "Move up (Ctrl+Shift+Up)",
+            self._emit_move_up,
+            btn_cfg,
+            enabled=False,
+        )
+        self._down_btn = self._make_tool_button(
+            "actions/down",
+            "Move down (Ctrl+Shift+Down)",
+            self._emit_move_down,
             btn_cfg,
             enabled=False,
         )
@@ -149,13 +175,6 @@ class ProfilesSidebar(QWidget):
         toolbar.addWidget(self._edit_btn)
         toolbar.addWidget(self._delete_btn)
         toolbar.addStretch()
-
-        self._up_btn = self._make_tool_button(
-            "actions/up", "Move up", self._emit_move_up, btn_cfg, enabled=False
-        )
-        self._down_btn = self._make_tool_button(
-            "actions/down", "Move down", self._emit_move_down, btn_cfg, enabled=False
-        )
         toolbar.addWidget(self._up_btn)
         toolbar.addWidget(self._down_btn)
 
@@ -168,14 +187,61 @@ class ProfilesSidebar(QWidget):
     #  Public helpers
     # ------------------------------------------------------------------
     def eventFilter(self, obj, event) -> bool:
-        """Change cursor to PointingHand when the mouse is over an item."""
-        if obj is self._list.viewport() and event.type() == event.Type.MouseMove:
-            pos = event.pos()
+        """Handle mouse‑hover cursor and keyboard shortcuts."""
+        # --- Mouse cursor over list items ---
+        if obj is self._list.viewport() and event.type() == QEvent.MouseMove:
+            pos = event.position().toPoint()
             item = self._list.itemAt(pos)
             if item is not None:
                 self._list.viewport().setCursor(Qt.PointingHandCursor)
             else:
                 self._list.viewport().setCursor(Qt.ArrowCursor)
+            return False  # don't consume the event
+
+        # --- Keyboard shortcuts when the list widget has focus ---
+        if obj is self._list and event.type() == QEvent.KeyPress:
+            key = event.key()
+            mods = event.modifiers() & Qt.KeyboardModifierMask
+
+            # Current item (may be None)
+            item = self._list.currentItem()
+            has_profile = item and item.data(Qt.UserRole) != ""
+
+            # Delete – triggers the existing confirmation dialog
+            if key == Qt.Key_Delete and has_profile:
+                self.delete_profile_requested.emit(item.data(Qt.UserRole))
+                return True
+
+            # Edit: Enter / Return or F2 (standard for rename)
+            if (
+                key == Qt.Key_Return or key == Qt.Key_Enter or key == Qt.Key_F2
+            ) and has_profile:
+                self.edit_profile_requested.emit(item.data(Qt.UserRole))
+                return True
+
+            # Add new profile: Ctrl+N (common shortcut)
+            if key == Qt.Key_N and mods == Qt.ControlModifier:
+                self.add_profile_requested.emit()
+                return True
+
+            # Move up: Ctrl+Shift+Up  (using Shift to avoid conflict with text navigation)
+            if (
+                key == Qt.Key_Up
+                and mods == (Qt.ControlModifier | Qt.ShiftModifier)
+                and has_profile
+            ):
+                self.move_up_requested.emit(item.data(Qt.UserRole))
+                return True
+
+            # Move down: Ctrl+Shift+Down
+            if (
+                key == Qt.Key_Down
+                and mods == (Qt.ControlModifier | Qt.ShiftModifier)
+                and has_profile
+            ):
+                self.move_down_requested.emit(item.data(Qt.UserRole))
+                return True
+
         return super().eventFilter(obj, event)
 
     def populate_list(self, active_name: Optional[str] = None) -> None:
