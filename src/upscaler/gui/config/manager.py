@@ -65,7 +65,7 @@ class ConfigManager(QObject):
 
         # ---- Load frozen data from disk -----------------------------------
         self._general_opts: Dict[str, Any] = {}
-        self._profiles: OrderedDict[str, Dict] = OrderedDict()
+        self.profiles: OrderedDict[str, Dict] = OrderedDict()
         self._load_from_disk()
 
         # ---- Compute the immutable layering bases ------------------------
@@ -73,62 +73,23 @@ class ConfigManager(QObject):
         parse_config(self._system_defaults)
 
         # Global baseline: system defaults + top‑level YAML (NO profile, NO CLI)
-        self._global_baseline = self._build_global_baseline()
+        self.global_baseline = self._build_global_baseline()
 
         # ---- Live state --------------------------------------------------
-        self._active_profile_name: Optional[str] = None
+        self.active_profile_name: Optional[str] = None
 
         # The *persistent* config is what the user edits in the sidebar.
         # It contains system defaults + YAML general + active profile options.
         # CLI overrides are intentionally excluded.
-        self._persistent_config = copy.deepcopy(self._global_baseline)
+        self.persistent_config = copy.deepcopy(self.global_baseline)
 
         # The *effective* config is what the pipeline actually uses.
         # It adds CLI overrides on top of the persistent one.
-        self._effective_config = self._compute_effective()
+        self.effective_config = self._compute_effective()
 
         # Snapshot of the persistent config at the last successful save.
         # Used for dirty‑state detection and "Reset" functionality.
-        self.saved_persistent_config = copy.deepcopy(self._persistent_config)
-
-    # ------------------------------------------------------------------
-    #  Public properties
-    # ------------------------------------------------------------------
-    @property
-    def persistent_config(self) -> Config:
-        """
-        The configuration that the user can modify through the GUI sidebars.
-        It **does not** contain CLI overrides, so saving it back to disk
-        will never leak transient CLI options.
-        """
-        return self._persistent_config
-
-    @property
-    def effective_config(self) -> Config:
-        """
-        The configuration that should be used by the upscaling pipeline.
-        It is built as: ``persistent_config + CLI overrides``.
-        """
-        return self._effective_config
-
-    @property
-    def profiles(self) -> OrderedDict[str, Dict]:
-        """Read‑only view of the current profiles (name -> {match, options, icon})."""
-        return OrderedDict(self._profiles)
-
-    @property
-    def active_profile_name(self) -> Optional[str]:
-        """Name of the currently active profile, or None for the global settings."""
-        return self._active_profile_name
-
-    @property
-    def global_baseline(self) -> Config:
-        """
-        Baseline for highlighting: system defaults + top‑level YAML only.
-        This is useful for the sidebar to show which options are overridden
-        by the active profile.
-        """
-        return self._global_baseline
+        self.saved_persistent_config = copy.deepcopy(self.persistent_config)
 
     # ------------------------------------------------------------------
     #  Profile management
@@ -141,19 +102,20 @@ class ConfigManager(QObject):
         then apply the profile's saved options (if any).  CLI overrides
         are kept separate and applied to the effective config only.
         """
-        self._active_profile_name = name
+        self.active_profile_name = name
 
         if name is not None:
-            profile_data = self._profiles.get(name, {})
+            profile_data = self.profiles.get(name, {})
             opts = profile_data.get("options", {})
-            self._persistent_config = copy.deepcopy(self._global_baseline)
-            apply_overrides(self._persistent_config, opts)
-            parse_config(self._persistent_config)
+            self.persistent_config = copy.deepcopy(self.global_baseline)
+            apply_overrides(self.persistent_config, opts)
+            parse_config(self.persistent_config)
 
         else:
-            self._persistent_config = copy.deepcopy(self._global_baseline)
+            self.persistent_config = copy.deepcopy(self.global_baseline)
 
-        self._effective_config = self._compute_effective()
+        self.effective_config = self._compute_effective()
+        self.saved_persistent_config = copy.deepcopy(self.persistent_config)
         self.config_changed.emit()
 
     def add_profile(self, name: str, match: Dict[str, Any]) -> None:
@@ -162,17 +124,17 @@ class ConfigManager(QObject):
 
         Raises `ValueError` if a profile with *name* already exists.
         """
-        if name in self._profiles:
+        if name in self.profiles:
             raise ValueError(f"Profile '{name}' already exists")
 
-        self._profiles[name] = {"match": match, "options": {}}
+        self.profiles[name] = {"match": match, "options": {}}
         self.profile_list_changed.emit()
         logger.debug(f"Added profile '{name}'")
 
     def delete_profile(self, name: str) -> None:
         """Remove the profile *name*.  Does nothing if the profile doesn't exist."""
-        if name in self._profiles:
-            del self._profiles[name]
+        if name in self.profiles:
+            del self.profiles[name]
             self.profile_list_changed.emit()
             logger.debug(f"Deleted profile '{name}'")
 
@@ -182,31 +144,31 @@ class ConfigManager(QObject):
 
         Raises `ValueError` if *new_name* already exists.
         """
-        if new_name in self._profiles:
+        if new_name in self.profiles:
             raise ValueError(f"Profile '{new_name}' already exists")
-        if old_name not in self._profiles:
+        if old_name not in self.profiles:
             raise ValueError(f"Profile '{old_name}' not found")
 
         # Rebuild OrderedDict to keep order
         new_profiles = OrderedDict()
-        for key, val in self._profiles.items():
+        for key, val in self.profiles.items():
             if key == old_name:
                 new_profiles[new_name] = val
             else:
                 new_profiles[key] = val
 
-        self._profiles = new_profiles
+        self.profiles = new_profiles
         self.profile_list_changed.emit()
         logger.debug(f"Renamed profile '{old_name}' -> '{new_name}'")
 
     def move_profile_up(self, name: str) -> None:
         """Reorder the profile one position up (does nothing if already first)."""
-        self._profiles = move_profile_up(self._profiles, name)
+        self.profiles = move_profile_up(self.profiles, name)
         self.profile_list_changed.emit()
 
     def move_profile_down(self, name: str) -> None:
         """Reorder the profile one position down."""
-        self._profiles = move_profile_down(self._profiles, name)
+        self.profiles = move_profile_down(self.profiles, name)
         self.profile_list_changed.emit()
 
     def update_profile_match(self, name: str, match: Dict[str, Any]) -> None:
@@ -214,9 +176,9 @@ class ConfigManager(QObject):
         Update the match criteria of an existing profile.
         The profile's options are left unchanged.
         """
-        if name not in self._profiles:
+        if name not in self.profiles:
             raise ValueError(f"Profile '{name}' not found")
-        self._profiles[name]["match"] = match
+        self.profiles[name]["match"] = match
         self.profile_list_changed.emit()
 
     # ------------------------------------------------------------------
@@ -229,30 +191,26 @@ class ConfigManager(QObject):
         The caller is responsible for having already saved the image file
         at *icon_path*.
         """
-        if name not in self._profiles:
+        if name not in self.profiles:
             raise ValueError(f"Profile '{name}' not found")
-        self._profiles[name]["icon"] = icon_path
-        save_yaml_config(self._general_opts, dict(self._profiles), self._config_path)
+        self.profiles[name]["icon"] = icon_path
+        save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
         self.profile_list_changed.emit()
 
     def remove_profile_icon(self, name: str) -> None:
         """Remove the icon entry for *name* (does not delete the file)."""
-        if name in self._profiles and "icon" in self._profiles[name]:
-            del self._profiles[name]["icon"]
-            save_yaml_config(
-                self._general_opts, dict(self._profiles), self._config_path
-            )
+        if name in self.profiles and "icon" in self.profiles[name]:
+            del self.profiles[name]["icon"]
+            save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
             self.profile_list_changed.emit()
 
     def update_profile_icon_path(self, new_name: str, new_path: str) -> None:
         """Update the icon path after a profile rename."""
-        if new_name not in self._profiles:
+        if new_name not in self.profiles:
             raise ValueError(f"Profile '{new_name}' not found")
-        if "icon" in self._profiles[new_name]:
-            self._profiles[new_name]["icon"] = new_path
-            save_yaml_config(
-                self._general_opts, dict(self._profiles), self._config_path
-            )
+        if "icon" in self.profiles[new_name]:
+            self.profiles[new_name]["icon"] = new_path
+            save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
             self.profile_list_changed.emit()
 
     # ------------------------------------------------------------------
@@ -267,35 +225,33 @@ class ConfigManager(QObject):
         - If no profile is active, the top‑level YAML section is updated
           with the diff from system defaults.
         """
-        if self._active_profile_name is not None:
+        if self.active_profile_name is not None:
             # Save only profile‑specific overrides (diff from global baseline)
             new_options = self._profile_options_diff()
-            self._profiles[self._active_profile_name]["options"] = new_options
+            self.profiles[self.active_profile_name]["options"] = new_options
 
             # Always write the full file: general opts unchanged + updated profiles
-            save_yaml_config(
-                self._general_opts, dict(self._profiles), self._config_path
-            )
+            save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
             logger.debug(
                 "Saved profile '%s' with %d options",
-                self._active_profile_name,
+                self.active_profile_name,
                 len(new_options),
             )
 
         else:
             # Global settings – top‑level YAML
-            cfg_dict = self._persistent_config.to_dict(diff_only=True)
-            save_yaml_config(cfg_dict, dict(self._profiles), self._config_path)
+            cfg_dict = self.persistent_config.to_dict(diff_only=True)
+            save_yaml_config(cfg_dict, dict(self.profiles), self._config_path)
 
             # Reload the general opts from what we just wrote to keep them in sync
             self._general_opts, _ = load_yaml_config(self._config_path)
 
             # Rebuild the global baseline because general opts may have changed
-            self._global_baseline = self._build_global_baseline()
+            self.global_baseline = self._build_global_baseline()
             logger.debug("Saved global settings")
 
         # Update the saved snapshot so dirty‑state is cleared
-        self.saved_persistent_config = copy.deepcopy(self._persistent_config)
+        self.saved_persistent_config = copy.deepcopy(self.persistent_config)
         self.config_changed.emit()
 
     def reset_to_saved(self) -> None:
@@ -303,8 +259,8 @@ class ConfigManager(QObject):
         Discard any unsaved changes and revert the persistent config to the
         last saved state.
         """
-        self._persistent_config = copy.deepcopy(self.saved_persistent_config)
-        self._effective_config = self._compute_effective()
+        self.persistent_config = copy.deepcopy(self.saved_persistent_config)
+        self.effective_config = self._compute_effective()
         self.config_changed.emit()
 
     def restore_defaults(self) -> None:
@@ -318,17 +274,18 @@ class ConfigManager(QObject):
 
         CLI overrides are **not** affected; they remain in the effective config.
         """
-        if self._active_profile_name is not None:
+        if self.active_profile_name is not None:
             # Clear profile options – profile goes to "no overrides" state
-            self._profiles[self._active_profile_name]["options"] = {}
-            self._persistent_config = copy.deepcopy(self._global_baseline)
+            self.profiles[self.active_profile_name]["options"] = {}
+            self.persistent_config = copy.deepcopy(self.global_baseline)
 
         else:
             # Restore system defaults (completely fresh Config)
-            self._persistent_config = copy.deepcopy(self._system_defaults)
+            self.persistent_config = copy.deepcopy(self._system_defaults)
 
-        parse_config(self._persistent_config)
-        self._effective_config = self._compute_effective()
+        parse_config(self.persistent_config)
+        self.effective_config = self._compute_effective()
+        self.saved_persistent_config = copy.deepcopy(self.persistent_config)
         self.config_changed.emit()
 
     def is_dirty(self) -> bool:
@@ -337,7 +294,7 @@ class ConfigManager(QObject):
         to the last saved state.
         """
         return self._configs_differ(
-            self._persistent_config, self.saved_persistent_config
+            self.persistent_config, self.saved_persistent_config
         )
 
     # ------------------------------------------------------------------
@@ -348,12 +305,12 @@ class ConfigManager(QObject):
         try:
             self._general_opts, raw_profiles = load_yaml_config(self._config_path)
             # Preserve insertion order (YAML already provides OrderedDict via safe_load)
-            self._profiles = OrderedDict(raw_profiles)
+            self.profiles = OrderedDict(raw_profiles)
 
         except Exception:
             logger.exception("Failed to load config from %s", self._config_path)
             self._general_opts = {}
-            self._profiles = OrderedDict()
+            self.profiles = OrderedDict()
 
     def _build_global_baseline(self) -> Config:
         """
@@ -370,7 +327,7 @@ class ConfigManager(QObject):
 
     def _compute_effective(self) -> Config:
         """Build the runtime config: persistent + CLI overrides."""
-        cfg = copy.deepcopy(self._persistent_config)
+        cfg = copy.deepcopy(self.persistent_config)
         apply_overrides(cfg, self._cli_overrides)
         parse_config(cfg)
         return cfg
@@ -381,12 +338,12 @@ class ConfigManager(QObject):
         to the global baseline.
         """
         diff = {}
-        for field in fields(self._persistent_config):
+        for field in fields(self.persistent_config):
             name = field.name
             if name in ("log_level", "log_file", "program", "config_file"):
                 continue
-            value = getattr(self._persistent_config, name)
-            baseline = getattr(self._global_baseline, name)
+            value = getattr(self.persistent_config, name)
+            baseline = getattr(self.global_baseline, name)
             if value != baseline:
                 diff[name] = value
         return diff
