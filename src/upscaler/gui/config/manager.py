@@ -127,8 +127,8 @@ class ConfigManager(QObject):
         """
         if name in self.profiles:
             raise ValueError(f"Profile '{name}' already exists")
-
         self.profiles[name] = {"match": match, "options": {}}
+        save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
         self.profile_list_changed.emit()
         logger.debug(f"Added profile '{name}'")
 
@@ -136,6 +136,7 @@ class ConfigManager(QObject):
         """Remove the profile *name*.  Does nothing if the profile doesn't exist."""
         if name in self.profiles:
             del self.profiles[name]
+            save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
             self.profile_list_changed.emit()
             logger.debug(f"Deleted profile '{name}'")
 
@@ -159,18 +160,9 @@ class ConfigManager(QObject):
                 new_profiles[key] = val
 
         self.profiles = new_profiles
+        save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
         self.profile_list_changed.emit()
         logger.debug(f"Renamed profile '{old_name}' -> '{new_name}'")
-
-    def move_profile_up(self, name: str) -> None:
-        """Reorder the profile one position up (does nothing if already first)."""
-        self.profiles = move_profile_up(self.profiles, name)
-        self.profile_list_changed.emit()
-
-    def move_profile_down(self, name: str) -> None:
-        """Reorder the profile one position down."""
-        self.profiles = move_profile_down(self.profiles, name)
-        self.profile_list_changed.emit()
 
     def update_profile_match(self, name: str, match: Dict[str, Any]) -> None:
         """
@@ -180,6 +172,19 @@ class ConfigManager(QObject):
         if name not in self.profiles:
             raise ValueError(f"Profile '{name}' not found")
         self.profiles[name]["match"] = match
+        save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
+        self.profile_list_changed.emit()
+
+    def move_profile_up(self, name: str) -> None:
+        """Reorder the profile one position up (does nothing if already first)."""
+        self.profiles = move_profile_up(self.profiles, name)
+        save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
+        self.profile_list_changed.emit()
+
+    def move_profile_down(self, name: str) -> None:
+        """Reorder the profile one position down."""
+        self.profiles = move_profile_down(self.profiles, name)
+        save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
         self.profile_list_changed.emit()
 
     # ------------------------------------------------------------------
