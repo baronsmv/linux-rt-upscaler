@@ -261,6 +261,10 @@ class ConfigManager(QObject):
         last saved state.
         """
         self.persistent_config = copy.deepcopy(self.saved_persistent_config)
+        if self.active_profile_name is not None:
+            diff = self._profile_options_diff()
+            self.profiles[self.active_profile_name]["options"] = diff
+
         self.effective_config = self._compute_effective()
         self.config_changed.emit()
 
@@ -268,7 +272,7 @@ class ConfigManager(QObject):
         """
         Clear all overrides:
 
-        - For the active profile: remove all its options.  The persistent
+        - For the active profile: remove all its options. The persistent
           config falls back to the global baseline (system + top‑level YAML).
         - For global settings: restore the true system defaults (a fresh
           ``Config()``), ignoring YAML overrides.
@@ -286,7 +290,6 @@ class ConfigManager(QObject):
 
         parse_config(self.persistent_config)
         self.effective_config = self._compute_effective()
-        self.saved_persistent_config = copy.deepcopy(self.persistent_config)
         self.config_changed.emit()
 
     def is_dirty(self) -> bool:
