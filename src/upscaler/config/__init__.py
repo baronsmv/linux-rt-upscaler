@@ -1,6 +1,7 @@
 """Utility public modules."""
 
 from .args import apply_overrides, parse_args
+from .logging import setup_logging
 from .models import (
     BackgroundColor,
     Config,
@@ -43,4 +44,5 @@ __all__ = [
     "validate_overrides",
     "save_yaml_config",
     "setup_config",
+    "setup_logging",
 ]

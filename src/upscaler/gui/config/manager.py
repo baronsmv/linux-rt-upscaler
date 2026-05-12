@@ -33,7 +33,8 @@ class ConfigManager(QObject):
         refresh their displayed values and dirty‑state highlighting.
 
     profile_list_changed ()
-        Emitted when profiles are added, removed, renamed, or reordered.
+        Emitted when profiles are added, removed, renamed, or reordered, or
+        when a profile’s icon path is changed.
     """
 
     config_changed = Signal()
@@ -216,9 +217,43 @@ class ConfigManager(QObject):
         if name not in self._profiles:
             raise ValueError(f"Profile '{name}' not found")
         self._profiles[name]["match"] = match
-
-        # No need to rebuild config; match criteria don't affect live settings
         self.profile_list_changed.emit()
+
+    # ------------------------------------------------------------------
+    #  Profile icon management (file I/O is handled by the caller)
+    # ------------------------------------------------------------------
+    def set_profile_icon(self, name: str, icon_path: str) -> None:
+        """
+        Store an icon path for *name* and immediately save to disk.
+
+        The caller is responsible for having already saved the image file
+        at *icon_path*.
+        """
+        if name not in self._profiles:
+            raise ValueError(f"Profile '{name}' not found")
+        self._profiles[name]["icon"] = icon_path
+        save_yaml_config(self._general_opts, dict(self._profiles), self._config_path)
+        self.profile_list_changed.emit()
+
+    def remove_profile_icon(self, name: str) -> None:
+        """Remove the icon entry for *name* (does not delete the file)."""
+        if name in self._profiles and "icon" in self._profiles[name]:
+            del self._profiles[name]["icon"]
+            save_yaml_config(
+                self._general_opts, dict(self._profiles), self._config_path
+            )
+            self.profile_list_changed.emit()
+
+    def update_profile_icon_path(self, new_name: str, new_path: str) -> None:
+        """Update the icon path after a profile rename."""
+        if new_name not in self._profiles:
+            raise ValueError(f"Profile '{new_name}' not found")
+        if "icon" in self._profiles[new_name]:
+            self._profiles[new_name]["icon"] = new_path
+            save_yaml_config(
+                self._general_opts, dict(self._profiles), self._config_path
+            )
+            self.profile_list_changed.emit()
 
     # ------------------------------------------------------------------
     #  Saving, resetting, restoring

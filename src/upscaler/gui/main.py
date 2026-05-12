@@ -5,7 +5,7 @@ import os
 import re
 from typing import List, Optional
 
-from PySide6.QtCore import QStandardPaths, Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QStandardPaths
 from PySide6.QtGui import QKeySequence, QImage, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -22,6 +22,7 @@ from .dialogs import ProfileDialog
 from .grid import FilterBar, WindowGridScene, WindowGridView
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .widgets import StyledSplitter
+from ..config import find_matching_profile
 from ..pipeline import create_pipeline_session
 from ..utils import system_color_scheme
 from ..window import WindowInfo, activate_window, list_windows
@@ -214,8 +215,9 @@ class MainWindow(QMainWindow):
         self._recreate_right_sidebar()
 
     def _recreate_right_sidebar(self) -> None:
-        """Replace the right sidebar with a fresh one that reflects the new state."""
+        """Replace the right sidebar with a fresh one and restore the active tab."""
         old = self.right_sidebar
+        tab_index = old.current_tab_index
         idx = self.splitter.indexOf(old)
         new_sidebar = self._create_right_sidebar()
         new_sidebar.save_settings.connect(self._on_save_settings)
@@ -226,16 +228,32 @@ class MainWindow(QMainWindow):
             old.deleteLater()
         else:
             self.splitter.addWidget(new_sidebar)
+        new_sidebar.current_tab_index = tab_index
         self.right_sidebar = new_sidebar
 
     # ------------------------------------------------------------------
     #  Profile slots
     # ------------------------------------------------------------------
+    def _maybe_save_before_switch(self) -> bool:
+        """Return False if user cancels."""
+        if self._config_manager.is_dirty():
+            reply = QMessageBox.question(
+                self,
+                "Unsaved changes",
+                "Save changes before switching profile?",
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+            )
+            if reply == QMessageBox.Save:
+                self._on_save_settings()
+                return True
+            elif reply == QMessageBox.Discard:
+                return True
+            else:
+                return False
+        return True
+
     def _on_profile_selected(self, name: str) -> None:
-        """
-        Switch to the selected profile, saving any unsaved changes first.
-        """
-        # If it's the already active profile, do nothing
+        # Already active?
         if name == (self._config_manager.active_profile_name or ""):
             return
 
@@ -244,7 +262,7 @@ class MainWindow(QMainWindow):
 
         self._config_manager.set_active_profile(name)
         self.left_sidebar.set_active_item(name)
-        # Sidebar is refreshed by the config_changed signal
+        # Sidebar is refreshed automatically by config_changed signal
 
     def _on_add_profile(self) -> None:
         try:
@@ -259,10 +277,10 @@ class MainWindow(QMainWindow):
                 if captured:
                     self._save_profile_icon(name, captured)
 
+                # Activate the new profile immediately (avoids double signal)
+                self._config_manager.set_active_profile(name)
                 self.left_sidebar.populate_list(active_name=name)
-                QTimer.singleShot(
-                    0, lambda: self._config_manager.set_active_profile(name)
-                )
+
         except Exception:
             logger.exception("Failed to add profile")
             QMessageBox.critical(self, "Error", "Could not add profile.")
@@ -299,13 +317,12 @@ class MainWindow(QMainWindow):
                         new_name if new_name != name else name, captured
                     )
 
-                # If the active profile was renamed, update the active item
-                if self._config_manager.active_profile_name == (
-                    new_name if new_name != name else name
-                ):
+                # If the active profile was renamed, update the sidebar highlight
+                if self._config_manager.active_profile_name == new_name:
                     self.left_sidebar.set_active_item(new_name)
 
                 self.left_sidebar.populate_list(active_name=new_name)
+
         except Exception:
             logger.exception("Failed to edit profile")
             QMessageBox.critical(self, "Error", "Could not edit profile.")
@@ -365,29 +382,8 @@ class MainWindow(QMainWindow):
     def _on_restore_defaults(self) -> None:
         """Clear all overrides (profile or global)."""
         self._config_manager.restore_defaults()
-        # Update left sidebar if a profile lost its options
+        # Update left sidebar in case the active profile lost its options
         self.left_sidebar.set_active_item(self._config_manager.active_profile_name)
-
-    # ------------------------------------------------------------------
-    #  Dirty‑check before switching profiles
-    # ------------------------------------------------------------------
-    def _maybe_save_before_switch(self) -> bool:
-        """Return False if user cancels."""
-        if self._config_manager.is_dirty():
-            reply = QMessageBox.question(
-                self,
-                "Unsaved changes",
-                "Save changes before switching profile?",
-                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-            )
-            if reply == QMessageBox.Save:
-                self._on_save_settings()
-                return True
-            elif reply == QMessageBox.Discard:
-                return True
-            else:
-                return False
-        return True
 
     # ------------------------------------------------------------------
     #  Icon file helpers (file I/O stays in MainWindow, manager tracks path)
@@ -417,20 +413,21 @@ class MainWindow(QMainWindow):
     def _rename_profile_icon_file(self, old_name: str, new_name: str) -> None:
         """Rename the icon file on disk and update the profile entry."""
         old_path = self._profile_icon_path(old_name)
-        if not os.path.isfile(old_path):
-            self._config_manager.remove_profile_icon(new_name)  # just in case
-            return
         new_path = self._profile_icon_path(new_name)
-        try:
-            os.rename(old_path, new_path)
-            self._config_manager.set_profile_icon(new_name, new_path)
-        except OSError:
-            # Fallback: just remove old and let the user re-capture
-            self._config_manager.remove_profile_icon(old_name)
+        if os.path.isfile(old_path):
             try:
-                os.remove(old_path)
+                os.rename(old_path, new_path)
+                self._config_manager.update_profile_icon_path(new_name, new_path)
             except OSError:
-                pass
+                # Fallback: remove old reference, let user re‑capture
+                self._config_manager.remove_profile_icon(old_name)
+                try:
+                    os.remove(old_path)
+                except OSError:
+                    pass
+        else:
+            # No file to rename – ensure the entry is clean
+            self._config_manager.remove_profile_icon(new_name)
 
     # ------------------------------------------------------------------
     #  Window selection -> pipeline launch
@@ -440,11 +437,6 @@ class MainWindow(QMainWindow):
 
     def _on_window_selected(self, win_info: WindowInfo) -> None:
         self._selected_win_info = win_info
-
-        # Auto‑match profile based on window title (only if no profile is active)
-        from ..config.profiles import (
-            find_matching_profile,
-        )  # could move to manager later
 
         profile_name, _ = find_matching_profile(
             self._config_manager.profiles, win_info.title
