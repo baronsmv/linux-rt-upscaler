@@ -102,6 +102,7 @@ class ConfigManager(QObject):
         then apply the profile's saved options (if any).  CLI overrides
         are kept separate and applied to the effective config only.
         """
+        name = name or None
         self.active_profile_name = name
 
         if name is not None:
