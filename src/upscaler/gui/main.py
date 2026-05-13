@@ -41,7 +41,7 @@ class MainWindow(QMainWindow):
     This class coordinates the three panes (profile list, window grid,
     settings sidebar) and delegates all configuration management to a
     :class:`ConfigManager`.  It no longer manipulates config objects
-    directly – all layering, saving, and restoring is handled by the
+    directly. All layering, saving, and restoring is handled by the
     manager.
     """
 
@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # Left sidebar – Profiles
+        # Left sidebar - Profiles
         self.left_sidebar = ProfilesSidebar(
             self.gui_config,
             self._config_manager.profiles,
@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):
         self.left_sidebar.move_up_requested.connect(self._on_move_up)
         self.left_sidebar.move_down_requested.connect(self._on_move_down)
 
-        # Central column – filter bar + window grid
+        # Central column - filter bar + window grid
         central_widget = QWidget()
         central_layout = QVBoxLayout(central_widget)
         central_layout.setContentsMargins(
@@ -118,7 +118,7 @@ class MainWindow(QMainWindow):
         self.about_btn.setIconSize(QSize(20, 20))
         self.about_btn.setFixedSize(32, 32)
         self.about_btn.setCursor(Qt.PointingHandCursor)
-        self.about_btn.setToolTip("About Linux Real‑Time Upscaler")
+        self.about_btn.setToolTip("About Linux Real-Time Upscaler")
         self.about_btn.setAutoRaise(True)
         self.about_btn.setStyleSheet(
             f"""
@@ -134,6 +134,7 @@ class MainWindow(QMainWindow):
         )
         self.about_btn.clicked.connect(self._show_about)
         filter_row.addWidget(self.about_btn)
+        filter_row.addSpacing(self.gui_config.filter_horizontal_margin)
 
         central_layout.addLayout(filter_row)
 
@@ -144,7 +145,7 @@ class MainWindow(QMainWindow):
         self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
         central_layout.addWidget(self._view, stretch=1)
 
-        # Right sidebar – Settings
+        # Right sidebar - Settings
         self.right_sidebar = self._create_right_sidebar()
         self.right_sidebar.save_settings.connect(self._on_save_settings)
         self.right_sidebar.reset_settings.connect(self._on_reset_settings)
@@ -465,14 +466,14 @@ class MainWindow(QMainWindow):
                 os.rename(old_path, new_path)
                 self._config_manager.update_profile_icon_path(new_name, new_path)
             except OSError:
-                # Fallback: remove old reference, let user re‑capture
+                # Fallback: remove old reference, let user re-capture
                 self._config_manager.remove_profile_icon(old_name)
                 try:
                     os.remove(old_path)
                 except OSError:
                     pass
         else:
-            # No file to rename – ensure the entry is clean
+            # No file to rename - ensure the entry is clean
             self._config_manager.remove_profile_icon(new_name)
 
     # ------------------------------------------------------------------
@@ -493,7 +494,7 @@ class MainWindow(QMainWindow):
             self._config_manager.set_active_profile(profile_name)
             self.left_sidebar.set_active_item(profile_name)
             logger.info(
-                "Auto‑applied profile '%s' for window '%s'",
+                "Auto-applied profile '%s' for window '%s'",
                 profile_name,
                 win_info.title,
             )
@@ -559,7 +560,7 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(icon_container)
 
         # ---- App name (big, bold) ----
-        name_label = QLabel("Linux Real‑Time Upscaler")
+        name_label = QLabel("Linux Real-Time Upscaler")
         name_label.setAlignment(Qt.AlignCenter)
         name_label.setStyleSheet(
             f"color: {cfg.palette.text_primary}; "
@@ -581,7 +582,7 @@ class MainWindow(QMainWindow):
 
         # ---- Tagline / description ----
         desc_label = QLabel(
-            "A real‑time AI upscaler for any application window on GNU/Linux."
+            "A real-time AI upscaler for any application window on GNU/Linux."
         )
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignCenter)

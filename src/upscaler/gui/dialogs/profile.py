@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 class ProfileDialog(QDialog):
-    """Dialog for creating or editing a profile’s name, icon, and match rules."""
+    """Dialog for creating or editing a profile's name, icon, and match rules."""
 
     def __init__(
         self,
@@ -169,7 +169,7 @@ class ProfileDialog(QDialog):
         self._match_title_contains = QLineEdit()
         self._match_title_contains.setPlaceholderText("e.g., VLC")
         self._match_title_contains.setToolTip(
-            "Match if the window title contains this text (case‑insensitive)."
+            "Match if the window title contains this text (case-insensitive)."
         )
         row1.addWidget(self._match_title_contains)
         match_layout.addLayout(row1)
@@ -184,7 +184,7 @@ class ProfileDialog(QDialog):
         self._match_title_regex = QLineEdit()
         self._match_title_regex.setPlaceholderText("e.g., (Yuzu|Ryujinx).*")
         self._match_title_regex.setToolTip(
-            "Match if the window title matches this regular expression (case‑insensitive)."
+            "Match if the window title matches this regular expression (case-insensitive)."
         )
         row2.addWidget(self._match_title_regex)
         match_layout.addLayout(row2)
@@ -199,7 +199,7 @@ class ProfileDialog(QDialog):
         self._match_title_exact = QLineEdit()
         self._match_title_exact.setPlaceholderText("e.g., Steam")
         self._match_title_exact.setToolTip(
-            "Match if the window title exactly equals this text (case‑insensitive)."
+            "Match if the window title exactly equals this text (case-insensitive)."
         )
         row3.addWidget(self._match_title_exact)
         match_layout.addLayout(row3)
@@ -218,7 +218,7 @@ class ProfileDialog(QDialog):
         )
         match_layout.addWidget(info)
 
-        # ── Pre‑fill existing match criteria ─────────────────────────
+        # ── Pre-fill existing match criteria ─────────────────────────
         if match:
             self._match_title_contains.setText(match.get("title_contains", ""))
             self._match_title_regex.setText(match.get("title_regex", ""))
@@ -296,7 +296,7 @@ class ProfileDialog(QDialog):
         return msg
 
     # ------------------------------------------------------------------
-    #  Match rule auto‑fill
+    #  Match rule auto-fill
     # ------------------------------------------------------------------
     def _capture_full(self):
         picker = WindowPickerDialog(

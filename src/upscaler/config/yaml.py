@@ -22,7 +22,7 @@ def load_yaml_config(
     Returns
     -------
     tuple[dict, dict]
-        The first dict contains the top‑level key/value pairs (excluding
+        The first dict contains the top-level key/value pairs (excluding
         'profiles'), the second dict contains the named profiles.
     """
     if custom_path:
@@ -43,7 +43,7 @@ def load_yaml_config(
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
     except FileNotFoundError:
-        # Race condition between isfile and open – just return empty
+        # Race condition between isfile and open - just return empty
         return general_options, profiles
     except PermissionError as e:
         logger.warning("Permission denied reading %s: %s", path, e)
@@ -54,7 +54,7 @@ def load_yaml_config(
     except RecursionError:
         logger.warning(
             "YAML recursion depth exceeded in %s. "
-            "The file may contain circular references or be overly deep – ignoring it.",
+            "The file may contain circular references or be overly deep, ignoring it.",
             path,
         )
         return general_options, profiles
@@ -68,7 +68,7 @@ def load_yaml_config(
 
     if not isinstance(data, dict):
         logger.warning(
-            "Config file %s is not a mapping (type %s) – ignoring it",
+            "Config file %s is not a mapping (type %s), ignoring it",
             path,
             type(data).__name__,
         )
@@ -94,7 +94,7 @@ def save_yaml_config(
     Parameters
     ----------
     general_options : dict
-        Top‑level configuration keys (excluding 'profiles').
+        Top-level configuration keys (excluding 'profiles').
     profiles : dict
         Profile definitions.
     config_path : str or None

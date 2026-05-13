@@ -3,7 +3,7 @@ from PySide6.QtGui import QGuiApplication
 
 
 def system_color_scheme() -> str:
-    """Return 'dark' or 'light' based on the OS/desktop colour scheme."""
+    """Return 'dark' or 'light' based on the OS/desktop color scheme."""
     # Qt 6.5+
     if hasattr(Qt, "ColorScheme"):
         scheme = QGuiApplication.styleHints().colorScheme()

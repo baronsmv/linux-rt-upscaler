@@ -30,11 +30,11 @@ class ConfigManager(QObject):
     config_changed ()
         Emitted whenever `persistent_config` is modified (by loading a profile,
         restoring defaults, etc.).  The sidebars can connect to this signal to
-        refresh their displayed values and dirty‑state highlighting.
+        refresh their displayed values and dirty-state highlighting.
 
     profile_list_changed ()
         Emitted when profiles are added, removed, renamed, or reordered, or
-        when a profile’s icon path is changed.
+        when a profile's icon path is changed.
     """
 
     config_changed = Signal()
@@ -55,7 +55,7 @@ class ConfigManager(QObject):
         config_path : str
             Path to the YAML configuration file (may not exist yet).
         cli_overrides : dict or None
-            Command‑line overrides as returned by :func:`config.args.parse_args`.
+            Command-line overrides as returned by :func:`config.args.parse_args`.
             These are **never** saved to disk; they are applied on top of
             everything else to form the effective runtime configuration.
         """
@@ -72,7 +72,7 @@ class ConfigManager(QObject):
         self._system_defaults = Config()  # all fields at their Dataclass defaults
         parse_config(self._system_defaults)
 
-        # Global baseline: system defaults + top‑level YAML (NO profile, NO CLI)
+        # Global baseline: system defaults + top-level YAML (NO profile, NO CLI)
         self.global_baseline = self._build_global_baseline()
 
         # ---- Live state --------------------------------------------------
@@ -88,7 +88,7 @@ class ConfigManager(QObject):
         self.effective_config = self._compute_effective()
 
         # Snapshot of the persistent config at the last successful save.
-        # Used for dirty‑state detection and "Reset" functionality.
+        # Used for dirty-state detection and "Reset" functionality.
         self.saved_persistent_config = copy.deepcopy(self.persistent_config)
 
     # ------------------------------------------------------------------
@@ -228,11 +228,11 @@ class ConfigManager(QObject):
 
         - If a profile is active, only the options that differ from the
           global baseline are saved inside the profile dictionary.
-        - If no profile is active, the top‑level YAML section is updated
+        - If no profile is active, the top-level YAML section is updated
           with the diff from system defaults.
         """
         if self.active_profile_name is not None:
-            # Save only profile‑specific overrides (diff from global baseline)
+            # Save only profile-specific overrides (diff from global baseline)
             new_options = self._profile_options_diff()
             self.profiles[self.active_profile_name]["options"] = new_options
 
@@ -245,7 +245,7 @@ class ConfigManager(QObject):
             )
 
         else:
-            # Global settings – top‑level YAML
+            # Global settings, top-level YAML
             cfg_dict = self.persistent_config.to_dict(diff_only=True)
             save_yaml_config(cfg_dict, dict(self.profiles), self._config_path)
 
@@ -256,7 +256,7 @@ class ConfigManager(QObject):
             self.global_baseline = self._build_global_baseline()
             logger.debug("Saved global settings")
 
-        # Update the saved snapshot so dirty‑state is cleared
+        # Update the saved snapshot so dirty-state is cleared
         self.saved_persistent_config = copy.deepcopy(self.persistent_config)
         self.config_changed.emit()
 
@@ -278,14 +278,14 @@ class ConfigManager(QObject):
         Clear all overrides:
 
         - For the active profile: remove all its options. The persistent
-          config falls back to the global baseline (system + top‑level YAML).
+          config falls back to the global baseline (system + top-level YAML).
         - For global settings: restore the true system defaults (a fresh
           ``Config()``), ignoring YAML overrides.
 
         CLI overrides are **not** affected; they remain in the effective config.
         """
         if self.active_profile_name is not None:
-            # Clear profile options – profile goes to "no overrides" state
+            # Clear profile options - profile goes to "no overrides" state
             self.profiles[self.active_profile_name]["options"] = {}
             self.persistent_config = copy.deepcopy(self.global_baseline)
 
@@ -323,10 +323,10 @@ class ConfigManager(QObject):
 
     def _build_global_baseline(self) -> Config:
         """
-        System defaults + top‑level YAML only.
+        System defaults + top-level YAML only.
 
         This is the starting point for any profile: it includes everything
-        from the “general” section of the config file.  Profile options and
+        from the "general" section of the config file.  Profile options and
         CLI overrides are **not** included.
         """
         base = copy.deepcopy(self._system_defaults)

@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 class WindowPickerDialog(QDialog):
     """Dialog to select a window from the list of open windows, with icons
-    and double‑click support.  Excludes the main GUI window if its handle
+    and double-click support.  Excludes the main GUI window if its handle
     is provided.
     """
 
@@ -47,7 +47,7 @@ class WindowPickerDialog(QDialog):
 
         # Filter input
         self._filter = QLineEdit()
-        self._filter.setPlaceholderText("Filter windows…")
+        self._filter.setPlaceholderText(f"Filter windows{chr(8230)}")
         self._filter.textChanged.connect(self._populate)
         layout.addWidget(self._filter)
 
@@ -70,7 +70,7 @@ class WindowPickerDialog(QDialog):
 
         self._selected_win: WindowInfo | None = None
 
-        # Pre‑load the fallback icon (generic window)
+        # Pre-load the fallback icon (generic window)
         pix = load_pixmap(
             "tabs/window",
             gui_config.profile_item_icon_size,
@@ -91,7 +91,7 @@ class WindowPickerDialog(QDialog):
             QMessageBox.warning(self, "Error", "Could not list windows.")
             return
 
-        # Sort by title, case‑insensitive
+        # Sort by title, case-insensitive
         all_windows.sort(key=lambda w: w.title.lower())
 
         for win in all_windows:
@@ -104,7 +104,7 @@ class WindowPickerDialog(QDialog):
                 continue
 
             # Build item text with size info
-            item_text = f"{win.title}  ({win.width}×{win.height})"
+            item_text = f"{win.title}  ({win.width}{chr(215)}{win.height})"
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, win)
 

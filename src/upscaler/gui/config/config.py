@@ -29,7 +29,7 @@ class GUIConfig:
     pop_scale: float = 1.05
     pop_duration: int = 200
 
-    # ── Tile‑specific colors (delegated to palette) ────────────
+    # ── Tile-specific colors (delegated to palette) ────────────
     @property
     def main_background(self) -> str:
         return self.palette.bg_deep
@@ -127,7 +127,7 @@ class GUIConfig:
     selection_border_width: int = 3
     hover_border_width: int = 2
 
-    # ── Empty‑grid placeholder ─────────────────────────────────
+    # ── Empty-grid placeholder ─────────────────────────────────
     empty_text: str = "No windows found"
 
     @property

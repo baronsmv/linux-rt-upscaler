@@ -44,7 +44,7 @@ class GuiPalette:
     accent_cyan: str = "#2b5b84"  # tile hover border
     accent_icon: str = "#7A9EB1"  # SVG icon stroke
 
-    # ── Slider, scrollbar, checkbox, color‑swatch ─────────────────
+    # ── Slider, scrollbar, checkbox, color-swatch ─────────────────
     slider_groove: str = "#333"
     slider_groove_disabled: str = "#222"
     scrollbar_handle: str = "#3a3a3c"

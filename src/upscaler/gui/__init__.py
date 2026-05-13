@@ -18,7 +18,7 @@ from ..config import parse_args, validate_overrides, setup_logging
 
 def main() -> None:
     """Start the upscaler GUI application."""
-    # Parse CLI arguments (the GUI accepts the same options as the non‑GUI version)
+    # Parse CLI arguments (the GUI accepts the same options as the non-GUI version)
     overrides, profile_name, config_path = parse_args()
     validate_overrides(overrides)
 

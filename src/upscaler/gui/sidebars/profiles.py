@@ -37,7 +37,7 @@ class ProfilesSidebar(QWidget):
         Emitted when the user clicks the Add button.
     edit_profile_requested(str)
         Emitted after a profile is selected, either by clicking the Edit
-        button or by double‑clicking the profile entry.
+        button or by double-clicking the profile entry.
     delete_profile_requested(str)
     move_up_requested(str)
     move_down_requested(str)
@@ -187,7 +187,7 @@ class ProfilesSidebar(QWidget):
     #  Public helpers
     # ------------------------------------------------------------------
     def eventFilter(self, obj, event) -> bool:
-        """Handle mouse‑hover cursor and keyboard shortcuts."""
+        """Handle mouse-hover cursor and keyboard shortcuts."""
         # --- Mouse cursor over list items ---
         if obj is self._list.viewport() and event.type() == QEvent.MouseMove:
             pos = event.position().toPoint()
@@ -207,7 +207,7 @@ class ProfilesSidebar(QWidget):
             item = self._list.currentItem()
             has_profile = item and item.data(Qt.UserRole) != ""
 
-            # Delete – triggers the existing confirmation dialog
+            # Delete, triggers the existing confirmation dialog
             if key == Qt.Key_Delete and has_profile:
                 self.delete_profile_requested.emit(item.data(Qt.UserRole))
                 return True
@@ -301,10 +301,10 @@ class ProfilesSidebar(QWidget):
                 )
             self._list.addItem(item)
 
-        # Re‑enable signals before selecting the active item
+        # Re-enable signals before selecting the active item
         self._list.blockSignals(False)
 
-        # Now select the correct item – the signal will fire and update toolbar buttons
+        # Now select the correct item - the signal will fire and update toolbar buttons
         if active_name is None or active_name == "":
             self._list.setCurrentRow(0)
         else:
@@ -318,8 +318,8 @@ class ProfilesSidebar(QWidget):
         """
         Highlight the given profile without rebuilding the list.
 
-        Use this when the list content hasn't changed – it prevents
-        unnecessary flicker and preserves the double‑click window.
+        Use this when the list content hasn't changed, it prevents
+        unnecessary flicker and preserves the double-click window.
         """
         target = name or ""
         self._list.blockSignals(True)
@@ -374,7 +374,7 @@ class ProfilesSidebar(QWidget):
         cfg: dict,
         enabled: bool = True,
     ) -> QPushButton:
-        """Create a flat, icon‑only toolbar button with configurable size."""
+        """Create a flat, icon-only toolbar button with configurable size."""
         btn = QPushButton()
         btn.setIcon(
             load_icon(
@@ -440,7 +440,7 @@ class ProfilesSidebar(QWidget):
 
     def _on_item_double_clicked(self, item: QListWidgetItem) -> None:
         """
-        Open the edit dialog for a double‑clicked profile.
+        Open the edit dialog for a double-clicked profile.
 
         The profile was already applied by the initial single click,
         so this only requests editing.

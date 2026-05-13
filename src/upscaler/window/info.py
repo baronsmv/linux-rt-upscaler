@@ -209,8 +209,8 @@ def get_window_pid(
 
 def get_window_icon(win_handle: int, size: int = 32) -> Optional[QImage]:
     """
-    Retrieve the best‑fitting icon from `_NET_WM_ICON` for *win_handle*,
-    scaled to *size*×*size*. Returns None if no icon is found.
+    Retrieve the best-fitting icon from `_NET_WM_ICON` for *win_handle*,
+    scaled to *size*x*size*. Returns None if no icon is found.
     """
     conn = open_xcb_connection()
     if conn is None:
@@ -248,7 +248,7 @@ def get_window_icon(win_handle: int, size: int = 32) -> Optional[QImage]:
             if w <= 0 or h <= 0:
                 continue
 
-            # Raw bytes are BGRA on little‑endian, which matches QImage::Format_ARGB32
+            # Raw bytes are BGRA on little-endian, which matches QImage::Format_ARGB32
             img = QImage(pixels, w, h, w * 4, QImage.Format_ARGB32)
 
             # Force a deep copy so the image owns its data

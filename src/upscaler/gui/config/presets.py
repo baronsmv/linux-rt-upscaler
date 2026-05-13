@@ -85,7 +85,7 @@ CYBERPUNK = GuiPalette(
     shadow_color=(0, 0, 0, 180),
 )
 
-# ── Solarized Dark (low‑contrast, warm) ──────────────────────────────
+# ── Solarized Dark (low-contrast, warm) ──────────────────────────────
 SOLARIZED_DARK = GuiPalette(
     bg_deep="#002b36",
     bg_panel="#073642",
