@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "linux-rt-upscaler"
-version = "1.0.0"
+version = "1.0.0.post1"
 description = "Real-time AI upscaler for any Linux window"
 readme = "README.md"
 authors = [
     { name = "Mauricio Valentín Barón Salinas", email = "baronsmv@gmail.com" }
 ]
-license = "GPL-3.0-only"
+license = "GPL-3.0-or-later"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
@@ -54,7 +54,8 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-"upscaler.shaders" = ["**/*.hlsl", "**/*.spv"]
-"upscaler.srcnn" = ["**/*.hlsl", "**/*.spv", "**/*.json"]
 "upscaler.capture" = ["lib/*.c", "lib/*.h"]
+"upscaler.gui.icons" = ["*.svg", "**/*.svg"]
+"upscaler.shaders" = ["**/*.spv"]
+"upscaler.srcnn" = ["**/*.json", "**/*.spv"]
 "upscaler.vulkan" = ["lib/*.cpp", "lib/*.h"]
