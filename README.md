@@ -18,6 +18,10 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 
 ![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/comparisons/diagram/w40-70_h40-90_4x_comparison.png)
 
+## Main Window
+
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/refs/heads/main/docs/gui/screenshots/02.png)
+
 ## Features
 
 - **AI-Powered Upscaling** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high-quality 2x upscaling of visual novels and illustrations.
@@ -44,22 +48,9 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 - Vulkan-capable GPU (NVIDIA, AMD, Intel)
 - Python 3.10 or newer
 
-> [!NOTE]
-> **Python 3.14 compatibility**
->
-> Previously, we advised against Python 3.14 due to a suspected Vulkan backend issue ([#1](https://github.com/baronsmv/linux-rt-upscaler/issues/1#issuecomment-4069065775)). Recent testing shows it should now work without problems.
->
-> Python 3.14 is supported; **however**, our testing has been limited. If you encounter any issues, please [report them](https://github.com/baronsmv/linux-rt-upscaler/issues).
->
-> For a safe fallback, you can still use Python 3.13:
->
-> ```sh
-> pipx install --python=python3.13 --fetch-missing-python linux-rt-upscaler
-> ```
-
 ## Installation
 
-### Install with pipx (recommended)
+### Install with pipx
 
 ```sh
 pipx install linux-rt-upscaler
@@ -111,7 +102,19 @@ pip install -e .
 
 ## Usage
 
-After installation, the `upscale` command will be available globally:
+After installation, the `upscale-gui` and `upscale` commands will be available globally:
+
+### Graphical mode
+
+```bash
+upscale-gui
+```
+
+The GUI displays live thumbnails of every open valid window. Click one to start upscaling that window. 
+
+Use the right panel to adjust any setting, and the left panel to create profiles that automatically apply when a matching window is detected, or when selected manually.
+
+### Command-line mode
 
 ```bash
 # Upscale the currently active window
@@ -131,14 +134,8 @@ upscale -m veryfast  # Maximum performance
 # Perform 4x upscaling (two 2x passes)
 upscale -2
 
-# Set a custom overlay geometry (50% size, fitted)
-upscale -o 50%
-
 # Crop 100 pixels from top and left, then upscale
 upscale --crop-top 100 --crop-left 100
-
-# Shift the overlay 100 pixels right and 50 down
-upscale --offset-x 100 --offset-y 50
 ```
 
 For a full list of options and examples:
@@ -198,7 +195,6 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 
 ## Future Plans
 
-- [ ] **Standalone GUI application** – Create a windowed app interface for easier management.
 - [ ] **Addition of more models** – Parse and include other models and shaders.
 - [ ] **Native Wayland support** – Support pure Wayland windows without XWayland.
 

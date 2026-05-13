@@ -5,13 +5,13 @@
 # ===================================================================
 
 set root_dir (dirname (dirname (status --current-filename)))
-
 cd "$root_dir"
 
 uv export \
     --format requirements-txt \
     --no-editable \
-    | grep -v '^\.$' > requirements.txt
+    --no-emit-project \
+    > requirements.txt
 
 pip install \
     --dry-run \
