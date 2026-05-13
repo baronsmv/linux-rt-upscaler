@@ -265,6 +265,9 @@ class ProfilesSidebar(QWidget):
         default_item = QListWidgetItem(default_icon, "  Global")
         default_item.setData(Qt.UserRole, "")
         default_item.setSizeHint(QSize(0, self._cfg.profile_item_height))
+        default_item.setToolTip(
+            "When selected, the settings panel on the right edits the global configuration."
+        )
         self._list.addItem(default_item)
 
         # Profile entries
@@ -291,6 +294,11 @@ class ProfilesSidebar(QWidget):
             item = QListWidgetItem(icon, f"  {name}")
             item.setData(Qt.UserRole, name)
             item.setSizeHint(QSize(0, self._cfg.profile_item_height))
+            if name:
+                item.setToolTip(
+                    "When selected, the settings panel on the right edits the "
+                    f"'{name}' profile overrides."
+                )
             self._list.addItem(item)
 
         # Re‑enable signals before selecting the active item

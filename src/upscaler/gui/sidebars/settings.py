@@ -142,7 +142,7 @@ class SettingsSidebar(IconSidebarBase):
         button_layout.setSpacing(8)
 
         # ---- Save button ----
-        self._save_btn = QPushButton("Save")
+        self._save_btn = QPushButton("Save Profile" if self._profile_active else "Save")
         self._save_btn.setCursor(Qt.PointingHandCursor)
         self._save_btn.setFixedHeight(cfg.footer_button_height)
         self._save_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -191,7 +191,7 @@ class SettingsSidebar(IconSidebarBase):
         restore_text = (
             "Clear profile overrides"
             if self._profile_active
-            else "Restore System Defaults"
+            else "Restore system defaults"
         )
         self._restore_action = menu.addAction(restore_text)
         self._restore_action.triggered.connect(self.restore_defaults.emit)
