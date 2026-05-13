@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QScrollArea,
 )
 
-from . import styles
 from ..controls import (
     CheckBox,
     ColorPickerRow,
@@ -22,6 +21,7 @@ from ..controls import (
     SectionLabel,
     SliderRow,
 )
+from ...styles import row_label, section_label, separator_line, scroll_area, scrollbar
 from ....config import DEFAULT_CONFIG
 
 if TYPE_CHECKING:
@@ -66,9 +66,9 @@ class SettingsTab(QWidget):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.verticalScrollBar().setStyleSheet(styles.scrollbar(gui_config))
+        scroll.verticalScrollBar().setStyleSheet(scrollbar(gui_config))
         scroll.setFrameShape(QScrollArea.NoFrame)
-        scroll.setStyleSheet(styles.scroll_area())
+        scroll.setStyleSheet(scroll_area())
 
         # ---- Inner content widget and its layout ----------------------------
         content = QWidget()
@@ -95,12 +95,12 @@ class SettingsTab(QWidget):
     def _add_section_label(self, text: str) -> None:
         """Add an uppercase section header with a thin separator line below."""
         label = QLabel(text.upper())
-        label.setStyleSheet(styles.section_label(self.gui_config))
+        label.setStyleSheet(section_label(self.gui_config))
 
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
-        line.setStyleSheet(styles.separator_line(self.gui_config))
+        line.setStyleSheet(separator_line(self.gui_config))
 
         self.content_layout.addWidget(label)
         self.content_layout.addWidget(line)
@@ -111,7 +111,7 @@ class SettingsTab(QWidget):
         row.setContentsMargins(0, 0, 0, 0)
 
         lbl = QLabel(label_text)
-        lbl.setStyleSheet(styles.row_label(self.gui_config))
+        lbl.setStyleSheet(row_label(self.gui_config))
         lbl.setFixedHeight(self.gui_config.sidebar_row_height)
         lbl.setAlignment(Qt.AlignVCenter)
         row.addWidget(lbl)

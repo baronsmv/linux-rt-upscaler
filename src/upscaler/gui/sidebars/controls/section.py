@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
 
-from ..common import styles
+from ...styles import section_label, separator_line
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -29,12 +29,12 @@ class SectionLabel(QWidget):
         layout.setSpacing(4)
 
         self._label = QLabel(text.upper())
-        self._label.setStyleSheet(styles.section_label(gui_config))
+        self._label.setStyleSheet(section_label(gui_config))
 
         self._line = QFrame()
         self._line.setFrameShape(QFrame.HLine)
         self._line.setFrameShadow(QFrame.Sunken)
-        self._line.setStyleSheet(styles.separator_line(self._cfg))
+        self._line.setStyleSheet(separator_line(self._cfg))
 
         layout.addWidget(self._label)
         layout.addWidget(self._line)

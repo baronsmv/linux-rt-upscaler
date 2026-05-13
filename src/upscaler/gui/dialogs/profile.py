@@ -20,9 +20,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ._styles import list_stylesheet
 from .window import WindowPickerDialog
 from ..icons import load_icon, load_pixmap
+from ..styles import dialog_style
 from ...window import get_window_icon
 
 if TYPE_CHECKING:
@@ -47,7 +47,7 @@ class ProfileDialog(QDialog):
 
         self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
         self.setMinimumWidth(520)
-        self.setStyleSheet(list_stylesheet(gui_config))
+        self.setStyleSheet(dialog_style(gui_config))
 
         # Exclude parent window from the picker
         self._exclude_handle = parent.winId() if parent else 0

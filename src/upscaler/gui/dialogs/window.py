@@ -15,8 +15,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ._styles import list_stylesheet
 from ..icons import load_pixmap
+from ..styles import dialog_style
 from ...window import WindowInfo, list_windows, get_window_icon
 
 if TYPE_CHECKING:
@@ -41,7 +41,7 @@ class WindowPickerDialog(QDialog):
         self._cfg = gui_config
         self._exclude_handle = exclude_handle
 
-        self.setStyleSheet(list_stylesheet(gui_config))
+        self.setStyleSheet(dialog_style(gui_config))
 
         layout = QVBoxLayout(self)
 
