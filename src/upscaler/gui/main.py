@@ -5,24 +5,28 @@ import os
 import re
 from typing import List, Optional
 
-from PySide6.QtCore import Qt, QTimer, QStandardPaths
+from PySide6.QtCore import Qt, QTimer, QStandardPaths, QSize
 from PySide6.QtGui import QKeySequence, QImage, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QHBoxLayout,
+    QLabel,
     QMainWindow,
     QMessageBox,
+    QPushButton,
     QVBoxLayout,
     QWidget,
+    QToolButton,
 )
 
 from .config import ConfigManager, GUIConfig, presets
 from .dialogs import ProfileDialog
 from .grid import FilterBar, WindowGridScene, WindowGridView
+from .icons import load_icon
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .widgets import StyledSplitter
-from ..config import find_matching_profile
+from ..config import find_matching_profile, get_version
 from ..pipeline import create_pipeline_session
 from ..utils import system_color_scheme
 from ..window import WindowInfo, activate_window, list_windows
@@ -96,10 +100,42 @@ class MainWindow(QMainWindow):
         )
         central_layout.setSpacing(0)
 
+        # ---- Filter bar + About button in a horizontal row ----
+        filter_row = QHBoxLayout()
+        filter_row.setContentsMargins(0, 0, 0, 0)
+        filter_row.setSpacing(4)
+
         self.filter_bar = FilterBar(self.gui_config)
         self.filter_bar.filter_changed.connect(self._on_filter_changed)
         self.filter_bar.focus_grid_requested.connect(self._focus_grid)
-        central_layout.addWidget(self.filter_bar)
+        filter_row.addWidget(self.filter_bar, 1)
+
+        # ---- About button ----
+        self.about_btn = QToolButton()
+        self.about_btn.setIcon(
+            load_icon("actions/about", 20, 20, color=self.gui_config.palette.text_dim)
+        )
+        self.about_btn.setIconSize(QSize(20, 20))
+        self.about_btn.setFixedSize(32, 32)
+        self.about_btn.setCursor(Qt.PointingHandCursor)
+        self.about_btn.setToolTip("About Linux Real‑Time Upscaler")
+        self.about_btn.setAutoRaise(True)
+        self.about_btn.setStyleSheet(
+            f"""
+            QToolButton {{
+                border-radius: 16px;
+                border: none;
+                background: transparent;
+            }}
+            QToolButton:hover {{
+                background: {self.gui_config.palette.bg_surface_hover};
+            }}
+            """
+        )
+        self.about_btn.clicked.connect(self._show_about)
+        filter_row.addWidget(self.about_btn)
+
+        central_layout.addLayout(filter_row)
 
         self._scene = WindowGridScene(self.gui_config)
         self._view = WindowGridView(self._scene, self.gui_config)
@@ -484,6 +520,121 @@ class MainWindow(QMainWindow):
             logger.exception("Failed to start pipeline")
             QMessageBox.critical(None, "Error", f"Could not start pipeline:\n{e}")
             QApplication.instance().quit()
+
+    def _show_about(self) -> None:
+        """Display the About dialog."""
+        cfg = self.gui_config  # shorthand
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("About")
+        dlg.setFixedSize(480, 400)
+
+        # Overall dialog styling
+        dlg.setStyleSheet(
+            f"""
+            QDialog {{
+                background-color: {cfg.dialog_background};
+                border: 1px solid {cfg.dialog_groupbox_border};
+                border-radius: 12px;
+            }}
+            """
+        )
+
+        main_layout = QVBoxLayout(dlg)
+        main_layout.setContentsMargins(32, 28, 32, 24)
+        main_layout.setSpacing(0)
+
+        # ---- App icon ----
+        icon_label = QLabel()
+        icon_pixmap = load_icon(
+            "app/app", 96, 96, color=cfg.palette.accent_blue
+        ).pixmap(96, 96)
+        icon_label.setPixmap(icon_pixmap)
+        icon_label.setFixedSize(96, 96)
+
+        icon_container = QVBoxLayout()
+        icon_container.addStretch()
+        icon_container.addWidget(icon_label, alignment=Qt.AlignCenter)
+        icon_container.addStretch()
+        main_layout.addLayout(icon_container)
+
+        # ---- App name (big, bold) ----
+        name_label = QLabel("Linux Real‑Time Upscaler")
+        name_label.setAlignment(Qt.AlignCenter)
+        name_label.setStyleSheet(
+            f"color: {cfg.palette.text_primary}; "
+            "font-size: 24px; "
+            "font-weight: bold; "
+            "margin-top: 16px;"
+        )
+        main_layout.addWidget(name_label)
+
+        # ---- Version (subtle) ----
+        version_label = QLabel(f"Version {get_version()}")
+        version_label.setAlignment(Qt.AlignCenter)
+        version_label.setStyleSheet(
+            f"color: {cfg.palette.text_secondary}; "
+            "font-size: 20px; "
+            "margin-top: 4px;"
+        )
+        main_layout.addWidget(version_label)
+
+        # ---- Tagline / description ----
+        desc_label = QLabel(
+            "A real‑time AI upscaler for any application window on GNU/Linux."
+        )
+        desc_label.setWordWrap(True)
+        desc_label.setAlignment(Qt.AlignCenter)
+        desc_label.setStyleSheet(
+            f"color: {cfg.palette.text_dim}; "
+            "font-size: 18px; "
+            "margin-top: 18px; "
+            "padding: 0 24px;"
+        )
+        main_layout.addWidget(desc_label)
+
+        # ---- GitHub link ----
+        link_label = QLabel()
+        link_label.setText(
+            "<a href='https://github.com/baronsmv/linux-rt-upscaler' "
+            "style='color: #4a9eff; text-decoration: none;'>"
+            "GitHub</a>"
+        )
+        link_label.setOpenExternalLinks(True)
+        link_label.setAlignment(Qt.AlignCenter)
+        link_label.setCursor(Qt.PointingHandCursor)
+        link_label.setStyleSheet("font-size: 18px; margin-top: 10px;")
+        main_layout.addWidget(link_label)
+
+        # Push remaining space above the button
+        main_layout.addStretch()
+
+        # ---- Close button ----
+        close_btn = QPushButton("Close")
+        close_btn.setFixedSize(120, 36)
+        close_btn.setCursor(Qt.PointingHandCursor)
+        close_btn.clicked.connect(dlg.accept)
+        close_btn.setStyleSheet(
+            f"""
+            QPushButton {{
+                background: {cfg.dialog_button_background};
+                border: 1px solid {cfg.dialog_button_border};
+                border-radius: 8px;
+                padding: 6px 18px;
+                color: {cfg.dialog_text_color};
+                font-size: 18px;
+            }}
+            QPushButton:hover {{
+                background: {cfg.dialog_button_hover_background};
+                border-color: {cfg.dialog_button_hover_border_color};
+            }}
+            """
+        )
+        btn_container = QVBoxLayout()
+        btn_container.addWidget(close_btn, alignment=Qt.AlignCenter)
+        main_layout.addLayout(btn_container)
+
+        dlg.exec()
 
     def closeEvent(self, event) -> None:
         self._refresh_timer.stop()

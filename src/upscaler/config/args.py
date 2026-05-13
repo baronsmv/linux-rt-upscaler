@@ -66,7 +66,7 @@ class FilteredHelpAction(argparse._HelpAction):
         parser.exit()
 
 
-def _get_version() -> str:
+def get_version() -> str:
     """Return the package version, with a fallback for development."""
     try:
         return version("linux-rt-upscaler")
@@ -110,7 +110,7 @@ def parse_args() -> Tuple[Dict, Optional[str], Optional[str]]:
         "-v",
         "--version",
         action="version",
-        version=f"%(prog)s {_get_version()}",
+        version=f"%(prog)s {get_version()}",
         help="Show program version and exit.",
     )
 

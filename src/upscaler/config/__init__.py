@@ -1,6 +1,6 @@
 """Utility public modules."""
 
-from .args import apply_overrides, parse_args
+from .args import apply_overrides, get_version, parse_args
 from .logging import setup_logging
 from .models import (
     BackgroundColor,
@@ -35,6 +35,7 @@ __all__ = [
     "apply_overrides",
     "find_matching_profile",
     "find_profile",
+    "get_version",
     "load_config",
     "load_yaml_config",
     "move_profile_down",
