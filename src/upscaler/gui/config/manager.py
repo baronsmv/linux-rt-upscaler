@@ -83,13 +83,17 @@ class ConfigManager(QObject):
         # CLI overrides are intentionally excluded.
         self.persistent_config = copy.deepcopy(self.global_baseline)
 
-        # The *effective* config is what the pipeline actually uses.
-        # It adds CLI overrides on top of the persistent one.
-        self.effective_config = self._compute_effective()
-
         # Snapshot of the persistent config at the last successful save.
         # Used for dirty-state detection and "Reset" functionality.
         self.saved_persistent_config = copy.deepcopy(self.persistent_config)
+
+    @property
+    def effective_config(self) -> Config:
+        """
+        The configuration that the pipeline should use.
+        Built fresh from the current persistent config + CLI overrides.
+        """
+        return self._compute_effective()
 
     # ------------------------------------------------------------------
     #  Profile management
@@ -115,7 +119,6 @@ class ConfigManager(QObject):
         else:
             self.persistent_config = copy.deepcopy(self.global_baseline)
 
-        self.effective_config = self._compute_effective()
         self.saved_persistent_config = copy.deepcopy(self.persistent_config)
         self.config_changed.emit()
 
@@ -270,7 +273,6 @@ class ConfigManager(QObject):
             diff = self._profile_options_diff()
             self.profiles[self.active_profile_name]["options"] = diff
 
-        self.effective_config = self._compute_effective()
         self.config_changed.emit()
 
     def restore_defaults(self) -> None:
@@ -294,7 +296,6 @@ class ConfigManager(QObject):
             self.persistent_config = copy.deepcopy(self._system_defaults)
 
         parse_config(self.persistent_config)
-        self.effective_config = self._compute_effective()
         self.config_changed.emit()
 
     def is_dirty(self) -> bool:
