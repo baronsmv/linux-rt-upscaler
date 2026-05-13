@@ -54,6 +54,7 @@ class GuiPalette:
     # ── Fonts ─────────────────────────────────────────────────────
     font_family: str = "Segoe UI"
     font_size_sm: int = 12  # tile titles
+    font_size_mid: int = 16  # visual hints
     font_size_base: int = 18  # dialogs
     font_size_lg: int = 24  # filter bar, maybe future
 

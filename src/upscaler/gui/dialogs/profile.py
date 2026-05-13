@@ -70,6 +70,7 @@ class ProfileDialog(QDialog):
         name_col.addWidget(name_label)
         self._name_edit = QLineEdit(profile_name)
         self._name_edit.setPlaceholderText("Profile name")
+        self._name_edit.setToolTip("A unique name for this profile. Required.")
         name_col.addWidget(self._name_edit)
         header.addLayout(name_col, 1)
 
@@ -151,6 +152,10 @@ class ProfileDialog(QDialog):
 
         # ── Match rules group ────────────────────────────────────────
         match_group = QGroupBox("Match rules")
+        match_group.setToolTip(
+            "Profiles are checked in the order they appear in the left panel. "
+            "The first profile whose match criteria fit the window will be applied."
+        )
         match_layout = QVBoxLayout(match_group)
         match_layout.setSpacing(8)
 
@@ -163,6 +168,9 @@ class ProfileDialog(QDialog):
         row1.addWidget(lbl)
         self._match_title_contains = QLineEdit()
         self._match_title_contains.setPlaceholderText("e.g., VLC")
+        self._match_title_contains.setToolTip(
+            "Match if the window title contains this text (case‑insensitive)."
+        )
         row1.addWidget(self._match_title_contains)
         match_layout.addLayout(row1)
 
@@ -175,6 +183,9 @@ class ProfileDialog(QDialog):
         row2.addWidget(lbl2)
         self._match_title_regex = QLineEdit()
         self._match_title_regex.setPlaceholderText("e.g., (Yuzu|Ryujinx).*")
+        self._match_title_regex.setToolTip(
+            "Match if the window title matches this regular expression (case‑insensitive)."
+        )
         row2.addWidget(self._match_title_regex)
         match_layout.addLayout(row2)
 
@@ -187,10 +198,25 @@ class ProfileDialog(QDialog):
         row3.addWidget(lbl3)
         self._match_title_exact = QLineEdit()
         self._match_title_exact.setPlaceholderText("e.g., Steam")
+        self._match_title_exact.setToolTip(
+            "Match if the window title exactly equals this text (case‑insensitive)."
+        )
         row3.addWidget(self._match_title_exact)
         match_layout.addLayout(row3)
 
         layout.addWidget(match_group)
+
+        # Info note
+        info = QLabel(
+            "Profiles are checked top-to-bottom; the first matching profile is applied."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet(
+            f"color: {self._cfg.palette.text_dim}; "
+            f"font-size: {self._cfg.palette.font_size_mid}px; "
+            "padding-top: 6px;"
+        )
+        match_layout.addWidget(info)
 
         # ── Pre‑fill existing match criteria ─────────────────────────
         if match:
