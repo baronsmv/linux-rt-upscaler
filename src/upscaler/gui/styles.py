@@ -18,7 +18,7 @@ def tooltip_style(cfg: GUIConfig) -> str:
         border: 1px solid {cfg.palette.border_subtle};
         padding: 4px;
         border-radius: 4px;
-        font-size: {cfg.palette.font_size_sm}px;
+        font-size: {cfg.palette.font_size_base}px;
     }}
     """
 
@@ -298,6 +298,7 @@ def checkbox_style(
         background-color: {indicator_color};
         border-color: {indicator_color};
     }}
+    {tooltip_style(cfg)}
     """
 
 
@@ -316,16 +317,14 @@ def color_swatch_style(
             border-radius: 4px;
         }}
         """
-    border = cfg.color_swatch_border
-    hover = cfg.sidebar_combo_border_focus
     return f"""
     QPushButton {{
         background-color: {current_color};
-        border: 1px solid {border};
+        border: 1px solid {cfg.color_swatch_border};
         border-radius: 4px;
     }}
     QPushButton:hover {{
-        border-color: {hover};
+        border-color: {cfg.sidebar_combo_border_focus};
     }}
     """
 
@@ -369,6 +368,7 @@ def slider_style(cfg: GUIConfig, enabled: bool = True) -> str:
         background: {sub_page};
         border-radius: 2px;
     }}
+    {tooltip_style(cfg)}
     """
 
 
@@ -698,8 +698,53 @@ def footer_menu_style(cfg: GUIConfig) -> str:
 
 
 # ---------------------------------------------------------------------------
-#  About dialog (specific button)
+#  About dialog
 # ---------------------------------------------------------------------------
+def about_button_style(cfg: GUIConfig) -> str:
+    """Style for the small '?' About button next to the filter bar."""
+    return f"""
+    QToolButton {{
+        border-radius: 16px;
+        border: none;
+        background: transparent;
+    }}
+    QToolButton:hover {{
+        background: {cfg.palette.bg_surface_hover};
+    }}
+    """
+
+
+def about_dialog_style(cfg: GUIConfig) -> str:
+    """Style for the About dialog itself (background, border, rounded corners)."""
+    return f"""
+    QDialog {{
+        background-color: {cfg.dialog_background};
+        border: 1px solid {cfg.dialog_groupbox_border};
+        border-radius: 12px;
+    }}
+    """
+
+
+def about_dialog_name_style(cfg: GUIConfig) -> str:
+    """Style for the application name in the About dialog."""
+    return f"color: {cfg.palette.text_primary}; font-size: 24px; font-weight: bold; margin-top: 16px;"
+
+
+def about_dialog_version_style(cfg: GUIConfig) -> str:
+    """Style for the version string in the About dialog."""
+    return f"color: {cfg.palette.text_secondary}; font-size: 20px; margin-top: 4px;"
+
+
+def about_dialog_description_style(cfg: GUIConfig) -> str:
+    """Style for the description text in the About dialog."""
+    return f"color: {cfg.palette.text_dim}; font-size: 18px; margin-top: 18px; padding: 0 24px;"
+
+
+def about_dialog_link_style(cfg: GUIConfig) -> str:
+    """Style for the GitHub link in the About dialog."""
+    return f"font-size: 18px; margin-top: 10px;"
+
+
 def about_dialog_close_button_style(cfg: GUIConfig) -> str:
     """Style for the 'Close' button in the About dialog."""
     return f"""
