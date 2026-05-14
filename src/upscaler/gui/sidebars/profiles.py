@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 
 from ..config import GUIConfig
 from ..icons import load_icon, load_pixmap
-from ..styles import scrollbar, sidebar_container
+from ..styles import scrollbar_style, sidebar_container_style
 
 
 class ProfilesSidebar(QWidget):
@@ -63,7 +63,7 @@ class ProfilesSidebar(QWidget):
 
         # ---- Visual identity ----
         self.setObjectName("sidebar_container")
-        self.setStyleSheet(sidebar_container(gui_config))
+        self.setStyleSheet(sidebar_container_style(gui_config))
         self.setFixedWidth(gui_config.sidebar_width)
 
         # ---- Layout ----
@@ -104,7 +104,7 @@ class ProfilesSidebar(QWidget):
         )
         self._list.setSpacing(gui_config.profile_item_spacing)
         self._list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self._list.verticalScrollBar().setStyleSheet(scrollbar(gui_config))
+        self._list.verticalScrollBar().setStyleSheet(scrollbar_style(gui_config))
         self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._list.currentItemChanged.connect(self._on_current_item_changed)
         self._list.itemDoubleClicked.connect(self._on_item_double_clicked)

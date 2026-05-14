@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 
-from ...styles import sidebar_container, tab_widget
+from ...styles import sidebar_container_style, tab_widget
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -35,7 +35,7 @@ class SidebarBase(QWidget):
 
         # ---- Visual identity ------------------------------------------------
         self.setObjectName("sidebar_container")
-        self.setStyleSheet(sidebar_container(gui_config))
+        self.setStyleSheet(sidebar_container_style(gui_config))
 
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(20)

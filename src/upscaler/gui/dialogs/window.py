@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -114,8 +114,6 @@ class WindowPickerDialog(QDialog):
                     win.handle, size=self._cfg.profile_capture_icon_size
                 )
                 if img and not img.isNull():
-                    from PySide6.QtGui import QPixmap
-
                     pix = QPixmap.fromImage(img)
                 else:
                     pix = load_pixmap(

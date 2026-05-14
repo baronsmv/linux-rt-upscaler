@@ -21,7 +21,13 @@ from ..controls import (
     SectionLabel,
     SliderRow,
 )
-from ...styles import row_label, section_label, separator_line, scroll_area, scrollbar
+from ...styles import (
+    row_label_style,
+    section_label,
+    separator_line_style,
+    scroll_area_style,
+    scrollbar_style,
+)
 from ....config import DEFAULT_CONFIG
 
 if TYPE_CHECKING:
@@ -66,9 +72,9 @@ class SettingsTab(QWidget):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.verticalScrollBar().setStyleSheet(scrollbar(gui_config))
+        scroll.verticalScrollBar().setStyleSheet(scrollbar_style(gui_config))
         scroll.setFrameShape(QScrollArea.NoFrame)
-        scroll.setStyleSheet(scroll_area())
+        scroll.setStyleSheet(scroll_area_style())
 
         # ---- Inner content widget and its layout ----------------------------
         content = QWidget()
@@ -100,7 +106,7 @@ class SettingsTab(QWidget):
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
-        line.setStyleSheet(separator_line(self.gui_config))
+        line.setStyleSheet(separator_line_style(self.gui_config))
 
         self.content_layout.addWidget(label)
         self.content_layout.addWidget(line)
@@ -111,7 +117,7 @@ class SettingsTab(QWidget):
         row.setContentsMargins(0, 0, 0, 0)
 
         lbl = QLabel(label_text)
-        lbl.setStyleSheet(row_label(self.gui_config))
+        lbl.setStyleSheet(row_label_style(self.gui_config))
         lbl.setFixedHeight(self.gui_config.sidebar_row_height)
         lbl.setAlignment(Qt.AlignVCenter)
         row.addWidget(lbl)

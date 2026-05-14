@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 #  Global / tooltip
 # ---------------------------------------------------------------------------
-def tooltip(cfg: GUIConfig) -> str:
+def tooltip_style(cfg: GUIConfig) -> str:
     """Style for QToolTip in both light and dark themes."""
     return f"""
     QToolTip {{
@@ -26,7 +26,7 @@ def tooltip(cfg: GUIConfig) -> str:
 # ---------------------------------------------------------------------------
 #  Filter bar
 # ---------------------------------------------------------------------------
-def filter_bar_line_edit(cfg: GUIConfig, *, hover: bool = False) -> str:
+def filter_bar_line_edit_style(cfg: GUIConfig, *, hover: bool = False) -> str:
     """Style for the filter bar QLineEdit, with optional hover state."""
     bg = cfg.filter_hover_background if hover else cfg.filter_background
     return f"""
@@ -48,7 +48,7 @@ def filter_bar_line_edit(cfg: GUIConfig, *, hover: bool = False) -> str:
 # ---------------------------------------------------------------------------
 #  Sidebar containers / tabs / scroll
 # ---------------------------------------------------------------------------
-def sidebar_container(cfg: GUIConfig) -> str:
+def sidebar_container_style(cfg: GUIConfig) -> str:
     """Outer rounded container for sidebars."""
     return f"""
     QWidget#sidebar_container {{
@@ -58,7 +58,7 @@ def sidebar_container(cfg: GUIConfig) -> str:
     """
 
 
-def sidebar_tab_widget(cfg: GUIConfig) -> str:
+def sidebar_tab_widget_style(cfg: GUIConfig) -> str:
     """QTabWidget and its tab bar inside a sidebar."""
     return f"""
     QTabWidget::pane {{
@@ -90,7 +90,7 @@ def sidebar_tab_widget(cfg: GUIConfig) -> str:
     """
 
 
-def scroll_area() -> str:
+def scroll_area_style() -> str:
     """Transparent scroll area that blends into the sidebar background."""
     return """
     QScrollArea {
@@ -103,7 +103,7 @@ def scroll_area() -> str:
     """
 
 
-def sidebar_section_label(cfg: GUIConfig) -> str:
+def sidebar_section_label_style(cfg: GUIConfig) -> str:
     """Uppercase section title inside a settings tab."""
     return f"""
     font-size: {cfg.sidebar_section_title_size}px;
@@ -115,17 +115,17 @@ def sidebar_section_label(cfg: GUIConfig) -> str:
     """
 
 
-def row_label(cfg: GUIConfig) -> str:
+def row_label_style(cfg: GUIConfig) -> str:
     """Label placed next to a control in a settings row."""
     return f"color: {cfg.sidebar_tab_text_color}; font-size: {cfg.sidebar_tab_font_size}px;"
 
 
-def separator_line(cfg: GUIConfig) -> str:
+def separator_line_style(cfg: GUIConfig) -> str:
     """Thin horizontal line used under section headers."""
     return f"color: {cfg.separator_line_color};"
 
 
-def scrollbar(cfg: GUIConfig) -> str:
+def scrollbar_style(cfg: GUIConfig) -> str:
     """Custom vertical scrollbar for sidebars."""
     return f"""
     QScrollBar:vertical {{
@@ -155,12 +155,12 @@ def scrollbar(cfg: GUIConfig) -> str:
 # ---------------------------------------------------------------------------
 #  BaseRow highlight helpers
 # ---------------------------------------------------------------------------
-def base_row_indicator(cfg: GUIConfig) -> str:
+def base_row_indicator_style(cfg: GUIConfig) -> str:
     """Style for the colored indicator bar (left side of a highlighted row)."""
     return f"background: {cfg.highlight_border_color}; border: none;"
 
 
-def base_row_content_background(cfg: GUIConfig, highlighted: bool) -> str:
+def base_row_content_background_style(cfg: GUIConfig, highlighted: bool) -> str:
     """Background style for the content container of a BaseRow."""
     if highlighted and cfg.highlight_background_enabled:
         return f"background: {cfg.highlight_background_color}; border-radius: 4px;"
@@ -374,7 +374,7 @@ def slider_value_label_style(cfg: GUIConfig, enabled: bool = True) -> str:
 
 
 # ---------------------------------------------------------------------------
-#  Dialog (universal for all setting-related dialogs)
+#  Dialog
 # ---------------------------------------------------------------------------
 def dialog_style(cfg: GUIConfig) -> str:
     """Full stylesheet for QDialog used by ProfileDialog and WindowPickerDialog."""
@@ -464,6 +464,62 @@ def dialog_style(cfg: GUIConfig) -> str:
     QListWidget::item:selected {{
         background: {cfg.dialog_list_item_selected_background};
         color: {cfg.palette.text_primary};
+    }}
+    """
+
+
+def dialog_header_label_style(cfg: GUIConfig) -> str:
+    """Style for the header label in Profile Editor dialog."""
+    return "font-weight: bold;"
+
+
+def icon_preview_style(cfg: GUIConfig) -> str:
+    """Style for icon preview in Profile Editor dialog."""
+    return f"border: 1px solid {cfg.icon_preview_border_color}; border-radius: 4px;"
+
+
+def dialog_info_label_style(cfg: GUIConfig) -> str:
+    """Style for info label in Profile Editor dialog."""
+    return (
+        f"color: {cfg.palette.text_dim}; "
+        f"font-size: {cfg.palette.font_size_mid}px; "
+        "padding-top: 6px;"
+    )
+
+
+def dialog_match_label_style(cfg: GUIConfig) -> str:
+    """Style for match label in Profile Editor dialog."""
+    return f"font-size: {cfg.dialog_match_label_font_size}px; font-weight: bold;"
+
+
+# ---------------------------------------------------------------------------
+#  Message box
+# ---------------------------------------------------------------------------
+def message_box_style(cfg: GUIConfig) -> str:
+    """Style for the QMessageBox that displays messages."""
+    return f"""
+    QMessageBox {{
+        background-color: {cfg.dialog_background};
+        color: {cfg.dialog_text_color};
+        font-size: {cfg.dialog_label_font_size}px;
+    }}
+    QMessageBox QLabel {{
+        color: {cfg.dialog_text_color};
+        font-size: {cfg.dialog_label_font_size}px;
+    }}
+    QMessageBox QPushButton {{
+        background: {cfg.dialog_button_background};
+        border: 1px solid {cfg.dialog_button_border};
+        border-radius: {cfg.dialog_button_border_radius}px;
+        padding: {cfg.dialog_button_padding};
+        color: {cfg.dialog_text_color};
+        min-width: 60px;
+    }}
+    QMessageBox QPushButton:hover {{
+        background: {cfg.dialog_button_hover_background};
+    }}
+    QMessageBox QPushButton:pressed {{
+        background: {cfg.dialog_button_pressed_background};
     }}
     """
 

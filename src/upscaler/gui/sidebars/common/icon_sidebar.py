@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 
 from .icon_tab_bar import IconTabBar
 from ...config import GUIConfig
-from ...styles import sidebar_container
+from ...styles import sidebar_container_style
 
 
 class IconSidebarBase(QWidget):
@@ -29,7 +29,7 @@ class IconSidebarBase(QWidget):
 
         # ---- Styling ----
         self.setObjectName("sidebar_container")
-        self.setStyleSheet(sidebar_container(gui_config))
+        self.setStyleSheet(sidebar_container_style(gui_config))
 
         # Shadow Effect (disable for better performance,
         # but might need to evaluate its real weight further later on

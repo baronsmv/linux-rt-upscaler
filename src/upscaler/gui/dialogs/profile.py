@@ -22,7 +22,14 @@ from PySide6.QtWidgets import (
 
 from .window import WindowPickerDialog
 from ..icons import load_icon, load_pixmap
-from ..styles import dialog_style
+from ..styles import (
+    dialog_header_label_style,
+    dialog_info_label_style,
+    dialog_match_label_style,
+    dialog_style,
+    icon_preview_style,
+    message_box_style,
+)
 from ...window import get_window_icon
 
 if TYPE_CHECKING:
@@ -47,7 +54,7 @@ class ProfileDialog(QDialog):
 
         self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
         self.setMinimumWidth(520)
-        self.setStyleSheet(dialog_style(gui_config))
+        self.setStyleSheet(dialog_style(self._cfg))
 
         # Exclude parent window from the picker
         self._exclude_handle = parent.winId() if parent else 0
@@ -66,7 +73,7 @@ class ProfileDialog(QDialog):
         # Name field
         name_col = QVBoxLayout()
         name_label = QLabel("Name")
-        name_label.setStyleSheet("font-weight: bold;")
+        name_label.setStyleSheet(dialog_header_label_style(self._cfg))
         name_col.addWidget(name_label)
         self._name_edit = QLineEdit(profile_name)
         self._name_edit.setPlaceholderText("Profile name")
@@ -77,14 +84,12 @@ class ProfileDialog(QDialog):
         # Icon
         icon_col = QVBoxLayout()
         icon_label = QLabel("Icon")
-        icon_label.setStyleSheet("font-weight: bold;")
+        icon_label.setStyleSheet(dialog_header_label_style(self._cfg))
         icon_col.addWidget(icon_label)
 
         self._icon_preview = QLabel()
         self._icon_preview.setFixedSize(32, 32)
-        self._icon_preview.setStyleSheet(
-            f"border: 1px solid {self._cfg.icon_preview_border_color}; border-radius: 4px;"
-        )
+        self._icon_preview.setStyleSheet(icon_preview_style(self._cfg))
         self._icon_preview.setAlignment(Qt.AlignCenter)
 
         # Load existing icon
@@ -162,9 +167,7 @@ class ProfileDialog(QDialog):
         # Title contains
         row1 = QHBoxLayout()
         lbl = QLabel("Title contains:")
-        lbl.setStyleSheet(
-            f"font-size: {self._cfg.dialog_match_label_font_size}px; font-weight: bold;"
-        )
+        lbl.setStyleSheet(dialog_match_label_style(self._cfg))
         row1.addWidget(lbl)
         self._match_title_contains = QLineEdit()
         self._match_title_contains.setPlaceholderText("e.g., VLC")
@@ -177,9 +180,7 @@ class ProfileDialog(QDialog):
         # Title regex
         row2 = QHBoxLayout()
         lbl2 = QLabel("Title regex:")
-        lbl2.setStyleSheet(
-            f"font-size: {self._cfg.dialog_match_label_font_size}px; font-weight: bold;"
-        )
+        lbl2.setStyleSheet(dialog_match_label_style(self._cfg))
         row2.addWidget(lbl2)
         self._match_title_regex = QLineEdit()
         self._match_title_regex.setPlaceholderText("e.g., (Yuzu|Ryujinx).*")
@@ -192,9 +193,7 @@ class ProfileDialog(QDialog):
         # Title exact
         row3 = QHBoxLayout()
         lbl3 = QLabel("Title exact:")
-        lbl3.setStyleSheet(
-            f"font-size: {self._cfg.dialog_match_label_font_size}px; font-weight: bold;"
-        )
+        lbl3.setStyleSheet(dialog_match_label_style(self._cfg))
         row3.addWidget(lbl3)
         self._match_title_exact = QLineEdit()
         self._match_title_exact.setPlaceholderText("e.g., Steam")
@@ -211,11 +210,7 @@ class ProfileDialog(QDialog):
             "Profiles are checked top-to-bottom; the first matching profile is applied."
         )
         info.setWordWrap(True)
-        info.setStyleSheet(
-            f"color: {self._cfg.palette.text_dim}; "
-            f"font-size: {self._cfg.palette.font_size_mid}px; "
-            "padding-top: 6px;"
-        )
+        info.setStyleSheet(dialog_info_label_style(self._cfg))
         match_layout.addWidget(info)
 
         # ── Pre-fill existing match criteria ─────────────────────────
@@ -259,41 +254,6 @@ class ProfileDialog(QDialog):
         btn.setEnabled(enabled)
         btn.clicked.connect(callback)
         return btn
-
-    def _styled_msg_box(
-        self, icon: QMessageBox.Icon, title: str, text: str
-    ) -> QMessageBox:
-        """Return a themed QMessageBox."""
-        msg = QMessageBox(icon, title, text, QMessageBox.Ok, self)
-        cfg = self._cfg
-        msg.setStyleSheet(
-            f"""
-            QMessageBox {{
-                background-color: {cfg.dialog_background};
-                color: {cfg.dialog_text_color};
-                font-size: {cfg.dialog_label_font_size}px;
-            }}
-            QMessageBox QLabel {{
-                color: {cfg.dialog_text_color};
-                font-size: {cfg.dialog_label_font_size}px;
-            }}
-            QMessageBox QPushButton {{
-                background: {cfg.dialog_button_background};
-                border: 1px solid {cfg.dialog_button_border};
-                border-radius: {cfg.dialog_button_border_radius}px;
-                padding: {cfg.dialog_button_padding};
-                color: {cfg.dialog_text_color};
-                min-width: 60px;
-            }}
-            QMessageBox QPushButton:hover {{
-                background: {cfg.dialog_button_hover_background};
-            }}
-            QMessageBox QPushButton:pressed {{
-                background: {cfg.dialog_button_pressed_background};
-            }}
-        """
-        )
-        return msg
 
     # ------------------------------------------------------------------
     #  Match rule auto-fill
@@ -389,11 +349,15 @@ class ProfileDialog(QDialog):
         # Duplicate check using the provided profiles dictionary
         if name != self._original_name:
             if name in self._profiles:
-                self._styled_msg_box(
+                msg = QMessageBox(
                     QMessageBox.Warning,
                     "Duplicate name",
                     f"A profile named '{name}' already exists.\nPlease choose a different name.",
-                ).exec()
+                    QMessageBox.Ok,
+                    self,
+                )
+                msg.setStyleSheet(message_box_style(self._cfg))
+                msg.exec()
                 self._name_edit.setFocus()
                 self._name_edit.selectAll()
                 return
