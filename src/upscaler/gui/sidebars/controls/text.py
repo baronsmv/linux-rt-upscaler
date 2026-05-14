@@ -6,6 +6,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QLineEdit, QWidget
 
 from ._base import BaseRow
+from ...styles import line_edit_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -70,4 +71,4 @@ class LineEditRow(BaseRow):
     #  Style helpers
     # ------------------------------------------------------------------
     def _apply_style(self) -> None:
-        self._edit.setStyleSheet(self._make_input_style(self.isEnabled()))
+        self._edit.setStyleSheet(line_edit_style(self._cfg, enabled=self.isEnabled()))

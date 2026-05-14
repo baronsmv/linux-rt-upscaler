@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QSlider, QLineEdit, QLabel, QWidget
 
 from ._base import BaseRow
+from ...styles import line_edit_style, slider_style, slider_value_label_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -138,56 +139,15 @@ class SliderRow(BaseRow):
         self._value_edit.setText(self._format(clamped))
 
     def _apply_slider_style(self) -> None:
-        cfg = self._cfg
-        enabled = self.isEnabled()
-        groove = cfg.slider_groove_bg if enabled else cfg.slider_groove_bg_disabled
-        handle_color = (
-            cfg.slider_handle_color if enabled else cfg.slider_handle_color_disabled
-        )
-        sub_page = (
-            cfg.slider_handle_color if enabled else cfg.slider_sub_page_color_disabled
-        )
-        hover = (
-            cfg.slider_handle_hover_color
-            if enabled
-            else cfg.slider_handle_hover_color_disabled
-        )
-        self._slider.setStyleSheet(
-            f"""
-            QSlider::groove:horizontal {{
-                border: none;
-                height: 4px;
-                background: {groove};
-                border-radius: 2px;
-            }}
-            QSlider::handle:horizontal {{
-                background: {handle_color};
-                width: 16px;
-                height: 16px;
-                margin: -6px 0;
-                border-radius: 8px;
-            }}
-            QSlider::handle:horizontal:hover {{
-                background: {hover};
-            }}
-            QSlider::sub-page:horizontal {{
-                background: {sub_page};
-                border-radius: 2px;
-            }}
-        """
-        )
+        self._slider.setStyleSheet(slider_style(self._cfg, enabled=self.isEnabled()))
 
     def _apply_edit_style(self) -> None:
-        style = self._make_input_style(self.isEnabled())
         for w in (self._value_edit,):
             if w is not None:
-                w.setStyleSheet(style)
+                w.setStyleSheet(line_edit_style(self._cfg, enabled=self.isEnabled()))
 
     def _apply_label_style(self) -> None:
-        cfg = self._cfg
-        enabled = self.isEnabled()
-        color = cfg.sidebar_tab_text_color if enabled else cfg.control_disabled_text
         if self._value_label:
             self._value_label.setStyleSheet(
-                f"color: {color}; font-size: {cfg.sidebar_tab_font_size}px;"
+                slider_value_label_style(self._cfg, enabled=self.isEnabled()),
             )

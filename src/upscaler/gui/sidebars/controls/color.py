@@ -7,6 +7,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QColorDialog, QPushButton, QWidget
 
 from ._base import BaseRow
+from ...styles import color_swatch_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -64,13 +65,7 @@ class ColorPickerRow(BaseRow):
             self._apply_color()
         else:
             self._button.setStyleSheet(
-                f"""
-                QPushButton {{
-                    background-color: {self._cfg.color_swatch_disabled_bg};
-                    border: 1px solid {self._cfg.control_disabled_border};
-                    border-radius: 4px;
-                }}
-            """
+                color_swatch_style(self._cfg, enabled=False, current_color="")
             )
 
     def _is_highlighted(self) -> bool:
@@ -98,17 +93,10 @@ class ColorPickerRow(BaseRow):
 
     def _apply_color(self) -> None:
         """Update the button's background to the current color."""
-        border = self._cfg.color_swatch_border
-        hover = self._cfg.sidebar_combo_border_focus
         self._button.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: {self._current_color.name(QColor.HexArgb)};
-                border: 1px solid {border};
-                border-radius: 4px;
-            }}
-            QPushButton:hover {{
-                border-color: {hover};
-            }}
-        """
+            color_swatch_style(
+                self._cfg,
+                enabled=True,
+                current_color=self._current_color.name(QColor.HexArgb),
+            )
         )

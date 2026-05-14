@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QCheckBox, QWidget
 
 from ._base import BaseRow
+from ...styles import checkbox_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -82,45 +83,9 @@ class CheckBox(BaseRow):
         self._update_highlight()
         self.stateChanged.emit(state)
 
-    def _apply_style(self, highlighted: Optional[bool] = None) -> None:
-        if highlighted is None:
-            highlighted = self._is_highlighted()
-
-        cfg = self._cfg
-        enabled = self.isEnabled()
-
-        text_color = (
-            cfg.highlight_label_color if highlighted else cfg.sidebar_tab_text_color
-        )
-        if not enabled:
-            text_color = cfg.checkbox_disabled_color
-
-        indicator_color = (
-            cfg.highlight_border_color
-            if highlighted
-            else (
-                cfg.sidebar_checkbox_color if enabled else cfg.checkbox_disabled_color
-            )
-        )
-
+    def _apply_style(self, highlighted: bool = False) -> None:
         self._checkbox.setStyleSheet(
-            f"""
-            QCheckBox {{
-                spacing: {cfg.checkbox_spacing}px;
-                color: {text_color};
-                font-size: {cfg.sidebar_tab_font_size}px;
-                padding: {cfg.checkbox_padding_v}px 0;
-            }}
-            QCheckBox::indicator {{
-                width: {cfg.checkbox_indicator_size}px;
-                height: {cfg.checkbox_indicator_size}px;
-                border: 2px solid {indicator_color};
-                border-radius: {cfg.checkbox_indicator_radius}px;
-                background: transparent;
-            }}
-            QCheckBox::indicator:checked {{
-                background-color: {indicator_color};
-                border-color: {indicator_color};
-            }}
-        """
+            checkbox_style(
+                self._cfg, self.isEnabled(), highlighted or self._is_highlighted()
+            )
         )

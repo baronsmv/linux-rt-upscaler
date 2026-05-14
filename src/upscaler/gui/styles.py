@@ -167,6 +167,11 @@ def base_row_content_background_style(cfg: GUIConfig, *, highlighted: bool) -> s
     return "background: transparent;"
 
 
+def base_row_label_highlight_style(cfg: GUIConfig, *, color: str) -> str:
+    """Label style that reflects highlight state."""
+    return f"color: {color}; font-size: {cfg.sidebar_tab_font_size}px;"
+
+
 def base_row_label_color(cfg: GUIConfig, *, highlighted: bool, enabled: bool) -> str:
     """Return the appropriate text color for a row label."""
     if not enabled:

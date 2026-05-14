@@ -6,6 +6,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QComboBox, QWidget
 
 from ._base import BaseRow
+from ...styles import combo_box_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -75,4 +76,4 @@ class ComboRow(BaseRow):
     #  Style helper
     # ------------------------------------------------------------------
     def _apply_style(self) -> None:
-        self._combo.setStyleSheet(self._make_combo_style(self.isEnabled()))
+        self._combo.setStyleSheet(combo_box_style(self._cfg, enabled=self.isEnabled()))

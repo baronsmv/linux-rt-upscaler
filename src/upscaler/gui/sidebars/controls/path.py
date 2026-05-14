@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from ._base import BaseRow
+from ...styles import line_edit_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -93,7 +94,7 @@ class PathPickerRow(BaseRow):
     #  Style helpers
     # ------------------------------------------------------------------
     def _apply_style(self) -> None:
-        self._edit.setStyleSheet(self._make_input_style(self.isEnabled()))
+        self._edit.setStyleSheet(line_edit_style(self._cfg, enabled=self.isEnabled()))
 
     def _browse(self) -> None:
         current = self._edit.text() or os.path.expanduser("~")
