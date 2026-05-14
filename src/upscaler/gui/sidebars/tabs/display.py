@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtGui import QColor
-
 from ..common import SettingsTab
+from ..controls import normalize_to_hex
 from ....config import OverlayMode
 from ....utils import list_monitors
 
@@ -135,30 +134,8 @@ class DisplayTab(SettingsTab):
 
         # ---- Background Color ----
         self._add_section("Background Color")
-        bg = self._config.background_color
-        if isinstance(bg, tuple):
-            # convert (b, g, r, a) to #AARRGGBB
-            r, g, b, a = bg[2], bg[1], bg[0], bg[3]
-            r8, g8, b8, a8 = [int(c * 255) for c in (r, g, b, a)]
-            bg = f"#{a8:02x}{r8:02x}{g8:02x}{b8:02x}"
-
-        elif isinstance(bg, str) and not bg.startswith("#"):
-            # named color - convert to hex via QColor
-            qc = QColor(bg)
-            if qc.isValid():
-                bg = qc.name(QColor.HexArgb)
-
-        # Baseline background color
-        baseline_bg = self.baseline_config.background_color
-        if isinstance(baseline_bg, tuple):
-            r, g, b, a = baseline_bg[2], baseline_bg[1], baseline_bg[0], baseline_bg[3]
-            r8, g8, b8, a8 = [int(c * 255) for c in (r, g, b, a)]
-            baseline_bg = f"#{a8:02x}{r8:02x}{g8:02x}{b8:02x}"
-        elif isinstance(baseline_bg, str) and not baseline_bg.startswith("#"):
-            qc = QColor(baseline_bg)
-            if qc.isValid():
-                baseline_bg = qc.name(QColor.HexArgb)
-
+        bg = normalize_to_hex(self._config.background_color)
+        baseline_bg = normalize_to_hex(self.baseline_config.background_color)
         self._bg_picker = self._add_color_picker(
             "Color",
             bg,
@@ -219,6 +196,5 @@ class DisplayTab(SettingsTab):
         self.config_changed.emit()
 
     def _on_bg_color(self, text: str):
-        r, g, b, a = QColor(text).getRgbF()
-        self._config.background_color = (b, g, r, a)
+        self._config.background_color = str(text)
         self.config_changed.emit()

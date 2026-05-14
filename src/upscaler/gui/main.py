@@ -36,7 +36,7 @@ from .styles import (
     tooltip_style,
 )
 from .widgets import StyledSplitter
-from ..config import find_matching_profile, get_version
+from ..config import find_matching_profile, get_version, parse_config
 from ..pipeline import create_pipeline_session
 from ..utils import system_color_scheme
 from ..window import WindowInfo, activate_window, list_windows
@@ -518,6 +518,7 @@ class MainWindow(QMainWindow):
         activate_window(self._selected_win_info.handle)
         self.hide()
         self._scene.clear_all()
+        parse_config(self._config_manager.effective_config)
 
         # The pipeline uses the effective config (includes CLI overrides)
         try:
