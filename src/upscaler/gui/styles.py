@@ -571,6 +571,11 @@ def profile_toolbar_button_style(cfg: GUIConfig) -> str:
     """
 
 
+def profile_toolbar_separator_style(cfg: GUIConfig) -> str:
+    """Style for the profile toolbar separators."""
+    return f"color: {cfg.profile_toolbar_separator};"
+
+
 # ---------------------------------------------------------------------------
 #  About dialog (specific button)
 # ---------------------------------------------------------------------------

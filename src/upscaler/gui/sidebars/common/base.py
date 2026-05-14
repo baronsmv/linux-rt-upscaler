@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 
-from ...styles import sidebar_container_style, tab_widget
+from ...styles import sidebar_container_style, sidebar_tab_widget_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -49,7 +49,7 @@ class SidebarBase(QWidget):
         layout.setSpacing(0)
 
         self.tab_widget = QTabWidget()
-        self.tab_widget.setStyleSheet(tab_widget(gui_config))
+        self.tab_widget.setStyleSheet(sidebar_tab_widget_style(gui_config))
         layout.addWidget(self.tab_widget)
 
     # ------------------------------------------------------------------

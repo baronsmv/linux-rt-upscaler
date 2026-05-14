@@ -31,14 +31,6 @@ class IconSidebarBase(QWidget):
         self.setObjectName("sidebar_container")
         self.setStyleSheet(sidebar_container_style(gui_config))
 
-        # Shadow Effect (disable for better performance,
-        # but might need to evaluate its real weight further later on
-        """shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(20)
-        shadow.setColor(Qt.gray)
-        shadow.setOffset(0, 2)
-        self.setGraphicsEffect(shadow)"""
-
         # ---- Layout ----
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)

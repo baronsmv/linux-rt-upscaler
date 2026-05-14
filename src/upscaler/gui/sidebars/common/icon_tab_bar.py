@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QWidget, QGridLayout, QPushButton, QButtonGroup
 
 from ...config import GUIConfig
 from ...icons import load_pixmap
+from ...styles import icon_tab_bar_style, icon_tab_button_style
 
 
 class IconTabBar(QWidget):
@@ -22,14 +23,7 @@ class IconTabBar(QWidget):
         self._columns = gui_config.sidebar_icon_columns
         self._icon_size = gui_config.sidebar_icon_size
 
-        self.setStyleSheet(
-            f"""
-            QWidget {{
-                background: {gui_config.icon_tab_bar_background};
-                border-radius: 8px;
-            }}
-            """
-        )
+        self.setStyleSheet(icon_tab_bar_style(gui_config))
 
         layout = QGridLayout(self)
         layout.setContentsMargins(4, 8, 4, 8)
@@ -73,7 +67,7 @@ class IconTabBar(QWidget):
         btn.setFlat(True)
         btn.setCursor(Qt.PointingHandCursor)
         btn.setFixedSize(self._icon_size + 12, self._icon_size + 12)
-        btn.setStyleSheet(self._button_style())
+        btn.setStyleSheet(icon_tab_button_style(self._cfg))
 
         self._grid.addWidget(btn, row, col)
         self._button_group.addButton(btn, index)
@@ -84,25 +78,6 @@ class IconTabBar(QWidget):
             btn.setChecked(True)
         return btn
 
-    # ------------------------------------------------------------------
     def _load_icon(self, name: str, size: int) -> QIcon:
         pixmap = load_pixmap(name, size, size, color=self._cfg.icon_color)
         return QIcon(pixmap)
-
-    def _button_style(self) -> str:
-        cfg = self._cfg
-        return f"""
-            QPushButton {{
-                background: transparent;
-                border: 2px solid transparent;
-                border-radius: 8px;
-            }}
-            QPushButton:hover {{
-                background: {cfg.sidebar_tab_background_active};
-                border-color: {cfg.sidebar_tab_indicator_color};
-            }}
-            QPushButton:checked {{
-                background: {cfg.sidebar_tab_background_active};
-                border-color: {cfg.sidebar_tab_indicator_color};
-            }}
-        """

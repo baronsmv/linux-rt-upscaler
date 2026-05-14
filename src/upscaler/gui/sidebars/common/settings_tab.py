@@ -23,10 +23,10 @@ from ..controls import (
 )
 from ...styles import (
     row_label_style,
-    section_label,
-    separator_line_style,
     scroll_area_style,
     scrollbar_style,
+    separator_line_style,
+    sidebar_section_label_style,
 )
 from ....config import DEFAULT_CONFIG
 
@@ -101,7 +101,7 @@ class SettingsTab(QWidget):
     def _add_section_label(self, text: str) -> None:
         """Add an uppercase section header with a thin separator line below."""
         label = QLabel(text.upper())
-        label.setStyleSheet(section_label(self._cfg))
+        label.setStyleSheet(sidebar_section_label_style(self._cfg))
 
         line = QFrame()
         line.setFrameShape(QFrame.HLine)

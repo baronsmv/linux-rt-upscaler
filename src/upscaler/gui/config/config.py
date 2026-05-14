@@ -569,11 +569,7 @@ class GUIConfig:
     profile_capture_icon_size: int = 128
 
     @property
-    def profile_header_bottom_border(self) -> str:
-        return self.palette.border_profile_sep
-
-    @property
-    def profile_toolbar_top_border(self) -> str:
+    def profile_toolbar_separator(self) -> str:
         return self.palette.border_profile_sep
 
     @property

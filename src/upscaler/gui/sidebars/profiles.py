@@ -18,7 +18,14 @@ from PySide6.QtWidgets import (
 
 from ..config import GUIConfig
 from ..icons import load_icon, load_pixmap
-from ..styles import scrollbar_style, sidebar_container_style
+from ..styles import (
+    scrollbar_style,
+    sidebar_container_style,
+    profile_list_style,
+    profile_toolbar_button_style,
+    profile_toolbar_separator_style,
+    sidebar_section_label_style,
+)
 
 
 class ProfilesSidebar(QWidget):
@@ -63,8 +70,8 @@ class ProfilesSidebar(QWidget):
 
         # ---- Visual identity ----
         self.setObjectName("sidebar_container")
-        self.setStyleSheet(sidebar_container_style(gui_config))
-        self.setFixedWidth(gui_config.sidebar_width)
+        self.setStyleSheet(sidebar_container_style(self._cfg))
+        self.setFixedWidth(self._cfg.sidebar_width)
 
         # ---- Layout ----
         layout = QVBoxLayout(self)
@@ -73,19 +80,14 @@ class ProfilesSidebar(QWidget):
 
         # Title
         title = QLabel("Profiles")
-        title.setStyleSheet(
-            f"color: {gui_config.sidebar_section_title_color}; "
-            f"font-size: {gui_config.sidebar_section_title_size}px; "
-            f"font-weight: bold;"
-            f"padding-left: {gui_config.profile_title_left_padding}px;"
-        )
+        title.setStyleSheet(sidebar_section_label_style(self._cfg))
         layout.addWidget(title)
 
         # Header separator line
         layout.addSpacing(8)
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet(f"color: {gui_config.profile_header_bottom_border};")
+        sep.setStyleSheet(profile_toolbar_separator_style(self._cfg))
         sep.setFixedHeight(1)
         layout.addWidget(sep)
         layout.addSpacing(8)
@@ -95,7 +97,7 @@ class ProfilesSidebar(QWidget):
         self._list.setMouseTracking(True)
         self._list.viewport().installEventFilter(self)
         self._list.installEventFilter(self)
-        self._list.setStyleSheet(self._list_stylesheet())
+        self._list.setStyleSheet(profile_list_style(self._cfg))
         self._list.setIconSize(
             QSize(
                 gui_config.profile_item_icon_size,
@@ -113,20 +115,13 @@ class ProfilesSidebar(QWidget):
         # Toolbar separator
         toolbar_sep = QFrame()
         toolbar_sep.setFrameShape(QFrame.HLine)
-        toolbar_sep.setStyleSheet(f"color: {gui_config.profile_toolbar_top_border};")
+        toolbar_sep.setStyleSheet(profile_toolbar_separator_style(gui_config))
         toolbar_sep.setFixedHeight(1)
         layout.addWidget(toolbar_sep)
 
         # Toolbar
         toolbar = QHBoxLayout()
         toolbar.setSpacing(4)
-
-        btn_cfg = {
-            "size": gui_config.profile_toolbar_button_size,
-            "icon_size": gui_config.profile_toolbar_button_icon_size,
-            "hover_bg": gui_config.profile_toolbar_button_background_hover,
-            "radius": gui_config.profile_toolbar_button_border_radius,
-        }
 
         btn_cfg = {
             "size": gui_config.profile_toolbar_button_size,
@@ -339,33 +334,6 @@ class ProfilesSidebar(QWidget):
     # ------------------------------------------------------------------
     #  Private helpers
     # ------------------------------------------------------------------
-
-    def _list_stylesheet(self) -> str:
-        c = self._cfg
-        return f"""
-            QListWidget {{
-                background: transparent;
-                border: none;
-                outline: none;
-            }}
-            QListWidget::item {{
-                color: {c.profile_item_text_color};
-                background: {c.profile_item_background};
-                border-radius: {c.profile_item_border_radius}px;
-                padding: 4px 8px;
-                border-left: {c.profile_item_indicator_width}px solid transparent;
-            }}
-            QListWidget::item:hover {{
-                background: {c.profile_item_background_hover};
-                color: {c.profile_item_text_color_active};
-            }}
-            QListWidget::item:selected {{
-                background: {c.profile_item_background_active};
-                color: {c.profile_item_text_color_active};
-                border-left: {c.profile_item_indicator_width}px solid {c.profile_item_indicator_color};
-            }}
-        """
-
     def _make_tool_button(
         self,
         icon_name: str,
@@ -391,21 +359,7 @@ class ProfilesSidebar(QWidget):
         btn.setFlat(True)
         btn.setEnabled(enabled)
         btn.clicked.connect(callback)
-        btn.setStyleSheet(
-            f"""
-            QPushButton {{
-                background: transparent;
-                border: none;
-                border-radius: {cfg['radius']}px;
-            }}
-            QPushButton:hover {{
-                background: {cfg['hover_bg']};
-            }}
-            QPushButton:disabled {{
-                opacity: 0.4;
-            }}
-            """
-        )
+        btn.setStyleSheet(profile_toolbar_button_style(self._cfg))
         return btn
 
     # ------------------------------------------------------------------
