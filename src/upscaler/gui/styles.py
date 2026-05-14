@@ -582,6 +582,122 @@ def profile_toolbar_separator_style(cfg: GUIConfig) -> str:
 
 
 # ---------------------------------------------------------------------------
+#  Footer buttons (Save, Reset)
+# ---------------------------------------------------------------------------
+def footer_save_button_style(cfg: GUIConfig) -> str:
+    """Style for the 'Save' button in the settings footer."""
+    return f"""
+    QPushButton {{
+        background: {cfg.footer_save_bg};
+        color: {cfg.footer_save_text};
+        border: 2px solid {cfg.footer_save_border};
+        border-radius: {cfg.footer_button_radius}px;
+        padding: {cfg.footer_button_padding_v}px {cfg.footer_button_padding_h}px;
+        font-size: {cfg.sidebar_tab_font_size}px;
+        font-weight: 600;
+        height: {cfg.footer_button_height}px;
+    }}
+    QPushButton:hover {{
+        background: {cfg.footer_save_hover_bg};
+        border-color: {cfg.footer_save_hover_border};
+    }}
+    QPushButton:pressed {{
+        background: {cfg.footer_save_hover_bg};
+        border-color: {cfg.footer_save_border};
+    }}
+    QPushButton:disabled {{
+        background: {cfg.footer_save_disabled_bg};
+        color: {cfg.footer_save_disabled_text};
+        border-color: {cfg.footer_save_disabled_border};
+    }}
+    """
+
+
+def footer_reset_button_style(
+    cfg: GUIConfig, *, main_active: bool, enabled: bool
+) -> str:
+    """Style for the 'Reset' split‑button with dynamic split‑line color."""
+    bg = cfg.footer_reset_bg if main_active else cfg.footer_reset_disabled_bg
+    text = cfg.footer_reset_text if main_active else cfg.footer_reset_disabled_text
+    border = (
+        cfg.footer_reset_border if main_active else cfg.footer_reset_disabled_border
+    )
+    hover_bg = (
+        cfg.footer_reset_hover_bg if main_active else cfg.footer_reset_disabled_bg
+    )
+    hover_border = (
+        cfg.footer_reset_hover_border
+        if main_active
+        else cfg.footer_reset_disabled_border
+    )
+    split_color = (
+        cfg.footer_reset_split_border
+        if main_active
+        else cfg.footer_reset_disabled_border
+    )
+
+    if not enabled:
+        bg = cfg.footer_reset_disabled_bg
+        text = cfg.footer_reset_disabled_text
+        border = cfg.footer_reset_disabled_border
+        hover_bg = cfg.footer_reset_disabled_bg
+        hover_border = cfg.footer_reset_disabled_border
+        split_color = cfg.footer_reset_disabled_border
+
+    return f"""
+    QToolButton {{
+        background: {bg};
+        color: {text};
+        border: 2px solid {border};
+        border-radius: {cfg.footer_button_radius}px;
+        padding: {cfg.footer_button_padding_v}px {cfg.footer_button_padding_h}px;
+        font-size: {cfg.sidebar_tab_font_size}px;
+        font-weight: 600;
+        height: {cfg.footer_button_height}px;
+    }}
+    QToolButton:hover {{
+        background: {hover_bg};
+        border-color: {hover_border};
+    }}
+    QToolButton:pressed {{
+        background: {hover_bg};
+        border-color: {border};
+    }}
+    QToolButton::menu-button {{
+        background: transparent;
+        border: none;
+        border-left: 1px solid {split_color};
+        width: 20px;
+    }}
+    QToolButton::menu-arrow {{
+        width: 12px;
+        height: 12px;
+    }}
+    """
+
+
+def footer_menu_style(cfg: GUIConfig) -> str:
+    """Style for the dropdown menu of the Reset button."""
+    return f"""
+    QMenu {{
+        background: {cfg.footer_menu_bg};
+        border: 1px solid {cfg.footer_menu_border};
+        border-radius: 4px;
+        padding: 4px;
+    }}
+    QMenu::item {{
+        color: {cfg.footer_menu_text};
+        padding: 6px 24px;
+        font-size: {cfg.sidebar_tab_font_size}px;
+    }}
+    QMenu::item:selected {{
+        background: {cfg.footer_menu_selection_bg};
+        color: {cfg.footer_menu_selection_text};
+    }}
+    """
+
+
+# ---------------------------------------------------------------------------
 #  About dialog (specific button)
 # ---------------------------------------------------------------------------
 def about_dialog_close_button_style(cfg: GUIConfig) -> str:
