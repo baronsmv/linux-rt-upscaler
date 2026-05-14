@@ -25,6 +25,16 @@ from .dialogs import ProfileDialog
 from .grid import FilterBar, WindowGridScene, WindowGridView
 from .icons import load_icon
 from .sidebars import ProfilesSidebar, SettingsSidebar
+from .styles import (
+    about_button_style,
+    about_dialog_style,
+    about_dialog_name_style,
+    about_dialog_version_style,
+    about_dialog_description_style,
+    about_dialog_link_style,
+    about_dialog_close_button_style,
+    tooltip_style,
+)
 from .widgets import StyledSplitter
 from ..config import find_matching_profile, get_version
 from ..pipeline import create_pipeline_session
@@ -59,6 +69,8 @@ class MainWindow(QMainWindow):
         self.gui_config = GUIConfig(
             palette=presets.DARK if scheme == "dark" else presets.LIGHT
         )
+        app = QApplication.instance()
+        app.setStyleSheet(tooltip_style(self.gui_config))
 
         # ---- Icons directory (for profile icons) -------------------------
         self._icons_dir = os.path.join(
@@ -120,18 +132,7 @@ class MainWindow(QMainWindow):
         self.about_btn.setCursor(Qt.PointingHandCursor)
         self.about_btn.setToolTip("About Linux Real-Time Upscaler")
         self.about_btn.setAutoRaise(True)
-        self.about_btn.setStyleSheet(
-            f"""
-            QToolButton {{
-                border-radius: 16px;
-                border: none;
-                background: transparent;
-            }}
-            QToolButton:hover {{
-                background: {self.gui_config.palette.bg_surface_hover};
-            }}
-            """
-        )
+        self.about_btn.setStyleSheet(about_button_style(self.gui_config))
         self.about_btn.clicked.connect(self._show_about)
         filter_row.addWidget(self.about_btn)
         filter_row.addSpacing(self.gui_config.filter_horizontal_margin)
@@ -529,17 +530,7 @@ class MainWindow(QMainWindow):
         dlg = QDialog(self)
         dlg.setWindowTitle("About")
         dlg.setFixedSize(480, 400)
-
-        # Overall dialog styling
-        dlg.setStyleSheet(
-            f"""
-            QDialog {{
-                background-color: {cfg.dialog_background};
-                border: 1px solid {cfg.dialog_groupbox_border};
-                border-radius: 12px;
-            }}
-            """
-        )
+        dlg.setStyleSheet(about_dialog_style(cfg))
 
         main_layout = QVBoxLayout(dlg)
         main_layout.setContentsMargins(32, 28, 32, 24)
@@ -562,22 +553,13 @@ class MainWindow(QMainWindow):
         # ---- App name (big, bold) ----
         name_label = QLabel("Linux Real-Time Upscaler")
         name_label.setAlignment(Qt.AlignCenter)
-        name_label.setStyleSheet(
-            f"color: {cfg.palette.text_primary}; "
-            "font-size: 24px; "
-            "font-weight: bold; "
-            "margin-top: 16px;"
-        )
+        name_label.setStyleSheet(about_dialog_name_style(cfg))
         main_layout.addWidget(name_label)
 
         # ---- Version (subtle) ----
         version_label = QLabel(f"Version {get_version()}")
         version_label.setAlignment(Qt.AlignCenter)
-        version_label.setStyleSheet(
-            f"color: {cfg.palette.text_secondary}; "
-            "font-size: 20px; "
-            "margin-top: 4px;"
-        )
+        version_label.setStyleSheet(about_dialog_version_style(cfg))
         main_layout.addWidget(version_label)
 
         # ---- Tagline / description ----
@@ -586,12 +568,7 @@ class MainWindow(QMainWindow):
         )
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignCenter)
-        desc_label.setStyleSheet(
-            f"color: {cfg.palette.text_dim}; "
-            "font-size: 18px; "
-            "margin-top: 18px; "
-            "padding: 0 24px;"
-        )
+        desc_label.setStyleSheet(about_dialog_description_style(cfg))
         main_layout.addWidget(desc_label)
 
         # ---- GitHub link ----
@@ -604,7 +581,7 @@ class MainWindow(QMainWindow):
         link_label.setOpenExternalLinks(True)
         link_label.setAlignment(Qt.AlignCenter)
         link_label.setCursor(Qt.PointingHandCursor)
-        link_label.setStyleSheet("font-size: 18px; margin-top: 10px;")
+        link_label.setStyleSheet(about_dialog_link_style(cfg))
         main_layout.addWidget(link_label)
 
         # Push remaining space above the button
@@ -615,22 +592,7 @@ class MainWindow(QMainWindow):
         close_btn.setFixedSize(120, 36)
         close_btn.setCursor(Qt.PointingHandCursor)
         close_btn.clicked.connect(dlg.accept)
-        close_btn.setStyleSheet(
-            f"""
-            QPushButton {{
-                background: {cfg.dialog_button_background};
-                border: 1px solid {cfg.dialog_button_border};
-                border-radius: 8px;
-                padding: 6px 18px;
-                color: {cfg.dialog_text_color};
-                font-size: 18px;
-            }}
-            QPushButton:hover {{
-                background: {cfg.dialog_button_hover_background};
-                border-color: {cfg.dialog_button_hover_border_color};
-            }}
-            """
-        )
+        close_btn.setStyleSheet(about_dialog_close_button_style(cfg))
         btn_container = QVBoxLayout()
         btn_container.addWidget(close_btn, alignment=Qt.AlignCenter)
         main_layout.addLayout(btn_container)
