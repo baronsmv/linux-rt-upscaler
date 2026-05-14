@@ -84,7 +84,7 @@ def load_yaml_config(
 
 def save_yaml_config(
     general_options: dict,
-    profiles: dict,
+    profiles: Dict,
     config_path: Optional[str] = None,
     max_backups: int = DEFAULT_MAX_BACKUPS,
 ) -> str:
