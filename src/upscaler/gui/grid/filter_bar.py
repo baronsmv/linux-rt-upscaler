@@ -3,6 +3,7 @@ from PySide6.QtGui import QPalette, QColor, QPixmap, QPainter, QIcon
 from PySide6.QtWidgets import QWidget, QLineEdit, QPushButton, QLabel
 
 from ..icons import load_icon, load_pixmap
+from ..styles import filter_bar_line_edit_style
 
 
 class FilterBar(QWidget):
@@ -122,26 +123,13 @@ class FilterBar(QWidget):
     #  Style (hover / normal)
     # ------------------------------------------------------------------
     def _update_bar_style(self, hover: bool) -> None:
-        cfg = self._cfg
-        bg = cfg.filter_hover_background if hover else cfg.filter_background
         self._line_edit.setStyleSheet(
-            f"""
-            QLineEdit {{
-                border: 1px solid {cfg.filter_border_color};
-                border-radius: {cfg.filter_border_radius}px;
-                background: {bg};
-                color: {cfg.filter_text_color};
-                font-size: {cfg.filter_font_size}px;
-                padding: 0px;  /* handled via setTextMargins */
-                selection-background-color: {cfg.filter_border_focus_color};
-            }}
-            QLineEdit:focus {{
-                border-color: {cfg.filter_border_focus_color};
-            }}
-        """
+            filter_bar_line_edit_style(self._cfg, hover=hover)
         )
         pal = self._line_edit.palette()
-        pal.setColor(QPalette.PlaceholderText, QColor(cfg.filter_placeholder_color))
+        pal.setColor(
+            QPalette.PlaceholderText, QColor(self._cfg.filter_placeholder_color)
+        )
         self._line_edit.setPalette(pal)
 
     # ------------------------------------------------------------------

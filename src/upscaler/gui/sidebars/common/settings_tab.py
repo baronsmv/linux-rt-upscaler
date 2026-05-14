@@ -57,7 +57,7 @@ class SettingsTab(QWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.gui_config = gui_config
+        self._cfg = gui_config
         self.baseline_config = (
             baseline_config if baseline_config is not None else DEFAULT_CONFIG
         )
@@ -74,7 +74,7 @@ class SettingsTab(QWidget):
         scroll.setWidgetResizable(True)
         scroll.verticalScrollBar().setStyleSheet(scrollbar_style(gui_config))
         scroll.setFrameShape(QScrollArea.NoFrame)
-        scroll.setStyleSheet(scroll_area_style())
+        scroll.setStyleSheet(scroll_area_style(self._cfg))
 
         # ---- Inner content widget and its layout ----------------------------
         content = QWidget()
@@ -101,12 +101,12 @@ class SettingsTab(QWidget):
     def _add_section_label(self, text: str) -> None:
         """Add an uppercase section header with a thin separator line below."""
         label = QLabel(text.upper())
-        label.setStyleSheet(section_label(self.gui_config))
+        label.setStyleSheet(section_label(self._cfg))
 
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
-        line.setStyleSheet(separator_line_style(self.gui_config))
+        line.setStyleSheet(separator_line_style(self._cfg))
 
         self.content_layout.addWidget(label)
         self.content_layout.addWidget(line)
@@ -117,19 +117,19 @@ class SettingsTab(QWidget):
         row.setContentsMargins(0, 0, 0, 0)
 
         lbl = QLabel(label_text)
-        lbl.setStyleSheet(row_label_style(self.gui_config))
-        lbl.setFixedHeight(self.gui_config.sidebar_row_height)
+        lbl.setStyleSheet(row_label_style(self._cfg))
+        lbl.setFixedHeight(self._cfg.sidebar_row_height)
         lbl.setAlignment(Qt.AlignVCenter)
         row.addWidget(lbl)
         row.addStretch()
 
-        widget.setFixedHeight(self.gui_config.sidebar_row_height)
+        widget.setFixedHeight(self._cfg.sidebar_row_height)
         row.addWidget(widget)
 
         self.content_layout.addLayout(row)
 
     def _add_section(self, title: str) -> None:
-        self.content_layout.addWidget(SectionLabel(title, self.gui_config))
+        self.content_layout.addWidget(SectionLabel(title, self._cfg))
 
     def _add_cb(
         self,
@@ -141,7 +141,7 @@ class SettingsTab(QWidget):
     ) -> CheckBox:
         cb = CheckBox(
             label,
-            self.gui_config,
+            self._cfg,
             checked,
             baseline=baseline,
             tooltip=help,
@@ -167,7 +167,7 @@ class SettingsTab(QWidget):
         """Add a slider row, optionally with float output and editable field."""
         slider = SliderRow(
             label,
-            self.gui_config,
+            self._cfg,
             min_val,
             max_val,
             value,
@@ -212,7 +212,7 @@ class SettingsTab(QWidget):
 
         slider = SliderRow(
             label,
-            self.gui_config,
+            self._cfg,
             min_val=0,
             max_val=len(names) - 1,
             value=index,
@@ -239,7 +239,7 @@ class SettingsTab(QWidget):
         """Add a labeled combo box row and return it."""
         combo = ComboRow(
             label,
-            self.gui_config,
+            self._cfg,
             items,
             current,
             baseline=baseline,
@@ -260,7 +260,7 @@ class SettingsTab(QWidget):
         """Add a labeled single-line text edit and return it."""
         editor = LineEditRow(
             label,
-            self.gui_config,
+            self._cfg,
             text,
             baseline=baseline,
             tooltip=help,
@@ -280,7 +280,7 @@ class SettingsTab(QWidget):
         """Add a directory picker row (line edit + browse) and return it."""
         picker = PathPickerRow(
             label,
-            self.gui_config,
+            self._cfg,
             initial_path,
             baseline=baseline,
             tooltip=help,
@@ -300,7 +300,7 @@ class SettingsTab(QWidget):
         """Add a color picker row (swatch + dialog) and return it."""
         picker = ColorPickerRow(
             label,
-            self.gui_config,
+            self._cfg,
             initial_color,
             baseline=baseline,
             tooltip=help,

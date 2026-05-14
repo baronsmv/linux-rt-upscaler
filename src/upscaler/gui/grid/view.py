@@ -5,6 +5,7 @@ from PySide6.QtGui import QKeyEvent, QPainter, QKeySequence
 from PySide6.QtWidgets import QGraphicsView
 
 from .scene import WindowGridScene
+from ..styles import graphics_view_style
 
 
 class WindowGridView(QGraphicsView):
@@ -46,7 +47,7 @@ class WindowGridView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
         # Transparent background and no frame
-        self.setStyleSheet("background: transparent; border: none;")
+        self.setStyleSheet(graphics_view_style(self._cfg))
 
         # Accept focus (needed for keyboard navigation)
         self.setFocusPolicy(Qt.StrongFocus)

@@ -90,7 +90,7 @@ def sidebar_tab_widget_style(cfg: GUIConfig) -> str:
     """
 
 
-def scroll_area_style() -> str:
+def scroll_area_style(cfg: GUIConfig) -> str:
     """Transparent scroll area that blends into the sidebar background."""
     return """
     QScrollArea {
@@ -160,14 +160,14 @@ def base_row_indicator_style(cfg: GUIConfig) -> str:
     return f"background: {cfg.highlight_border_color}; border: none;"
 
 
-def base_row_content_background_style(cfg: GUIConfig, highlighted: bool) -> str:
+def base_row_content_background_style(cfg: GUIConfig, *, highlighted: bool) -> str:
     """Background style for the content container of a BaseRow."""
     if highlighted and cfg.highlight_background_enabled:
         return f"background: {cfg.highlight_background_color}; border-radius: 4px;"
     return "background: transparent;"
 
 
-def base_row_label_color(cfg: GUIConfig, highlighted: bool, enabled: bool) -> str:
+def base_row_label_color(cfg: GUIConfig, *, highlighted: bool, enabled: bool) -> str:
     """Return the appropriate text color for a row label."""
     if not enabled:
         return cfg.control_disabled_text
@@ -179,7 +179,7 @@ def base_row_label_color(cfg: GUIConfig, highlighted: bool, enabled: bool) -> st
 # ---------------------------------------------------------------------------
 #  Line edit (editable text fields)
 # ---------------------------------------------------------------------------
-def line_edit_style(cfg: GUIConfig, enabled: bool = True) -> str:
+def line_edit_style(cfg: GUIConfig, *, enabled: bool = True) -> str:
     """Base style for QLineEdit used inside settings rows."""
     bg = cfg.edit_background if enabled else cfg.edit_background_disabled
     text_color = cfg.edit_text_color if enabled else cfg.edit_text_color_disabled
@@ -209,7 +209,7 @@ def line_edit_style(cfg: GUIConfig, enabled: bool = True) -> str:
 # ---------------------------------------------------------------------------
 #  Combo box
 # ---------------------------------------------------------------------------
-def combo_box_style(cfg: GUIConfig, enabled: bool = True) -> str:
+def combo_box_style(cfg: GUIConfig, *, enabled: bool = True) -> str:
     """Style for QComboBox used inside settings rows."""
     bg = cfg.combo_background if enabled else cfg.combo_background_disabled
     text_color = cfg.combo_text_color if enabled else cfg.combo_text_color_disabled
@@ -300,7 +300,7 @@ def checkbox_style(
 #  Color swatch button
 # ---------------------------------------------------------------------------
 def color_swatch_style(
-    cfg: GUIConfig, enabled: bool = True, current_color: str = "#000000"
+    cfg: GUIConfig, *, enabled: bool = True, current_color: str = "#000000"
 ) -> str:
     """Style for the QPushButton that acts as a color preview."""
     if not enabled:
@@ -622,3 +622,13 @@ def icon_tab_button_style(cfg: GUIConfig) -> str:
         border-color: {cfg.sidebar_tab_indicator_color};
     }}
     """
+
+
+# ---------------------------------------------------------------------------
+#  Window grid
+# ---------------------------------------------------------------------------
+
+
+def graphics_view_style(cfg: GUIConfig) -> str:
+    """Transparent, borderless QGraphicsView."""
+    return "background: transparent; border: none;"
