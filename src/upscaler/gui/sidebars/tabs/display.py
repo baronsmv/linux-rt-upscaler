@@ -219,5 +219,6 @@ class DisplayTab(SettingsTab):
         self.config_changed.emit()
 
     def _on_bg_color(self, text: str):
-        self._config.background_color = str(text)
+        r, g, b, a = QColor(text).getRgbF()
+        self._config.background_color = (b, g, r, a)
         self.config_changed.emit()

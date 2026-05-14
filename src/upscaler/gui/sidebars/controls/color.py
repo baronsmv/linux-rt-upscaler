@@ -83,7 +83,7 @@ class ColorPickerRow(BaseRow):
             initial=self._current_color,
             parent=self,
             title="Choose Background Color",
-            options=QColorDialog.DontUseNativeDialog,
+            options=QColorDialog.DontUseNativeDialog | QColorDialog.ShowAlphaChannel,
         )
         if color.isValid():
             self._current_color = color
