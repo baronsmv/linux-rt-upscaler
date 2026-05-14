@@ -5,7 +5,7 @@ import os
 import re
 from typing import List, Optional
 
-from PySide6.QtCore import Qt, QTimer, QStandardPaths, QSize
+from PySide6.QtCore import Qt, QTimer, QSettings, QSize, QStandardPaths
 from PySide6.QtGui import QKeySequence, QImage, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -183,7 +183,14 @@ class MainWindow(QMainWindow):
             self._config_manager.set_active_profile(profile_name)
             self.left_sidebar.set_active_item(profile_name)
 
-        self.showMaximized()
+        # Restore saved window geometry
+        self._settings = QSettings("linux-rt-upscaler")
+        geometry = self._settings.value("mainwindow/geometry")
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+        else:
+            self.showMaximized()
+
         QTimer.singleShot(0, self._initial_populate)
 
     # ------------------------------------------------------------------
@@ -602,4 +609,5 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         self._refresh_timer.stop()
         self._scene.clear_all()
+        self._settings.setValue("mainwindow/geometry", self.saveGeometry())
         super().closeEvent(event)
