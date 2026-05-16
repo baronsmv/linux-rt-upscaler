@@ -140,9 +140,9 @@ upscale --help
 | ----------------------------------- | --------------------------------------------|
 | `Alt`+`Shift`+`S`                   | Pause upscaling                             |
 | `Alt`+`Shift`+`Escape`              | Exit upscaling                              |
+| `Alt`+`Shift`+`P`                   | Take a lossless screenshot                  |
 | `Alt`+`Shift`+`M`                   | Switch to the next model                    |
 | `Alt`+`Shift`+`G`                   | Cycle output geometry (fit, stretch, cover) |
-| `Alt`+`Shift`+`P`                   | Take a lossless screenshot                  |
 | `Alt`+`Shift`+`+` / `-`             | Zoom in / Zoom out                          |
 | `Alt`+`Shift`+`↑` / `↓` / `←` / `→` | Pan the upscaled content                    |
 
