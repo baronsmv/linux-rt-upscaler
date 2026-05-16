@@ -1,4 +1,4 @@
-# Real-Time Upscaler
+# Real-Time Upscaler for Linux
 
 [![PyPI version](https://img.shields.io/pypi/v/linux-rt-upscaler.svg)](https://pypi.org/project/linux-rt-upscaler/)
 [![Python versions](https://img.shields.io/pypi/pyversions/linux-rt-upscaler.svg)](https://pypi.org/project/linux-rt-upscaler/)
