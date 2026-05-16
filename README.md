@@ -136,15 +136,15 @@ upscale --help
 
 ### Controls
 
-| Shortcut                            | Action                                                                   |
-| ----------------------------------- | ------------------------------------------------------------------------ |
-| `Alt`+`Shift`+`S`                   | Toggle overlay visibility / pause processing                             |
-| `Alt`+`Shift`+`M`                   | Switch to the next upscaling model                                       |
-| `Alt`+`Shift`+`G`                   | Cycle output geometry (fit → stretch → cover)                            |
-| `Alt`+`Shift`+`P`                   | Take a lossless screenshot (`--screenshot-dir DIR` defines the location) |
-| `Alt`+`Shift`+`+` / `-`             | Zoom in / Zoom out                                                       |
-| `Alt`+`Shift`+`↑` / `↓` / `←` / `→` | Pan the upscaled content                                                 |
-| `Alt`+`Shift`+`Escape`              | Exit the application                                                     |
+| Shortcut                            | Action                                      |
+| ----------------------------------- | --------------------------------------------|
+| `Alt`+`Shift`+`S`                   | Pause the application                       |
+| `Alt`+`Shift`+`Escape`              | Exit the application                        |
+| `Alt`+`Shift`+`M`                   | Switch to the next upscaling model          |
+| `Alt`+`Shift`+`G`                   | Cycle output geometry (fit, stretch, cover) |
+| `Alt`+`Shift`+`P`                   | Take a lossless screenshot                  |
+| `Alt`+`Shift`+`+` / `-`             | Zoom in / Zoom out                          |
+| `Alt`+`Shift`+`↑` / `↓` / `←` / `→` | Pan the upscaled content                    |
 
 All hotkeys can be customised in the configuration file.
 
@@ -196,7 +196,7 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 Synthetic mouse events (clicks, motion, wheel) sent by the overlay are ignored by:
 
 - Wine and Proton versions older than 10.0 (GE-Proton10 + UMU works).
-- Native applications like Firefox.
+- Some native applications like Firefox.
 
 For more details, see [issue #7](https://github.com/baronsmv/linux-rt-upscaler/issues/7).
 
