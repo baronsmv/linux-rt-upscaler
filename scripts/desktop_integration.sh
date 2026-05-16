@@ -47,6 +47,7 @@ sed -i "s|EXEC_PATH_PLACEHOLDER|$CMD_PATH|g" "$TMP_DESKTOP"
 mv "$TMP_DESKTOP" "$DESKTOP_FILE"
 chmod 644 "$DESKTOP_FILE"
 
+echo
 echo "Desktop integration complete:"
 echo "Name of the app: 'Real-Time Upscaler'"
 echo "Desktop file: '$DESKTOP_FILE'"

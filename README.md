@@ -91,6 +91,17 @@ cd linux-rt-upscaler
 pip install -e .
 ```
 
+### Optional: Desktop integration
+
+After installing, you can add a desktop entry so the GUI appears in your application menu:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/refs/heads/main/scripts/desktop_integration.sh \
+    -o /tmp/desktop_integration.sh
+less /tmp/desktop_integration.sh  # always review scripts before running them
+sh /tmp/desktop_integration.sh
+```
+
 ## Usage
 
 After installation, the `upscale-gui` and `upscale` commands will be available globally:
