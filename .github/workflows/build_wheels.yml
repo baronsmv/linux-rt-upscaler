@@ -23,6 +23,9 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v3
+
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel
 
@@ -37,7 +40,7 @@ jobs:
               yum install -y epel-release || true;
               yum install -y libX11-devel libXext-devel libXdamage-devel libXfixes-devel libxcb-devel vulkan-devel;
             fi
-          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_LINUX: x86_64 aarch64
           CIBW_BUILD: cp${{ matrix.pyver }}-*
           CIBW_TEST_COMMAND: "python -c 'import upscaler.capture'"
           CIBW_BUILD_VERBOSITY: 3
