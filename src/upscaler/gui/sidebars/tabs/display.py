@@ -77,10 +77,10 @@ class DisplayTab(SettingsTab):
             self._on_overlay_mode,
             baseline=self.baseline_config.overlay_mode,
             help="Overlay window behaviour:\n"
-            f"{chr(8226)} always-on-top - floating, cannot be focused (recommended)\n"
-            f"{chr(8226)} top-transparent - click-through (mouse passes to window below)\n"
-            f"{chr(8226)} fullscreen - covers entire monitor\n"
-            f"{chr(8226)} windowed - normal window with decorations",
+            f"{chr(8226)} always-on-top: floating, cannot be focused (recommended)\n"
+            f"{chr(8226)} top-transparent: click-through (mouse passes to window below)\n"
+            f"{chr(8226)} fullscreen: covers entire monitor\n"
+            f"{chr(8226)} windowed: normal window with decorations",
         )
 
         # ---- Output Geometry ----
@@ -92,9 +92,9 @@ class DisplayTab(SettingsTab):
             self._on_geometry_changed,
             baseline=self.baseline_config.output_geometry,
             help="How the upscaled content fits the overlay:\n"
-            f"{chr(8226)} fit - letterbox, preserves aspect ratio\n"
-            f"{chr(8226)} stretch - fill, aspect ratio may be distorted\n"
-            f"{chr(8226)} cover - fill and crop to fit",
+            f"{chr(8226)} fit: letterbox, preserves aspect ratio\n"
+            f"{chr(8226)} stretch: fill, aspect ratio may be distorted\n"
+            f"{chr(8226)} cover: fill and crop to fit",
         )
 
         # ---- Crop ----

@@ -43,7 +43,7 @@ class WindowTileItem(QGraphicsObject):
     Local coordinates are **centered** at (0,0), so scaling expands
     symmetrically.  A constant bounding rectangle, pre-computed for
     the maximum pop-out scale plus shadow, is returned by
-    :meth:`boundingRect` - this avoids layout recalculations during
+    :meth:`boundingRect`: this avoids layout recalculations during
     animations and makes keyboard navigation flicker-free.
 
     All visual parameters are taken from a :class:`GUIConfig` instance.

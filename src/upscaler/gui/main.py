@@ -81,7 +81,7 @@ class MainWindow(QMainWindow):
         os.makedirs(self._icons_dir, exist_ok=True)
 
         # ---- UI setup ----------------------------------------------------
-        self.setWindowTitle("Linux Real-Time Upscaler")
+        self.setWindowTitle("Real-Time Upscaler")
         self.setMinimumSize(1200, 600)
 
         # Central layout: splitter with three panels
@@ -91,7 +91,7 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # Left sidebar - Profiles
+        # Left sidebar: Profiles
         self.left_sidebar = ProfilesSidebar(
             self.gui_config,
             self._config_manager.profiles,
@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
         self.left_sidebar.move_up_requested.connect(self._on_move_up)
         self.left_sidebar.move_down_requested.connect(self._on_move_down)
 
-        # Central column - filter bar + window grid
+        # Central column: filter bar + window grid
         central_widget = QWidget()
         central_layout = QVBoxLayout(central_widget)
         central_layout.setContentsMargins(
@@ -130,7 +130,7 @@ class MainWindow(QMainWindow):
         self.about_btn.setIconSize(QSize(20, 20))
         self.about_btn.setFixedSize(32, 32)
         self.about_btn.setCursor(Qt.PointingHandCursor)
-        self.about_btn.setToolTip("About Linux Real-Time Upscaler")
+        self.about_btn.setToolTip("About Real-Time Upscaler")
         self.about_btn.setAutoRaise(True)
         self.about_btn.setStyleSheet(about_button_style(self.gui_config))
         self.about_btn.clicked.connect(self._show_about)
@@ -146,7 +146,7 @@ class MainWindow(QMainWindow):
         self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
         central_layout.addWidget(self._view, stretch=1)
 
-        # Right sidebar - Settings
+        # Right sidebar: Settings
         self.right_sidebar = self._create_right_sidebar()
         self.right_sidebar.save_settings.connect(self._on_save_settings)
         self.right_sidebar.reset_settings.connect(self._on_reset_settings)
@@ -481,7 +481,7 @@ class MainWindow(QMainWindow):
                 except OSError:
                     pass
         else:
-            # No file to rename - ensure the entry is clean
+            # No file to rename: ensure the entry is clean
             self._config_manager.remove_profile_icon(new_name)
 
     # ------------------------------------------------------------------
@@ -533,7 +533,7 @@ class MainWindow(QMainWindow):
 
     def _show_about(self) -> None:
         """Display the About dialog."""
-        cfg = self.gui_config  # shorthand
+        cfg = self.gui_config
 
         dlg = QDialog(self)
         dlg.setWindowTitle("About")
@@ -558,8 +558,8 @@ class MainWindow(QMainWindow):
         icon_container.addStretch()
         main_layout.addLayout(icon_container)
 
-        # ---- App name (big, bold) ----
-        name_label = QLabel("Linux Real-Time Upscaler")
+        # ---- App name ----
+        name_label = QLabel("Real-Time Upscaler")
         name_label.setAlignment(Qt.AlignCenter)
         name_label.setStyleSheet(about_dialog_name_style(cfg))
         main_layout.addWidget(name_label)
@@ -571,9 +571,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(version_label)
 
         # ---- Tagline / description ----
-        desc_label = QLabel(
-            "A real-time AI upscaler for any application window on GNU/Linux."
-        )
+        desc_label = QLabel("A real-time SRCNN upscaler for any X-Window on GNU/Linux.")
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignCenter)
         desc_label.setStyleSheet(about_dialog_description_style(cfg))

@@ -299,7 +299,7 @@ class ProfilesSidebar(QWidget):
         # Re-enable signals before selecting the active item
         self._list.blockSignals(False)
 
-        # Now select the correct item - the signal will fire and update toolbar buttons
+        # Now select the correct item: the signal will fire and update toolbar buttons
         if active_name is None or active_name == "":
             self._list.setCurrentRow(0)
         else:

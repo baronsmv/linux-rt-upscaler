@@ -80,9 +80,9 @@ class AdvancedTab(SettingsTab):
             self._on_present_mode,
             baseline=self.baseline_config.vulkan_present_mode,
             help="Vulkan presentation mode:\n"
-            f"{chr(8226)} fifo - VSync on, lowest power, no tearing\n"
-            f"{chr(8226)} mailbox - tear-free, lower latency, higher power\n"
-            f"{chr(8226)} immediate - no VSync, lowest latency, may tear",
+            f"{chr(8226)} fifo: VSync on, lowest power, no tearing\n"
+            f"{chr(8226)} mailbox: tear-free, lower latency, higher power\n"
+            f"{chr(8226)} immediate: no VSync, lowest latency, may tear",
         )
         self._buffer_pool = self._add_slider(
             "Buffer Pool Size",
@@ -116,7 +116,7 @@ class AdvancedTab(SettingsTab):
             baseline=self.baseline_config.use_tile_processing,
             help="Divide the frame into tiles and only re-process the ones that have changed.\n"
             "Ideal for mostly static content (e.g. text editors, visual novels).\n"
-            "When disabled, the whole frame is upscaled in one pass - better for video or rapid changes.",
+            "When disabled, the whole frame is upscaled in one pass: better for video or rapid changes.",
         )
         self._damage_cb = self._add_cb(
             "Damage Tracking",

@@ -103,7 +103,7 @@ class BaseRow(QWidget):
     def _apply_highlight_style(self, highlighted: bool) -> None:
         """
         Update the label color.
-        Disabled always wins - dimmed text, no highlight styling.
+        Disabled always wins: dimmed text, no highlight styling.
         """
         if self._label is None:
             return

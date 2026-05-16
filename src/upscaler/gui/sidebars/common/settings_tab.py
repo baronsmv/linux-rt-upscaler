@@ -44,7 +44,7 @@ class SettingsTab(QWidget):
     a setting has been modified (optional, depending on concrete tab).
 
     The class provides convenience methods for adding rows with labels,
-    section headers, and separators - all styled consistently.
+    section headers, and separators: all styled consistently.
     """
 
     config_changed = Signal()

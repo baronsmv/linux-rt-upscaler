@@ -287,7 +287,7 @@ class ConfigManager(QObject):
         CLI overrides are **not** affected; they remain in the effective config.
         """
         if self.active_profile_name is not None:
-            # Clear profile options - profile goes to "no overrides" state
+            # Clear profile options: profile goes to "no overrides" state
             self.profiles[self.active_profile_name]["options"] = {}
             self.persistent_config = copy.deepcopy(self.global_baseline)
 
