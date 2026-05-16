@@ -1,9 +1,11 @@
 [Desktop Entry]
-Type=Application
-Name=Real-Time Upscaler
-GenericName=Real-Time Upscaler
+Categories=Graphics;GTK;Qt;
 Comment=Upscale any X‑Window
 Exec=EXEC_PATH_PLACEHOLDER
-Icon=ICON_PATH_PLACEHOLDER
-Categories=Graphics;GTK;Qt;
+GenericName=Real-Time Upscaler
+Icon=io.github.baronsmv.linux-rt-upscaler
+Name=Real-Time Upscaler
+NoDisplay=false
+StartupNotify=false
 Terminal=false
+Type=Application
