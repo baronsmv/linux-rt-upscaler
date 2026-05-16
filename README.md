@@ -1,32 +1,37 @@
-# Real-Time Upscaler for Linux
+<p align="center">
+  <img src="https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/data/icons/hicolor/scalable/apps/io.github.baronsmv.linux-rt-upscaler.svg" width="128" alt="icon">
+</p>
 
-[![PyPI version](https://img.shields.io/pypi/v/linux-rt-upscaler.svg)](https://pypi.org/project/linux-rt-upscaler/)
-[![Python versions](https://img.shields.io/pypi/pyversions/linux-rt-upscaler.svg)](https://pypi.org/project/linux-rt-upscaler/)
-[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+<h1 align="center">Real-Time Upscaler for Linux</h1>
+
+<p align="center">
+  <a href="https://pypi.org/project/linux-rt-upscaler/"><img src="https://img.shields.io/pypi/v/linux-rt-upscaler.svg" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/linux-rt-upscaler/"><img src="https://img.shields.io/pypi/pyversions/linux-rt-upscaler.svg" alt="Python versions"></a>
+  <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPLv3"></a>
+</p>
 
 A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It uses [CuNNy](https://github.com/funnyplanter/CuNNy) neural networks to perform 2x (or 4x) upscaling to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
 
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/refs/heads/main/docs/gui/screenshots/dark_02.png)
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/docs/gui/screenshots/dark_02.png)
 
 ## Results at 400% magnification
 
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/comparisons/gurikaji/w40-60_h20-50_4x_comparison.png)
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/docs/comparisons/gurikaji/w40-60_h20-50_4x_comparison.png)
 
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/comparisons/fatamoru/w30-50_h10-50_4x_comparison.png)
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/docs/comparisons/fatamoru/w30-50_h10-50_4x_comparison.png)
 
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/comparisons/konosora/w10-30_h20-50_4x_comparison.png)
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/docs/comparisons/konosora/w10-30_h20-50_4x_comparison.png)
 
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/comparisons/diagram/w40-70_h40-90_4x_comparison.png)
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/docs/comparisons/diagram/w40-70_h40-90_4x_comparison.png)
 
 ## Features
 
-- **Neural-Network Upscaling** using SRCNNs trained specifically for high-quality 2x upscaling of visual novels and illustrations.
-- **Complete Model Selection** from 9 variants with variable quality/performance trade-offs.
-- **Tile‑Based Processing** that divides each frame into tiles and upscaling only the regions that change, reducing GPU load for mostly static content.
-- **Select Any Window** from a list of visible windows or by its name.
-- **Flexible Output Geometry**: scaling mode (fit, stretch, cover), offset, crop and zoom.
-- **Input Forwarding** as if interacting directly with the original window.
-- **Hardware Accelerated** using Vulkan compute.
+- **Neural-Network upscaling** using SRCNNs trained for high-quality upscaling of visual novels and illustrations.
+- **Model selection** from 9 variants with variable quality/performance trade-offs.
+- **Hardware accelerated** using Vulkan compute.
+- **Tile-Based processing** that upscales only the frame regions that change, reducing GPU load for mostly static content.
+- **Customizable output geometry**: scaling mode (fit, stretch, cover), offset, crop and zoom.
+- **Input forwarding** as if interacting directly with the original window.
 
 ## Requirements
 
@@ -96,7 +101,7 @@ After installation, the `upscale-gui` and `upscale` commands will be available g
 upscale-gui
 ```
 
-The GUI displays live thumbnails of every open valid window. Click one to start upscaling that window. 
+The GUI displays live thumbnails of every open valid window. Click one to start upscaling that window.
 
 Use the right panel to adjust any setting, and the left panel to create profiles that automatically apply when a matching window is detected, or when selected manually.
 
@@ -153,9 +158,10 @@ If no profile is selected manually, the program checks all profiles that have a 
 
 ```yaml
 # General defaults (lowest priority)
-model: fast
-select: false
+model: 3x12
+double_upscale: true
 
+# Profiles that override if matched
 profiles:
   game:
     match:
@@ -171,17 +177,17 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 
 ## How It Works
 
-1. **Selects** a window using X11 to find the target window by PID or WM_CLASS.
-2. **Captures** the window's pixels using XShm and XDamage.
-3. **Upscales** with SRCNN compute shaders to a 2x (or 4x) larger image.
-4. **Scales** with a Lanczos2 shader to fill the monitor.
-5. **Renders** in a overlay window that bypasses the window manager (so it always stays on top).
-6. **Forwards** mouse events to the original window.
+1. Selects a window using X11 to find the target window by PID or WM_CLASS.
+2. Captures the window's pixels using XShm and XDamage.
+3. Upscales with SRCNN compute shaders to a 2x (or 4x) larger image.
+4. Scales with a Lanczos2 shader to fill the monitor.
+5. Renders in a overlay window that bypasses the window manager (so it always stays on top).
+6. Forwards mouse events to the original window.
 
 ## Future Plans
 
 - [ ] Addition of more SRCNN models ([FSRCNNX](https://github.com/awused/dotfiles/tree/master/mpv/.config/mpv/shaders/fsrcnnx) planned).
-- [ ] ~~Native Wayland support~~ (**on hold**: the Wayland capture model would be deeply compositor-specific and doesn’t align with the XShm/XDamage pipeline.)
+- [ ] ~~Native Wayland support~~ (**on hold**: Wayland capture is deeply compositor-specific and currently doesn’t align with the XShm/XDamage pipeline.)
 
 ## Known Issues
 
@@ -189,23 +195,17 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 
 Synthetic mouse events (clicks, motion, wheel) sent by the overlay are ignored by:
 
-- Wine and Proton versions older than 10.0 (Proton 10 works correctly).
-- Certain native applications like Firefox.
+- Wine and Proton versions older than 10.0 (GE-Proton10 + UMU works).
+- Native applications like Firefox.
 
 For more details, see [issue #7](https://github.com/baronsmv/linux-rt-upscaler/issues/7).
-
-## Motivation
-
-While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their **frame generation** capabilities to Linux.
-
-This project tackles the other half of the equation: **SRCNN upscaling** to deliver a native solution Linux has been missing, an experience similar to [Gamescope](https://github.com/ValveSoftware/gamescope) that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
 
 ## Acknowledgments
 
 This project stands on the shoulders of several open-source works, mantained by amazing people:
 
-- **[L65536](https://github.com/L65536)**, for the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real-time CuNNy upscaling on Linux and served as a proof-of-concept for this project.
-- **[funnyplanter](https://github.com/funnyplanter)**, for the incredible [CuNNy](https://github.com/funnyplanter/CuNNy) neural network upscaling models, especially the Magpie NVL variants trained on visual novel artwork.
+- **[L65536](https://github.com/L65536)**, for the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real-time SRCNN upscaling on Linux and served as a proof-of-concept for this project.
+- **[funnyplanter](https://github.com/funnyplanter)**, for the incredible [CuNNy](https://github.com/funnyplanter/CuNNy) neural network upscaling models.
 - **[Compushady](https://github.com/rdeioris/compushady)**, which served as an invaluable foundation during early development.
 - **[PySide6](https://pypi.org/project/PySide6/)**, the Qt binding that powers the entire graphical interface and overlay window.
 - **[xcffib](https://github.com/tych0/xcffib)**, the low‑level XCB binding used for all window management and event forwarding.
