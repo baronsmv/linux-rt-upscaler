@@ -181,7 +181,7 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 ## Future Plans
 
 - [ ] Addition of more SRCNN models ([FSRCNNX](https://github.com/awused/dotfiles/tree/master/mpv/.config/mpv/shaders/fsrcnnx) planned).
-- [ ] ~~Native Wayland support~~ (reviewing it: heavily compositor-dependent and different from the current XShm + XDamage currently used).
+- [ ] ~~Native Wayland support~~ (**on hold**: the Wayland capture model would be deeply compositor-specific and doesn’t align with the XShm/XDamage pipeline.)
 
 ## Known Issues
 
