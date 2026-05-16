@@ -34,6 +34,7 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setWindowIcon(load_icon("app/app", 256, 256))
     app.setApplicationName("upscale-gui")
+    app.setDesktopFileName("io.github.baronsmv.linux-rt-upscaler")
 
     # Main window
     window = MainWindow(config_manager, profile_name=profile_name)
