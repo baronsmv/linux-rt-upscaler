@@ -1,3 +1,3 @@
 """Real-Time Upscaler for Linux"""
 
-__version__ = "1.0.0.post4"
+__version__ = "1.0.0.post5"

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "linux-rt-upscaler"
-version = "1.0.0.post4"
+version = "1.0.0.post5"
 description = "Real-time AI upscaler for any Linux window"
 readme = "README.md"
 authors = [

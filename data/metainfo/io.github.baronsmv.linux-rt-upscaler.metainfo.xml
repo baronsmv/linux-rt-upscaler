@@ -58,7 +58,7 @@
     </requires>
 
     <releases>
-        <release version="1.0.0.post4" date="2026-05-16">
+        <release version="1.0.0.post5" date="2026-05-16">
             <description>
                 <p>Initial Flatpak release.</p>
             </description>
