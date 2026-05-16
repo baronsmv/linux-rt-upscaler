@@ -33,7 +33,7 @@ def main() -> None:
     # Qt application
     app = QApplication(sys.argv)
     app.setWindowIcon(load_icon("app/app", 256, 256))
-    app.setApplicationName("upscaler-gui")
+    app.setApplicationName("upscale-gui")
 
     # Main window
     window = MainWindow(config_manager, profile_name=profile_name)
