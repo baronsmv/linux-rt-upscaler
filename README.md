@@ -1,12 +1,12 @@
-# Real-Time Upscaler for Linux
+# Real-Time Upscaler
 
 [![PyPI version](https://img.shields.io/pypi/v/linux-rt-upscaler.svg)](https://pypi.org/project/linux-rt-upscaler/)
 [![Python versions](https://img.shields.io/pypi/pyversions/linux-rt-upscaler.svg)](https://pypi.org/project/linux-rt-upscaler/)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-A real-time AI upscaler for any application window on GNU/Linux. It uses [CuNNy](https://github.com/funnyplanter/CuNNy) neural networks to perform 2x (or 4x) upscaling, then scales the result to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
+A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It uses [CuNNy](https://github.com/funnyplanter/CuNNy) neural networks to perform 2x (or 4x) upscaling to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
 
-Now with full **XWayland support** – works seamlessly under Wayland compositors!
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/refs/heads/main/docs/gui/screenshots/dark_02.png)
 
 ## Results at 400% magnification
 
@@ -18,29 +18,15 @@ Now with full **XWayland support** – works seamlessly under Wayland compositor
 
 ![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/comparisons/diagram/w40-70_h40-90_4x_comparison.png)
 
-## Main Window
-
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/refs/heads/main/docs/gui/screenshots/02.png)
-
 ## Features
 
-- **AI-Powered Upscaling** – Uses the CuNNy (Convolutional upscaling Neural Network) models, trained specifically for high-quality 2x upscaling of visual novels and illustrations.
-- **Complete Model Selection** – Choose from 9 variants, offering a range of quality/performance trade-offs:
-  - `8x32` – Highest quality, slowest.
-  - `4x32`
-  - `4x24`
-  - `4x16`
-  - `4x12`
-  - `3x12`
-  - `fast` – Default. Recommended for slow machines.
-  - `faster`
-  - `veryfast` – Fastest option, lowest quality.
-- **Tile‑Based Processing** – Divides each frame into tiles, re‑upscaling only the regions that change, drastically reducing GPU and CPU load for mostly static content.
-- **Attach to Any Window** – Either grab the currently active window, select from visible windows or launch a new program and capture its window automatically.
-- **Flexible Output Geometry** – Control the overlay size, scaling mode, offset and borders, with interactive zoom and pan.
-- **Input Forwarding** – Click, move, and drag on the upscaled image as if interacting directly with the original window.
-- **Hardware Accelerated** – Custom Vulkan compute backend works on NVIDIA, AMD, and Intel GPUs.
-- **Global Hotkeys & On-Screen Display** – Switch models, zoom, pan, take lossless screenshots and more using keyboard shortcuts.
+- **Neural-Network Upscaling** using SRCNNs trained specifically for high-quality 2x upscaling of visual novels and illustrations.
+- **Complete Model Selection** from 9 variants with variable quality/performance trade-offs.
+- **Tile‑Based Processing** that divides each frame into tiles and upscaling only the regions that change, reducing GPU load for mostly static content.
+- **Select Any Window** from a list of visible windows or by its name.
+- **Flexible Output Geometry**: scaling mode (fit, stretch, cover), offset, crop and zoom.
+- **Input Forwarding** as if interacting directly with the original window.
+- **Hardware Accelerated** using Vulkan compute.
 
 ## Requirements
 
@@ -128,7 +114,6 @@ upscale -- <command>
 
 # Choose a specific model (examples)
 upscale -m 8x32      # Highest quality, slowest
-upscale -m 4x24      # A balanced option
 upscale -m veryfast  # Maximum performance
 
 # Perform 4x upscaling (two 2x passes)
@@ -186,17 +171,17 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 
 ## How It Works
 
-1. **Window Selection** – Uses X11 to find the target window by PID or WM_CLASS.
-2. **Capture** – Grabs the window's pixels using a fast custom C library.
-3. **AI Upscaling** – CuNNy compute shaders (written in HLSL, compiled via Compushady) produce a 2x (or 4x) larger image.
-4. **Aspect-Preserving Scaling** – A lightweight Lanczos2 compute shader scales the upscaled image to fill the monitor, adding black bars to maintain the original aspect ratio.
-5. **Display** – The result is rendered in a transparent overlay window that bypasses the window manager (so it always stays on top).
-6. **Input Forwarding** – Mouse events are transformed using the scaling ratios and sent to the original window via `XSendEvent`.
+1. **Selects** a window using X11 to find the target window by PID or WM_CLASS.
+2. **Captures** the window's pixels using XShm and XDamage.
+3. **Upscales** with SRCNN compute shaders to a 2x (or 4x) larger image.
+4. **Scales** with a Lanczos2 shader to fill the monitor.
+5. **Renders** in a overlay window that bypasses the window manager (so it always stays on top).
+6. **Forwards** mouse events to the original window.
 
 ## Future Plans
 
-- [ ] **Addition of more models** – Parse and include other models and shaders.
-- [ ] **Native Wayland support** – Support pure Wayland windows without XWayland.
+- [ ] Addition of more SRCNN models ([FSRCNNX](https://github.com/awused/dotfiles/tree/master/mpv/.config/mpv/shaders/fsrcnnx) planned).
+- [ ] ~~Native Wayland support~~ (reviewing it: heavily compositor-dependent and different from the current XShm + XDamage currently used).
 
 ## Known Issues
 
@@ -213,17 +198,17 @@ For more details, see [issue #7](https://github.com/baronsmv/linux-rt-upscaler/i
 
 While real-time upscaling tools like [Magpie](https://github.com/Blinue/Magpie) and [Lossless Scaling](https://losslessscaling.com/) remain Windows-exclusive, projects such as [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) are successfully bringing their **frame generation** capabilities to Linux.
 
-This project tackles the other half of the equation: **AI-powered upscaling** to deliver a native solution Linux has been missing, an experience similar to [Gamescope](https://github.com/ValveSoftware/gamescope) that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
+This project tackles the other half of the equation: **SRCNN upscaling** to deliver a native solution Linux has been missing, an experience similar to [Gamescope](https://github.com/ValveSoftware/gamescope) that applies intelligent upscaling (similar to [Anime4K](https://github.com/bloc97/Anime4K)) to any application.
 
 ## Acknowledgments
 
-This project stands on the shoulders of several open-source works, mantained by amazing people and communities:
+This project stands on the shoulders of several open-source works, mantained by amazing people:
 
-- **[L65536](https://github.com/L65536)**, for the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real‑time CuNNy upscaling on Linux. This project began from that proof‑of‑concept and has since evolved into a complete rewrite with a custom Vulkan backend, tile‑based processing, and more features.
+- **[L65536](https://github.com/L65536)**, for the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real-time CuNNy upscaling on Linux and served as a proof-of-concept for this project.
 - **[funnyplanter](https://github.com/funnyplanter)**, for the incredible [CuNNy](https://github.com/funnyplanter/CuNNy) neural network upscaling models, especially the Magpie NVL variants trained on visual novel artwork.
-- **[Compushady](https://github.com/rdeioris/compushady)**, which served as an invaluable foundation during early development. The current release uses a custom, tailored Vulkan backend that builds on those early lessons and grows to meet the project’s specific needs.
-- **[PySide6](https://pypi.org/project/PySide6/)**, the Qt binding that powers the entire graphical overlay window.
+- **[Compushady](https://github.com/rdeioris/compushady)**, which served as an invaluable foundation during early development.
+- **[PySide6](https://pypi.org/project/PySide6/)**, the Qt binding that powers the entire graphical interface and overlay window.
 - **[xcffib](https://github.com/tych0/xcffib)**, the low‑level XCB binding used for all window management and event forwarding.
-- **[screeninfo](https://github.com/rr-/screeninfo)**, providing the physical dimensions and positions of all connected monitors, and used for scaling factor detection.
-- **[psutil](https://github.com/giampaolo/psutil)**, helping locate the target window by matching process IDs and window classes when attaching to a running application or launching a new one.
-- **[Pillow](https://python-pillow.github.io/)**, used for saving lossless screenshots and for rendering the on‑screen display text as an image, which is then uploaded to the GPU.
+- **[screeninfo](https://github.com/rr-/screeninfo)**, used for automatic scale factor detection in Wayland.
+- **[psutil](https://github.com/giampaolo/psutil)**, used to locate the target window PID.
+- **[Pillow](https://python-pillow.github.io/)**, used for saving screenshots and rendering OSD messages.
