@@ -7,16 +7,12 @@
 set root_dir (dirname (dirname (status --current-filename)))
 cd "$root_dir"
 
-uv export \
-    --format requirements-txt \
-    --no-editable \
-    --no-emit-project \
-    > requirements.txt
+if not test -f flatpak-pip-generator.py
+    wget https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py
+    chmod +x flatpak-pip-generator.py
+end
 
-pip install \
-    --dry-run \
-    --report python-dependencies.json \
-    -r requirements.txt \
-    --prefix /app
-
-rm requirements.txt
+uv run python3 flatpak-pip-generator.py \
+    --runtime='org.kde.Sdk//6.10' \
+    --output python-dependencies \
+    pybind11 numpy pillow platformdirs psutil pyyaml screeninfo xcffib
