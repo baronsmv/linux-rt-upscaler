@@ -44,7 +44,7 @@ class SwapchainManager:
             RuntimeError: If width or height is zero, or XCB connection fails.
         """
         if width <= 0 or height <= 0:
-            raise ValueError(f"Invalid dimensions: {width}x{height}")
+            raise ValueError(f"Invalid dimensions: {width}x{height}.")
 
         self._xid = xid
         self._width = width
@@ -67,7 +67,7 @@ class SwapchainManager:
 
         self._create_swapchain()
         logger.debug(
-            f"SwapchainManager initialized: {width}x{height}, mode={present_mode}"
+            f"SwapchainManager initialized: {width}x{height}, mode={present_mode}."
         )
 
     # ----------------------------------------------------------------------
@@ -86,7 +86,7 @@ class SwapchainManager:
         """
         with self._lock:
             if self._swapchain is None:
-                raise RuntimeError("Swapchain not available")
+                raise RuntimeError("Swapchain not available.")
             self._swapchain.present(texture, wait_for_fence=wait_for_fence)
 
     def recreate(self, new_width: int, new_height: int) -> None:
@@ -100,7 +100,9 @@ class SwapchainManager:
             new_height: New height in pixels.
         """
         if new_width <= 0 or new_height <= 0:
-            logger.warning(f"Ignoring invalid swapchain size: {new_width}x{new_height}")
+            logger.warning(
+                f"Ignoring invalid swapchain size: {new_width}x{new_height}."
+            )
             return
 
         with self._lock:
@@ -110,7 +112,7 @@ class SwapchainManager:
             self._last_recreate_time = now
 
             logger.debug(
-                f"Recreating swapchain: {self._width}x{self._height} -> {new_width}x{new_height}"
+                f"Recreating swapchain: {self._width}x{self._height} -> {new_width}x{new_height}."
             )
             self._width = new_width
             self._height = new_height
@@ -166,9 +168,9 @@ class SwapchainManager:
                 try:
                     self._xcb_conn.disconnect()
                 except Exception as e:
-                    logger.warning(f"Error closing XCB connection: {e}")
+                    logger.warning("Error closing XCB connection: '%s'.", e)
                 self._xcb_conn = None
-        logger.debug("SwapchainManager closed")
+        logger.debug("SwapchainManager closed.")
 
     # ----------------------------------------------------------------------
     # Internal

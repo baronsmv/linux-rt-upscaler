@@ -182,7 +182,7 @@ class OSDManager:
             if img:
                 self._images[text] = img
         self._images_ready.set()
-        logger.debug(f"OSD CPU rendering complete: {len(self._images)} images")
+        logger.debug("OSD CPU rendering complete: %s images.", len(self._images))
 
     # ----------------------------------------------------------------------
     # GPU texture preparation (must be called from pipeline thread)
@@ -198,12 +198,12 @@ class OSDManager:
         self._images_ready.wait()
         for text, img in self._images.items():
             if text not in self._texture_cache:
-                logger.debug(f"Uploading OSD texture for '{text}'")
+                logger.debug("Uploading OSD texture for '%s'.", text)
                 try:
                     self._texture_cache[text] = self._upload_image_to_texture(img)
                 except Exception as e:
-                    logger.error(f"Failed to upload OSD texture '{text}': {e}")
-        logger.debug("All OSD textures uploaded to GPU")
+                    logger.error("Failed to upload OSD texture '%s': '%s'.", text, e)
+        logger.debug("All OSD textures uploaded to GPU.")
 
     @staticmethod
     def _upload_image_to_texture(image: Image.Image) -> Texture2D:
@@ -250,7 +250,7 @@ class OSDManager:
             if self._active_text is not None and self._active_texture is None:
                 self._active_texture = self._texture_cache.get(self._active_text)
                 if self._active_texture is None:
-                    logger.error(f"OSD texture not found for '{self._active_text}'")
+                    logger.error("OSD texture not found for '%s'.", self._active_text)
 
             texture = self._active_texture
             needs_redraw = self._needs_redraw
@@ -334,7 +334,7 @@ class OSDManager:
         pipelines that reference the old screen texture become invalid.
         """
         self._compute_cache.clear()
-        logger.debug("OSD compute cache cleared")
+        logger.debug("OSD compute cache cleared.")
 
     def shutdown(self) -> None:
         """Clean up background executor."""

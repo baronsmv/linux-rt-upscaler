@@ -190,10 +190,7 @@ class Presenter:
         self.swapchain.present(self.screen_tex, wait_for_fence=False)
 
     def reconfigure_effects(self, config: Config) -> None:
-        """
-        Update post-processing passes to match a new configuration.
-        Call this after changing the active Config (e.g. on window switch).
-        """
+        """Update post-processing passes to match a new configuration."""
         self.config = config
 
         # ---- Debanding ----

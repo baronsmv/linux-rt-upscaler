@@ -165,11 +165,6 @@ class Pipeline:
         self._max_capture_failures = 10
         self._pause_after_failure = 0.05
 
-        # Performance counters
-        self._frame_count = 0
-        self._last_fps_log = time.time()
-        self._last_frame_time = time.time()
-
         # Pre-upload OSD textures (requires Vulkan device to be ready)
         self.osd.prepare_textures()
 
@@ -398,7 +393,7 @@ class Pipeline:
     # ----------------------------------------------------------------------
     def _handle_window_change(self) -> None:
         """Recreate resources when the target window changes size or handle."""
-        logger.debug("Handling window change")
+        logger.debug("Handling window change.")
         self._win_info.handle = self._window_tracker.handle
         self._win_info.width = self._window_tracker.width
         self._win_info.height = self._window_tracker.height
@@ -450,7 +445,7 @@ class Pipeline:
             self.update_content_dimensions()
         else:
             self._swapchain_manager.recreate(new_w, new_h)
-        self.osd.clear_compute_cache()  # screen texture changed
+        self.osd.clear_compute_cache()
 
         # Force full render
         self._presenter_params_stale = True
@@ -473,13 +468,13 @@ class Pipeline:
     # ----------------------------------------------------------------------
     def _switch_target(self, new_win_info: WindowInfo) -> None:
         """Switch the pipeline to a new target window."""
-        logger.info(f"Switching to window: {new_win_info.title}")
+        logger.info("Switching to window: '%s'", new_win_info.title)
         test_tracker = WindowTracker(
             new_win_info.handle, new_win_info.width, new_win_info.height
         )
         test_tracker.update(force=True)
         if not test_tracker.alive:
-            logger.warning("New window not alive, ignoring switch")
+            logger.warning("New window not alive, ignoring switch.")
             test_tracker.close()
             return
         test_tracker.close()
@@ -497,7 +492,7 @@ class Pipeline:
     # ----------------------------------------------------------------------
     def _run(self) -> None:
         """Main pipeline loop."""
-        logger.debug("Pipeline thread started")
+        logger.debug("Pipeline thread started.")
         self._create_grabber()
 
         while self._running:
@@ -509,7 +504,7 @@ class Pipeline:
                 if not self.config.follow_focus:
                     self._window_tracker.check_alive()
                     if not self._window_tracker.alive:
-                        logger.info("Target window closed - exiting")
+                        logger.info("Target window closed, exiting.")
                         break
 
                 # Update window state (size, minimized, focus)
@@ -535,11 +530,8 @@ class Pipeline:
                 # Show pending OSD messages
                 self._process_osd_requests()
 
-                # Periodic FPS logging
-                self._log_fps()
-
             except Exception as e:
-                logger.exception(f"Fatal error in pipeline loop: {e}")
+                logger.exception("Fatal error in pipeline loop: '%s'.", e)
                 break
 
         self._stopped_event.set()
@@ -627,15 +619,3 @@ class Pipeline:
                 self.osd.show(text, duration)
         except Empty:
             pass
-
-    def _log_fps(self) -> None:
-        """Log average FPS every 2 seconds."""
-        now = time.time()
-        if now - self._last_fps_log >= 2.0:
-            elapsed = now - self._last_frame_time
-            if elapsed > 0:
-                fps = self._frame_count / elapsed
-                logger.debug(f"FPS: {fps:.1f}")
-            self._last_frame_time = now
-            self._frame_count = 0
-            self._last_fps_log = now
