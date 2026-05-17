@@ -522,7 +522,6 @@ class Pipeline:
 
                 # Process a frame
                 self._process_one_frame()
-                self._frame_count += 1
 
                 # Handle hotkey requests (model / geometry / screenshot)
                 self.controller.process_requests()
