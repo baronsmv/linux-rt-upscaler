@@ -20,7 +20,7 @@ from .profiles import (
     move_profile_up,
 )
 from .setup import load_config, setup_config
-from .validators import validate_overrides
+from .validators import validate_config, validate_overrides
 from .yaml import load_yaml_config, save_yaml_config
 
 __all__ = [
@@ -42,6 +42,7 @@ __all__ = [
     "move_profile_up",
     "parse_args",
     "parse_config",
+    "validate_config",
     "validate_overrides",
     "save_yaml_config",
     "setup_config",

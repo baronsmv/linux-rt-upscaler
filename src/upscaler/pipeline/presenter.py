@@ -189,6 +189,74 @@ class Presenter:
         """Re-present the current screen texture without any processing."""
         self.swapchain.present(self.screen_tex, wait_for_fence=False)
 
+    def reconfigure_effects(self, config: Config) -> None:
+        """
+        Update post‑processing passes to match a new configuration.
+        Call this after changing the active Config (e.g. on window switch).
+        """
+        self.config = config
+
+        # ---- Debanding ----
+        if config.deband_enabled:
+            if self._deband is None:
+                self._deband = DebandPass()
+        else:
+            if self._deband is not None:
+                self._deband = None
+                self._deband_tex = None
+
+        # ---- CAS ----
+        if config.cas_enabled:
+            if self._cas is None:
+                self._cas = CASPass()
+                self._cas.set_target_texture(self.screen_tex)
+        else:
+            if self._cas is not None:
+                self._cas = None
+
+        # ---- Bloom ----
+        if config.bloom_enabled:
+            if self._bloom is None:
+                self._bloom = BloomPass()
+                self._bloom.set_target_texture(self.screen_tex)
+        else:
+            if self._bloom is not None:
+                self._bloom = None
+
+        # ---- Vignette ----
+        if config.vignette_enabled:
+            if self._vignette is None:
+                self._vignette = VignettePass()
+                self._vignette.set_target_texture(self.screen_tex)
+        else:
+            if self._vignette is not None:
+                self._vignette = None
+
+        # ---- LUT ----
+        if config.lut_enabled:
+            if self._lut is None:
+                self._lut = LUTPass(preset=config.lut_preset)
+                self._lut.set_target_texture(self.screen_tex)
+            else:
+                if self._lut.preset != config.lut_preset:
+                    self._lut = LUTPass(preset=config.lut_preset)
+                    self._lut.set_target_texture(self.screen_tex)
+        else:
+            if self._lut is not None:
+                self._lut = None
+
+        # ---- Film Grain ----
+        if config.grain_enabled:
+            if self._grain is None:
+                self._grain = FilmGrainPass()
+                self._grain.set_target_texture(self.screen_tex)
+        else:
+            if self._grain is not None:
+                self._grain = None
+
+        # Reset cached compute pipelines that reference the old screen texture
+        self.osd.clear_compute_cache()
+
     def get_scaling_rect(self, scale_factor: float) -> List[float]:
         """
         Return the rectangle (in overlay widget coordinates) where content is

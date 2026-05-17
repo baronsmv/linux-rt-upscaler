@@ -1,9 +1,10 @@
+import copy
 import logging
 import threading
 import time
 from enum import Enum, auto
 from queue import Empty, Queue
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import shiboken6
 from PySide6.QtCore import QMetaObject, Qt
@@ -14,7 +15,14 @@ from .presenter import Presenter
 from .swapchain import SwapchainManager
 from .upscale import UpscalerManager
 from ..capture import FrameGrabber
-from ..config import Config, OverlayMode
+from ..config import (
+    Config,
+    OverlayMode,
+    apply_overrides,
+    find_matching_profile,
+    parse_config,
+    validate_config,
+)
 from ..overlay import OverlayWindow
 from ..tiles import extract_expanded_tiles
 from ..utils import parse_output_geometry
@@ -56,12 +64,21 @@ class Pipeline:
     """
 
     def __init__(
-        self, config: Config, win_info: WindowInfo, overlay: OverlayWindow
+        self,
+        config: Config,
+        win_info: WindowInfo,
+        overlay: OverlayWindow,
+        base_config: Optional[Config] = None,
+        profiles: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Initialise the pipeline - resources are allocated later, on the pipeline thread."""
+        """Initialize the pipeline - resources are allocated later, on the pipeline thread."""
         self.config = config
         self._win_info = win_info
         self.overlay = overlay
+        self.base_config = (
+            base_config if base_config is not None else copy.deepcopy(config)
+        )
+        self.profiles = profiles if profiles is not None else {}
 
         # Crop margins (fixed for the session)
         self._crop_left = config.crop_left
@@ -223,6 +240,40 @@ class Pipeline:
             self.overlay.show()
 
     # ----------------------------------------------------------------------
+    # Configuration change
+    # ----------------------------------------------------------------------
+    def _apply_configuration_for_window(self, win_info: WindowInfo) -> None:
+        """
+        Rebuild the configuration from the base snapshot, apply any
+        matching profile for the new window, and reconfigure all
+        pipeline components.
+        """
+        # Copy of the base config
+        new_config = copy.deepcopy(self.base_config)
+
+        # Try to match a profile
+        profile_name, profile_data = find_matching_profile(
+            self.profiles, win_info.title
+        )
+        if profile_data:
+            apply_overrides(new_config, profile_data.get("options", {}))
+            logger.info(
+                f"Applied profile '{profile_name}' for window '{win_info.title}'."
+            )
+        else:
+            logger.debug(
+                f"No matching profile for '{win_info.title}', using base config."
+            )
+        parse_config(new_config)
+        validate_config(new_config)
+
+        # Update and recreate
+        self.config = new_config
+        self.recreate_upscaler()
+        self.presenter.reconfigure_effects(new_config)
+        self.overlay.set_scale_mode(new_config.output_geometry)
+
+    # ----------------------------------------------------------------------
     # Core frame processing
     # ----------------------------------------------------------------------
     def _process_one_frame(self) -> None:
@@ -356,10 +407,7 @@ class Pipeline:
         )
 
         self.update_content_dimensions()
-        self.recreate_upscaler()
         self._create_grabber()
-
-        # Force full render
         self._presenter_params_stale = True
 
     def update_content_dimensions(self) -> None:
@@ -427,9 +475,13 @@ class Pipeline:
             logger.warning("New window not alive, ignoring switch")
             test_tracker.close()
             return
+        test_tracker.close()
 
+        self._apply_configuration_for_window(new_win_info)
         self._window_tracker.close()
-        self._window_tracker = test_tracker
+        self._window_tracker = WindowTracker(
+            new_win_info.handle, new_win_info.width, new_win_info.height
+        )
         self._win_info = new_win_info
         self._handle_window_change()
         self.overlay.set_target_handle(new_win_info.handle)
