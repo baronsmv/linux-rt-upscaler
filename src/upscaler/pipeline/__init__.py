@@ -1,6 +1,6 @@
 """Pipeline public module."""
 
-from .launcher import PipelineSession, create_pipeline_session
+from .session import PipelineSession, create_pipeline_session
 
 __all__ = [
     "PipelineSession",

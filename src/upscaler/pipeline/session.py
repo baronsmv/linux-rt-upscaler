@@ -1,7 +1,7 @@
 import logging
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
@@ -26,7 +26,12 @@ class PipelineSession:
     hotkey_manager: Optional[HotkeyManager] = None
 
 
-def create_pipeline_session(config: Config, win_info: WindowInfo) -> PipelineSession:
+def create_pipeline_session(
+    config: Config,
+    win_info: WindowInfo,
+    base_config: Optional[Config] = None,
+    profiles: Optional[Dict[str, Any]] = None,
+) -> PipelineSession:
     """
     Create the overlay, pipeline, and all supporting systems.
 
@@ -41,6 +46,10 @@ def create_pipeline_session(config: Config, win_info: WindowInfo) -> PipelineSes
         Fully validated configuration object.
     win_info : WindowInfo
         The initially targeted window.
+    base_config : Config, optional
+        A copy of the base configuration before contextual overrides.
+    profiles : Dict[str, Any], optional
+        User profiles with match and options.
 
     Returns
     -------
@@ -67,7 +76,13 @@ def create_pipeline_session(config: Config, win_info: WindowInfo) -> PipelineSes
         overlay.windowHandle().setSurfaceType(QWindow.VulkanSurface)
 
     # ---- Pipeline --------------------------------------------------------
-    pipeline = Pipeline(config, win_info, overlay)
+    pipeline = Pipeline(
+        config,
+        win_info,
+        overlay,
+        base_config=base_config,
+        profiles=profiles,
+    )
     pipeline.start()
 
     app.aboutToQuit.connect(lambda: pipeline.stop())
@@ -76,13 +91,7 @@ def create_pipeline_session(config: Config, win_info: WindowInfo) -> PipelineSes
     monitor: Optional[FocusMonitor] = None
     if config.follow_focus:
         monitor = FocusMonitor(interval=config.focus_poll_interval)
-        monitor.focus_changed.connect(
-            lambda new_win: (
-                pipeline.request_switch(new_win)
-                if new_win.handle != overlay.xid
-                else None
-            )
-        )
+        monitor.focus_changed.connect(lambda new_win: pipeline.request_switch(new_win))
         monitor.start()
 
     # ---- Hotkey manager --------------------------------------------------
