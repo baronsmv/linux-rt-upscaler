@@ -2,12 +2,14 @@
 
 from .acquisition import acquire_target_window, activate_window, list_windows
 from .connection import open_xcb_connection, close_xcb_connection
+from .daemon import DaemonMonitor
 from .focus import FocusMonitor
 from .hotkeys import HotkeyManager
 from .info import WindowInfo, get_window_icon
 from .tracker import WindowTracker
 
 __all__ = [
+    "DaemonMonitor",
     "FocusMonitor",
     "HotkeyManager",
     "WindowInfo",
