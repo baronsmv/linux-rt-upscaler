@@ -493,6 +493,9 @@ def acquire_target_window(
         returns (None, None). The Popen object is only non-None when a program
         was launched.
     """
+    if config.daemon:
+        return None, None  # no initial target
+
     start_time = time.perf_counter()
 
     if config.target_title or config.target_title_regex:
@@ -523,7 +526,7 @@ def acquire_target_window(
         if win_info is None:
             return None, None
         if config.log_level != "ERROR":
-            logger.info(f"Selected: {win_info.title}")
+            logger.debug(f"Selected: %s", win_info.title)
         logger.debug(
             f"Window acquired interactively in {time.perf_counter() - start_time:.2f}s"
         )

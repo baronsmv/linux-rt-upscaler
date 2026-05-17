@@ -159,8 +159,11 @@ def setup_config() -> (
 
     # Acquire the target window
     win_info, proc = acquire_target_window(config)
-    if win_info is None:
-        sys.exit(0 if config.select else 1)
+    if win_info is None and not config.daemon:
+        if not config.select:
+            logger.error("No window was found, exiting.")
+            sys.exit(0)
+        sys.exit(1)
 
     # Post-window merging and finalization (this applies the auto-profile)
     finalize_config(
@@ -173,7 +176,7 @@ def setup_config() -> (
 
     # Log summary
     logger.info(
-        f'Upscaling "%s" (%d{chr(215)}%d)',
+        f'Upscaling "%s" (%d{chr(215)}%d).',
         win_info.title,
         win_info.width,
         win_info.height,

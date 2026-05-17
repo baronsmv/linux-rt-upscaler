@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication
 
 from .config import setup_config
 from .pipeline import create_pipeline_session
+from .window import WindowInfo
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,8 @@ def main() -> None:
 
     # Window acquisition and config setup
     config, base_config, profiles, win_info, proc = setup_config()
+    if config.daemon and win_info is None:
+        win_info = WindowInfo(0, 0, 0, "daemon-pending")
 
     # Create the Qt application
     app = QApplication([])
