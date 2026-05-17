@@ -119,7 +119,7 @@ def finalize_config(
     if extra_overrides:
         apply_overrides(config, extra_overrides)
 
-    # Re-parse string colors
+    # Reparse string colors
     parse_config(config)
 
     # Ensure logging matches the final log_level / log_file
@@ -130,7 +130,7 @@ def finalize_config(
 
 
 def setup_config() -> (
-    Tuple[Config, Config, Dict[str, Any], WindowInfo, Optional[Popen]]
+    Tuple[Config, Config, Dict[str, Any], Optional[WindowInfo], Optional[Popen]]
 ):
     """
     Load configuration, acquire target window, apply automatic profile, and
@@ -175,12 +175,16 @@ def setup_config() -> (
     )
 
     # Log summary
-    logger.info(
-        f'Upscaling "%s" (%d{chr(215)}%d).',
-        win_info.title,
-        win_info.width,
-        win_info.height,
-    )
-    logger.debug("Window handle: 0x%x", win_info.handle)
+    if win_info is not None:
+        logger.info(
+            'Upscaling "%s" (%d%s%d)',
+            win_info.title,
+            win_info.width,
+            chr(215),
+            win_info.height,
+        )
+        logger.debug("Window handle: 0x%x", win_info.handle)
+    else:
+        logger.info("Daemon mode – waiting for a matching window.")
 
     return config, base_config, profiles, win_info, proc
