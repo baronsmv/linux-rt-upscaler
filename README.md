@@ -197,7 +197,7 @@ A more detailed example is included [here](https://github.com/baronsmv/linux-rt-
 
 ## Future Plans
 
-- [ ] Addition of more SRCNN models ([FSRCNNX](https://github.com/awused/dotfiles/tree/master/mpv/.config/mpv/shaders/fsrcnnx) planned).
+- [ ] Addition of more SRCNN models ([FSRCNNX](https://github.com/igv/FSRCNN-TensorFlow/releases/tag/1.1) planned).
 - [ ] ~~Native Wayland support~~ (**on hold**: Wayland capture is deeply compositor-specific and currently doesn’t align with the XShm/XDamage pipeline.)
 
 ## Known Issues
