@@ -21,7 +21,7 @@ def main() -> None:
     overall_start = time.perf_counter()
 
     # Window acquisition and config setup
-    config, win_info, proc = setup_config()
+    config, base_config, profiles, win_info, proc = setup_config()
 
     # Create the Qt application
     app = QApplication([])
@@ -30,7 +30,7 @@ def main() -> None:
     logger.debug("Qt application initialized.")
 
     # Launch pipeline session
-    session = create_pipeline_session(config, win_info)
+    session = create_pipeline_session(config, win_info, base_config, profiles)
     logger.debug(
         f"Total initialization time: {time.perf_counter() - overall_start:.2f}s"
     )
