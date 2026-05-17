@@ -258,18 +258,24 @@ class Pipeline:
         if profile_data:
             apply_overrides(new_config, profile_data.get("options", {}))
             logger.info(
-                f"Applied profile '{profile_name}' for window '{win_info.title}'."
+                "Applied profile '%s' for window '%s'.",
+                profile_name,
+                win_info.title,
             )
         else:
             logger.debug(
-                f"No matching profile for '{win_info.title}', using base config."
+                "No matching profile for '%s', using base config.",
+                win_info.title,
             )
         parse_config(new_config)
         validate_config(new_config)
 
         # Update and recreate
         self.config = new_config
-        self.recreate_upscaler()
+        self._crop_left = new_config.crop_left
+        self._crop_top = new_config.crop_top
+        self._crop_right = new_config.crop_right
+        self._crop_bottom = new_config.crop_bottom
         self.presenter.reconfigure_effects(new_config)
         self.overlay.set_scale_mode(new_config.output_geometry)
 
@@ -407,6 +413,7 @@ class Pipeline:
         )
 
         self.update_content_dimensions()
+        self.recreate_upscaler()
         self._create_grabber()
         self._presenter_params_stale = True
 
@@ -484,8 +491,6 @@ class Pipeline:
         )
         self._win_info = new_win_info
         self._handle_window_change()
-        self.overlay.set_target_handle(new_win_info.handle)
-        self.overlay.set_target_size(new_win_info.width, new_win_info.height)
 
     # ----------------------------------------------------------------------
     # Main loop (runs in dedicated thread)

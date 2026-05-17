@@ -90,9 +90,7 @@ class FocusMonitor(QObject):
                         # Fetch full window info
                         win_info = self._get_window_info(conn, active_handle, atoms)
                         if win_info:
-                            logger.info(
-                                f"Focus changed to: {win_info.handle:#x} - {win_info.title}"
-                            )
+                            logger.info(f"Focus changed to: %s", win_info.title)
                             self._current_handle = active_handle
                             activate_window(win_info.handle)
 
