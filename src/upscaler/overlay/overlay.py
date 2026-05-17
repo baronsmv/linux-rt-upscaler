@@ -45,7 +45,7 @@ class OverlayWindow(QMainWindow):
         start_time = time.perf_counter()
         logger.debug(
             f"Initializing OverlayWindow: mode={config.overlay_mode}, "
-            f"target_handle={win_info.handle:#x}, scale_mode={config.output_geometry}"
+            f"target_handle={win_info.handle:#x}, scale_mode={config.output_geometry}."
         )
 
         # Store configuration and window info
@@ -89,7 +89,7 @@ class OverlayWindow(QMainWindow):
 
         # Store XID for debugging
         self.xid: int = int(self.winId())
-        logger.debug(f"Overlay XID: {self.xid:#x}")
+        logger.debug(f"Overlay XID: {self.xid:#x}.")
 
         # Install event filter for mouse forwarding
         if self._should_forward and self._forwarder.conn is not None:
@@ -103,7 +103,7 @@ class OverlayWindow(QMainWindow):
             self.show()
 
         logger.debug(
-            f"OverlayWindow initialized in {(time.perf_counter() - start_time) * 1000:.2f} ms"
+            f"OverlayWindow initialized in {(time.perf_counter() - start_time) * 1000:.2f} ms."
         )
 
     # ----------------------------------------------------------------------
@@ -158,7 +158,7 @@ class OverlayWindow(QMainWindow):
             self.setGeometry(x, y, width, height)
             self.showFullScreen()
             logger.debug(
-                f"Overlay set to fullscreen on geometry ({x},{y},{width}x{height})"
+                f"Overlay set to fullscreen on geometry ({x},{y},{width}x{height})."
             )
             return
 
@@ -166,19 +166,19 @@ class OverlayWindow(QMainWindow):
             self.setGeometry(x, y, width, height)
             self.setFixedSize(width, height)
             logger.debug(
-                f"Overlay set to windowed mode at ({x},{y}) size {width}x{height}"
+                f"Overlay set to windowed mode at ({x},{y}) size {width}x{height}."
             )
         elif mode == OverlayMode.ALWAYS_ON_TOP.value:
             flags |= Qt.X11BypassWindowManagerHint
             self.setGeometry(x, y, width, height)
             logger.debug(
-                f"Overlay set to always-on-top mode at ({x},{y}) size {width}x{height}"
+                f"Overlay set to always-on-top mode at ({x},{y}) size {width}x{height}."
             )
         elif mode == OverlayMode.ALWAYS_ON_TOP_TRANSPARENT.value:
             flags |= Qt.X11BypassWindowManagerHint | Qt.WindowTransparentForInput
             self.setGeometry(x, y, width, height)
             logger.debug(
-                f"Overlay set to transparent always-on-top mode at ({x},{y}) size {width}x{height}"
+                f"Overlay set to transparent always-on-top mode at ({x},{y}) size {width}x{height}."
             )
         else:
             raise ValueError(f"Unknown overlay mode: {mode}")
@@ -312,7 +312,7 @@ class OverlayWindow(QMainWindow):
         Args:
             event: The close event.
         """
-        logger.info("Overlay window closed - quitting application.")
+        logger.info("Overlay window closed, quitting application.")
         self._opacity_controller.close()
         self._forwarder.close()
         QApplication.quit()
@@ -321,7 +321,7 @@ class OverlayWindow(QMainWindow):
     @Slot()
     def on_pipeline_stopped(self) -> None:
         """Slot called from the pipeline thread when it exits due to an error."""
-        logger.info("Pipeline stopped - quitting application.")
+        logger.info("Pipeline stopped, quitting application.")
         QApplication.quit()
 
     @Slot(str)
