@@ -278,11 +278,7 @@ class Pipeline:
         )
         if profile_data:
             apply_overrides(new_config, profile_data.get("options", {}))
-            logger.info(
-                "Applied profile '%s' for window '%s'.",
-                profile_name,
-                win_info.title,
-            )
+            logger.info("Auto-applied profile '%s'.", profile_name)
         else:
             logger.debug(
                 "No matching profile for '%s', using base config.",

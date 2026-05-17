@@ -5,7 +5,7 @@ from typing import Dict, Optional, Any
 
 from PySide6.QtCore import QObject, Signal
 
-from .acquisition import list_windows
+from .acquisition import activate_window, list_windows
 from .connection import open_xcb_connection, close_xcb_connection
 from .info import WindowInfo
 
@@ -81,6 +81,7 @@ class DaemonMonitor(QObject):
                                 win.title,
                                 name,
                             )
+                            activate_window(win.handle)
                             self.match_found.emit(win)
                             self._running = False  # stop polling
                             return

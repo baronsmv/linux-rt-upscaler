@@ -501,10 +501,7 @@ class MainWindow(QMainWindow):
                 return
             self._config_manager.set_active_profile(profile_name)
             self.left_sidebar.set_active_item(profile_name)
-            logger.info(
-                "Auto-applied profile '%s'.",
-                profile_name,
-            )
+            logger.info("Auto-applied profile '%s'.", profile_name)
 
         QTimer.singleShot(0, self._start_pipeline)
 
