@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 import sys
 from subprocess import Popen
@@ -128,11 +129,17 @@ def finalize_config(
     validate_config(config)
 
 
-def setup_config() -> Tuple[Config, WindowInfo, Optional[Popen]]:
+def setup_config() -> (
+    Tuple[Config, Config, Dict[str, Any], WindowInfo, Optional[Popen]]
+):
     """
     Load configuration, acquire target window, apply automatic profile, and
-    return the resulting ``Config``, ``WindowInfo``, and optionally the
-    launched process handle.
+    return:
+        - final config (after profile + extra overrides)
+        - base config (before any window-specific profile was applied)
+        - raw profiles dict
+        - WindowInfo
+        - optionally the launched process handle
     """
     from ..window import acquire_target_window
 
@@ -147,12 +154,15 @@ def setup_config() -> Tuple[Config, WindowInfo, Optional[Popen]]:
         overrides=overrides,
     )
 
+    # Save a deepcopy of the config *before* we apply the auto-profile
+    base_config = copy.deepcopy(config)
+
     # Acquire the target window
     win_info, proc = acquire_target_window(config)
     if win_info is None:
         sys.exit(0 if config.select else 1)
 
-    # Post-window merging and finalization
+    # Post-window merging and finalization (this applies the auto-profile)
     finalize_config(
         config,
         win_info=win_info,
@@ -170,4 +180,4 @@ def setup_config() -> Tuple[Config, WindowInfo, Optional[Popen]]:
     )
     logger.debug("Window handle: 0x%x", win_info.handle)
 
-    return config, win_info, proc
+    return config, base_config, profiles, win_info, proc
