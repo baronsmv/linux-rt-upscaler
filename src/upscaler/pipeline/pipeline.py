@@ -7,7 +7,7 @@ from queue import Empty, Queue
 from typing import Any, Dict, Optional, Tuple
 
 import shiboken6
-from PySide6.QtCore import QMetaObject, Qt
+from PySide6.QtCore import QMetaObject, QObject, Qt, Signal
 
 from .controller import PipelineController
 from .osd import OSDManager
@@ -27,7 +27,7 @@ from ..overlay import OverlayWindow
 from ..tiles import extract_expanded_tiles
 from ..utils import get_base_geometry, parse_output_geometry
 from ..vulkan import configure_device
-from ..window import DaemonMonitor, WindowInfo, WindowTracker
+from ..window import WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class PauseReason(Enum):
     DAEMON_WAITING = auto()  # Daemon waiting for new window match.
 
 
-class Pipeline:
+class Pipeline(QObject):
     """
     Main real-time upscaling pipeline.
 
@@ -64,6 +64,10 @@ class Pipeline:
         upscaler_mgr (UpscalerManager): SRCNN upscaling orchestration.
     """
 
+    # Signals (emitted from pipeline thread, automatically queued to main thread)
+    daemon_scan_start = Signal()  # go back to scanning for windows
+    daemon_target_acquired = Signal()  # daemon window was successfully switched to
+
     def __init__(
         self,
         config: Config,
@@ -71,15 +75,14 @@ class Pipeline:
         overlay: OverlayWindow,
         base_config: Optional[Config] = None,
         profiles: Optional[Dict[str, Any]] = None,
-        daemon_monitor: Optional[DaemonMonitor] = None,
     ) -> None:
         """Initialize the pipeline. Resources are allocated later, on the pipeline thread."""
+        QObject.__init__(self)
         self.config = config
         self._win_info = win_info
         self.overlay = overlay
         self.base_config = base_config or copy.deepcopy(config)
         self.profiles = profiles or {}
-        self.daemon_monitor = daemon_monitor
 
         # Crop margins (fixed for the session)
         self._crop_left = config.crop_left
@@ -518,6 +521,7 @@ class Pipeline:
         # Exit daemon waiting state
         if self._pause_reason == PauseReason.DAEMON_WAITING:
             self._pause_reason = PauseReason.NONE
+            self.daemon_target_acquired.emit()
 
     # ----------------------------------------------------------------------
     # Main loop (runs in dedicated thread)
@@ -549,10 +553,7 @@ class Pipeline:
                         self._pause_reason = PauseReason.DAEMON_WAITING
                         self._window_tracker = None
                         self._win_info = None
-                        # Restart the daemon monitor
-                        if self.daemon_monitor:
-                            self.daemon_monitor.start()
-                        # Continue loop (will be paused until next switch)
+                        self.daemon_scan_start.emit()
                         time.sleep(0.1)
                         continue
 

@@ -998,15 +998,20 @@ Recommended range: 0.15 - 0.5. Default: %(default)s.
     args = parser.parse_args()
 
     # Scan sys.argv for options that were actually typed by the user
-    explicit_dests = {
-        dest
-        for arg in sys.argv[1:]
-        if (
-            (dest := opt_to_dest.get(arg.split("=")[0]))
-            and dest in DEFAULT_CONFIG.__dataclass_fields__
-            and arg.startswith("-")
-        )
-    }
+    explicit_dests = set()
+    for arg in sys.argv[1:]:
+        if arg == "--":
+            break
+        if arg.startswith("--"):
+            dest = opt_to_dest.get(arg.split("=")[0])
+            if dest and dest in DEFAULT_CONFIG.__dataclass_fields__:
+                explicit_dests.add(dest)
+        elif arg.startswith("-") and len(arg) > 1 and arg[1] != "-":
+            for char in arg[1:]:
+                flag = f"-{char}"
+                dest = opt_to_dest.get(flag)
+                if dest and dest in DEFAULT_CONFIG.__dataclass_fields__:
+                    explicit_dests.add(dest)
 
     # Build overrides only for explicitly supplied arguments
     provided_args = {

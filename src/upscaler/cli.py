@@ -51,6 +51,8 @@ def main() -> None:
         session.pipeline.stop()
         if session.monitor is not None:
             session.monitor.stop()
+        if session.daemon_monitor is not None:
+            session.daemon_monitor.stop()
         if proc is not None:
             logger.debug(f"Terminating launched process {proc.pid}")
             proc.terminate()

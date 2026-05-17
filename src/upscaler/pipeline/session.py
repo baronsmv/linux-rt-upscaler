@@ -23,6 +23,7 @@ class PipelineSession:
     overlay: OverlayWindow
     pipeline: Pipeline
     monitor: Optional[FocusMonitor] = None
+    daemon_monitor: Optional[DaemonMonitor] = None
     hotkey_manager: Optional[HotkeyManager] = None
 
 
@@ -76,19 +77,12 @@ def create_pipeline_session(
         overlay.windowHandle().setSurfaceType(QWindow.VulkanSurface)
 
     # ---- Pipeline --------------------------------------------------------
-    daemon_monitor = None
-    if config.daemon:
-        daemon_monitor = DaemonMonitor(
-            profiles or {}, interval=config.daemon_poll_interval
-        )
-
     pipeline = Pipeline(
         config,
         win_info if not config.daemon else None,
         overlay,
         base_config=base_config,
         profiles=profiles,
-        daemon_monitor=daemon_monitor,
     )
     pipeline.start()
 
@@ -96,19 +90,32 @@ def create_pipeline_session(
     if config.follow_focus:
         monitor = FocusMonitor(interval=config.focus_poll_interval)
         monitor.focus_changed.connect(lambda w: pipeline.request_switch(w))
-        monitor.start()
+        if not config.daemon:  # start only if not waiting for daemon first match
+            monitor.start()
     else:
         monitor = None
 
     # ---- Daemon monitor --------------------------------------------------
-    if config.daemon and daemon_monitor:
+    if config.daemon:
+        daemon_monitor = DaemonMonitor(
+            profiles or {}, interval=config.daemon_poll_interval
+        )
         daemon_monitor.match_found.connect(
-            lambda w: (
-                daemon_monitor.stop(),  # stop polling
-                pipeline.request_switch(w),  # request switch
-            )
+            lambda w: (daemon_monitor.stop(), pipeline.request_switch(w))
         )
         daemon_monitor.start()  # begin scanning
+    else:
+        daemon_monitor = None
+
+    # ---- Pipeline signals to handle Daemon + Follow-focus scenario -------
+    if config.daemon and config.follow_focus:
+
+        # When daemon acquires a target, start focus monitor
+        pipeline.daemon_target_acquired.connect(monitor.start)
+
+        # When daemon target closes, stop focus and restart daemon scanning
+        pipeline.daemon_scan_start.connect(monitor.stop)
+        pipeline.daemon_scan_start.connect(daemon_monitor.start)
 
     # ---- Hotkey manager --------------------------------------------------
     hotkey_manager = HotkeyManager(config.hotkeys)
@@ -134,5 +141,6 @@ def create_pipeline_session(
         overlay=overlay,
         pipeline=pipeline,
         monitor=monitor if config.follow_focus else None,
+        daemon_monitor=daemon_monitor if config.daemon else None,
         hotkey_manager=hotkey_manager,
     )
