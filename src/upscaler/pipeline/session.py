@@ -35,7 +35,7 @@ def create_pipeline_session(
     """
     Create the overlay, pipeline, and all supporting systems.
 
-    This function does **not** enter an event loop - it only creates the
+    This function does **not** enter an event loop: it only creates the
     required objects and starts the pipeline’s background thread.
 
     The caller must ensure that a `QApplication` already exists.
@@ -54,7 +54,7 @@ def create_pipeline_session(
     Returns
     -------
     PipelineSession
-        A container holding all live objects.  The session must be kept alive
+        A container holding all live objects. The session must be kept alive
         for the duration of the upscaling run.
     """
     app = QApplication.instance()

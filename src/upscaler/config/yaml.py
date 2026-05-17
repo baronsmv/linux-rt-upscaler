@@ -43,7 +43,7 @@ def load_yaml_config(
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
     except FileNotFoundError:
-        # Race condition between isfile and open - just return empty
+        # Race condition between isfile and open: just return empty
         return general_options, profiles
     except PermissionError as e:
         logger.warning("Permission denied reading %s: %s", path, e)

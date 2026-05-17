@@ -143,7 +143,7 @@ class PipelineController:
         Updates the configuration, syncs the presenter's scale mode, notifies
         the overlay on the main thread, recalculates content dimensions, and
         immediately updates the Lanczos scaling rectangle so the change is
-        visible on the next frame - even if the pipeline is temporarily paused.
+        visible on the next frame, even if the pipeline is temporarily paused.
 
         Args:
             forward: If True (default), cycle forward; if False, cycle backward.
@@ -253,9 +253,6 @@ class PipelineController:
             self._pipeline.upscaler_mgr.get_output_texture()
         )
 
-        # Clear any stale frames (optional, but safe)
-        self._pipeline.clear_frame_queue()
-
         # Show OSD message
         self._pipeline.osd_queue.put((f"Model: {new_model}", self._osd_duration))
 
@@ -325,7 +322,7 @@ class PipelineController:
                 filename = pipeline.config.screenshot_filename.format(**fmt_vars)
             except (KeyError, ValueError) as e:
                 logger.error(
-                    "Screenshot filename format error: %s - falling back to default", e
+                    "Screenshot filename format error: %s, falling back to default", e
                 )
                 filename = f"Screenshot_{now:%Y%m%d_%H%M%S}.png"
 

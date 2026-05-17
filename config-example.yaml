@@ -104,7 +104,7 @@ lanczos_linear_light: true
 # Use only the central 2x2 neighborhood for anti-ringing clamping.
 # When enabled (true), the clamp is less aggressive, keeping thin text
 # and line art crisp. Disable this if you notice distant ringing artifacts
-# on high-contrast edges - the full filter footprint will then be used
+# on high-contrast edges, the full filter footprint will then be used
 # for a more conservative clamp.
 # Default: true
 lanczos_tight_antiring: true

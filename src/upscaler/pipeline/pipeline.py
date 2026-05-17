@@ -50,8 +50,8 @@ class Pipeline:
     swapchain. All heavy work runs on a dedicated background thread.
 
     Supports two upscaling modes:
-        - **Full-frame** - always upscale the entire crop.
-        - **Tile** - only upscale the tiles that overlap X11 damage rectangles
+        - **Full-frame**: always upscale the entire crop.
+        - **Tile**: only upscale the tiles that overlap X11 damage rectangles
           (configurable fallback to full-frame when too much of the screen changes).
 
     Attributes:
@@ -71,7 +71,7 @@ class Pipeline:
         base_config: Optional[Config] = None,
         profiles: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Initialize the pipeline - resources are allocated later, on the pipeline thread."""
+        """Initialize the pipeline. Resources are allocated later, on the pipeline thread."""
         self.config = config
         self._win_info = win_info
         self.overlay = overlay
@@ -118,7 +118,7 @@ class Pipeline:
         )
         self.osd = OSDManager(osd_texts, self._screen_width, self._screen_height)
 
-        # Presenter - Lanczos scaling + OSD blending + swapchain present
+        # Presenter: Lanczos scaling + OSD blending + swapchain present
         self.presenter = Presenter(
             screen_width=self._screen_width,
             screen_height=self._screen_height,
@@ -132,7 +132,7 @@ class Pipeline:
         self._last_present_state_hash: Optional[int] = None
         self._presenter_params_stale = True
 
-        # Upscaler manager - full-frame or tile processing
+        # Upscaler manager: full-frame or tile processing
         self.upscaler_mgr = UpscalerManager(
             config=self.config, crop_width=self.crop_width, crop_height=self.crop_height
         )
@@ -142,7 +142,7 @@ class Pipeline:
             win_info.handle, win_info.width, win_info.height
         )
 
-        # Mouse mapping rectangle - updated every frame
+        # Mouse mapping rectangle: updated every frame
         overlay.scaling_rect = [0, 0, 0, 0]
 
         # Threading control
@@ -169,18 +169,21 @@ class Pipeline:
         self.osd.prepare_textures()
 
     # ----------------------------------------------------------------------
-    # Public API - lifecycle and external requests
+    # Public API
     # ----------------------------------------------------------------------
     def start(self) -> None:
         """Start the pipeline thread."""
-        logger.debug("Starting pipeline thread")
+        logger.debug("Starting pipeline thread.")
         self._running = True
         self._thread = threading.Thread(target=self._run, name="PipelineThread")
         self._thread.start()
 
     def stop(self) -> None:
         """Stop the pipeline thread and release resources."""
-        logger.debug("Stopping pipeline thread")
+        if not self._running:
+            return
+
+        logger.debug("Stopping pipeline thread.")
         self._running = False
         if self._thread is not None:
             self._thread.join(timeout=2.0)
@@ -195,7 +198,7 @@ class Pipeline:
 
     def recreate_upscaler(self) -> None:
         """Rebuild the upscaler manager (model change, crop resize)."""
-        logger.debug("Recreating upscaler manager")
+        logger.debug("Recreating upscaler manager.")
         self.upscaler_mgr = UpscalerManager(
             config=self.config, crop_width=self.crop_width, crop_height=self.crop_height
         )
@@ -205,10 +208,6 @@ class Pipeline:
 
         # Force full render
         self._presenter_params_stale = True
-
-    def clear_frame_queue(self) -> None:
-        """No-op - kept for API compatibility."""
-        pass
 
     # ----------------------------------------------------------------------
     # Pause state management
@@ -279,11 +278,11 @@ class Pipeline:
     # ----------------------------------------------------------------------
     def _process_one_frame(self) -> None:
         """Capture one frame, upscale it, and present."""
-        # --- Wait for the previous present to complete (GPU fence) ----------
+        # --- Wait for the previous present to complete (GPU fence) ---------
         if not self._swapchain_manager.wait_for_last_present(
             timeout_ns=self.config.frame_timeout
         ):
-            logger.warning("Frame fence wait timed out - possible GPU hang?")
+            logger.warning("Frame fence wait timed out, possible GPU hang?")
 
         # --- 1. Capture ----------------------------------------------------
         try:
@@ -292,9 +291,7 @@ class Pipeline:
             logger.error(f"Frame grab failed: {e}")
             self._consecutive_capture_failures += 1
             if self._consecutive_capture_failures >= self._max_capture_failures:
-                logger.critical(
-                    "Too many consecutive capture failures - shutting down."
-                )
+                logger.critical("Too many consecutive capture failures, shutting down.")
                 self._running = False
             time.sleep(self._pause_after_failure)
             return
@@ -364,8 +361,10 @@ class Pipeline:
                 self.upscaler_mgr.process_tile_frame(dirty_tiles, rects, frame)
                 src_tex = self.upscaler_mgr.get_output_texture()
             else:
-                # Too many dirty tiles - fall back to full-frame
-                logger.debug("Tile threshold exceeded; using full-frame for this frame")
+                # Too many dirty tiles, fall back to full-frame
+                logger.debug(
+                    "Tile threshold exceeded, using full-frame for this frame."
+                )
                 self.upscaler_mgr.upload_full_frame(
                     frame=frame,
                     rects=rects,
@@ -385,7 +384,7 @@ class Pipeline:
         # --- 7. Handle swapchain recreation (overlay resize) ----------------
         if self._swapchain_manager.needs_recreation():
             if self._swapchain_manager.is_out_of_date():
-                logger.debug("Swapchain out-of-date, recreating")
+                logger.debug("Swapchain out-of-date, recreating.")
                 self._recreate_swapchain()
 
     # ----------------------------------------------------------------------
@@ -541,7 +540,7 @@ class Pipeline:
                 )
             except RuntimeError:
                 pass
-        logger.debug("Pipeline thread stopped")
+        logger.debug("Pipeline thread stopped.")
 
     # ----------------------------------------------------------------------
     # Internal helpers

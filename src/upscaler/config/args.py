@@ -144,6 +144,12 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'.""",
         help="Select a window from the list of open windows.",
     )
     target_selection_group.add_argument(
+        "-d",
+        "--daemon",
+        action="store_true",
+        help="Run in background, automatically upscale windows matching profiles.",
+    )
+    target_selection_group.add_argument(
         "-t",
         "--target-title",
         type=str,
@@ -187,6 +193,14 @@ Use this flag to keep it always visible.""",
         default=DEFAULT_CONFIG.focus_poll_interval,
         help="""How often (seconds) the application checks for window focus
 changes when --follow-focus is activated.
+Minimum is 0.05. Default: %(default)s.""",
+    )
+    timing_group.add_argument(
+        "--daemon-poll-interval",
+        type=float,
+        default=DEFAULT_CONFIG.daemon_poll_interval,
+        help="""How often (seconds) the application checks for active
+windows when --daemon is activated.
 Minimum is 0.05. Default: %(default)s.""",
     )
 

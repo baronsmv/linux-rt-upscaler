@@ -59,6 +59,7 @@ class Config:
 
     # Target selection
     select: bool = False
+    daemon: bool = False
     target_title: Optional[str] = None
     target_title_regex: Optional[str] = None
 
@@ -68,6 +69,7 @@ class Config:
 
     # Timing
     focus_poll_interval: float = 0.2
+    daemon_poll_interval: float = 2.0
 
     # Window detection
     target_delay: float = 5

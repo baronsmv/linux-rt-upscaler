@@ -258,7 +258,7 @@ class UpscalerManager:
         self._rebind_full_frame_output()
 
         # For double-upscale, keep the references needed to generate the 2x
-        # residual (the first SRCNN stage output) - they are already set.
+        # residual (the first SRCNN stage output).
         if self.config.double_upscale and len(self.full_stages) >= 2:
             self._residual_upscale_groups = self.full_groups[0]
             self._residual_dst_tex = self.full_stages[0].outputs["output"]
@@ -415,9 +415,9 @@ class UpscalerManager:
         if not self.use_tile:
             raise RuntimeError("process_tile_frame called when tile mode is disabled")
 
-        # ---- First tile frame - seed with a full-frame pass ----
+        # ---- First tile frame, seed with a full-frame pass ----
         if self._first_tile_frame:
-            logger.debug("First tile frame - performing full capture")
+            logger.debug("First tile frame: performing full capture")
             # Upload the full frame to self.input (this is also the 1x residual)
             self.upload_full_frame(
                 frame_data,
@@ -445,7 +445,7 @@ class UpscalerManager:
         max_layers = self.config.max_tile_layers
         if len(dirty_tiles) > max_layers:
             logger.warning(
-                "Extracted %d tiles > capacity %d - falling back to full-frame",
+                "Extracted %d tiles > capacity %d. Falling back to full-frame",
                 len(dirty_tiles),
                 max_layers,
             )
