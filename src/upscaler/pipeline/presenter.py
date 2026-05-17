@@ -248,7 +248,7 @@ class Presenter:
         # Reset cached compute pipelines that reference the old screen texture
         self.osd.clear_compute_cache()
 
-    def get_scaling_rect(self, scale_factor: float) -> List[float]:
+    def get_scaling_rect(self, scale_factor: Optional[float]) -> List[float]:
         """
         Return the rectangle (in overlay widget coordinates) where content is
         drawn. Used by the overlay window for mouse-event mapping.

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from ..config import Config, OverlayMode
 from ..utils import get_base_geometry, parse_output_geometry
@@ -26,22 +27,24 @@ class OverlayGeometry:
         offset_y: Additional vertical offset applied to the content.
     """
 
-    overlay_x: int
-    overlay_y: int
-    overlay_width: int
-    overlay_height: int
-    content_width: int
-    content_height: int
-    scale_mode: str
-    crop_left: int
-    crop_top: int
-    crop_width: int
-    crop_height: int
-    offset_x: int
-    offset_y: int
+    overlay_x: int = 0
+    overlay_y: int = 0
+    overlay_width: int = 0
+    overlay_height: int = 0
+    content_width: int = 0
+    content_height: int = 0
+    scale_mode: str = "fit"
+    crop_left: int = 0
+    crop_top: int = 0
+    crop_width: int = 0
+    crop_height: int = 0
+    offset_x: int = 0
+    offset_y: int = 0
 
 
-def compute_overlay_geometry(config: Config, win_info: WindowInfo) -> OverlayGeometry:
+def compute_overlay_geometry(
+    config: Config, win_info: Optional[WindowInfo]
+) -> OverlayGeometry:
     """
     Compute all geometry parameters for the overlay based on configuration and target window.
 

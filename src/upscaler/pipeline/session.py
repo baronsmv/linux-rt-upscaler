@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication
 from .pipeline import Pipeline
 from ..config import Config
 from ..overlay import OverlayWindow
-from ..window import WindowInfo, FocusMonitor, HotkeyManager
+from ..window import DaemonMonitor, FocusMonitor, HotkeyManager, WindowInfo
 
 logger = logging.getLogger(__name__)
 
@@ -76,23 +76,39 @@ def create_pipeline_session(
         overlay.windowHandle().setSurfaceType(QWindow.VulkanSurface)
 
     # ---- Pipeline --------------------------------------------------------
+    daemon_monitor = None
+    if config.daemon:
+        daemon_monitor = DaemonMonitor(
+            profiles or {}, interval=config.daemon_poll_interval
+        )
+
     pipeline = Pipeline(
         config,
-        win_info,
+        win_info if not config.daemon else None,
         overlay,
         base_config=base_config,
         profiles=profiles,
+        daemon_monitor=daemon_monitor,
     )
     pipeline.start()
 
-    app.aboutToQuit.connect(lambda: pipeline.stop())
-
     # ---- Focus monitor ---------------------------------------------------
-    monitor: Optional[FocusMonitor] = None
     if config.follow_focus:
         monitor = FocusMonitor(interval=config.focus_poll_interval)
-        monitor.focus_changed.connect(lambda new_win: pipeline.request_switch(new_win))
+        monitor.focus_changed.connect(lambda w: pipeline.request_switch(w))
         monitor.start()
+    else:
+        monitor = None
+
+    # ---- Daemon monitor --------------------------------------------------
+    if config.daemon and daemon_monitor:
+        daemon_monitor.match_found.connect(
+            lambda w: (
+                daemon_monitor.stop(),  # stop polling
+                pipeline.request_switch(w),  # request switch
+            )
+        )
+        daemon_monitor.start()  # begin scanning
 
     # ---- Hotkey manager --------------------------------------------------
     hotkey_manager = HotkeyManager(config.hotkeys)
@@ -117,6 +133,6 @@ def create_pipeline_session(
         window_info=win_info,
         overlay=overlay,
         pipeline=pipeline,
-        monitor=monitor,
+        monitor=monitor if config.follow_focus else None,
         hotkey_manager=hotkey_manager,
     )

@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, List
+from typing import Any, List, Optional
 
 from PySide6.QtCore import QEvent, Qt, Slot
 from PySide6.QtGui import QCloseEvent
@@ -11,6 +11,7 @@ from .events import X11EventForwarder
 from .geometry import compute_overlay_geometry, OverlayGeometry
 from .opacity import OpacityController
 from ..config import OverlayMode, Config
+from ..utils import get_base_geometry
 from ..window import WindowInfo
 
 logger = logging.getLogger(__name__)
@@ -47,19 +48,33 @@ class OverlayWindow(QMainWindow):
             f"Initializing OverlayWindow: mode={config.overlay_mode}, "
             f"target_handle={win_info.handle:#x}, scale_mode={config.output_geometry}."
         )
-
-        # Store configuration and window info
         self._config = config
-        self._win_info = win_info
+
+        # Daemon mode handler
+        if win_info.width <= 0 or win_info.height <= 0:
+            # No real target yet
+            _, _, phys_w, phys_h, _ = get_base_geometry(
+                config.monitor or "primary", config.scale_factor
+            )
+            self._geometry = OverlayGeometry(
+                overlay_width=phys_w,
+                overlay_height=phys_h,
+                content_width=phys_w,
+                content_height=phys_h,
+                crop_width=phys_w,
+                crop_height=phys_h,
+            )
+            self.scale_mode = "fit"
+            self._win_info = WindowInfo(0, phys_w, phys_h, "")
+        else:
+            self._geometry = compute_overlay_geometry(config, win_info)
+            self.scale_mode = self._geometry.scale_mode
+            self._win_info = win_info
 
         # Transparency support (if background has alpha or we want click-through)
         if self._config.background_color[3] < 1.0:
             self.setAttribute(Qt.WA_TranslucentBackground, True)
             self.setStyleSheet("background: transparent;")
-
-        # Compute initial geometry
-        self._geometry = compute_overlay_geometry(config, win_info)
-        self.scale_mode: str = self._geometry.scale_mode
 
         # Initialize subcomponents
         self._mapper = CoordinateMapper()
@@ -248,7 +263,7 @@ class OverlayWindow(QMainWindow):
             self._forwarder.target_handle, width, height
         )
 
-    def update_geometry(self, win_info: WindowInfo) -> None:
+    def update_geometry(self, win_info: Optional[WindowInfo]) -> None:
         """
         Recompute overlay geometry after a window or monitor change.
 

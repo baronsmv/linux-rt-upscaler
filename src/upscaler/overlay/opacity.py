@@ -182,7 +182,9 @@ class OpacityController(QObject):
             logger.debug(f"Failed to get target window geometry: {e}")
             return None, None, 0, 0
 
-    def update_target_info(self, handle: int, width: int, height: int) -> None:
+    def update_target_info(
+        self, handle: Optional[int], width: int, height: int
+    ) -> None:
         """
         Update the target window information.
 

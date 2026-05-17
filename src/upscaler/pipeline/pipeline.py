@@ -25,9 +25,9 @@ from ..config import (
 )
 from ..overlay import OverlayWindow
 from ..tiles import extract_expanded_tiles
-from ..utils import parse_output_geometry
+from ..utils import get_base_geometry, parse_output_geometry
 from ..vulkan import configure_device
-from ..window import WindowInfo, WindowTracker
+from ..window import DaemonMonitor, WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,7 @@ class PauseReason(Enum):
     USER = auto()  # Manually paused via hotkey (overlay hidden).
     MINIMIZED = auto()  # Target window is minimized.
     FOCUS_LOST = auto()  # Target window lost focus (when pause_on_focus_loss is set).
+    DAEMON_WAITING = auto()  # Daemon waiting for new window match.
 
 
 class Pipeline:
@@ -66,29 +67,38 @@ class Pipeline:
     def __init__(
         self,
         config: Config,
-        win_info: WindowInfo,
+        win_info: Optional[WindowInfo],
         overlay: OverlayWindow,
         base_config: Optional[Config] = None,
         profiles: Optional[Dict[str, Any]] = None,
+        daemon_monitor: Optional[DaemonMonitor] = None,
     ) -> None:
         """Initialize the pipeline. Resources are allocated later, on the pipeline thread."""
         self.config = config
         self._win_info = win_info
         self.overlay = overlay
-        self.base_config = (
-            base_config if base_config is not None else copy.deepcopy(config)
-        )
-        self.profiles = profiles if profiles is not None else {}
+        self.base_config = base_config or copy.deepcopy(config)
+        self.profiles = profiles or {}
+        self.daemon_monitor = daemon_monitor
 
         # Crop margins (fixed for the session)
         self._crop_left = config.crop_left
         self._crop_top = config.crop_top
         self._crop_right = config.crop_right
         self._crop_bottom = config.crop_bottom
-        self.crop_width = win_info.width - config.crop_left - config.crop_right
-        self.crop_height = win_info.height - config.crop_top - config.crop_bottom
+
+        if win_info is not None:
+            self.crop_width = win_info.width - config.crop_left - config.crop_right
+            self.crop_height = win_info.height - config.crop_top - config.crop_bottom
+        else:
+            self.crop_width = 0
+            self.crop_height = 0
 
         self._scale_factor = config.scale_factor
+        if self._scale_factor is None:
+            _, _, _, _, self._scale_factor = get_base_geometry(
+                config.monitor or "primary", None
+            )
         self._screen_width = overlay.width()
         self._screen_height = overlay.height()
 
@@ -133,21 +143,32 @@ class Pipeline:
         self._presenter_params_stale = True
 
         # Upscaler manager: full-frame or tile processing
-        self.upscaler_mgr = UpscalerManager(
-            config=self.config, crop_width=self.crop_width, crop_height=self.crop_height
-        )
+        self.upscaler_mgr: Optional[UpscalerManager] = None
+        if win_info is not None and self.crop_width > 0 and self.crop_height > 0:
+            self.upscaler_mgr = UpscalerManager(
+                config=self.config,
+                crop_width=self.crop_width,
+                crop_height=self.crop_height,
+            )
 
         # Window tracker (size, minimized, focus)
-        self._window_tracker = WindowTracker(
-            win_info.handle, win_info.width, win_info.height
-        )
+        self._window_tracker: Optional[WindowTracker] = None
+        if win_info is not None:
+            self._window_tracker = WindowTracker(
+                win_info.handle, win_info.width, win_info.height
+            )
 
         # Mouse mapping rectangle: updated every frame
         overlay.scaling_rect = [0, 0, 0, 0]
 
+        # Pause reason
+        if self.config.daemon and self._window_tracker is None:
+            self._pause_reason = PauseReason.DAEMON_WAITING
+        else:
+            self._pause_reason = PauseReason.NONE
+
         # Threading control
         self._running = False
-        self._pause_reason = PauseReason.NONE
         self._thread: Optional[threading.Thread] = None
         self._stopped_event = threading.Event()
 
@@ -198,12 +219,18 @@ class Pipeline:
 
     def recreate_upscaler(self) -> None:
         """Rebuild the upscaler manager (model change, crop resize)."""
+        if self.crop_width <= 0 or self.crop_height <= 0:
+            logger.debug("Skipping upscaler recreation, invalid crop size.")
+            return
+
         logger.debug("Recreating upscaler manager.")
         self.upscaler_mgr = UpscalerManager(
-            config=self.config, crop_width=self.crop_width, crop_height=self.crop_height
+            config=self.config,
+            crop_width=self.crop_width,
+            crop_height=self.crop_height,
         )
 
-        # Update presenter's source texture to the new output.
+        # Update presenter's source texture to the new output
         self.presenter.set_upscaled_source(self.upscaler_mgr.get_output_texture())
 
         # Force full render
@@ -397,6 +424,7 @@ class Pipeline:
         self._win_info.width = self._window_tracker.width
         self._win_info.height = self._window_tracker.height
 
+        self.overlay.update_geometry(self._win_info)
         self.overlay.set_target_handle(self._win_info.handle)
         self.overlay.set_target_size(self._win_info.width, self._win_info.height)
 
@@ -409,6 +437,7 @@ class Pipeline:
         self.update_content_dimensions()
         self.recreate_upscaler()
         self._create_grabber()
+        self._recreate_swapchain()
         self._presenter_params_stale = True
 
     def update_content_dimensions(self) -> None:
@@ -468,6 +497,8 @@ class Pipeline:
     def _switch_target(self, new_win_info: WindowInfo) -> None:
         """Switch the pipeline to a new target window."""
         logger.info("Switching to window: '%s'", new_win_info.title)
+
+        # Verify alive
         test_tracker = WindowTracker(
             new_win_info.handle, new_win_info.width, new_win_info.height
         )
@@ -478,13 +509,19 @@ class Pipeline:
             return
         test_tracker.close()
 
+        # Apply config/profile for this window
         self._apply_configuration_for_window(new_win_info)
-        self._window_tracker.close()
+
+        # Set up tracker and geometry
         self._window_tracker = WindowTracker(
             new_win_info.handle, new_win_info.width, new_win_info.height
         )
         self._win_info = new_win_info
         self._handle_window_change()
+
+        # Exit daemon waiting state
+        if self._pause_reason == PauseReason.DAEMON_WAITING:
+            self._pause_reason = PauseReason.NONE
 
     # ----------------------------------------------------------------------
     # Main loop (runs in dedicated thread)
@@ -492,35 +529,59 @@ class Pipeline:
     def _run(self) -> None:
         """Main pipeline loop."""
         logger.debug("Pipeline thread started.")
-        self._create_grabber()
+
+        if self._window_tracker is not None:
+            self._create_grabber()
 
         while self._running:
             try:
                 # Process window switch requests
                 self._process_switch_requests()
 
-                # If not following focus, verify target is still alive
-                if not self.config.follow_focus:
+                # When not following focus or daemon, exit if target dies.
+                if not self.config.follow_focus and not self.config.daemon:
+                    if self._window_tracker:
+                        self._window_tracker.check_alive()
+                        if not self._window_tracker.alive:
+                            logger.info("Target window closed, exiting.")
+                            break
+                elif self.config.daemon and self._window_tracker:
+                    # Daemon mode: check alive, if dead, go back to waiting.
                     self._window_tracker.check_alive()
                     if not self._window_tracker.alive:
-                        logger.info("Target window closed, exiting.")
-                        break
+                        logger.info("Daemon target window closed, resuming scanning.")
+                        self._pause_reason = PauseReason.DAEMON_WAITING
+                        self._window_tracker = None
+                        self._win_info = None
+                        # Restart the daemon monitor
+                        if self.daemon_monitor:
+                            self.daemon_monitor.start()
+                        # Continue loop (will be paused until next switch)
+                        time.sleep(0.1)
+                        continue
 
-                # Update window state (size, minimized, focus)
-                changed = self._window_tracker.update()
-                if self._update_pause_state():
+                # Update window state only if we have a tracker
+                if self._window_tracker:
+                    changed = self._window_tracker.update()
+                    if self._update_pause_state():
+                        time.sleep(0.1)
+                        continue
+                    if changed:
+                        self._handle_window_change()
+                else:
+                    # No target window, just wait for a switch request
                     time.sleep(0.1)
                     continue
-
-                if changed:
-                    self._handle_window_change()
 
                 if self._pause_reason != PauseReason.NONE:
                     time.sleep(0.1)
                     continue
 
-                # Process a frame
-                self._process_one_frame()
+                # Process a frame if upscaler exists
+                if self.upscaler_mgr:
+                    self._process_one_frame()
+                else:
+                    time.sleep(0.1)
 
                 # Handle hotkey requests (model / geometry / screenshot)
                 self.controller.process_requests()
