@@ -41,7 +41,7 @@ A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It u
 
 ## Installation
 
-### Install with pipx
+### Install with pipx (recommended)
 
 ```sh
 pipx install linux-rt-upscaler
