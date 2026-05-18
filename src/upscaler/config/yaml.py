@@ -5,6 +5,8 @@ from typing import Optional, Tuple, Dict, Any
 
 import yaml
 
+from .parsers import color_tuple_to_string
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_BACKUPS = 5
@@ -82,6 +84,20 @@ def load_yaml_config(
     return general_options, profiles
 
 
+def _parse_profile_colors(profiles: Dict) -> Dict:
+    """Return a copy of *profiles* with any color converted to a hex string."""
+    cleaned = {}
+    for name, profile in profiles.items():
+        profile_copy = dict(profile)
+        options = profile_copy.get("options", {})
+        if "background_color" in options:
+            bg = options["background_color"]
+            if isinstance(bg, tuple):
+                options["background_color"] = color_tuple_to_string(bg)
+        cleaned[name] = profile_copy
+    return cleaned
+
+
 def save_yaml_config(
     general_options: dict,
     profiles: Dict,
@@ -117,7 +133,7 @@ def save_yaml_config(
     # Build the output data
     data = dict(general_options) if general_options else {}
     if profiles:
-        data["profiles"] = profiles
+        data["profiles"] = _parse_profile_colors(profiles)
 
     # Determine the target path
     if config_path is None:

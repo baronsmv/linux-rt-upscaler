@@ -4,12 +4,12 @@ from typing import Tuple
 
 from PySide6.QtGui import QColor
 
-from . import Config
+from .models import Config
 
 logger = logging.getLogger(__name__)
 
 
-def _color_string_to_float4(
+def color_string_to_float4(
     color: str | Tuple[float, float, float, float],
 ) -> Tuple[float, float, float, float]:
     """
@@ -104,5 +104,14 @@ def _color_string_to_float4(
     return result
 
 
-def parse_config(config: Config):
-    config.background_color = _color_string_to_float4(config.background_color)
+def color_tuple_to_string(color: Tuple[float, float, float, float]) -> str:
+    """Convert a (b, g, r, a) float tuple to a hex string."""
+    b, g, r, a = color
+    if a >= 1.0:
+        return f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+    else:
+        return f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}{int(a*255):02x}"
+
+
+def parse_config(config: Config) -> None:
+    config.background_color = color_string_to_float4(config.background_color)

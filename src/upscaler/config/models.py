@@ -181,11 +181,11 @@ class Config:
     # ----------------------------------------------------------------------------------
     def to_dict(self, diff_only: bool = True) -> Dict[str, Any]:
         """Convert config to a dict suitable for YAML dump."""
-        from .parsers import _color_string_to_float4  # local import to avoid circular
+        from .parsers import color_string_to_float4, color_tuple_to_string
 
         result = {}
         defaults = Config()
-        defaults.background_color = _color_string_to_float4(defaults.background_color)
+        defaults.background_color = color_string_to_float4(defaults.background_color)
         default_bg = defaults.background_color
 
         for f in fields(self):
@@ -200,18 +200,11 @@ class Config:
             if diff_only:
                 if name == "background_color":
                     # Normalize to tuple for comparison
-                    if isinstance(value, str):
-                        value_tuple = _color_string_to_float4(value)
-                    else:
-                        value_tuple = value
-                    if value_tuple == default_bg:
+                    current_tuple = color_string_to_float4(value)
+                    if current_tuple == default_bg:
                         continue
-                    # Convert to hex for output
-                    b, g, r, a = value_tuple
-                    if a < 1.0:
-                        value = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}{int(a*255):02x}"
-                    else:
-                        value = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+                    # Convert to hex string for YAML output
+                    value = color_tuple_to_string(current_tuple)
                 else:
                     if value == default_value:
                         continue
