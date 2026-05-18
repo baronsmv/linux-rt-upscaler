@@ -106,10 +106,12 @@ class DaemonController:
     def _on_scan_start(self) -> None:
         """Daemon returned to scanning, show GUI and restart grid."""
         self._show_gui()
+        if self._session and self._session.daemon_monitor:
+            self._session.daemon_monitor.start()
 
     def _on_error(self) -> None:
         """Pipeline exited unexpectedly, treat as stopped."""
-        logger.warning("Daemon pipeline finished unexpectedly")
+        logger.warning("Daemon pipeline finished unexpectedly, stopping it")
         self._active = False
         if self._session:
             # Avoid double cleanup
@@ -144,5 +146,7 @@ class DaemonController:
     def _show_gui(self) -> None:
         """Show the main window and restart grid refreshes (if daemon active)."""
         self._mw.show()
+        self._mw.raise_()
+        self._mw.activateWindow()
         if self._active:
             self._grid_mgr.start()
