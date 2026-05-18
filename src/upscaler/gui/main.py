@@ -509,33 +509,34 @@ class MainWindow(QMainWindow):
 
     def _start_daemon(self) -> None:
         """Launch a persistent daemon pipeline (same as CLI daemon mode)."""
-        if hasattr(self, "_daemon_session") and self._daemon_session:
+        if getattr(self, "_daemon_active", False):
             return
+        self._daemon_active = True
 
-        # Build a config with daemon enabled, using the current GUI settings
         eff_cfg = copy.deepcopy(self._config_manager.effective_config)
         eff_cfg.daemon = True
 
+        # Daemon window and session
         dummy_win = WindowInfo(0, 0, 0, "daemon-pending")
         self._daemon_session = create_pipeline_session(
             eff_cfg,
             dummy_win,
-            base_config=eff_cfg,  # will be updated later
+            base_config=eff_cfg,
             profiles=self._config_manager.profiles,
         )
 
-        # Connect signals to hide/show the GUI
+        # When a match is found, stop and hide the GUI
         self._daemon_session.pipeline.daemon_target_acquired.connect(
-            lambda: self.hide()
+            self._on_daemon_target_acquired
         )
+        # When scanning resumes, restart and show the GUI
         self._daemon_session.pipeline.daemon_scan_start.connect(
-            lambda: self._show_gui_and_rescan()
+            self._show_gui_and_rescan
         )
-
-        self._daemon_session.pipeline.start()
 
     def _stop_daemon(self) -> None:
         """Stop the daemon pipeline and show the GUI."""
+        self._daemon_active = False
         if hasattr(self, "_daemon_session") and self._daemon_session:
             session = self._daemon_session
             session.pipeline.stop()
@@ -545,13 +546,24 @@ class MainWindow(QMainWindow):
                 session.daemon_monitor.stop()
             session.hotkey_manager.stop()
             del self._daemon_session
+
+        # Restart and show GUI
         self.show()
+        self._refresh_timer.start()
+        self._populate_grid()
+
+    def _on_daemon_target_acquired(self) -> None:
+        """Stop GUI resources and hide the window when the daemon found a match."""
+        self._refresh_timer.stop()
+        self._scene.clear_all()
+        self.hide()
 
     def _show_gui_and_rescan(self) -> None:
         """Called when the daemon resumes scanning (window closed)."""
         self.show()
-        self._refresh_timer.start()
-        self._populate_grid()
+        if self._daemon_active:
+            self._refresh_timer.start()
+            self._populate_grid()
 
     # ------------------------------------------------------------------
     #  Window selection -> pipeline launch
