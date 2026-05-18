@@ -156,10 +156,10 @@ class HotkeyManager(QObject):
 
     def stop(self) -> None:
         """Ungrab keys and close connection."""
-        self._ungrab_keys()
         if self._socket_notifier:
             self._socket_notifier.setEnabled(False)
             self._socket_notifier = None
+        self._ungrab_keys()
         if self._conn:
             self._conn.disconnect()
             self._conn = None
@@ -259,7 +259,7 @@ class HotkeyManager(QObject):
 
     def _process_x_events(self) -> None:
         """Read all pending events from the XCB connection."""
-        while True:
+        while self._conn is not None:
             try:
                 event = self._conn.poll_for_event()
             except Exception as e:
