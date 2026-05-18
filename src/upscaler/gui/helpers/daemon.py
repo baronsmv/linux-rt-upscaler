@@ -76,7 +76,7 @@ class DaemonController:
             base_config=eff,
             profiles=self._cm.profiles,
         )
-        self._session.overlay.external_owner = True
+        self._session.overlay.closed.connect(self.stop)
 
         # Wire pipeline signals
         self._session.pipeline.daemon_target_acquired.connect(self._on_target_acquired)

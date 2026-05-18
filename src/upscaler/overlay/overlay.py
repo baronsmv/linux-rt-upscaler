@@ -2,9 +2,9 @@ import logging
 import time
 from typing import Any, List, Optional
 
-from PySide6.QtCore import QEvent, Qt, Slot
+from PySide6.QtCore import QEvent, Qt, Signal, Slot
 from PySide6.QtGui import QCloseEvent
-from PySide6.QtWidgets import QMainWindow, QApplication
+from PySide6.QtWidgets import QMainWindow
 
 from .coordinates import CoordinateMapper
 from .events import X11EventForwarder
@@ -34,6 +34,8 @@ class OverlayWindow(QMainWindow):
                                   where the content is drawn.
     """
 
+    closed = Signal()
+
     def __init__(self, config: Config, win_info: WindowInfo) -> None:
         """
         Create and show the overlay window.
@@ -43,13 +45,12 @@ class OverlayWindow(QMainWindow):
             win_info: Initial information about the target window.
         """
         super().__init__()
+        self._config = config
         start_time = time.perf_counter()
         logger.debug(
             f"Initializing OverlayWindow: mode={config.overlay_mode}, "
             f"target_handle={win_info.handle:#x}, scale_mode={config.output_geometry}"
         )
-        self._config = config
-        self.external_owner = False
 
         # Daemon mode handler
         if win_info.width <= 0 or win_info.height <= 0:
@@ -327,27 +328,9 @@ class OverlayWindow(QMainWindow):
         Args:
             event: The close event.
         """
-        if self.external_owner:
-            logger.debug("Overlay window closed, hiding")
-            self.hide()
-            event.ignore()
-            return
-
-        logger.info("Overlay window closed, quitting application")
-        self._opacity_controller.close()
-        self._forwarder.close()
-        QApplication.quit()
-        super().closeEvent(event)
-
-    @Slot()
-    def on_pipeline_stopped(self) -> None:
-        """Slot called from the pipeline thread when it exits due to an error."""
-        if self.external_owner:
-            logger.debug("Pipeline stopped, returning")
-            return
-
-        logger.info("Pipeline stopped, quitting application")
-        QApplication.quit()
+        self.hide()
+        self.closed.emit()
+        event.ignore()
 
     @Slot(str)
     def set_scale_mode(self, mode: str) -> None:

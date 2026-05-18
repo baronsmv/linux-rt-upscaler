@@ -6,7 +6,7 @@ from queue import Empty, Queue
 from typing import Any, Dict, Optional, Tuple
 
 import shiboken6
-from PySide6.QtCore import QMetaObject, QObject, Qt, Signal
+from PySide6.QtCore import QObject, Signal
 
 from .controller import PipelineController
 from .osd import OSDManager
@@ -629,14 +629,6 @@ class Pipeline(QObject):
 
         self._stopped_event.set()
         self.finished.emit()
-
-        if shiboken6.isValid(self.overlay):
-            try:
-                QMetaObject.invokeMethod(
-                    self.overlay, "on_pipeline_stopped", Qt.QueuedConnection
-                )
-            except RuntimeError:
-                pass
         logger.debug("Pipeline thread stopped")
 
     # ----------------------------------------------------------------------

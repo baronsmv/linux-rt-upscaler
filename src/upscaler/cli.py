@@ -34,6 +34,8 @@ def main() -> None:
 
     # Launch pipeline session
     session = create_pipeline_session(config, win_info, base_config, profiles)
+    session.pipeline.finished.connect(QApplication.quit)
+    session.overlay.closed.connect(QApplication.quit)
     logger.debug(
         f"Total initialization time: {time.perf_counter() - overall_start:.2f}s"
     )

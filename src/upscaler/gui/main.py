@@ -222,6 +222,12 @@ class MainWindow(QMainWindow):
 
         QTimer.singleShot(0, lambda: self._start_pipeline(win_info))
 
+    def _on_manual_overlay_closed(self) -> None:
+        if self._manual_session:
+            self._manual_session.pipeline.stop()
+            self._manual_session = None
+        QApplication.instance().quit()
+
     def _start_pipeline(self, win_info: WindowInfo) -> None:
         """Create a temporary pipeline session for the given window."""
         logger.info("Starting upscale for: '%s'", win_info.title)
@@ -235,6 +241,7 @@ class MainWindow(QMainWindow):
                 self._config_manager.effective_config,
                 win_info,
             )
+            self._manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
         except Exception as e:
             logger.exception("Failed to start pipeline")
             QMessageBox.critical(None, "Error", f"Could not start pipeline:\n{e}")
