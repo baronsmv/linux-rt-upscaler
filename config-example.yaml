@@ -16,17 +16,12 @@
 
 
 # ------------------------------------------------------------------------------
-# Interaction
+# Focus Tracking
 # ------------------------------------------------------------------------------
 
 # Automatically switch to the currently focused window (follow-focus).
 # Default: false
 follow_focus: false
-
-# How often (seconds) the focus monitor checks for window changes.
-# Lower = more responsive, higher = slightly less CPU usage. Must be > 0.05.
-# Default: 0.2
-focus_poll_interval: 0.2
 
 # When the target window loses focus, pause frame processing and hide the
 # overlay. Only active when overlay_mode is "always-on-top" or "top-transparent".
@@ -34,7 +29,21 @@ focus_poll_interval: 0.2
 pause_on_focus_loss: true
 
 # ------------------------------------------------------------------------------
-# Window Detection Timeouts (used when launching a program)
+# Intervals
+# ------------------------------------------------------------------------------
+
+# How often (seconds) the daemon scans for matching windows.
+# Lower = more responsive, higher = slightly less CPU usage. Must be > 0.05.
+# Default: 2.0
+daemon_poll_interval: 2.0
+
+# How often (seconds) the focus monitor checks for window changes.
+# Lower = more responsive, higher = slightly less CPU usage. Must be > 0.05.
+# Default: 0.2
+focus_poll_interval: 0.2
+
+# ------------------------------------------------------------------------------
+# Window Detection
 # ------------------------------------------------------------------------------
 
 # Seconds to wait before capturing the active window after program launch.
@@ -543,6 +552,9 @@ profiles:
       crop_left: 2
       crop_right: 2
       output_geometry: cover
+      # A profile can be set with 'daemon: false' to be excluded from
+      # automatic daemon matching.
+      daemon: false
 
   # Profile for a lightweight / fast game
   retro_game:

@@ -147,7 +147,8 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'.""",
         "-d",
         "--daemon",
         action="store_true",
-        help="Run in background, automatically upscale windows matching profiles.",
+        help="""Run in background, automatically upscaling any window
+matching a profile. Can be combined with --follow-focus.""",
     )
     target_selection_group.add_argument(
         "-t",
@@ -173,7 +174,7 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'.""",
         "--follow-focus",
         action="store_true",
         help="""Follow the currently focused window (automatically switch
-when focus changes).""",
+when focus changes). Can be combined with --daemon.""",
     )
     focus_tracking_group.add_argument(
         "--no-focus-pause",
@@ -184,23 +185,23 @@ Use this flag to keep it always visible.""",
     )
 
     # ----------------------------------------------------------------------
-    # Timing section
+    # Interval section
     # ----------------------------------------------------------------------
-    timing_group = parser.add_argument_group("TIMING OPTIONS")
-    timing_group.add_argument(
-        "--focus-poll-interval",
-        type=float,
-        default=DEFAULT_CONFIG.focus_poll_interval,
-        help="""How often (seconds) the application checks for window focus
-changes when --follow-focus is activated.
-Minimum is 0.05. Default: %(default)s.""",
-    )
-    timing_group.add_argument(
+    interval_group = parser.add_argument_group("INTERVAL OPTIONS")
+    interval_group.add_argument(
         "--daemon-poll-interval",
         type=float,
         default=DEFAULT_CONFIG.daemon_poll_interval,
         help="""How often (seconds) the application checks for active
 windows when --daemon is activated.
+Minimum is 0.05. Default: %(default)s.""",
+    )
+    interval_group.add_argument(
+        "--focus-poll-interval",
+        type=float,
+        default=DEFAULT_CONFIG.focus_poll_interval,
+        help="""How often (seconds) the application checks for window focus
+changes when --follow-focus is activated.
 Minimum is 0.05. Default: %(default)s.""",
     )
 
@@ -972,7 +973,7 @@ Recommended range: 0.15 - 0.5. Default: %(default)s.
     # Additional groups
     # ----------------------------------------------------------------------
     additional_groups = [
-        timing_group,
+        interval_group,
         window_detection_group,
         lanczos_group,
         pre_processing_group,
