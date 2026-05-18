@@ -549,7 +549,9 @@ class Pipeline(QObject):
                     # Daemon mode: check alive, if dead, go back to waiting.
                     self._window_tracker.check_alive()
                     if not self._window_tracker.alive:
-                        logger.info("Daemon: Target window closed, resuming scanning")
+                        logger.info(
+                            "Daemon: Target window closed, resuming scanning..."
+                        )
                         self._set_pause_reason(PauseReason.DAEMON_WAITING)
                         self._window_tracker = None
                         self._win_info = None

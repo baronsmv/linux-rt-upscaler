@@ -75,6 +75,13 @@ class DaemonMonitor(QObject):
                             break
                         name, data = find_matching_profile(self._profiles, win.title)
                         if data is not None:
+                            # Per-profile daemon exclusion (daemon=False)
+                            profile_daemon = data.get("options", {}).get("daemon")
+                            if profile_daemon is False:
+                                logger.debug(
+                                    "Skipping profile '%s' (daemon=False)", name
+                                )
+                                continue
                             logger.info(
                                 "Daemon: Matched window '%s' with profile '%s'",
                                 win.title,
