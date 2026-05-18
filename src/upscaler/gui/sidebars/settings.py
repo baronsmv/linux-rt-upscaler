@@ -40,6 +40,7 @@ class SettingsSidebar(IconSidebarBase):
     save_settings = Signal()
     reset_settings = Signal()
     restore_defaults = Signal()
+    daemon_toggled = Signal(bool)
 
     def __init__(
         self,
@@ -63,12 +64,16 @@ class SettingsSidebar(IconSidebarBase):
         parse_config(self._system_defaults)
         self._dirty = False
 
+        tab_args = gui_config, config, self._bc
+        general_tab = GeneralTab(*tab_args)
+        general_tab.daemon_toggled.connect(self.daemon_toggled)
+
         tabs = [
-            (GeneralTab(gui_config, config, self._bc), "general", "General"),
-            (DisplayTab(gui_config, config, self._bc), "display", "Display & Overlay"),
-            (EffectsTab(gui_config, config, self._bc), "effects", "Effects"),
-            (ExtrasTab(gui_config, config, self._bc), "extras", "Extras"),
-            (AdvancedTab(gui_config, config, self._bc), "advanced", "Advanced"),
+            (general_tab, "general", "General"),
+            (DisplayTab(*tab_args), "display", "Display & Overlay"),
+            (EffectsTab(*tab_args), "effects", "Effects"),
+            (ExtrasTab(*tab_args), "extras", "Extras"),
+            (AdvancedTab(*tab_args), "advanced", "Advanced"),
         ]
 
         for tab, icon, tooltip in tabs:

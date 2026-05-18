@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import Signal
+
 from ..common import SettingsTab
 from ....config import UPSCALING_MODELS
 
@@ -11,6 +13,9 @@ if TYPE_CHECKING:
 
 
 class GeneralTab(SettingsTab):
+
+    daemon_toggled = Signal(bool)
+
     def __init__(
         self,
         gui_config: GUIConfig,
@@ -47,6 +52,16 @@ class GeneralTab(SettingsTab):
             "or low-resolution sources. Uses more GPU resources.",
         )
 
+        # ---- Daemon ----
+        self._add_section("Daemon")
+        self._daemon_cb = self._add_cb(
+            "Daemon Mode",
+            self._config.daemon,
+            self._on_daemon_changed,
+            baseline=self.baseline_config.daemon,
+            help="Automatically upscale any window matching a profile.",
+        )
+
         # ---- Focus Tracking ----
         self._add_section("Focus Tracking")
         self._follow_focus_cb = self._add_cb(
@@ -73,6 +88,11 @@ class GeneralTab(SettingsTab):
     def _on_double_changed(self, state: bool) -> None:
         self._config.double_upscale = bool(state)
         self.config_changed.emit()
+
+    def _on_daemon_changed(self, state: bool) -> None:
+        self._config.daemon = bool(state)
+        self.config_changed.emit()
+        self.daemon_toggled.emit(bool(state))
 
     def _on_follow_focus(self, state: bool):
         self._config.follow_focus = bool(state)
