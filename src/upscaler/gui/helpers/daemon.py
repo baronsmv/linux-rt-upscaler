@@ -4,7 +4,7 @@ import copy
 import logging
 from typing import TYPE_CHECKING
 
-from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QApplication, QMainWindow
 
 from ...pipeline import create_pipeline_session
 from ...window import WindowInfo
@@ -76,6 +76,7 @@ class DaemonController:
             dummy,
             base_config=eff,
             profiles=self._cm.profiles,
+            on_exit=self.shutdown,
         )
         self._session.overlay.closed.connect(self.stop)
 
@@ -96,6 +97,15 @@ class DaemonController:
             self._session = None
 
         self._show_gui()
+
+    def shutdown(self) -> None:
+        """Tear down the daemon pipeline and quit the application immediately."""
+        if self._active:
+            self._active = False
+            if self._session:
+                self._teardown_session(self._session)
+                self._session = None
+        QApplication.instance().quit()
 
     # ------------------------------------------------------------------
     # Pipeline signal slots

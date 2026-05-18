@@ -1,7 +1,7 @@
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
@@ -32,6 +32,7 @@ def create_pipeline_session(
     win_info: WindowInfo,
     base_config: Optional[Config] = None,
     profiles: Optional[Dict[str, Any]] = None,
+    on_exit: Optional[Callable] = None,
 ) -> PipelineSession:
     """
     Create the overlay, pipeline, and all supporting systems.
@@ -51,6 +52,8 @@ def create_pipeline_session(
         A copy of the base configuration before contextual overrides.
     profiles : Dict[str, Any], optional
         User profiles with match and options.
+    on_exit : Callable, optional
+        Custom function to be executed when the session exits.
 
     Returns
     -------
@@ -124,7 +127,7 @@ def create_pipeline_session(
     controller = pipeline.controller
 
     hotkey_manager.toggle_scaling.connect(controller.toggle_overlay)
-    hotkey_manager.exit_app.connect(controller.exit_app)
+    hotkey_manager.exit_app.connect(on_exit or controller.exit_app)
     hotkey_manager.screenshot.connect(controller.take_screenshot)
     hotkey_manager.cycle_model.connect(controller.switch_model)
     hotkey_manager.cycle_geometry.connect(controller.switch_geometry)
