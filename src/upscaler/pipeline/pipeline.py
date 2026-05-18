@@ -26,7 +26,7 @@ from ..config import (
 from ..overlay import OverlayWindow
 from ..tiles import extract_expanded_tiles
 from ..utils import get_base_geometry, parse_output_geometry
-from ..vulkan import configure_device
+from ..vulkan import SwapchainError, configure_device
 from ..window import WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
@@ -357,7 +357,10 @@ class Pipeline(QObject):
         )
 
         if idle:
-            # Re-present the exact same frame, zero compute cost
+            # Only present if the swapchain is still healthy
+            if self._swapchain_manager.needs_recreation():
+                logger.debug("Swapchain needs recreation, skipping idle present")
+                return
             self.presenter.present_unchanged()
             self.overlay.scaling_rect = self.presenter.get_scaling_rect(
                 self._scale_factor
@@ -586,10 +589,15 @@ class Pipeline(QObject):
                     continue
 
                 # Process a frame if upscaler exists
-                if self.upscaler_mgr:
-                    self._process_one_frame()
-                else:
-                    time.sleep(0.1)
+                try:
+                    if self.upscaler_mgr:
+                        self._process_one_frame()
+                    else:
+                        time.sleep(0.1)
+                except SwapchainError as e:
+                    logger.warning("Swapchain error, recreating: %s", e)
+                    self._recreate_swapchain()
+                    continue
 
                 # Handle hotkey requests (model / geometry / screenshot)
                 self.controller.process_requests()
