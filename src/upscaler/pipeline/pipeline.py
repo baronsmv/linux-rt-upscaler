@@ -145,6 +145,7 @@ class Pipeline(QObject):
         )
         self._last_present_state_hash: Optional[int] = None
         self._presenter_params_stale = True
+        self._force_next_frame = False
 
         # Upscaler manager: full-frame or tile processing
         self.upscaler_mgr: Optional[UpscalerManager] = None
@@ -349,28 +350,28 @@ class Pipeline(QObject):
         self.overlay.update_opacity()
 
         # --- 3. Idle frame detection ---------------------------------------
-        current_hash = self._compute_present_state_hash()
-        idle = (
-            not is_dirty
-            and osd_tex is None
-            and not self._presenter_params_stale
-            and current_hash == self._last_present_state_hash
-        )
-
-        if idle:
-            # Only present if the swapchain is still healthy
-            if self._swapchain_manager.needs_recreation():
-                logger.debug("Swapchain needs recreation, skipping idle present")
-                return
-            self.presenter.present_unchanged()
-            self.overlay.scaling_rect = self.presenter.get_scaling_rect(
-                self._scale_factor
+        if not self._force_next_frame:
+            current_hash = self._compute_present_state_hash()
+            idle = (
+                not is_dirty
+                and osd_tex is None
+                and not self._presenter_params_stale
+                and current_hash == self._last_present_state_hash
             )
-            return
 
-        # Full render: mark params as fresh
-        self._presenter_params_stale = False
-        self._last_present_state_hash = current_hash
+            if idle:
+                # Only present if the swapchain is still healthy
+                if self._swapchain_manager.needs_recreation():
+                    logger.debug("Swapchain needs recreation, skipping idle present")
+                    return
+                self.presenter.present_unchanged()
+                self.overlay.scaling_rect = self.presenter.get_scaling_rect(
+                    self._scale_factor
+                )
+                return
+        else:
+            self._force_next_frame = False
+            logger.debug("Forcing first frame after switch")
 
         # --- 4. Upscale ----------------------------------------------------
         if not self.upscaler_mgr.use_tile:
@@ -531,6 +532,7 @@ class Pipeline(QObject):
         )
         self._win_info = new_win_info
         self._handle_window_change()
+        self._force_next_frame = True
 
         # Exit daemon waiting state
         if self._pause_reason == PauseReason.DAEMON_WAITING:
