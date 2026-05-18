@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon, QPixmap
@@ -32,7 +32,7 @@ class WindowPickerDialog(QDialog):
     def __init__(
         self,
         gui_config: GUIConfig,
-        parent: QWidget | None = None,
+        parent: Optional[QWidget] = None,
         exclude_handle: int = 0,
     ):
         super().__init__(parent)
@@ -68,7 +68,7 @@ class WindowPickerDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-        self._selected_win: WindowInfo | None = None
+        self._selected_win: Optional[WindowInfo] = None
 
         # Pre-load the fallback icon (generic window)
         pix = load_pixmap(
@@ -141,5 +141,5 @@ class WindowPickerDialog(QDialog):
         self._selected_win = item.data(Qt.UserRole)
         self.accept()
 
-    def selected_window(self) -> WindowInfo | None:
+    def selected_window(self) -> Optional[WindowInfo]:
         return self._selected_win

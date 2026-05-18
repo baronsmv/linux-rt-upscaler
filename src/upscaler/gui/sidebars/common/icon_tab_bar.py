@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from typing import Optional, TYPE_CHECKING
+
 from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QWidget, QGridLayout, QPushButton, QButtonGroup
 
-from ...config import GUIConfig
 from ...icons import load_pixmap
 from ...styles import icon_tab_bar_style, icon_tab_button_style
+
+if TYPE_CHECKING:
+    from ...config import GUIConfig
 
 
 class IconTabBar(QWidget):
@@ -17,7 +21,7 @@ class IconTabBar(QWidget):
 
     currentChanged = Signal(int)
 
-    def __init__(self, gui_config: GUIConfig, parent: QWidget | None = None) -> None:
+    def __init__(self, gui_config: GUIConfig, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._cfg = gui_config
         self._columns = gui_config.sidebar_icon_columns

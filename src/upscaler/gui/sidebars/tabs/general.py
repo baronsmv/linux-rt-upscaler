@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget
 
 from ..common import SettingsTab
 from ....config import UPSCALING_MODELS
@@ -21,9 +22,11 @@ class GeneralTab(SettingsTab):
         gui_config: GUIConfig,
         config: Config,
         baseline_config: Config,
-        parent=None,
+        profile_active: bool = False,
+        parent: Optional[QWidget] = None,
     ) -> None:
         self._config = config
+        self._profile_active = profile_active
         super().__init__(
             gui_config,
             title="General",
@@ -73,13 +76,22 @@ class GeneralTab(SettingsTab):
 
         # ---- Daemon ----
         self._add_section("Automatic Upscaling")
-        self._daemon_cb = self._add_cb(
-            "Daemon Mode",
-            self._config.daemon,
-            self._on_daemon_changed,
-            baseline=self.baseline_config.daemon,
-            help="Automatically upscale any window matching a profile.",
-        )
+        if self._profile_active:
+            self._auto_cb = self._add_cb(
+                "Exclude from Daemon Mode",
+                self._config.daemon_exclude,
+                self._on_daemon_exclude_changed,
+                baseline=self.baseline_config.daemon_exclude,
+                help="Exclude this profile from automatic upscaling.",
+            )
+        else:
+            self._daemon_cb = self._add_cb(
+                "Daemon Mode",
+                self._config.daemon,
+                self._on_daemon_changed,
+                baseline=self.baseline_config.daemon,
+                help="Automatically upscale any window matching a profile.",
+            )
 
     def _on_model_changed(self, text: str) -> None:
         self._config.model = text
@@ -101,3 +113,7 @@ class GeneralTab(SettingsTab):
         self._config.daemon = bool(state)
         self.config_changed.emit()
         self.daemon_toggled.emit(bool(state))
+
+    def _on_daemon_exclude_changed(self, state: bool) -> None:
+        self._config.daemon_exclude = bool(state)
+        self.config_changed.emit()

@@ -366,9 +366,7 @@ class ProfilesSidebar(QWidget):
     #  Slots
     # ------------------------------------------------------------------
 
-    def _on_current_item_changed(
-        self, current: QListWidgetItem | None, previous: QListWidgetItem | None
-    ) -> None:
+    def _on_current_item_changed(self, current: Optional[QListWidgetItem]) -> None:
         """
         Update toolbar button states and emit ``profile_selected``.
 

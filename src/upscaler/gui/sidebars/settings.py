@@ -65,7 +65,7 @@ class SettingsSidebar(IconSidebarBase):
         self._dirty = False
 
         tab_args = gui_config, config, self._bc
-        general_tab = GeneralTab(*tab_args)
+        general_tab = GeneralTab(*tab_args, profile_active=profile_active)
         general_tab.daemon_toggled.connect(self.daemon_toggled)
 
         tabs = [

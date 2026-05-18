@@ -54,7 +54,7 @@ class SettingsTab(QWidget):
         gui_config: GUIConfig,
         title: str,
         baseline_config: Optional[Config] = None,
-        parent: QWidget | None = None,
+        parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
         self._cfg = gui_config
@@ -230,8 +230,8 @@ class SettingsTab(QWidget):
     def _add_combo(
         self,
         label: str,
-        items: list[str],
-        current: str | None,
+        items: List[str],
+        current: Optional[str],
         slot: Callable,
         baseline: Optional[str] = None,
         help: Optional[str] = None,

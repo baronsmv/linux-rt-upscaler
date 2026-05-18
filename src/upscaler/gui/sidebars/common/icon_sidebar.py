@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Optional, TYPE_CHECKING
+
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QWidget,
@@ -9,8 +11,10 @@ from PySide6.QtWidgets import (
 )
 
 from .icon_tab_bar import IconTabBar
-from ...config import GUIConfig
 from ...styles import sidebar_container_style
+
+if TYPE_CHECKING:
+    from ...config import GUIConfig
 
 
 class IconSidebarBase(QWidget):
@@ -21,7 +25,7 @@ class IconSidebarBase(QWidget):
 
     config_changed = Signal()
 
-    def __init__(self, gui_config: GUIConfig, parent: QWidget | None = None) -> None:
+    def __init__(self, gui_config: GUIConfig, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.gui_config = gui_config
         self.setFixedWidth(gui_config.sidebar_width)
@@ -36,7 +40,7 @@ class IconSidebarBase(QWidget):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(0)
 
-        self._tab_bar: IconTabBar | None = None
+        self._tab_bar: Optional[IconTabBar] = None
         self._stack = QStackedWidget()
         layout.addWidget(self._stack, stretch=1)
 

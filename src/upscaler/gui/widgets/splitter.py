@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from typing import Optional, TYPE_CHECKING
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QColor, QPen
 from PySide6.QtWidgets import QSplitter, QSplitterHandle
 
-from ..config import GUIConfig
+if TYPE_CHECKING:
+    from ..config import GUIConfig
 
 
 class StyledSplitterHandle(QSplitterHandle):
@@ -12,7 +15,7 @@ class StyledSplitterHandle(QSplitterHandle):
 
     def __init__(self, orientation: Qt.Orientation, splitter: QSplitter) -> None:
         super().__init__(orientation, splitter)
-        self._cfg: GUIConfig | None = None
+        self._cfg: Optional[GUIConfig] = None
 
     def set_config(self, cfg: GUIConfig) -> None:
         self._cfg = cfg

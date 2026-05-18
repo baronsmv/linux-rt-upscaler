@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QComboBox, QWidget
@@ -19,8 +19,8 @@ class ComboRow(BaseRow):
         self,
         label: str,
         gui_config: GUIConfig,
-        items: list[str],
-        current: str | None = None,
+        items: List[str],
+        current: Optional[str] = None,
         tooltip: Optional[str] = None,
         baseline: Optional[str] = None,
         parent: Optional[QWidget] = None,

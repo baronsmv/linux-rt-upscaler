@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -27,7 +27,7 @@ class SidebarBase(QWidget):
 
     config_changed = Signal()
 
-    def __init__(self, gui_config: GUIConfig, parent: QWidget | None = None) -> None:
+    def __init__(self, gui_config: GUIConfig, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.gui_config = gui_config
         self.setFixedWidth(gui_config.sidebar_width)

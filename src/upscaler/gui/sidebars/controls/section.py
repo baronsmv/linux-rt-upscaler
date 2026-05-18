@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
 
@@ -18,7 +18,7 @@ class SectionLabel(QWidget):
     """
 
     def __init__(
-        self, text: str, gui_config: GUIConfig, parent: QWidget | None = None
+        self, text: str, gui_config: GUIConfig, parent: Optional[QWidget] = None
     ) -> None:
         super().__init__(parent)
         self._text = text
