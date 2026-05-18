@@ -195,7 +195,7 @@ class HotkeyManager(QObject):
 
             self._grabbed[(mod_mask, keycode)] = action
             logger.debug(
-                f"Grabbed {action}: {hotkey_str} (mod={mod_mask}, keycode={keycode})"
+                f"Grabbed '{action}': '{hotkey_str}' (mod={mod_mask}, keycode={keycode})"
             )
 
         self._conn.flush()
