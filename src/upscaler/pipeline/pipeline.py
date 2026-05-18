@@ -214,7 +214,8 @@ class Pipeline(QObject):
             self._thread.join(timeout=2.0)
         if self._grabber:
             self._grabber.close()
-        self._window_tracker.close()
+        if self._window_tracker is not None:
+            self._window_tracker.close()
         self._swapchain_manager.close()
 
     def update_base_config(self, new_base: Config) -> None:
