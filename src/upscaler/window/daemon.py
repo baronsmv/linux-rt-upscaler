@@ -76,7 +76,7 @@ class DaemonMonitor(QObject):
                         name, data = find_matching_profile(self._profiles, win.title)
                         if data is not None:
                             logger.info(
-                                "Daemon: matched window '%s' with profile '%s'",
+                                "Daemon: Matched window '%s' with profile '%s'",
                                 win.title,
                                 name,
                             )

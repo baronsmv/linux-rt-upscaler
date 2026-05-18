@@ -185,6 +185,6 @@ def setup_config() -> (
         )
         logger.debug("Window handle: 0x%x", win_info.handle)
     else:
-        logger.info("Daemon: waiting for a matching window")
+        logger.info("Daemon: Waiting for a matching window...")
 
     return config, base_config, profiles, win_info, proc
