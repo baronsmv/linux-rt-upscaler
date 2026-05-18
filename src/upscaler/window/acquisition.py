@@ -494,7 +494,7 @@ def acquire_target_window(
         was launched.
     """
     if config.daemon:
-        logger.debug("Daemon mode: skipping window acquisition.")
+        logger.debug("Daemon: skipping window acquisition.")
         return None, None  # no initial target
 
     start_time = time.perf_counter()

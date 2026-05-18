@@ -46,7 +46,7 @@ class DaemonMonitor(QObject):
                 target=self._poll, name="DaemonMonitor", daemon=True
             )
             self._thread.start()
-            logger.debug("Daemon monitor started.")
+            logger.debug("Daemon: Monitor started.")
 
     def stop(self) -> None:
         """Stop the polling thread."""
@@ -54,7 +54,7 @@ class DaemonMonitor(QObject):
             self._running = False
         if self._thread:
             self._thread.join(timeout=2.0)
-        logger.debug("Daemon monitor stopped.")
+        logger.debug("Daemon: Monitor stopped.")
 
     # ------------------------------------------------------------------
     #  Polling loop
@@ -64,7 +64,7 @@ class DaemonMonitor(QObject):
 
         conn = open_xcb_connection()
         if conn is None:
-            logger.error("DaemonMonitor: failed to open XCB connection.")
+            logger.error("Daemon: Monitor failed to open XCB connection.")
             return
 
         try:
@@ -86,10 +86,10 @@ class DaemonMonitor(QObject):
                             self._running = False  # stop polling
                             return
                 except Exception as e:
-                    logger.error(f"Daemon polling error: '{e}'.", exc_info=True)
+                    logger.error(f"Daemon: Polling error: '{e}'.", exc_info=True)
 
                 time.sleep(self._interval)
 
         finally:
             close_xcb_connection(conn)
-            logger.debug("Daemon monitor thread finished.")
+            logger.debug("Daemon: Monitor thread finished.")

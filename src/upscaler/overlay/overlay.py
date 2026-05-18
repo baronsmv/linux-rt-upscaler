@@ -171,7 +171,7 @@ class OverlayWindow(QMainWindow):
         if mode == OverlayMode.FULLSCREEN.value:
             flags |= Qt.FramelessWindowHint
             self.setGeometry(x, y, width, height)
-            self.showFullScreen()
+            self._fullscreen_geometry = x, y, width, height
             logger.debug(
                 f"Overlay set to fullscreen on geometry ({x},{y},{width}x{height})."
             )
@@ -199,7 +199,6 @@ class OverlayWindow(QMainWindow):
             raise ValueError(f"Unknown overlay mode: {mode}")
 
         self.setWindowFlags(flags)
-        self.show()
 
     def _update_mapper(self) -> None:
         """Update the coordinate mapper with current crop, content, and target sizes."""

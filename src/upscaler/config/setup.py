@@ -161,7 +161,7 @@ def setup_config() -> (
     win_info, proc = acquire_target_window(config)
     if win_info is None and not config.daemon:
         if not config.select:
-            logger.error("No window was found, exiting.")
+            logger.debug("No window was found, exiting.")
             sys.exit(0)
         sys.exit(1)
 
@@ -185,6 +185,6 @@ def setup_config() -> (
         )
         logger.debug("Window handle: 0x%x", win_info.handle)
     else:
-        logger.info("Daemon mode: waiting for a matching window.")
+        logger.info("Daemon: waiting for a matching window.")
 
     return config, base_config, profiles, win_info, proc

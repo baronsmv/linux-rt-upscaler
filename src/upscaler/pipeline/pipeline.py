@@ -520,6 +520,7 @@ class Pipeline(QObject):
         # Exit daemon waiting state
         if self._pause_reason == PauseReason.DAEMON_WAITING:
             self._pause_reason = PauseReason.NONE
+            self.overlay.show()
             self.daemon_target_acquired.emit()
 
     # ----------------------------------------------------------------------
@@ -548,7 +549,7 @@ class Pipeline(QObject):
                     # Daemon mode: check alive, if dead, go back to waiting.
                     self._window_tracker.check_alive()
                     if not self._window_tracker.alive:
-                        logger.info("Daemon target window closed, resuming scanning.")
+                        logger.info("Daemon: Target window closed, resuming scanning.")
                         self._pause_reason = PauseReason.DAEMON_WAITING
                         self._window_tracker = None
                         self._win_info = None

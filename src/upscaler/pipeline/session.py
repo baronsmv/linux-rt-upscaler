@@ -69,12 +69,16 @@ def create_pipeline_session(
         logger.error(str(e))
         raise
 
-    # Prepare the overlay for Vulkan
-    time.sleep(0.5)
-    overlay.show()
+    # Create the native window handle without becoming visible
+    time.sleep(0.1)
+    overlay.winId()
     app.processEvents()
     if overlay.windowHandle():
         overlay.windowHandle().setSurfaceType(QWindow.VulkanSurface)
+
+    # For non-daemon modes, show the overlay immediately.
+    if not config.daemon:
+        overlay.show()
 
     # ---- Pipeline --------------------------------------------------------
     pipeline = Pipeline(
