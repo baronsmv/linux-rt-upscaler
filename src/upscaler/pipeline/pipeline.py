@@ -165,10 +165,9 @@ class Pipeline(QObject):
         overlay.scaling_rect = [0, 0, 0, 0]
 
         # Pause reason
+        self._pause_reason = PauseReason.NONE
         if self.config.daemon and self._window_tracker is None:
-            self._pause_reason = PauseReason.DAEMON_WAITING
-        else:
-            self._pause_reason = PauseReason.NONE
+            self._set_pause_reason(PauseReason.DAEMON_WAITING)
 
         # Threading control
         self._running = False
