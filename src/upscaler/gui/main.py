@@ -524,6 +524,7 @@ class MainWindow(QMainWindow):
             base_config=eff_cfg,
             profiles=self._config_manager.profiles,
         )
+        self._daemon_session.overlay.external_owner = True
 
         # When a match is found, stop and hide the GUI
         self._daemon_session.pipeline.daemon_target_acquired.connect(
@@ -533,6 +534,8 @@ class MainWindow(QMainWindow):
         self._daemon_session.pipeline.daemon_scan_start.connect(
             self._show_gui_and_rescan
         )
+        # Error handling
+        self._daemon_session.pipeline.finished.connect(self._on_daemon_error)
 
     def _stop_daemon(self) -> None:
         """Stop the daemon pipeline and show the GUI."""
@@ -564,6 +567,16 @@ class MainWindow(QMainWindow):
         if self._daemon_active:
             self._refresh_timer.start()
             self._populate_grid()
+
+    def _on_daemon_error(self):
+        """Pipeline crashed or stopped on its own, bring the GUI back."""
+        logger.warning("Daemon pipeline finished unexpectedly, showing GUI")
+        self._daemon_active = False
+        if hasattr(self, "_daemon_session") and self._daemon_session:
+            del self._daemon_session
+        self.show()
+        self._refresh_timer.start()
+        self._populate_grid()
 
     # ------------------------------------------------------------------
     #  Window selection -> pipeline launch

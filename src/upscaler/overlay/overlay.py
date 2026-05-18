@@ -49,6 +49,7 @@ class OverlayWindow(QMainWindow):
             f"target_handle={win_info.handle:#x}, scale_mode={config.output_geometry}"
         )
         self._config = config
+        self.external_owner = False
 
         # Daemon mode handler
         if win_info.width <= 0 or win_info.height <= 0:
@@ -326,6 +327,12 @@ class OverlayWindow(QMainWindow):
         Args:
             event: The close event.
         """
+        if self.external_owner:
+            logger.debug("Overlay window closed, hiding")
+            self.hide()
+            event.ignore()
+            return
+
         logger.info("Overlay window closed, quitting application")
         self._opacity_controller.close()
         self._forwarder.close()
@@ -335,6 +342,10 @@ class OverlayWindow(QMainWindow):
     @Slot()
     def on_pipeline_stopped(self) -> None:
         """Slot called from the pipeline thread when it exits due to an error."""
+        if self.external_owner:
+            logger.debug("Pipeline stopped, returning")
+            return
+
         logger.info("Pipeline stopped, quitting application")
         QApplication.quit()
 
