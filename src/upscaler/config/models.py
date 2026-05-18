@@ -60,6 +60,7 @@ class Config:
     # Target selection
     select: bool = False
     daemon: bool = False
+    daemon_exclude: bool = False
     target_title: Optional[str] = None
     target_title_regex: Optional[str] = None
 

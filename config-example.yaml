@@ -575,9 +575,8 @@ profiles:
       crop_left: 2
       crop_right: 2
       output_geometry: cover
-      # A profile can be set with 'daemon: false' to be excluded from
-      # automatic daemon matching.
-      daemon: false
+      # A profile can be excluded from automatic daemon matching:
+      daemon_exclude: true
 
   # Profile for a lightweight / fast game
   retro_game:
