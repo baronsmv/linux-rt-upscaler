@@ -119,7 +119,7 @@ def load_model(
             raise FileNotFoundError(f"Shader not found: {spv_path}")
         with spv_path.open("rb") as f:
             shaders.append(f.read())
-        logger.debug("Loaded shader: %s", spv_path)
+        logger.debug("Loaded shader: '%s'", spv_path)
 
     srv_uav: List[Tuple[List[str], List[str]]] = [
         (entry[0], entry[1]) for entry in srv_uav_raw

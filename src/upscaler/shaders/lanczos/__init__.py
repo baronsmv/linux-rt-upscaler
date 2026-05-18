@@ -88,14 +88,14 @@ class LanczosScaler(ShaderPass):
         try:
             with open(path_lanczos, "rb") as f:
                 self._shader_l2 = f.read()
-            logger.debug("Lanczos shader loaded from %s", path_lanczos)
+            logger.debug("Lanczos shader loaded from '%s'", path_lanczos)
         except OSError as e:
             raise RuntimeError(f"Failed to load Lanczos shader: {e}") from e
 
         try:
             with open(path_adapt, "rb") as f:
                 self._shader_adapt = f.read()
-            logger.debug("Adaptive Lanczos shader loaded from %s", path_adapt)
+            logger.debug("Adaptive Lanczos shader loaded from '%s'", path_adapt)
         except OSError as e:
             raise RuntimeError(f"Failed to load Lanczos adaptive shader: {e}") from e
 
@@ -214,7 +214,7 @@ class LanczosScaler(ShaderPass):
         if variant == self._current_variant:
             return
 
-        logger.debug("LanczosScaler switching to %s", variant)
+        logger.debug("LanczosScaler switching to '%s'", variant)
 
         self._shader = self._shader_adapt if adaptive else self._shader_l2
         self._current_variant = variant

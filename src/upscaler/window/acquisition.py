@@ -534,7 +534,7 @@ def acquire_target_window(
         if win_info is None:
             return None, None
         if config.log_level != "ERROR":
-            logger.debug(f"Selected: %s", win_info.title)
+            logger.debug(f"Selected: '%s'", win_info.title)
         logger.debug(
             f"Window acquired interactively in {time.perf_counter() - start_time:.2f}s"
         )

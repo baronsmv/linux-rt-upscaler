@@ -177,7 +177,7 @@ def setup_config() -> (
     # Log summary
     if win_info is not None:
         logger.info(
-            'Upscaling "%s" (%d%s%d)',
+            "Upscaling '%s' (%d%s%d)",
             win_info.title,
             win_info.width,
             chr(215),

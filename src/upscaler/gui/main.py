@@ -509,7 +509,7 @@ class MainWindow(QMainWindow):
         if self._selected_win_info is None:
             return
 
-        logger.info("Starting upscale for: %s", self._selected_win_info.title)
+        logger.info("Starting upscale for: '%s'", self._selected_win_info.title)
         self._refresh_timer.stop()
         activate_window(self._selected_win_info.handle)
         self.hide()

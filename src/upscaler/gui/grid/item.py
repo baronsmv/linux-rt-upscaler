@@ -237,7 +237,7 @@ class WindowTileItem(QGraphicsObject):
             self._full_w = self._win_info.width
             self._full_h = self._win_info.height
         except Exception:
-            logger.exception("Preview grabber failed for %s", self._win_info.title)
+            logger.exception("Preview grabber failed for '%s'", self._win_info.title)
             self._grabber = None
 
     def _refresh(self) -> None:
@@ -246,7 +246,7 @@ class WindowTileItem(QGraphicsObject):
         try:
             frame, _, _ = self._grabber.grab()
         except RuntimeError:
-            logger.warning("Preview grab failed for %s", self._win_info.title)
+            logger.warning("Preview grab failed for '%s'", self._win_info.title)
             self.stop_capture()
             return
 

@@ -318,7 +318,7 @@ class ConfigManager(QObject):
             self.profiles = OrderedDict(raw_profiles)
 
         except Exception:
-            logger.exception("Failed to load config from %s", self._config_path)
+            logger.exception("Failed to load config from '%s'", self._config_path)
             self._general_opts = {}
             self.profiles = OrderedDict()
 

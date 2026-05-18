@@ -132,7 +132,7 @@ class ShaderPass(ABC):
             with open(self._shader_path, "rb") as f:
                 self._shader = f.read()
             logger.debug(
-                "%s shader loaded from %s", type(self).__name__, self._shader_path
+                "%s shader loaded from '%s'", type(self).__name__, self._shader_path
             )
         except OSError as e:
             raise RuntimeError(

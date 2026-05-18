@@ -344,7 +344,7 @@ class PipelineController:
                 full_path += ".png"
 
             img.save(full_path)
-            logger.info("Screenshot saved to %s", full_path)
+            logger.info("Screenshot saved to '%s'", full_path)
             success = True
         except Exception as e:
             logger.error("Failed to save screenshot: %s", e, exc_info=True)

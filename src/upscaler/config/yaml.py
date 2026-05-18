@@ -35,7 +35,7 @@ def load_yaml_config(
     profiles: Dict[str, Any] = {}
 
     if not os.path.isfile(path):
-        logger.debug("No config file found at %s", path)
+        logger.debug("No config file found at '%s'", path)
         return general_options, profiles
 
     data = None
@@ -46,10 +46,10 @@ def load_yaml_config(
         # Race condition between isfile and open: just return empty
         return general_options, profiles
     except PermissionError as e:
-        logger.warning("Permission denied reading %s: %s", path, e)
+        logger.warning("Permission denied reading '%s': %s", path, e)
         return general_options, profiles
     except yaml.YAMLError as e:
-        logger.warning("YAML syntax error in %s: %s", path, e)
+        logger.warning("YAML syntax error in '%s': %s", path, e)
         return general_options, profiles
     except RecursionError:
         logger.warning(
@@ -59,7 +59,7 @@ def load_yaml_config(
         )
         return general_options, profiles
     except Exception as e:
-        logger.warning("Failed to load config %s: %s", path, e)
+        logger.warning("Failed to load config '%s': %s", path, e)
         return general_options, profiles
 
     if data is None:
@@ -78,7 +78,7 @@ def load_yaml_config(
     profiles = data.pop("profiles", {})
     general_options = data
 
-    logger.debug("Loaded config from %s", path)
+    logger.debug("Loaded config from '%s'", path)
     return general_options, profiles
 
 
@@ -135,7 +135,7 @@ def save_yaml_config(
             try:
                 os.remove(oldest)
             except OSError as e:
-                logger.debug("Could not remove oldest backup %s: %s", oldest, e)
+                logger.debug("Could not remove oldest backup '%s': %s", oldest, e)
 
         # Shift existing backups
         for i in range(max_backups - 1, 0, -1):
@@ -145,7 +145,9 @@ def save_yaml_config(
                 try:
                     shutil.move(src, dst)
                 except OSError as e:
-                    logger.debug("Backup rotation failed at %s -> %s: %s", src, dst, e)
+                    logger.debug(
+                        "Backup rotation failed at '%s' -> '%s': %s", src, dst, e
+                    )
 
     # ---- Write the new file ----
     try:
@@ -154,8 +156,8 @@ def save_yaml_config(
                 data, f, default_flow_style=False, allow_unicode=True, sort_keys=False
             )
     except OSError as e:
-        logger.error("Failed to write config to %s: %s", config_path, e)
+        logger.error("Failed to write config to '%s': %s", config_path, e)
         raise
 
-    logger.debug("Configuration saved to %s", config_path)
+    logger.debug("Configuration saved to '%s'", config_path)
     return config_path
