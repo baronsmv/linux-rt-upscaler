@@ -65,8 +65,9 @@ class Pipeline(QObject):
     """
 
     # Signals (emitted from pipeline thread, automatically queued to main thread)
-    daemon_scan_start = Signal()  # go back to scanning for windows
-    daemon_target_acquired = Signal()  # daemon window was successfully switched to
+    daemon_scan_start = Signal()
+    daemon_target_acquired = Signal()
+    finished = Signal()
 
     def __init__(
         self,
@@ -173,6 +174,7 @@ class Pipeline(QObject):
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._stopped_event = threading.Event()
+        self._config_lock = threading.Lock()
 
         # Cross-thread queues
         self._switch_queue: Queue[Optional[WindowInfo]] = (
@@ -214,6 +216,11 @@ class Pipeline(QObject):
             self._grabber.close()
         self._window_tracker.close()
         self._swapchain_manager.close()
+
+    def update_base_config(self, new_base: Config) -> None:
+        """Update the base configuration used for future window matches."""
+        with self._config_lock:
+            self.base_config = copy.deepcopy(new_base)
 
     def request_switch(self, new_win_info: WindowInfo) -> None:
         """Request a switch to a new target window (thread-safe)."""
@@ -272,7 +279,8 @@ class Pipeline(QObject):
         pipeline components.
         """
         # Copy of the base config
-        new_config = copy.deepcopy(self.base_config)
+        with self._config_lock:
+            new_config = copy.deepcopy(self.base_config)
 
         # Try to match a profile
         profile_name, profile_data = find_matching_profile(
@@ -593,6 +601,8 @@ class Pipeline(QObject):
                 break
 
         self._stopped_event.set()
+        self.finished.emit()
+
         if shiboken6.isValid(self.overlay):
             try:
                 QMetaObject.invokeMethod(
