@@ -85,7 +85,7 @@ class DaemonMonitor(QObject):
                             self._running = False  # stop polling
                             return
                 except Exception as e:
-                    logger.error(f"Daemon: Polling error: '{e}'", exc_info=True)
+                    logger.error(f"Daemon: Polling error: {e}", exc_info=True)
 
                 time.sleep(self._interval)
 
