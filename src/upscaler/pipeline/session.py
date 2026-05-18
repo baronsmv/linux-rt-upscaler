@@ -108,18 +108,16 @@ def create_pipeline_session(
             lambda w: (daemon_monitor.stop(), pipeline.request_switch(w))
         )
         daemon_monitor.start()  # begin scanning
+
+        # Restart daemon scanning whenever pipeline returns to waiting state
+        pipeline.daemon_scan_start.connect(daemon_monitor.start)
+
+        # If follow-focus is also enabled, coordinate monitors
+        if config.follow_focus:
+            pipeline.daemon_target_acquired.connect(monitor.start)
+            pipeline.daemon_scan_start.connect(monitor.stop)
     else:
         daemon_monitor = None
-
-    # ---- Pipeline signals to handle Daemon + Follow-focus scenario -------
-    if config.daemon and config.follow_focus:
-
-        # When daemon acquires a target, start focus monitor
-        pipeline.daemon_target_acquired.connect(monitor.start)
-
-        # When daemon target closes, stop focus and restart daemon scanning
-        pipeline.daemon_scan_start.connect(monitor.stop)
-        pipeline.daemon_scan_start.connect(daemon_monitor.start)
 
     # ---- Hotkey manager --------------------------------------------------
     hotkey_manager = HotkeyManager(config.hotkeys)

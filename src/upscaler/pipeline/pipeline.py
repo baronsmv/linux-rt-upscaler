@@ -504,6 +504,8 @@ class Pipeline(QObject):
         if not test_tracker.alive:
             logger.warning("New window not alive, ignoring switch.")
             test_tracker.close()
+            if self.config.daemon:
+                self.daemon_scan_start.emit()  # restart daemon monitor
             return
         test_tracker.close()
 
