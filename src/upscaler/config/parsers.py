@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Tuple
+from typing import Dict, Tuple
 
 from PySide6.QtGui import QColor
 
@@ -115,3 +115,17 @@ def color_tuple_to_string(color: Tuple[float, float, float, float]) -> str:
 
 def parse_config(config: Config) -> None:
     config.background_color = color_string_to_float4(config.background_color)
+
+
+def parse_profile_colors(profiles: Dict) -> Dict:
+    """Return a copy of *profiles* with any color converted to a hex string."""
+    cleaned = {}
+    for name, profile in profiles.items():
+        profile_copy = dict(profile)
+        options = profile_copy.get("options", {})
+        if "background_color" in options:
+            bg = options["background_color"]
+            if isinstance(bg, tuple):
+                options["background_color"] = color_tuple_to_string(bg)
+        cleaned[name] = profile_copy
+    return cleaned
