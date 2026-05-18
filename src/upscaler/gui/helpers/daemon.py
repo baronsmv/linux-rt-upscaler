@@ -65,6 +65,7 @@ class DaemonController:
         if self._active:
             return
         self._active = True
+        logger.info("Daemon: Waiting for a matching window...")
 
         eff = copy.deepcopy(self._cm.effective_config)
         eff.daemon = True
