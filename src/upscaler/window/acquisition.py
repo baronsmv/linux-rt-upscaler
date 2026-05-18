@@ -28,19 +28,25 @@ from ..config import Config
 logger = logging.getLogger(__name__)
 
 
-def list_windows() -> List[WindowInfo]:
+def list_windows(conn: Optional[xcffib.Connection] = None) -> List[WindowInfo]:
     """
     Enumerate all visible application windows using _NET_CLIENT_LIST.
+
+    If *conn* is provided, it is used directly and **not** closed.
+    Otherwise, a temporary connection is opened and closed.
 
     Returns:
         List of WindowInfo objects for windows that are considered application
         windows (by size, type, and class). Returns empty list on failure.
     """
     logger.debug("Starting window enumeration")
-    conn = open_xcb_connection()
-    if not conn:
-        logger.error("Cannot open XCB connection for window enumeration")
-        return []
+    own_conn = False
+    if conn is None:
+        conn = open_xcb_connection()
+        if not conn:
+            logger.error("Cannot open XCB connection for window enumeration")
+            return []
+        own_conn = True
 
     atoms = AtomCache(conn)
     root = conn.get_setup().roots[0].root
@@ -80,7 +86,8 @@ def list_windows() -> List[WindowInfo]:
         except Exception as e:
             logger.debug(f"Error processing window {win}: {e}")
 
-    close_xcb_connection(conn)
+    if own_conn:
+        close_xcb_connection(conn)
     logger.debug(f"Enumeration complete, found {len(result)} windows")
     return result
 

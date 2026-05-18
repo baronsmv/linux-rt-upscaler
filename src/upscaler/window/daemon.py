@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, Signal
 from .acquisition import activate_window, list_windows
 from .connection import open_xcb_connection, close_xcb_connection
 from .info import WindowInfo
+from ..config import find_matching_profile
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +61,6 @@ class DaemonMonitor(QObject):
     #  Polling loop
     # ------------------------------------------------------------------
     def _poll(self) -> None:
-        from ..config.profiles import find_matching_profile
-
         conn = open_xcb_connection()
         if conn is None:
             logger.error("Daemon: Monitor failed to open XCB connection.")
@@ -70,7 +69,7 @@ class DaemonMonitor(QObject):
         try:
             while self._running:
                 try:
-                    windows = list_windows()
+                    windows = list_windows(conn=conn)
                     for win in windows:
                         if not self._running:
                             break
