@@ -1,6 +1,5 @@
 import logging
 import threading
-import time
 from typing import Dict, Optional, Any
 
 from PySide6.QtCore import QObject, Signal
@@ -35,6 +34,7 @@ class DaemonMonitor(QObject):
         self._interval = interval
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        self._wake_event = threading.Event()
         self._lock = threading.Lock()
 
     def start(self) -> None:
@@ -43,6 +43,7 @@ class DaemonMonitor(QObject):
             if self._running:
                 return
             self._running = True
+            self._wake_event.clear()
             self._thread = threading.Thread(
                 target=self._poll, name="DaemonMonitor", daemon=True
             )
@@ -53,6 +54,7 @@ class DaemonMonitor(QObject):
         """Stop the polling thread."""
         with self._lock:
             self._running = False
+            self._wake_event.set()
         if self._thread:
             self._thread.join(timeout=2.0)
         logger.debug("Daemon: Monitor stopped")
@@ -94,7 +96,8 @@ class DaemonMonitor(QObject):
                 except Exception as e:
                     logger.error(f"Daemon: Polling error: {e}", exc_info=True)
 
-                time.sleep(self._interval)
+                self._wake_event.wait(timeout=self._interval)
+                self._wake_event.clear()
 
         finally:
             close_xcb_connection(conn)
