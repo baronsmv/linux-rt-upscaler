@@ -474,18 +474,20 @@ class Pipeline(QObject):
         new_w = self.overlay.width()
         new_h = self.overlay.height()
 
-        if new_w != self._screen_width or new_h != self._screen_height:
-            self._screen_width = new_w
-            self._screen_height = new_h
-            self.presenter.resize(new_w, new_h)
-            self._swapchain_manager.recreate(new_w, new_h)
-            self.update_content_dimensions()
-        else:
-            self._swapchain_manager.recreate(new_w, new_h)
-        self.osd.clear_compute_cache()
-
-        # Force full render
-        self._presenter_params_stale = True
+        try:
+            if new_w != self._screen_width or new_h != self._screen_height:
+                self._screen_width = new_w
+                self._screen_height = new_h
+                self.presenter.resize(new_w, new_h)
+                self._swapchain_manager.recreate(new_w, new_h)
+                self.update_content_dimensions()
+            else:
+                self._swapchain_manager.recreate(new_w, new_h)
+            self.osd.clear_compute_cache()
+            self._presenter_params_stale = True
+        except Exception as e:
+            logger.error("Failed to recreate swapchain: %s, stopping pipeline", e)
+            self._running = False
 
     def _create_grabber(self) -> None:
         """Create (or recreate) the FrameGrabber for the current target window."""
@@ -608,6 +610,10 @@ class Pipeline(QObject):
                         self._wake_event.clear()
                 except SwapchainError as e:
                     logger.warning("Swapchain error, recreating: %s", e)
+                    if not shiboken6.isValid(self.overlay):
+                        logger.debug("Overlay destroyed, exiting pipeline loop")
+                        self._running = False
+                        break
                     self._recreate_swapchain()
                     continue
 
