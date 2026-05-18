@@ -291,6 +291,7 @@ class WindowTileItem(QGraphicsObject):
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing)
 
+        # Scale animation support
         if abs(self._scale - 1.0) > 0.001:
             painter.scale(self._scale, self._scale)
 
@@ -299,10 +300,10 @@ class WindowTileItem(QGraphicsObject):
         radius = self._cfg.tile_radius
 
         # Shadow
-        shadow_rect = base.adjusted(4, 4, 4, 4)
+        shadow_rect = base
         shadow_path = QPainterPath()
         shadow_path.addRoundedRect(shadow_rect, radius, radius)
-        painter.setOpacity(0.15)
+        painter.setOpacity(0.12)
         painter.fillPath(shadow_path, QColor(0, 0, 0))
         painter.setOpacity(1.0)
 
@@ -317,6 +318,9 @@ class WindowTileItem(QGraphicsObject):
             py = (h - self._scaled_pixmap.height()) / 2.0
             painter.drawPixmap(int(-w / 2 + px), int(-h / 2 + py), self._scaled_pixmap)
 
+        painter.save()
+        painter.setClipPath(bg_path)
+
         # Gradient overlay
         grad = QLinearGradient(0, h / 2 - 40, 0, h / 2)
         grad.setColorAt(0, QColor(*self._cfg.tile_title_overlay_start))
@@ -325,15 +329,27 @@ class WindowTileItem(QGraphicsObject):
         painter.fillRect(QRectF(-w / 2, h / 2 - 40, w, 40), grad)
 
         # Title
-        painter.setPen(QColor(self._cfg.title_text_color))
+        title = self._win_info.title
         font = QFont(self._cfg.title_font_family, self._cfg.title_font_size)
         font.setBold(self._cfg.title_font_bold)
+        font.setHintingPreference(QFont.PreferFullHinting)
         painter.setFont(font)
+        painter.setRenderHint(QPainter.TextAntialiasing, True)
+
+        text_rect = QRectF(-w / 2 + 10, h / 2 - 32, w - 20, 20)
+
+        # Shadow offset
+        shadow_color = QColor(0, 0, 0, 160)
+        painter.setPen(shadow_color)
         painter.drawText(
-            QRectF(-w / 2 + 10, h / 2 - 32, w - 20, 20),
-            Qt.AlignLeft | Qt.AlignVCenter,
-            self._win_info.title,
+            text_rect.adjusted(1, 1, 1, 1), Qt.AlignLeft | Qt.AlignVCenter, title
         )
+
+        # Main text
+        painter.setPen(QColor(self._cfg.title_text_color))
+        painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, title)
+
+        painter.restore()
 
         # Border
         if self._selected:
@@ -346,6 +362,7 @@ class WindowTileItem(QGraphicsObject):
             )
         else:
             pen = QPen(Qt.NoPen)
+
         if pen.style() != Qt.NoPen:
             painter.setPen(pen)
             painter.setBrush(Qt.NoBrush)
