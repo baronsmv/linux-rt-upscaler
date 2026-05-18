@@ -249,10 +249,7 @@ class WindowGridScene(QGraphicsScene):
         # ---- 8. Set scene rect to exactly contain the grid + margins --------
         total_h = margin * 2 + self._rows * tile_h + (self._rows - 1) * spacing
         self.setSceneRect(
-            -self._SCENE_MARGIN,
-            -self._SCENE_MARGIN,
-            vp_w + 2 * self._SCENE_MARGIN,
-            total_h + 2 * self._SCENE_MARGIN,
+            0, -self._SCENE_MARGIN, vp_w, total_h + 2 * self._SCENE_MARGIN
         )
 
         # ---- 9. Keep selected tile in view ---------------------------------
