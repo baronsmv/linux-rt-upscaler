@@ -6,6 +6,7 @@ import os
 import re
 from typing import List, Optional
 
+import xcffib
 from PySide6.QtCore import Qt, QTimer, QSettings, QSize, QStandardPaths
 from PySide6.QtGui import QKeySequence, QImage, QShortcut
 from PySide6.QtWidgets import (
@@ -40,7 +41,13 @@ from .widgets import StyledSplitter
 from ..config import find_matching_profile, get_version, parse_config
 from ..pipeline import create_pipeline_session
 from ..utils import system_color_scheme
-from ..window import WindowInfo, activate_window, list_windows
+from ..window import (
+    WindowInfo,
+    activate_window,
+    close_xcb_connection,
+    list_windows,
+    open_xcb_connection,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +71,7 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__(parent)
         self._config_manager = config_manager
+        self._xcb_conn: Optional[xcffib.Connection] = None
 
         # ---- GUI visual config (theme, dimensions) -----------------------
         scheme = system_color_scheme()
@@ -198,13 +206,26 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     #  Window list helpers
     # ------------------------------------------------------------------
+    def _ensure_xcb_connection(self) -> bool:
+        if self._xcb_conn is not None:
+            return True
+        try:
+            self._xcb_conn = open_xcb_connection()
+            return self._xcb_conn is not None
+        except Exception:
+            logger.exception("Failed to open persistent XCB connection")
+            return False
+
     def _initial_populate(self) -> None:
         self._own_handle = int(self.winId())
         self._populate_grid()
 
     def _populate_grid(self, filter_text: str = "") -> None:
+        if not self._ensure_xcb_connection():
+            return
+
         try:
-            all_windows: List[WindowInfo] = list_windows()
+            all_windows: List[WindowInfo] = list_windows(conn=self._xcb_conn)
         except Exception:
             logger.exception("Failed to enumerate windows")
             QMessageBox.warning(self, "Error", "Could not enumerate windows.")
@@ -702,4 +723,7 @@ class MainWindow(QMainWindow):
         self._refresh_timer.stop()
         self._scene.clear_all()
         self._settings.setValue("mainwindow/geometry", self.saveGeometry())
+        if self._xcb_conn:
+            close_xcb_connection(self._xcb_conn)
+            self._xcb_conn = None
         super().closeEvent(event)
