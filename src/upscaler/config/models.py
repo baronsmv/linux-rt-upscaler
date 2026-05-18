@@ -160,6 +160,11 @@ class Config:
     max_tile_layers: int = 16
     area_threshold: float = 0.3
 
+    # Error handling
+    max_capture_failures: int = 10
+    capture_failure_delay: float = 0.05
+    swapchain_recreate_debounce: float = 1.0
+
     # Logging (set via flags, not directly from CLI)
     log_level: str = "INFO"
     log_file: Optional[str] = None

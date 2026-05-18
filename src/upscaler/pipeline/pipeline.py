@@ -120,6 +120,7 @@ class Pipeline(QObject):
             self._screen_width,
             self._screen_height,
             present_mode=config.vulkan_present_mode,
+            min_recreate_interval=config.swapchain_recreate_debounce,
         )
 
         # On-screen display (pre-render all possible messages)
@@ -185,10 +186,8 @@ class Pipeline(QObject):
         # Frame grabber (created on pipeline thread)
         self._grabber: Optional[FrameGrabber] = None
 
-        # Failure counters
+        # Failure counter
         self._consecutive_capture_failures = 0
-        self._max_capture_failures = 10
-        self._pause_after_failure = 0.05
 
         # Pre-upload OSD textures (requires Vulkan device to be ready)
         self.osd.prepare_textures()
@@ -325,10 +324,10 @@ class Pipeline(QObject):
         except RuntimeError as e:
             logger.error(f"Frame grab failed: {e}")
             self._consecutive_capture_failures += 1
-            if self._consecutive_capture_failures >= self._max_capture_failures:
+            if self._consecutive_capture_failures >= self.config.max_capture_failures:
                 logger.critical("Too many consecutive capture failures, shutting down")
                 self._running = False
-            self._wake_event.wait(timeout=self._pause_after_failure)
+            self._wake_event.wait(timeout=self.config.capture_failure_delay)
             self._wake_event.clear()
             return
 

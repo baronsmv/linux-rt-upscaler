@@ -475,6 +475,24 @@ max_tile_layers: 16
 area_threshold: 0.3
 
 # ------------------------------------------------------------------------------
+# Error Recovery Options (Advanced)
+# ------------------------------------------------------------------------------
+
+# Number of consecutive frame-grab failures before the pipeline gives up.
+# Minimum: 1. Default: 10
+max_capture_failures: 10
+
+# Delay (seconds) between a capture failure and the next attempt.
+# Minimum: 0.0. Default: 0.05
+capture_failure_delay: 0.05
+
+# Minimum time (seconds) between two Vulkan swapchain recreations.
+# When the surface is constantly invalidated, this prevents the
+# pipeline from recreating the swapchain on every frame.
+# Minimum: 0.0. Default: 1.0
+swapchain_recreate_debounce: 1.0
+
+# ------------------------------------------------------------------------------
 # Logging
 # ------------------------------------------------------------------------------
 

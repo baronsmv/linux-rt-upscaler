@@ -958,6 +958,32 @@ Recommended range: 0.15 - 0.5. Default: %(default)s.
     )
 
     # ----------------------------------------------------------------------
+    # Error Recovery Options
+    # ----------------------------------------------------------------------
+    error_group = parser.add_argument_group("ERROR RECOVERY OPTIONS")
+    error_group.add_argument(
+        "--max-capture-failures",
+        type=int,
+        default=DEFAULT_CONFIG.max_capture_failures,
+        help="""Number of consecutive capture failures before shutting down.
+Minimum is 1. Default: %(default)s.""",
+    )
+    error_group.add_argument(
+        "--capture-failure-delay",
+        type=float,
+        default=DEFAULT_CONFIG.capture_failure_delay,
+        help="""Seconds to wait after a capture failure before retrying.
+Minimum is 0.0. Default: %(default)s.""",
+    )
+    error_group.add_argument(
+        "--swapchain-recreate-debounce",
+        type=float,
+        default=DEFAULT_CONFIG.swapchain_recreate_debounce,
+        help="""Minimum seconds between two Vulkan swapchain recreations.
+Minimum is 0.0. Default: %(default)s.""",
+    )
+
+    # ----------------------------------------------------------------------
     # Logging section
     # ----------------------------------------------------------------------
     log_group = parser.add_argument_group("LOGGING OPTIONS")
@@ -992,6 +1018,7 @@ Recommended range: 0.15 - 0.5. Default: %(default)s.
         osd_group,
         vulkan_group,
         tile_group,
+        error_group,
     ]
     for grp in additional_groups:
         grp.additional = True

@@ -140,65 +140,69 @@ def validate_color(color: Union[Tuple, str], _: str) -> None:
 
 _VALIDATORS: Dict[str, Tuple] = {
     # Timing
-    "focus_poll_interval": (validate_number, "focus_poll_interval", 0.01),
-    "daemon_poll_interval": (validate_number, "daemon_poll_interval", 0.1),
-    "pipeline_poll_interval": (validate_number, "pipeline_poll_interval", 0.01),
+    "focus_poll_interval": (validate_number, 0.01),
+    "daemon_poll_interval": (validate_number, 0.1),
+    "pipeline_poll_interval": (validate_number, 0.01),
     # Window
-    "target_delay": (validate_number, "target_delay", 0),
-    "pid_timeout": (validate_number, "pid_timeout", 0),
-    "class_timeout": (validate_number, "class_timeout", 0),
-    "total_timeout": (validate_number, "total_timeout", 0),
+    "target_delay": (validate_number, 0),
+    "pid_timeout": (validate_number, 0),
+    "class_timeout": (validate_number, 0),
+    "total_timeout": (validate_number, 0),
     # Lanczos
-    "lanczos_blur": (validate_number, "lanczos_blur", 0, 2, False),
-    "lanczos_antiring_strength": (validate_number, "lanczos_antiring_strength", 0, 1),
+    "lanczos_blur": (validate_number, 0, 2, False),
+    "lanczos_antiring_strength": (validate_number, 0, 1),
     # Pre-processing
-    "deband_strength": (validate_number, "deband_strength", 0.0, 1.0),
+    "deband_strength": (validate_number, 0.0, 1.0),
     # Post-processing
-    "cas_strength": (validate_number, "cas_strength", 0.0, 1.0),
-    "bloom_strength": (validate_number, "bloom_strength", 0.0, 1.0),
-    "bloom_threshold": (validate_number, "bloom_threshold", 0.0, 1.0),
-    "bloom_radius": (validate_number, "bloom_radius", 1, 16),
-    "vignette_strength": (validate_number, "vignette_strength", 0.0, 1.0),
-    "vignette_radius": (validate_number, "vignette_radius", 0.0, 2.0),
-    "vignette_falloff": (validate_number, "vignette_falloff", 0.1, 10.0),
-    "grain_strength": (validate_number, "grain_strength", 0.0, 1.0),
-    "grain_size": (validate_number, "grain_size", 1.0, 10.0),
-    "lut_intensity": (validate_number, "lut_intensity", 0.0, 1.0),
+    "cas_strength": (validate_number, 0.0, 1.0),
+    "bloom_strength": (validate_number, 0.0, 1.0),
+    "bloom_threshold": (validate_number, 0.0, 1.0),
+    "bloom_radius": (validate_number, 1, 16),
+    "vignette_strength": (validate_number, 0.0, 1.0),
+    "vignette_radius": (validate_number, 0.0, 2.0),
+    "vignette_falloff": (validate_number, 0.1, 10.0),
+    "grain_strength": (validate_number, 0.0, 1.0),
+    "grain_size": (validate_number, 1.0, 10.0),
+    "lut_intensity": (validate_number, 0.0, 1.0),
     # Display
-    "scale_factor": (validate_number, "scale_factor", 0, None, False),
+    "scale_factor": (validate_number, 0, None, False),
     # Presentation
-    "output_geometry": (validate_geometry, "output_geometry"),
-    "crop_top": (validate_number, "crop_top", 0),
-    "crop_bottom": (validate_number, "crop_bottom", 0),
-    "crop_left": (validate_number, "crop_left", 0),
-    "crop_right": (validate_number, "crop_right", 0),
-    "background_color": (validate_color, "background_color"),
-    "offset_x": (validate_number, "offset_x"),
-    "offset_y": (validate_number, "offset_y"),
+    "output_geometry": (validate_geometry,),
+    "crop_top": (validate_number, 0),
+    "crop_bottom": (validate_number, 0),
+    "crop_left": (validate_number, 0),
+    "crop_right": (validate_number, 0),
+    "background_color": (validate_color,),
+    "offset_x": (validate_number,),
+    "offset_y": (validate_number,),
     # OSD
-    "osd_duration": (validate_number, "osd_duration", 0),
+    "osd_duration": (validate_number, 0),
     # Vulkan
-    "vulkan_buffer_pool_size": (validate_number, "vulkan_buffer_pool_size", 0),
-    "frame_timeout": (validate_number, "frame_timeout", 0),
+    "vulkan_buffer_pool_size": (validate_number, 0),
+    "frame_timeout": (validate_number, 0),
     # Tile
-    "tile_size": (validate_number, "tile_size", 1),
-    "tile_context_margin": (validate_number, "tile_context_margin", 0),
-    "max_tile_layers": (validate_number, "max_tile_layers", 0),
-    "area_threshold": (validate_number, "area_threshold", 0, 1),
+    "tile_size": (validate_number, 1),
+    "tile_context_margin": (validate_number, 0),
+    "max_tile_layers": (validate_number, 0),
+    "area_threshold": (validate_number, 0, 1),
+    # Error recovery
+    "max_capture_failures": (validate_number, 1),
+    "capture_failure_delay": (validate_number, 0.0),
+    "swapchain_recreate_debounce": (validate_number, 0.0),
 }
 
 
 def validate_config(config: Any) -> None:
     """Validate a full Config instance (or any object with the required attributes)."""
-    for field_name, (validator, arg_name, *args) in _VALIDATORS.items():
+    for field_name, (validator, *args) in _VALIDATORS.items():
         value = getattr(config, field_name, None)
         if value is not None:
-            validator(value, arg_name, *args)
+            validator(value, field_name, *args)
 
 
 def validate_overrides(overrides: Dict[str, Any]) -> None:
     """Validate only the keys present in the overrides dictionary."""
     for field_name, value in overrides.items():
         if field_name in _VALIDATORS:
-            validator, arg_name, *args = _VALIDATORS[field_name]
-            validator(value, arg_name, *args)
+            validator, *args = _VALIDATORS[field_name]
+            validator(value, field_name, *args)
