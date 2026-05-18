@@ -90,6 +90,7 @@ class DaemonController:
         self._active = False
 
         if self._session:
+            self._session.pipeline.finished.disconnect(self._on_error)
             self._teardown_session(self._session)
             self._session = None
 
@@ -112,6 +113,9 @@ class DaemonController:
     def _on_error(self) -> None:
         """Pipeline exited unexpectedly, treat as stopped."""
         logger.warning("Daemon pipeline finished unexpectedly, stopping it")
+        if not self._active:
+            return
+
         self._active = False
         if self._session:
             # Avoid double cleanup
