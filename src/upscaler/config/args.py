@@ -194,7 +194,7 @@ Use this flag to keep it always visible.""",
         default=DEFAULT_CONFIG.daemon_poll_interval,
         help="""How often (seconds) the application checks for active
 windows when --daemon is activated.
-Minimum is 0.05. Default: %(default)s.""",
+Minimum is 0.01. Default: %(default)s.""",
     )
     interval_group.add_argument(
         "--focus-poll-interval",
@@ -202,7 +202,15 @@ Minimum is 0.05. Default: %(default)s.""",
         default=DEFAULT_CONFIG.focus_poll_interval,
         help="""How often (seconds) the application checks for window focus
 changes when --follow-focus is activated.
-Minimum is 0.05. Default: %(default)s.""",
+Minimum is 0.1. Default: %(default)s.""",
+    )
+    interval_group.add_argument(
+        "--pipeline-poll-interval",
+        type=float,
+        default=DEFAULT_CONFIG.pipeline_poll_interval,
+        help="""How often (seconds) the pipeline thread checks its internal
+state when idle or paused.
+Minimum is 0.01. Default: %(default)s.""",
     )
 
     # ----------------------------------------------------------------------

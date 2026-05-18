@@ -33,14 +33,19 @@ pause_on_focus_loss: true
 # ------------------------------------------------------------------------------
 
 # How often (seconds) the daemon scans for matching windows.
-# Lower = more responsive, higher = slightly less CPU usage. Must be > 0.05.
+# Lower = more responsive, higher = slightly less CPU usage. Must be > 0.1.
 # Default: 2.0
 daemon_poll_interval: 2.0
 
 # How often (seconds) the focus monitor checks for window changes.
-# Lower = more responsive, higher = slightly less CPU usage. Must be > 0.05.
+# Lower = more responsive, higher = slightly less CPU usage. Must be > 0.01.
 # Default: 0.2
 focus_poll_interval: 0.2
+
+# How often (seconds) the pipeline checks its internal state when idle or paused.
+# Lower = more responsive, higher = slightly less CPU usage. Must be > 0.01.
+# Default: 0.1
+pipeline_idle_interval: 0.1
 
 # ------------------------------------------------------------------------------
 # Window Detection

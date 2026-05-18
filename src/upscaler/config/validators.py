@@ -140,8 +140,9 @@ def validate_color(color: Union[Tuple, str], _: str) -> None:
 
 _VALIDATORS: Dict[str, Tuple] = {
     # Timing
-    "focus_poll_interval": (validate_number, "focus_poll_interval", 0.05),
-    "daemon_poll_interval": (validate_number, "daemon_poll_interval", 0.05),
+    "focus_poll_interval": (validate_number, "focus_poll_interval", 0.01),
+    "daemon_poll_interval": (validate_number, "daemon_poll_interval", 0.1),
+    "pipeline_poll_interval": (validate_number, "pipeline_poll_interval", 0.01),
     # Window
     "target_delay": (validate_number, "target_delay", 0),
     "pid_timeout": (validate_number, "pid_timeout", 0),

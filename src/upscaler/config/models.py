@@ -70,6 +70,7 @@ class Config:
     # Timing
     focus_poll_interval: float = 0.2
     daemon_poll_interval: float = 2.0
+    pipeline_poll_interval: float = 0.1
 
     # Window detection
     target_delay: float = 5

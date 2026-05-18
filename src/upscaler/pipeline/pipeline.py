@@ -1,7 +1,6 @@
 import copy
 import logging
 import threading
-import time
 from enum import Enum, auto
 from queue import Empty, Queue
 from typing import Any, Dict, Optional, Tuple
@@ -173,6 +172,7 @@ class Pipeline(QObject):
         # Threading control
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        self._wake_event = threading.Event()
         self._stopped_event = threading.Event()
         self._config_lock = threading.Lock()
 
@@ -210,6 +210,7 @@ class Pipeline(QObject):
 
         logger.debug("Stopping pipeline thread")
         self._running = False
+        self._wake_event.set()
         if self._thread is not None:
             self._thread.join(timeout=2.0)
         if self._grabber:
@@ -327,7 +328,8 @@ class Pipeline(QObject):
             if self._consecutive_capture_failures >= self._max_capture_failures:
                 logger.critical("Too many consecutive capture failures, shutting down")
                 self._running = False
-            time.sleep(self._pause_after_failure)
+            self._wake_event.wait(timeout=self._pause_after_failure)
+            self._wake_event.clear()
             return
 
         # If we get here, capture succeeded, so reset the counter
@@ -568,24 +570,32 @@ class Pipeline(QObject):
                         self._window_tracker = None
                         self._win_info = None
                         self.daemon_scan_start.emit()
-                        time.sleep(0.1)
+                        self._wake_event.wait(
+                            timeout=self.config.pipeline_poll_interval
+                        )
+                        self._wake_event.clear()
                         continue
 
                 # Update window state only if we have a tracker
                 if self._window_tracker:
                     changed = self._window_tracker.update()
                     if self._update_pause_state():
-                        time.sleep(0.1)
+                        self._wake_event.wait(
+                            timeout=self.config.pipeline_poll_interval
+                        )
+                        self._wake_event.clear()
                         continue
                     if changed:
                         self._handle_window_change()
                 else:
                     # No target window, just wait for a switch request
-                    time.sleep(0.1)
+                    self._wake_event.wait(timeout=self.config.pipeline_poll_interval)
+                    self._wake_event.clear()
                     continue
 
                 if self._pause_reason != PauseReason.NONE:
-                    time.sleep(0.1)
+                    self._wake_event.wait(timeout=self.config.pipeline_poll_interval)
+                    self._wake_event.clear()
                     continue
 
                 # Process a frame if upscaler exists
@@ -593,7 +603,10 @@ class Pipeline(QObject):
                     if self.upscaler_mgr:
                         self._process_one_frame()
                     else:
-                        time.sleep(0.1)
+                        self._wake_event.wait(
+                            timeout=self.config.pipeline_poll_interval
+                        )
+                        self._wake_event.clear()
                 except SwapchainError as e:
                     logger.warning("Swapchain error, recreating: %s", e)
                     self._recreate_swapchain()
