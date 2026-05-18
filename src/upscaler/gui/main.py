@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 import os
 import re
@@ -177,6 +178,7 @@ class MainWindow(QMainWindow):
         self._selected_win_info: Optional[WindowInfo] = None
         self._session = None
         self._own_handle: Optional[int] = None
+        self._daemon_match_in_progress = False
 
         # Activate a profile if one was provided at startup
         if profile_name and profile_name in self._config_manager.profiles:
@@ -245,6 +247,12 @@ class MainWindow(QMainWindow):
             profile_active=self._config_manager.active_profile_name is not None,
             profile_has_options=self._active_profile_has_options(),
         )
+
+        # Daemon Mode
+        sidebar.daemon_toggled.connect(self._on_daemon_toggled)
+        if self._config_manager.effective_config.daemon:
+            QTimer.singleShot(0, lambda: self._on_daemon_toggled(True))
+
         return sidebar
 
     def _active_profile_has_options(self) -> bool:
@@ -258,6 +266,12 @@ class MainWindow(QMainWindow):
     def _on_config_changed(self) -> None:
         """Called whenever the manager's persistent config changes."""
         self._recreate_right_sidebar()
+
+        # If daemon is running, push the latest effective config
+        if hasattr(self, "_daemon_session") and self._daemon_session:
+            self._daemon_session.pipeline.update_base_config(
+                self._config_manager.effective_config
+            )
 
     def _recreate_right_sidebar(self) -> None:
         """Replace the right sidebar with a fresh one and restore the active tab."""
@@ -485,6 +499,61 @@ class MainWindow(QMainWindow):
             self._config_manager.remove_profile_icon(new_name)
 
     # ------------------------------------------------------------------
+    #  Daemon
+    # ------------------------------------------------------------------
+    def _on_daemon_toggled(self, enabled: bool) -> None:
+        if enabled:
+            self._start_daemon()
+        else:
+            self._stop_daemon()
+
+    def _start_daemon(self) -> None:
+        """Launch a persistent daemon pipeline (same as CLI daemon mode)."""
+        if hasattr(self, "_daemon_session") and self._daemon_session:
+            return
+
+        # Build a config with daemon enabled, using the current GUI settings
+        eff_cfg = copy.deepcopy(self._config_manager.effective_config)
+        eff_cfg.daemon = True
+
+        dummy_win = WindowInfo(0, 0, 0, "daemon-pending")
+        self._daemon_session = create_pipeline_session(
+            eff_cfg,
+            dummy_win,
+            base_config=eff_cfg,  # will be updated later
+            profiles=self._config_manager.profiles,
+        )
+
+        # Connect signals to hide/show the GUI
+        self._daemon_session.pipeline.daemon_target_acquired.connect(
+            lambda: self.hide()
+        )
+        self._daemon_session.pipeline.daemon_scan_start.connect(
+            lambda: self._show_gui_and_rescan()
+        )
+
+        self._daemon_session.pipeline.start()
+
+    def _stop_daemon(self) -> None:
+        """Stop the daemon pipeline and show the GUI."""
+        if hasattr(self, "_daemon_session") and self._daemon_session:
+            session = self._daemon_session
+            session.pipeline.stop()
+            if session.monitor:
+                session.monitor.stop()
+            if session.daemon_monitor:
+                session.daemon_monitor.stop()
+            session.hotkey_manager.stop()
+            del self._daemon_session
+        self.show()
+
+    def _show_gui_and_rescan(self) -> None:
+        """Called when the daemon resumes scanning (window closed)."""
+        self.show()
+        self._refresh_timer.start()
+        self._populate_grid()
+
+    # ------------------------------------------------------------------
     #  Window selection -> pipeline launch
     # ------------------------------------------------------------------
     def _on_filter_changed(self, text: str) -> None:
@@ -527,6 +596,9 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(None, "Error", f"Could not start pipeline:\n{e}")
             QApplication.instance().quit()
 
+    # ------------------------------------------------------------------
+    #  Show About
+    # ------------------------------------------------------------------
     def _show_about(self) -> None:
         """Display the About dialog."""
         cfg = self.gui_config
