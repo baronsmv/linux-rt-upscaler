@@ -63,7 +63,7 @@ def list_windows(conn: Optional[xcffib.Connection] = None) -> List[WindowInfo]:
         windows = window_ids
     else:
         logger.warning(
-            "No _NET_CLIENT_LIST property; falling back to recursive enumeration."
+            "No _NET_CLIENT_LIST property; falling back to recursive enumeration"
         )
         windows = enumerate_all_windows(conn)
 
@@ -178,7 +178,7 @@ def _find_by_pid(
         pids: Set[int] = {pid} | {child.pid for child in proc.children(recursive=True)}
         logger.debug(f"Process tree for PID {pid}: {pids}")
     except psutil.NoSuchProcess:
-        logger.warning(f"Process {pid} not found; using only the provided PID.")
+        logger.warning(f"Process {pid} not found; using only the provided PID")
         pids = {pid}
 
     class_hint_lower = class_hint.lower() if class_hint else None
@@ -203,7 +203,7 @@ def _find_by_pid(
             phase_start = time.time()
 
             if phase == 1:
-                logger.debug(f"Phase 1: Trying PID+class for {pid_timeout} seconds...")
+                logger.debug(f"Phase 1: Trying PID+class for {pid_timeout} seconds.")
                 while time.time() - phase_start < pid_timeout:
                     check_total_timeout()
                     windows = enumerate_all_windows(conn)
@@ -243,16 +243,16 @@ def _find_by_pid(
                 if class_hint_lower:
                     phase = 2
                     logger.debug(
-                        "Phase 1 timed out, switching to phase 2 (pure class search)."
+                        "Phase 1 timed out, switching to phase 2 (pure class search)"
                     )
                 else:
                     logger.debug(
-                        "Phase 1 timed out, restarting (no class hint available)."
+                        "Phase 1 timed out, restarting (no class hint available)"
                     )
 
             else:  # phase == 2
                 logger.debug(
-                    f"Phase 2: Trying pure class hint for {class_timeout} seconds..."
+                    f"Phase 2: Trying pure class hint for {class_timeout} seconds"
                 )
                 while time.time() - phase_start < class_timeout:
                     check_total_timeout()
@@ -283,7 +283,7 @@ def _find_by_pid(
                     time.sleep(0.2)
 
                 # Phase 2 timed out - go back to phase 1
-                logger.debug("Phase 2 timed out, restarting phase 1.")
+                logger.debug("Phase 2 timed out, restarting phase 1")
                 phase = 1
 
     finally:
@@ -340,7 +340,7 @@ def _launch_and_find_window(
     logger.info(f"Launching: {' '.join(config.program)}")
     proc = subprocess.Popen(config.program)
 
-    logger.info("Waiting for window...")
+    logger.info("Waiting for window")
     try:
         win_info = _find_by_pid(
             proc.pid,
@@ -387,7 +387,7 @@ def _select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo
                 return selected
             logger.info(f"Please enter a number between 0 and {len(windows)-1}")
         except ValueError:
-            logger.info("Invalid input. Please enter a number.")
+            logger.info("Invalid input. Please enter a number")
 
 
 def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
@@ -412,7 +412,7 @@ def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
     try:
         win_info = get_active_window()
         if not win_info:
-            logger.error("No visible windows found.")
+            logger.error("No visible windows found")
             sys.exit(1)
         logger.debug(f"Got active window: {win_info.title}")
         return win_info
@@ -449,12 +449,12 @@ def activate_window(win_handle: int) -> None:
         except subprocess.TimeoutExpired:
             logger.debug(
                 f"xdotool timed out activating window {win_handle:#x}; "
-                "falling back to XCB focus."
+                "falling back to XCB focus"
             )
         except subprocess.CalledProcessError as e:
             logger.debug(
                 f"xdotool failed to activate window {win_handle:#x} (exit code {e.returncode}). "
-                "Falling back to XCB focus."
+                "Falling back to XCB focus"
             )
         except FileNotFoundError:
             pass
@@ -462,7 +462,7 @@ def activate_window(win_handle: int) -> None:
     # Fallback: just give the window input focus
     conn = open_xcb_connection()
     if conn is None:
-        logger.debug("Cannot focus window: XCB connection unavailable.")
+        logger.debug("Cannot focus window: XCB connection unavailable")
         return
 
     try:
@@ -501,19 +501,19 @@ def acquire_target_window(
         was launched.
     """
     if config.daemon:
-        logger.debug("Daemon: skipping window acquisition.")
+        logger.debug("Daemon: skipping window acquisition")
         return None, None  # no initial target
 
     start_time = time.perf_counter()
 
     if config.target_title or config.target_title_regex:
-        logger.debug("Attaching to window by title criteria.")
+        logger.debug("Attaching to window by title criteria")
         win_info = _find_window_by_title(
             contains=config.target_title,
             regex=config.target_title_regex,
         )
         if win_info is None:
-            logger.error("No window matching the title criteria found.")
+            logger.error("No window matching the title criteria found")
             return None, None
 
         activate_window(win_info.handle)
@@ -523,8 +523,8 @@ def acquire_target_window(
         return win_info, None
 
     if config.select:
-        logger.debug("Selecting window interactively.")
-        logger.info("Enumerating open windows...")
+        logger.debug("Selecting window interactively")
+        logger.info("Enumerating open windows")
         windows = list_windows()
         if not windows:
             logger.error("No visible windows found")

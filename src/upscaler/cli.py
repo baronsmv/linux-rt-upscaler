@@ -30,7 +30,7 @@ def main() -> None:
     app = QApplication([])
     app.setApplicationName("upscaler-overlay")
     app.setApplicationDisplayName("Upscaler Overlay")
-    logger.debug("Qt application initialized.")
+    logger.debug("Qt application initialized")
 
     # Launch pipeline session
     session = create_pipeline_session(config, win_info, base_config, profiles)

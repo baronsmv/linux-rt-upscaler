@@ -54,7 +54,7 @@ def load_yaml_config(
     except RecursionError:
         logger.warning(
             "YAML recursion depth exceeded in %s. "
-            "The file may contain circular references or be overly deep, ignoring it.",
+            "The file may contain circular references or be overly deep, ignoring it",
             path,
         )
         return general_options, profiles

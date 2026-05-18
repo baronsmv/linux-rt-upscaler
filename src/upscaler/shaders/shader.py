@@ -173,8 +173,8 @@ class ShaderPass(ABC):
         """Raise if the pipeline is not yet ready."""
         if self._compute is None:
             raise RuntimeError(
-                f"{type(self).__name__} pipeline is not ready - "
-                "call set_target_texture() (and set_source_texture() if needed) first."
+                f"{type(self).__name__} pipeline is not ready, "
+                "call set_target_texture() (and set_source_texture() if needed) first"
             )
 
     # ------------------------------------------------------------------

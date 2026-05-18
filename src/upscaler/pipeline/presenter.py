@@ -82,42 +82,42 @@ class Presenter:
         self._deband_tex: Optional[Texture2D] = None  # temp debanded output
         if config.deband_enabled:
             self._deband = DebandPass()
-            logger.debug("Deband pass created.")
+            logger.debug("Deband pass created")
 
         # CAS (in-place)
         self._cas: Optional[CASPass] = None
         if config.cas_enabled:
             self._cas = CASPass()
             self._cas.set_target_texture(self.screen_tex)
-            logger.debug("CAS pass created.")
+            logger.debug("CAS pass created")
 
         # Bloom (in-place)
         self._bloom: Optional[BloomPass] = None
         if config.bloom_enabled:
             self._bloom = BloomPass()
             self._bloom.set_target_texture(self.screen_tex)
-            logger.debug("Bloom pass created.")
+            logger.debug("Bloom pass created")
 
         # Vignette (in-place)
         self._vignette: Optional[VignettePass] = None
         if config.vignette_enabled:
             self._vignette = VignettePass()
             self._vignette.set_target_texture(self.screen_tex)
-            logger.debug("Vignette pass created.")
+            logger.debug("Vignette pass created")
 
         # LUT (in-place)
         self._lut: Optional[LUTPass] = None
         if config.lut_enabled:
             self._lut = LUTPass(preset=config.lut_preset)
             self._lut.set_target_texture(self.screen_tex)
-            logger.debug("LUT pass created.")
+            logger.debug("LUT pass created")
 
         # Film grain (in-place)
         self._grain: Optional[FilmGrainPass] = None
         if config.grain_enabled:
             self._grain = FilmGrainPass()
             self._grain.set_target_texture(self.screen_tex)
-            logger.debug("Film grain pass created.")
+            logger.debug("Film grain pass created")
 
         # Frame counter - incremented each frame for temporal effects
         self._frame_counter: int = 0
@@ -150,7 +150,7 @@ class Presenter:
         """
         src = self._raw_upscaled_tex
         if src is None:
-            logger.warning("No source texture set, skipping present.")
+            logger.warning("No source texture set, skipping present")
             return
 
         # ---- 1. Debanding (optional) -----------------------------------------
@@ -378,7 +378,7 @@ class Presenter:
         radius_y = 2 if scale_y >= 1.0 else math.ceil(2.0 / scale_y)
 
         if r_w <= 0 or r_h <= 0:
-            logger.warning(f"Invalid Lanczos rect: {r_w}x{r_h}, skipping update.")
+            logger.warning(f"Invalid Lanczos rect: {r_w}x{r_h}, skipping update")
             return
 
         self.lanczos.update_constants(

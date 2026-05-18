@@ -10,7 +10,7 @@ def open_xcb_connection() -> Optional[xcffib.Connection]:
     """Open an XCB connection to the default display."""
     try:
         conn = xcffib.connect()
-        logger.debug("Opened XCB connection.")
+        logger.debug("Opened XCB connection")
         return conn
     except Exception as e:
         logger.error(f"Failed to open XCB connection: {e}", exc_info=True)
@@ -22,6 +22,6 @@ def close_xcb_connection(conn: Optional[xcffib.Connection]) -> None:
     if conn is not None:
         try:
             conn.disconnect()
-            logger.debug("Closed XCB connection.")
+            logger.debug("Closed XCB connection")
         except Exception as e:
             logger.warning(f"Error closing XCB connection: {e}")

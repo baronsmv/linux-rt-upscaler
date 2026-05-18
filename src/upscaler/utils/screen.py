@@ -57,7 +57,7 @@ def _get_screen(screen_spec: str) -> QScreen:
         return matches[0]
     elif len(matches) > 1:
         logger.warning(
-            f"Multiple screens match '{screen_spec}': {[s.name() for s in matches]}. Using first."
+            f"Multiple screens match '{screen_spec}': {[s.name() for s in matches]}, using first"
         )
         return matches[0]
 
@@ -126,7 +126,7 @@ def _get_scale_factor(q_screen: QScreen) -> float:
     if abs(scale_w - scale_h) > 0.01:
         logger.warning(
             f"Asymmetric scaling for {q_screen.name()}: width scale {scale_w:.3f}, "
-            f"height scale {scale_h:.3f}. Using width scale."
+            f"height scale {scale_h:.3f}, using width scale"
         )
 
     return scale_w

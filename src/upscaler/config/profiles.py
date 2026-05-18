@@ -175,7 +175,7 @@ def apply_window_profile(
     if profile_data is None:
         return False
     apply_overrides(config, profile_data.get("options", {}))
-    logger.info("Auto-applied profile '%s'.", profile_name)
+    logger.info("Auto-applied profile '%s'", profile_name)
     return True
 
 

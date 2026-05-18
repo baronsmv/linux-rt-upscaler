@@ -196,7 +196,7 @@ class Pipeline(QObject):
     # ----------------------------------------------------------------------
     def start(self) -> None:
         """Start the pipeline thread."""
-        logger.debug("Starting pipeline thread.")
+        logger.debug("Starting pipeline thread")
         self._running = True
         self._thread = threading.Thread(target=self._run, name="PipelineThread")
         self._thread.start()
@@ -206,7 +206,7 @@ class Pipeline(QObject):
         if not self._running:
             return
 
-        logger.debug("Stopping pipeline thread.")
+        logger.debug("Stopping pipeline thread")
         self._running = False
         if self._thread is not None:
             self._thread.join(timeout=2.0)
@@ -222,10 +222,10 @@ class Pipeline(QObject):
     def recreate_upscaler(self) -> None:
         """Rebuild the upscaler manager (model change, crop resize)."""
         if self.crop_width <= 0 or self.crop_height <= 0:
-            logger.debug("Skipping upscaler recreation, invalid crop size.")
+            logger.debug("Skipping upscaler recreation, invalid crop size")
             return
 
-        logger.debug("Recreating upscaler manager.")
+        logger.debug("Recreating upscaler manager")
         self.upscaler_mgr = UpscalerManager(
             config=self.config,
             crop_width=self.crop_width,
@@ -280,10 +280,10 @@ class Pipeline(QObject):
         )
         if profile_data:
             apply_overrides(new_config, profile_data.get("options", {}))
-            logger.info("Auto-applied profile '%s'.", profile_name)
+            logger.info("Auto-applied profile '%s'", profile_name)
         else:
             logger.debug(
-                "No matching profile for '%s', using base config.",
+                "No matching profile for '%s', using base config",
                 win_info.title,
             )
         parse_config(new_config)
@@ -316,7 +316,7 @@ class Pipeline(QObject):
             logger.error(f"Frame grab failed: {e}")
             self._consecutive_capture_failures += 1
             if self._consecutive_capture_failures >= self._max_capture_failures:
-                logger.critical("Too many consecutive capture failures, shutting down.")
+                logger.critical("Too many consecutive capture failures, shutting down")
                 self._running = False
             time.sleep(self._pause_after_failure)
             return
@@ -387,9 +387,7 @@ class Pipeline(QObject):
                 src_tex = self.upscaler_mgr.get_output_texture()
             else:
                 # Too many dirty tiles, fall back to full-frame
-                logger.debug(
-                    "Tile threshold exceeded, using full-frame for this frame."
-                )
+                logger.debug("Tile threshold exceeded, using full-frame for this frame")
                 self.upscaler_mgr.upload_full_frame(
                     frame=frame,
                     rects=rects,
@@ -409,7 +407,7 @@ class Pipeline(QObject):
         # --- 7. Handle swapchain recreation (overlay resize) ----------------
         if self._swapchain_manager.needs_recreation():
             if self._swapchain_manager.is_out_of_date():
-                logger.debug("Swapchain out-of-date, recreating.")
+                logger.debug("Swapchain out-of-date, recreating")
                 self._recreate_swapchain()
 
     # ----------------------------------------------------------------------
@@ -417,7 +415,7 @@ class Pipeline(QObject):
     # ----------------------------------------------------------------------
     def _handle_window_change(self) -> None:
         """Recreate resources when the target window changes size or handle."""
-        logger.debug("Handling window change.")
+        logger.debug("Handling window change")
         self._win_info.handle = self._window_tracker.handle
         self._win_info.width = self._window_tracker.width
         self._win_info.height = self._window_tracker.height
@@ -502,7 +500,7 @@ class Pipeline(QObject):
         )
         test_tracker.update(force=True)
         if not test_tracker.alive:
-            logger.warning("New window not alive, ignoring switch.")
+            logger.warning("New window not alive, ignoring switch")
             test_tracker.close()
             if self.config.daemon:
                 self.daemon_scan_start.emit()  # restart daemon monitor
@@ -530,7 +528,7 @@ class Pipeline(QObject):
     # ----------------------------------------------------------------------
     def _run(self) -> None:
         """Main pipeline loop."""
-        logger.debug("Pipeline thread started.")
+        logger.debug("Pipeline thread started")
 
         if self._window_tracker is not None:
             self._create_grabber()
@@ -545,13 +543,13 @@ class Pipeline(QObject):
                     if self._window_tracker:
                         self._window_tracker.check_alive()
                         if not self._window_tracker.alive:
-                            logger.info("Target window closed, exiting.")
+                            logger.info("Target window closed, exiting")
                             break
                 elif self.config.daemon and self._window_tracker:
                     # Daemon mode: check alive, if dead, go back to waiting.
                     self._window_tracker.check_alive()
                     if not self._window_tracker.alive:
-                        logger.info("Daemon: Target window closed, resuming scanning.")
+                        logger.info("Daemon: Target window closed, resuming scanning")
                         self._set_pause_reason(PauseReason.DAEMON_WAITING)
                         self._window_tracker = None
                         self._win_info = None
@@ -589,7 +587,7 @@ class Pipeline(QObject):
                 self._process_osd_requests()
 
             except Exception as e:
-                logger.exception("Fatal error in pipeline loop: '%s'.", e)
+                logger.exception("Fatal error in pipeline loop: '%s'", e)
                 break
 
         self._stopped_event.set()
@@ -600,7 +598,7 @@ class Pipeline(QObject):
                 )
             except RuntimeError:
                 pass
-        logger.debug("Pipeline thread stopped.")
+        logger.debug("Pipeline thread stopped")
 
     # ----------------------------------------------------------------------
     # Internal helpers

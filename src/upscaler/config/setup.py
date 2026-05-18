@@ -69,7 +69,7 @@ def load_config(
             apply_overrides(config, profile.get("options", {}))
             logger.info("Applied manual profile '%s'", profile_name)
         else:
-            logger.warning("Profile '%s' not found, ignoring.", profile_name)
+            logger.warning("Profile '%s' not found, ignoring", profile_name)
 
     # 4. CLI overrides take final precedence
     if overrides:
@@ -161,7 +161,7 @@ def setup_config() -> (
     win_info, proc = acquire_target_window(config)
     if win_info is None and not config.daemon:
         if not config.select:
-            logger.debug("No window was found, exiting.")
+            logger.debug("No window was found, exiting")
             sys.exit(0)
         sys.exit(1)
 
@@ -185,6 +185,6 @@ def setup_config() -> (
         )
         logger.debug("Window handle: 0x%x", win_info.handle)
     else:
-        logger.info("Daemon: waiting for a matching window.")
+        logger.info("Daemon: waiting for a matching window")
 
     return config, base_config, profiles, win_info, proc

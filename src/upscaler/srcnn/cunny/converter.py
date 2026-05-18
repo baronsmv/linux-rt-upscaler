@@ -840,7 +840,7 @@ def extract_license(content: str, start: int = 2) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Convert Magpie CuNNy shader to Vulkan compute shader format."
+        description="Convert Magpie CuNNy shader to Vulkan compute shader format"
     )
     parser.add_argument("shader_path", help="Path to the original .hlsl shader file")
     parser.add_argument(
@@ -853,7 +853,7 @@ def main() -> None:
 
     shader_path = args.shader_path
     if not os.path.isfile(shader_path):
-        print(f"Error: {shader_path} not found.")
+        print(f"Error: {shader_path} not found")
         return
 
     with open(shader_path, "r") as f:
@@ -862,7 +862,7 @@ def main() -> None:
     # Parse the shader
     parser = ShaderParser(content)
     if not parser.passes:
-        print("No passes found in the shader.")
+        print("No passes found in the shader")
         return
 
     # Configuration
