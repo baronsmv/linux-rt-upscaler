@@ -177,6 +177,16 @@ class AdvancedTab(SettingsTab):
         # ---- Timing ----
         self._add_section("Timing")
         self._add_slider(
+            "Daemon Poll (s)",
+            1,
+            100,
+            int(self._config.daemon_poll_interval * 10),
+            float_slot=self._on_daemon_poll_interval_changed,
+            scale_factor=10,
+            baseline=self.baseline_config.daemon_poll_interval,
+            help="How often the daemon scans for matching windows.",
+        )
+        self._add_slider(
             "Focus Poll (s)",
             1,
             1000,
@@ -185,16 +195,6 @@ class AdvancedTab(SettingsTab):
             scale_factor=100,
             baseline=self.baseline_config.focus_poll_interval,
             help="How often the focus monitor checks for active window changes.",
-        )
-        self._add_slider(
-            "Daemon Poll (s)",
-            1,
-            600,
-            int(self._config.daemon_poll_interval * 10),
-            float_slot=self._on_daemon_poll_interval_changed,
-            scale_factor=10,
-            baseline=self.baseline_config.daemon_poll_interval,
-            help="How often the daemon scans for matching windows.",
         )
         self._add_slider(
             "Pipeline Idle (s)",
@@ -292,12 +292,12 @@ class AdvancedTab(SettingsTab):
         self._config.area_threshold = value
         self.config_changed.emit()
 
-    def _on_focus_poll_interval_changed(self, value: float):
-        self._config.focus_poll_interval = value
-        self.config_changed.emit()
-
     def _on_daemon_poll_interval_changed(self, value: float):
         self._config.daemon_poll_interval = value
+        self.config_changed.emit()
+
+    def _on_focus_poll_interval_changed(self, value: float):
+        self._config.focus_poll_interval = value
         self.config_changed.emit()
 
     def _on_pipeline_poll_interval_changed(self, value: float):
