@@ -174,54 +174,144 @@ class AdvancedTab(SettingsTab):
             "Recommended range: 15% - 50%.",
         )
 
-    def _on_blur(self, val: float):
-        self._config.lanczos_blur = max(0.01, val)
+        # ---- Timing ----
+        self._add_section("Timing")
+        self._add_slider(
+            "Focus Poll (s)",
+            1,
+            1000,
+            int(self._config.focus_poll_interval * 100),
+            float_slot=self._on_focus_poll_interval_changed,
+            scale_factor=100,
+            baseline=self.baseline_config.focus_poll_interval,
+            help="How often the focus monitor checks for active window changes.",
+        )
+        self._add_slider(
+            "Daemon Poll (s)",
+            1,
+            600,
+            int(self._config.daemon_poll_interval * 10),
+            float_slot=self._on_daemon_poll_interval_changed,
+            scale_factor=10,
+            baseline=self.baseline_config.daemon_poll_interval,
+            help="How often the daemon scans for matching windows.",
+        )
+        self._add_slider(
+            "Pipeline Idle (s)",
+            1,
+            1000,
+            int(self._config.pipeline_poll_interval * 100),
+            float_slot=self._on_pipeline_poll_interval_changed,
+            scale_factor=100,
+            baseline=self.baseline_config.pipeline_poll_interval,
+            help="How often the pipeline checks its internal state when idle.",
+        )
+
+        # ---- Error Recovery ----
+        self._add_section("Error Recovery")
+        self._add_slider(
+            "Max Capture Failures",
+            1,
+            100,
+            self._config.max_capture_failures,
+            slot=self._on_max_capture_failures_changed,
+            scale_factor=1,
+            baseline=self.baseline_config.max_capture_failures,
+            help="Consecutive frame‑grab failures before the pipeline stops.",
+        )
+        self._add_slider(
+            "Capture Failure Delay (s)",
+            0,
+            500,
+            int(self._config.capture_failure_delay * 100),
+            float_slot=self._on_capture_failure_delay_changed,
+            scale_factor=100,
+            baseline=self.baseline_config.capture_failure_delay,
+            help="Pause after a capture failure before retrying.",
+        )
+        self._add_slider(
+            "Swapchain Debounce (s)",
+            0,
+            100,
+            int(self._config.swapchain_recreate_debounce * 10),
+            float_slot=self._on_swapchain_recreate_debounce_changed,
+            scale_factor=10,
+            baseline=self.baseline_config.swapchain_recreate_debounce,
+            help="Minimum time between two Vulkan swapchain recreations.",
+        )
+
+    def _on_blur(self, value: float):
+        self._config.lanczos_blur = value
         self.config_changed.emit()
 
-    def _on_antiring(self, val: float):
-        self._config.lanczos_antiring_strength = val
+    def _on_antiring(self, value: float):
+        self._config.lanczos_antiring_strength = value
         self.config_changed.emit()
 
-    def _on_linear_light(self, state: int):
-        self._config.lanczos_linear_light = bool(state)
+    def _on_linear_light(self, state: bool):
+        self._config.lanczos_linear_light = state
         self.config_changed.emit()
 
-    def _on_tight_antiring(self, state: int):
-        self._config.lanczos_tight_antiring = bool(state)
+    def _on_tight_antiring(self, state: bool):
+        self._config.lanczos_tight_antiring = state
         self.config_changed.emit()
 
     def _on_present_mode(self, text: str):
-        self._config.vulkan_present_mode = str(text)
+        self._config.vulkan_present_mode = text
         self.config_changed.emit()
 
-    def _on_buffer_pool(self, val: int):
-        self._config.vulkan_buffer_pool_size = int(val)
+    def _on_buffer_pool(self, value: int):
+        self._config.vulkan_buffer_pool_size = value
         self.config_changed.emit()
 
-    def _on_frame_timeout(self, val: int):
-        self._config.frame_timeout = val * 1_000_000
+    def _on_frame_timeout(self, value: int):
+        self._config.frame_timeout = value * 1_000_000
         self.config_changed.emit()
 
     def _on_tile_mode(self, state: bool):
-        self._config.use_tile_processing = bool(state)
+        self._config.use_tile_processing = state
         self.config_changed.emit()
 
     def _on_damage_tracking(self, state: bool):
-        self._config.use_damage_tracking = bool(state)
+        self._config.use_damage_tracking = state
         self.config_changed.emit()
 
-    def _on_tile_size(self, val: int):
-        self._config.tile_size = int(val)
+    def _on_tile_size(self, value: int):
+        self._config.tile_size = value
         self.config_changed.emit()
 
-    def _on_margin(self, val: int):
-        self._config.tile_context_margin = int(val)
+    def _on_margin(self, value: int):
+        self._config.tile_context_margin = value
         self.config_changed.emit()
 
-    def _on_max_layers(self, val: int):
-        self._config.max_tile_layers = int(val)
+    def _on_max_layers(self, value: int):
+        self._config.max_tile_layers = value
         self.config_changed.emit()
 
-    def _on_area_threshold(self, val: float):
-        self._config.area_threshold = max(0.0, min(val, 1.0))
+    def _on_area_threshold(self, value: float):
+        self._config.area_threshold = value
+        self.config_changed.emit()
+
+    def _on_focus_poll_interval_changed(self, value: float):
+        self._config.focus_poll_interval = value
+        self.config_changed.emit()
+
+    def _on_daemon_poll_interval_changed(self, value: float):
+        self._config.daemon_poll_interval = value
+        self.config_changed.emit()
+
+    def _on_pipeline_poll_interval_changed(self, value: float):
+        self._config.pipeline_poll_interval = value
+        self.config_changed.emit()
+
+    def _on_max_capture_failures_changed(self, value: int):
+        self._config.max_capture_failures = value
+        self.config_changed.emit()
+
+    def _on_capture_failure_delay_changed(self, value: float):
+        self._config.capture_failure_delay = value
+        self.config_changed.emit()
+
+    def _on_swapchain_recreate_debounce_changed(self, value: float):
+        self._config.swapchain_recreate_debounce = value
         self.config_changed.emit()

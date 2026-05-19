@@ -145,11 +145,11 @@ class DisplayTab(SettingsTab):
         )
 
     def _on_monitor_changed(self, text: str):
-        self._config.monitor = str(text)
+        self._config.monitor = text
         self.config_changed.emit()
 
-    def _on_auto_scale_changed(self, state: int) -> None:
-        auto = bool(state)
+    def _on_auto_scale_changed(self, state: bool) -> None:
+        auto = state
         self._scale_slider.setEnabled(not auto)
         if auto:
             self._config.scale_factor = None
@@ -158,43 +158,43 @@ class DisplayTab(SettingsTab):
             self._config.scale_factor = self._scale_slider.value() / 100.0
         self.config_changed.emit()
 
-    def _on_scale_slider_changed(self, val: float) -> None:
+    def _on_scale_slider_changed(self, value: float) -> None:
         if self._scale_slider.isEnabled():
-            self._config.scale_factor = val
+            self._config.scale_factor = value
             self.config_changed.emit()
 
     def _on_overlay_mode(self, text: str):
-        self._config.overlay_mode = str(text)
+        self._config.overlay_mode = text
         self.config_changed.emit()
 
     def _on_geometry_changed(self, text: str) -> None:
-        self._config.output_geometry = str(text)
+        self._config.output_geometry = text
         self.config_changed.emit()
 
-    def _on_crop_left(self, val: int):
-        self._config.crop_left = int(val)
+    def _on_crop_left(self, value: int):
+        self._config.crop_left = value
         self.config_changed.emit()
 
-    def _on_crop_top(self, val: int):
-        self._config.crop_top = int(val)
+    def _on_crop_top(self, value: int):
+        self._config.crop_top = value
         self.config_changed.emit()
 
-    def _on_crop_right(self, val: int):
-        self._config.crop_right = int(val)
+    def _on_crop_right(self, value: int):
+        self._config.crop_right = value
         self.config_changed.emit()
 
-    def _on_crop_bottom(self, val: int):
-        self._config.crop_bottom = int(val)
+    def _on_crop_bottom(self, value: int):
+        self._config.crop_bottom = value
         self.config_changed.emit()
 
-    def _on_offset_x(self, val: int):
-        self._config.offset_x = int(val)
+    def _on_offset_x(self, value: int):
+        self._config.offset_x = value
         self.config_changed.emit()
 
-    def _on_offset_y(self, val: int):
-        self._config.offset_y = int(val)
+    def _on_offset_y(self, value: int):
+        self._config.offset_y = value
         self.config_changed.emit()
 
     def _on_bg_color(self, text: str):
-        self._config.background_color = str(text)
+        self._config.background_color = text
         self.config_changed.emit()

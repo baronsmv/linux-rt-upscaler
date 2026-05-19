@@ -234,19 +234,19 @@ class EffectsTab(SettingsTab):
         self._lut_intensity.setEnabled(self._config.lut_enabled)
 
     def _on_deband_enabled(self, state: bool):
-        enabled = bool(state)
+        enabled = state
         self._config.deband_enabled = enabled
         self._deband_str.setEnabled(enabled)
         self.config_changed.emit()
 
     def _on_cas_enabled(self, state: bool):
-        enabled = bool(state)
+        enabled = state
         self._config.cas_enabled = enabled
         self._cas_str.setEnabled(enabled)
         self.config_changed.emit()
 
     def _on_bloom_enabled(self, state: bool):
-        enabled = bool(state)
+        enabled = state
         self._config.bloom_enabled = enabled
         self._bloom_str.setEnabled(enabled)
         self._bloom_thresh.setEnabled(enabled)
@@ -254,7 +254,7 @@ class EffectsTab(SettingsTab):
         self.config_changed.emit()
 
     def _on_vignette_enabled(self, state: bool):
-        enabled = bool(state)
+        enabled = state
         self._config.vignette_enabled = enabled
         self._vignette_str.setEnabled(enabled)
         self._vignette_radius.setEnabled(enabled)
@@ -262,63 +262,63 @@ class EffectsTab(SettingsTab):
         self.config_changed.emit()
 
     def _on_lut_enabled(self, state: bool):
-        enabled = bool(state)
+        enabled = state
         self._config.lut_enabled = enabled
         self._lut_combo.setEnabled(enabled)
         self._lut_intensity.setEnabled(enabled)
         self.config_changed.emit()
 
     def _on_grain_enabled(self, state: bool):
-        enabled = bool(state)
+        enabled = state
         self._config.grain_enabled = enabled
         self._grain_str.setEnabled(enabled)
         self._grain_size.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_deband_strength(self, val: float):
-        self._config.deband_strength = val
+    def _on_deband_strength(self, value: float):
+        self._config.deband_strength = value
         self.config_changed.emit()
 
-    def _on_cas_strength(self, val: float):
-        self._config.cas_strength = val
+    def _on_cas_strength(self, value: float):
+        self._config.cas_strength = value
         self.config_changed.emit()
 
-    def _on_bloom_strength(self, val: float):
-        self._config.bloom_strength = val
+    def _on_bloom_strength(self, value: float):
+        self._config.bloom_strength = value
         self.config_changed.emit()
 
-    def _on_bloom_threshold(self, val: float):
-        self._config.bloom_threshold = val
+    def _on_bloom_threshold(self, value: float):
+        self._config.bloom_threshold = value
         self.config_changed.emit()
 
-    def _on_bloom_radius(self, val: int):
-        self._config.bloom_radius = val
+    def _on_bloom_radius(self, value: int):
+        self._config.bloom_radius = value
         self.config_changed.emit()
 
-    def _on_vignette_strength(self, val: float):
-        self._config.vignette_strength = val
+    def _on_vignette_strength(self, value: float):
+        self._config.vignette_strength = value
         self.config_changed.emit()
 
-    def _on_vignette_radius(self, val: float):
-        self._config.vignette_radius = max(0.0, val)
+    def _on_vignette_radius(self, value: float):
+        self._config.vignette_radius = value
         self.config_changed.emit()
 
-    def _on_vignette_falloff(self, val: float):
-        self._config.vignette_falloff = max(0.1, val)
+    def _on_vignette_falloff(self, value: float):
+        self._config.vignette_falloff = value
         self.config_changed.emit()
 
     def _on_lut_preset(self, text: str):
         self._config.lut_preset = text
         self.config_changed.emit()
 
-    def _on_lut_intensity(self, val: float):
-        self._config.lut_intensity = max(0.0, min(val, 1.0))
+    def _on_lut_intensity(self, value: float):
+        self._config.lut_intensity = value
         self.config_changed.emit()
 
-    def _on_grain_strength(self, val: float):
-        self._config.grain_strength = val
+    def _on_grain_strength(self, value: float):
+        self._config.grain_strength = value
         self.config_changed.emit()
 
-    def _on_grain_size_changed(self, val: float):
-        self._config.grain_size = max(1.0, val)
+    def _on_grain_size_changed(self, value: float):
+        self._config.grain_size = value
         self.config_changed.emit()

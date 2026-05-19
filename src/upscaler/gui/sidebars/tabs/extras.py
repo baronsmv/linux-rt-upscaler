@@ -79,11 +79,11 @@ class ExtrasTab(SettingsTab):
         self.config_changed.emit()
 
     def _on_osd_enabled(self, state: bool):
-        enabled = bool(state)
+        enabled = state
         self._config.show_osd = enabled
         self._osd_duration.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_osd_duration(self, val: float):
-        self._config.osd_duration = val
+    def _on_osd_duration(self, value: float):
+        self._config.osd_duration = value
         self.config_changed.emit()
