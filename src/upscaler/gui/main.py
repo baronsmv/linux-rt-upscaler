@@ -236,11 +236,11 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(0, lambda: self._start_pipeline(win_info))
 
     def _on_manual_overlay_closed(self) -> None:
+        """Called when the overlay of a manual session is closed."""
         if self.manual_session:
             self.manual_session.pipeline.stop()
             self.manual_session = None
-        self.show()
-        QTimer.singleShot(0, self.grid_mgr.start)
+        QApplication.instance().quit()
 
     def _start_pipeline(self, win_info: WindowInfo) -> None:
         """Create a temporary pipeline session for the given window."""
