@@ -97,23 +97,24 @@ class GeneralTab(SettingsTab):
         self._config.model = text
         self.config_changed.emit()
 
-    def _on_double_changed(self, state: bool) -> None:
-        self._config.double_upscale = state
+    def _on_double_changed(self, state: int) -> None:
+        self._config.double_upscale = bool(state)
         self.config_changed.emit()
 
-    def _on_follow_focus(self, state: bool):
-        self._config.follow_focus = state
+    def _on_follow_focus(self, state: int):
+        self._config.follow_focus = bool(state)
         self.config_changed.emit()
 
-    def _on_pause_focus_loss(self, state: bool):
-        self._config.pause_on_focus_loss = state
+    def _on_pause_focus_loss(self, state: int):
+        self._config.pause_on_focus_loss = bool(state)
         self.config_changed.emit()
 
-    def _on_daemon_changed(self, state: bool) -> None:
-        self._config.daemon = state
+    def _on_daemon_changed(self, state: int) -> None:
+        enabled = bool(state)
+        self._config.daemon = enabled
         self.config_changed.emit()
-        self.daemon_toggled.emit(state)
+        self.daemon_toggled.emit(enabled)
 
-    def _on_daemon_exclude_changed(self, state: bool) -> None:
-        self._config.daemon_exclude = state
+    def _on_daemon_exclude_changed(self, state: int) -> None:
+        self._config.daemon_exclude = bool(state)
         self.config_changed.emit()

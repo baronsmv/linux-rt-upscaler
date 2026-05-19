@@ -233,43 +233,43 @@ class EffectsTab(SettingsTab):
         )
         self._lut_intensity.setEnabled(self._config.lut_enabled)
 
-    def _on_deband_enabled(self, state: bool):
-        enabled = state
+    def _on_deband_enabled(self, state: int):
+        enabled = bool(state)
         self._config.deband_enabled = enabled
         self._deband_str.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_cas_enabled(self, state: bool):
-        enabled = state
+    def _on_cas_enabled(self, state: int):
+        enabled = bool(state)
         self._config.cas_enabled = enabled
         self._cas_str.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_bloom_enabled(self, state: bool):
-        enabled = state
+    def _on_bloom_enabled(self, state: int):
+        enabled = bool(state)
         self._config.bloom_enabled = enabled
         self._bloom_str.setEnabled(enabled)
         self._bloom_thresh.setEnabled(enabled)
         self._bloom_radius.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_vignette_enabled(self, state: bool):
-        enabled = state
+    def _on_vignette_enabled(self, state: int):
+        enabled = bool(state)
         self._config.vignette_enabled = enabled
         self._vignette_str.setEnabled(enabled)
         self._vignette_radius.setEnabled(enabled)
         self._vignette_falloff.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_lut_enabled(self, state: bool):
-        enabled = state
+    def _on_lut_enabled(self, state: int):
+        enabled = bool(state)
         self._config.lut_enabled = enabled
         self._lut_combo.setEnabled(enabled)
         self._lut_intensity.setEnabled(enabled)
         self.config_changed.emit()
 
-    def _on_grain_enabled(self, state: bool):
-        enabled = state
+    def _on_grain_enabled(self, state: int):
+        enabled = bool(state)
         self._config.grain_enabled = enabled
         self._grain_str.setEnabled(enabled)
         self._grain_size.setEnabled(enabled)

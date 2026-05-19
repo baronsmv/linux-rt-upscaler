@@ -22,7 +22,7 @@ class AdvancedTab(SettingsTab):
         self._config = config
         super().__init__(
             gui_config,
-            title="General",
+            title="Advanced",
             baseline_config=baseline_config,
             parent=parent,
         )
@@ -248,12 +248,12 @@ class AdvancedTab(SettingsTab):
         self._config.lanczos_antiring_strength = value
         self.config_changed.emit()
 
-    def _on_linear_light(self, state: bool):
-        self._config.lanczos_linear_light = state
+    def _on_linear_light(self, state: int):
+        self._config.lanczos_linear_light = bool(state)
         self.config_changed.emit()
 
-    def _on_tight_antiring(self, state: bool):
-        self._config.lanczos_tight_antiring = state
+    def _on_tight_antiring(self, state: int):
+        self._config.lanczos_tight_antiring = bool(state)
         self.config_changed.emit()
 
     def _on_present_mode(self, text: str):
@@ -268,12 +268,12 @@ class AdvancedTab(SettingsTab):
         self._config.frame_timeout = value * 1_000_000
         self.config_changed.emit()
 
-    def _on_tile_mode(self, state: bool):
-        self._config.use_tile_processing = state
+    def _on_tile_mode(self, state: int):
+        self._config.use_tile_processing = bool(state)
         self.config_changed.emit()
 
-    def _on_damage_tracking(self, state: bool):
-        self._config.use_damage_tracking = state
+    def _on_damage_tracking(self, state: int):
+        self._config.use_damage_tracking = bool(state)
         self.config_changed.emit()
 
     def _on_tile_size(self, value: int):

@@ -78,8 +78,8 @@ class ExtrasTab(SettingsTab):
         self._config.screenshot_filename = text
         self.config_changed.emit()
 
-    def _on_osd_enabled(self, state: bool):
-        enabled = state
+    def _on_osd_enabled(self, state: int):
+        enabled = bool(state)
         self._config.show_osd = enabled
         self._osd_duration.setEnabled(enabled)
         self.config_changed.emit()
