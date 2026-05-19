@@ -34,6 +34,9 @@ def main() -> None:
             palette=presets.DARK if scheme == "dark" else presets.LIGHT
         )
         tmp_app.setStyleSheet(message_box_style(gui_config))
+        tmp_app.setWindowIcon(load_icon("app/app", 256, 256))
+        tmp_app.setApplicationName("upscale-gui")
+        tmp_app.setDesktopFileName("io.github.baronsmv.linux-rt-upscaler")
         QMessageBox.warning(
             None,
             "Already Running",
