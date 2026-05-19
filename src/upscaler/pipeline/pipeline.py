@@ -269,7 +269,7 @@ class Pipeline(QObject):
             self.overlay.hide()
         elif old != PauseReason.NONE and reason == PauseReason.NONE:
             self.overlay.show()
-            self._force_next_frame = True
+            self._presenter_params_stale = True
 
     # ----------------------------------------------------------------------
     # Configuration change
@@ -366,6 +366,10 @@ class Pipeline(QObject):
                 self._scale_factor
             )
             return
+
+        # Full render path, mark the state as clean for the next frame
+        self._presenter_params_stale = False
+        self._last_present_state_hash = current_hash
 
         # --- 4. Upscale ----------------------------------------------------
         if not self.upscaler_mgr.use_tile:
