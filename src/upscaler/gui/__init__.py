@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from PySide6.QtCore import QSharedMemory
 
 from ..env import setup_environment
 
@@ -9,12 +8,15 @@ import logging
 import signal
 import sys
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QSharedMemory
+from PySide6.QtWidgets import QApplication, QMessageBox
 
-from .config import ConfigManager
+from .config import ConfigManager, GUIConfig, presets
 from .icons import load_icon
 from .main import MainWindow
-from ..config import parse_args, validate_overrides, setup_logging
+from .styles import message_box_style
+from ..config import parse_args, setup_logging, validate_overrides
+from ..utils import system_color_scheme
 
 
 def main() -> None:
@@ -24,6 +26,20 @@ def main() -> None:
     if not shared.create(1):
         # Another instance is already running
         print("Another instance of upscale-gui is already running.")
+
+        # Dialog
+        tmp_app = QApplication(sys.argv)
+        scheme = system_color_scheme()
+        gui_config = GUIConfig(
+            palette=presets.DARK if scheme == "dark" else presets.LIGHT
+        )
+        tmp_app.setStyleSheet(message_box_style(gui_config))
+        QMessageBox.warning(
+            None,
+            "Already Running",
+            "Real-Time Upscaler is already running.\n\n"
+            "Only one instance of the GUI can be open at a time.",
+        )
         sys.exit(0)
 
     # Parse CLI arguments (the GUI accepts the same options as the non-GUI version)
