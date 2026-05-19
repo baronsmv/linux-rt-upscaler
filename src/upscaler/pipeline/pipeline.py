@@ -145,7 +145,6 @@ class Pipeline(QObject):
         )
         self._last_present_state_hash: Optional[int] = None
         self._presenter_params_stale = True
-        self._force_next_frame = False
 
         # Upscaler manager: full-frame or tile processing
         self.upscaler_mgr: Optional[UpscalerManager] = None
@@ -270,6 +269,7 @@ class Pipeline(QObject):
             self.overlay.hide()
         elif old != PauseReason.NONE and reason == PauseReason.NONE:
             self.overlay.show()
+            self._force_next_frame = True
 
     # ----------------------------------------------------------------------
     # Configuration change
@@ -351,30 +351,21 @@ class Pipeline(QObject):
 
         # --- 3. Idle frame detection ---------------------------------------
         current_hash = self._compute_present_state_hash()
-
-        if self._force_next_frame:
-            self._force_next_frame = False
-            logger.debug("Forcing first frame after switch")
-        else:
-            idle = (
-                not is_dirty
-                and osd_tex is None
-                and not self._presenter_params_stale
-                and current_hash == self._last_present_state_hash
-            )
-
-            if idle:
-                if self._swapchain_manager.needs_recreation():
-                    logger.debug("Swapchain needs recreation, skipping idle present")
-                    return
-                self.presenter.present_unchanged()
-                self.overlay.scaling_rect = self.presenter.get_scaling_rect(
-                    self._scale_factor
-                )
+        idle = (
+            not is_dirty
+            and osd_tex is None
+            and not self._presenter_params_stale
+            and current_hash == self._last_present_state_hash
+        )
+        if idle:
+            if self._swapchain_manager.needs_recreation():
+                logger.debug("Swapchain needs recreation, skipping idle present")
                 return
-
-        self._presenter_params_stale = False
-        self._last_present_state_hash = current_hash
+            self.presenter.present_unchanged()
+            self.overlay.scaling_rect = self.presenter.get_scaling_rect(
+                self._scale_factor
+            )
+            return
 
         # --- 4. Upscale ----------------------------------------------------
         if not self.upscaler_mgr.use_tile:
@@ -543,7 +534,6 @@ class Pipeline(QObject):
 
         # Handle the geometry change
         self._handle_window_change()
-        self._force_next_frame = True
 
     # ----------------------------------------------------------------------
     # Main loop (runs in dedicated thread)
