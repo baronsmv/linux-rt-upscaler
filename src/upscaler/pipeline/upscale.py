@@ -93,10 +93,10 @@ class UpscalerManager:
 
         # Tile mode can only be enabled for 2x upscalers (the tile shaders
         # are designed for a single 2x stage; for 4x we chain two 2x tile
-        # stages internally, so it's also valid).
+        # stages internally, so it's also valid)
         self.use_tile = config.use_tile_processing and self.scale == 2
 
-        # Pre-compute tile grid size for fallback decisions.
+        # Pre-compute tile grid size for fallback decisions
         self.tiles_x = (crop_width + config.tile_size - 1) // config.tile_size
         self.tiles_y = (crop_height + config.tile_size - 1) // config.tile_size
         self.total_tiles = self.tiles_x * self.tiles_y
@@ -211,7 +211,7 @@ class UpscalerManager:
                 dispatch_groups(stage1_out_w, stage1_out_h, last_pass=False)
             )
 
-            # Cache the 2x intermediate for tile-mode residual generation.
+            # Cache the 2x intermediate for tile-mode residual generation
             self._residual_dst_tex = inter_tex
 
         else:
@@ -258,7 +258,7 @@ class UpscalerManager:
         self._rebind_full_frame_output()
 
         # For double-upscale, keep the references needed to generate the 2x
-        # residual (the first SRCNN stage output).
+        # residual (the first SRCNN stage output)
         if self.config.double_upscale and len(self.full_stages) >= 2:
             self._residual_upscale_groups = self.full_groups[0]
             self._residual_dst_tex = self.full_stages[0].outputs["output"]
@@ -279,8 +279,8 @@ class UpscalerManager:
             return
 
         # The stage that writes the final output:
-        #   - second stage for double-upscale,
-        #   - first (only) stage for single-upscale.
+        #   - second stage for double-upscale
+        #   - first (only) stage for single-upscale
         stage_idx = -1 if self.config.double_upscale else 0
         old_stage = self.full_stages[stage_idx]
         new_outputs = dict(old_stage.outputs)

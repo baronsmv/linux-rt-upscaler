@@ -337,7 +337,7 @@ uint2 GetOutputSize() { return uint2(out_width, out_height); }
                 ]
 
                 # 2. Wrap each OUTPUT assignment with bounds check,
-                #    change gxy -> globalOutXY, and add uint3 + outputLayer.
+                #    change gxy -> globalOutXY, and add uint3 + outputLayer
                 new_core = []
                 for line in core_lines:
                     # Match original: OUTPUT[gxy + int2(X, Y)] = ...;
@@ -711,8 +711,7 @@ void {self.config.entry_point}(uint3 id : SV_DispatchThreadID)
                     tail_lines.append(line)
                     tail_block_indices.append(idx)
             else:
-                # If we encounter a block that is not a line block, we cannot compact beyond it
-                # So we stop at the previous block.
+                # Stop at the previous block
                 break
 
         if not tail_lines:

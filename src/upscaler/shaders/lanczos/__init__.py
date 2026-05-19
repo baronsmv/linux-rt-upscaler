@@ -51,36 +51,36 @@ class LanczosScaler(ShaderPass):
     ) -> None:
         self.source_texture: Optional[Texture2D] = None
 
-        # Pre-load both SPIR-V binaries into memory.
+        # Pre-load both SPIR-V binaries into memory
         self._shader_l2 = None
         self._shader_adapt = None
         self._load_shader_variants(shader_path_l2, shader_path_adapt)
 
-        # Let the base class handle persistent resources and pipeline creation.
+        # Let the base class handle persistent resources and pipeline creation
         # Important: super().__init__() sets self._shader = None internally,
-        # so we must assign self._shader *after* the super call.
+        # so we must assign self._shader *after* the super call
         super().__init__(
             shader_path_adapt
         )  # path is ignored because _load_shader is overridden
 
-        # Now set the initial shader to the adaptive variant (safe default).
+        # Now set the initial shader to the adaptive variant (safe default)
         self._shader = self._shader_adapt
         self._current_variant = "adaptive"
         self._cb_format = CB_FORMAT_ADAPTIVE
         self._cb_size_current = CB_SIZE_ADAPTIVE
 
     # ------------------------------------------------------------------
-    #  Constant buffer size - returns the maximum we ever need.
+    #  Constant buffer size
     # ------------------------------------------------------------------
     @staticmethod
     def _cb_size() -> int:
         return CB_SIZE_MAX
 
     # ------------------------------------------------------------------
-    #  Override _load_shader to avoid loading from disk (we pre-loaded).
+    #  Override _load_shader to avoid loading from disk
     # ------------------------------------------------------------------
     def _load_shader(self) -> None:
-        # Do nothing - we already have the shader bytes.
+        # Do nothing, already have the shader bytes
         pass
 
     def _load_shader_variants(self, path_lanczos: str, path_adapt: str) -> None:
@@ -104,8 +104,7 @@ class LanczosScaler(ShaderPass):
     # ------------------------------------------------------------------
     def _create_persistent_resources(self) -> None:
         """Create constant buffer and point sampler."""
-        # Base class would normally create a constant buffer of _cb_size().
-        # We need to override to use our max size.
+        # Base class would normally create a constant buffer of _cb_size()
         super()._create_persistent_resources()  # creates self._cb with size CB_SIZE_MAX
         self._sampler = Sampler(
             filter_min=SAMPLER_FILTER_POINT,
@@ -113,7 +112,7 @@ class LanczosScaler(ShaderPass):
         )
 
     # ------------------------------------------------------------------
-    #  Binding layout - common to both shaders.
+    #  Binding layout
     # ------------------------------------------------------------------
     def _get_bindings(self):
         return [self.source_texture], [self.target_texture], [self._sampler]
@@ -221,7 +220,7 @@ class LanczosScaler(ShaderPass):
         self._cb_format = CB_FORMAT_ADAPTIVE if adaptive else CB_FORMAT_FIXED
         self._cb_size_current = CB_SIZE_ADAPTIVE if adaptive else CB_SIZE_FIXED
 
-        # Rebuild the Vulkan pipeline with the new shader bytes.
+        # Rebuild the Vulkan pipeline with the new shader bytes
         self._rebuild_compute()
 
     # ------------------------------------------------------------------

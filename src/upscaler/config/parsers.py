@@ -24,7 +24,7 @@ def color_string_to_float4(
     If ``color`` is already a 4-tuple of floats, it is returned unchanged.
     This makes the function safe to call multiple times on the same config object.
     """
-    # If it's already a tuple, assume it's valid and return as-is.
+    # If it's already a tuple, assume it's valid and return as-is
     if isinstance(color, tuple):
         if len(color) == 4 and all(isinstance(v, (float, int)) for v in color):
             return color

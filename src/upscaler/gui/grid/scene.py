@@ -194,7 +194,7 @@ class WindowGridScene(QGraphicsScene):
         avail_w = vp_w - 2 * margin
         if target_cols > 1:
             # We'll first estimate tile width without spacing, then loop once
-            # to settle proportional spacing if needed.
+            # to settle proportional spacing if needed
             tile_w = avail_w / target_cols
 
         # ---- 3. Compute actual spacing (proportional or fixed) -------------

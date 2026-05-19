@@ -40,7 +40,7 @@ class OverlayBlender:
         self.cb: Optional[Buffer] = None
 
         self._screen_tex: Optional[Texture2D] = None
-        # Cache compute pipelines keyed by overlay texture id.
+        # Cache compute pipelines keyed by overlay texture id
         self._compute_cache: Dict[int, Compute] = {}
 
         self._load_shader()
@@ -100,14 +100,14 @@ class OverlayBlender:
             logger.warning("Cannot blend: screen texture not set")
             return
 
-        # Get or create a compute pipeline for this overlay texture.
+        # Get or create a compute pipeline for this overlay texture
         compute = self._get_compute(overlay_tex)
 
-        # Upload position and size constants.
+        # Upload position and size constants
         cb_data = struct.pack("iiii", x, y, width, height)
         self.cb.upload(cb_data)
 
-        # Dispatch compute groups (16x16 threads per group).
+        # Dispatch compute groups (16x16 threads per group)
         groups_x = (width + 15) // 16
         groups_y = (height + 15) // 16
         compute.dispatch(groups_x, groups_y, 1)

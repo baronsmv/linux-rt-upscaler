@@ -23,7 +23,7 @@ class FilterBar(QWidget):
         self._cfg = gui_config
         cfg = gui_config
 
-        # Fixed height from config; no separate "height" field needed for the line edit.
+        # Fixed height from config; no separate "height" field needed for the line edit
         self.setFixedHeight(cfg.filter_height)
         self.setAttribute(Qt.WA_Hover, True)
 

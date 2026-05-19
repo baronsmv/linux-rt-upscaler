@@ -34,11 +34,11 @@ logger = logging.getLogger(__name__)
 class PauseReason(Enum):
     """Reasons why the pipeline may be paused."""
 
-    NONE = auto()  # Pipeline is running normally.
-    USER = auto()  # Manually paused via hotkey (overlay hidden).
-    MINIMIZED = auto()  # Target window is minimized.
-    FOCUS_LOST = auto()  # Target window lost focus (when pause_on_focus_loss is set).
-    DAEMON_WAITING = auto()  # Daemon waiting for new window match.
+    NONE = auto()  # Pipeline is running normally
+    USER = auto()  # Manually paused via hotkey (overlay hidden)
+    MINIMIZED = auto()  # Target window is minimized
+    FOCUS_LOST = auto()  # Target window lost focus (when pause_on_focus_loss is set)
+    DAEMON_WAITING = auto()  # Daemon waiting for new window match
 
 
 class Pipeline(QObject):
@@ -560,7 +560,7 @@ class Pipeline(QObject):
                 # Process window switch requests
                 self._process_switch_requests()
 
-                # When not following focus or daemon, exit if target dies.
+                # When not following focus or daemon, exit if target dies
                 if not self.config.follow_focus and not self.config.daemon:
                     if self._window_tracker:
                         self._window_tracker.check_alive()
@@ -568,7 +568,7 @@ class Pipeline(QObject):
                             logger.info("Target window closed, exiting")
                             break
                 elif self.config.daemon and self._window_tracker:
-                    # Daemon mode: check alive, if dead, go back to waiting.
+                    # Daemon mode: check alive, if dead, go back to waiting
                     self._window_tracker.check_alive()
                     if not self._window_tracker.alive:
                         logger.info(
@@ -645,7 +645,7 @@ class Pipeline(QObject):
         """Return a hash of all config and geometry state that affects screen output."""
         c = self.config
         p = self.presenter
-        # Include only parameters that alter pixel values or placement.
+        # Include only parameters that alter pixel values or placement
         return hash(
             (
                 c.output_geometry,

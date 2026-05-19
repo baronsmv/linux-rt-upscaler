@@ -111,7 +111,7 @@ def extract_expanded_tiles(
     tiles_x = (crop_width + tile_size - 1) // tile_size
     tiles_y = (crop_height + tile_size - 1) // tile_size
 
-    # Gather all tile coordinates that intersect at least one damage rectangle.
+    # Gather all tile coordinates that intersect at least one damage rectangle
     dirty: Set[Tuple[int, int]] = set()
     for rx, ry, rw, rh, _ in rects:
         if rw <= 0 or rh <= 0:
@@ -138,7 +138,7 @@ def extract_expanded_tiles(
         exp_x1 = exp_x0 + expanded_side
         exp_y1 = exp_y0 + expanded_side
 
-        # If requested, skip interior tiles (return None) - caller handles them.
+        # If requested, skip interior tiles (return None), caller handles them
         if skip_interior and (
             0 <= exp_x0
             and 0 <= exp_y0
@@ -148,13 +148,13 @@ def extract_expanded_tiles(
             result.append((tx, ty, None, margin, margin))
             continue
 
-        # Clamp source rectangle to the crop area.
+        # Clamp source rectangle to the crop area
         src_x0 = max(0, exp_x0)
         src_y0 = max(0, exp_y0)
         src_x1 = min(crop_width, exp_x1)
         src_y1 = min(crop_height, exp_y1)
 
-        # Destination offset inside the expanded tile buffer.
+        # Destination offset inside the expanded tile buffer
         dst_x0 = src_x0 - exp_x0
         dst_y0 = src_y0 - exp_y0
         copy_w = src_x1 - src_x0
@@ -162,7 +162,7 @@ def extract_expanded_tiles(
 
         data = bytearray(expanded_bytes)
 
-        # Copy the valid interior region.
+        # Copy the valid interior region
         _copy_region(
             data,
             frame,
@@ -176,7 +176,7 @@ def extract_expanded_tiles(
             expanded_side,
         )
 
-        # Replicate edge pixels for any out-of-bounds areas.
+        # Replicate edge pixels for any out-of-bounds areas
         if exp_y0 < 0:
             _pad_top(
                 data, frame, stride, dst_x0, dst_y0, copy_w, expanded_side, src_x0, 0

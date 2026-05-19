@@ -78,13 +78,13 @@ class ConfigManager(QObject):
         # ---- Live state --------------------------------------------------
         self.active_profile_name: Optional[str] = None
 
-        # The *persistent* config is what the user edits in the sidebar.
-        # It contains system defaults + YAML general + active profile options.
-        # CLI overrides are intentionally excluded.
+        # The *persistent* config is what the user edits in the sidebar
+        # It contains system defaults + YAML general + active profile options
+        # CLI overrides are intentionally excluded
         self.persistent_config = copy.deepcopy(self.global_baseline)
 
-        # Snapshot of the persistent config at the last successful save.
-        # Used for dirty-state detection and "Reset" functionality.
+        # Snapshot of the persistent config at the last successful save
+        # Used for dirty-state detection and "Reset" functionality
         self.saved_persistent_config = copy.deepcopy(self.persistent_config)
 
     @property

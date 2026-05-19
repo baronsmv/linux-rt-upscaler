@@ -101,7 +101,7 @@ class OpacityController(QObject):
         self._last_update_time = now
 
         # If event forwarding is active, we don't dim (user is interacting with overlay)
-        # This is set by the overlay when map_events is True.
+        # This is set by the overlay when map_events is True
         if hasattr(self.overlay, "map_events") and self.overlay.map_events:
             self.overlay.setWindowOpacity(self.max_opacity)
             return

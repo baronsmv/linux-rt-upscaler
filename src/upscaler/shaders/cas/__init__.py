@@ -31,7 +31,7 @@ class CASPass(ShaderPass):
     """
 
     def __init__(self, shader_path: str = DEFAULT_SHADER_PATH) -> None:
-        # CAS does not have a separate source texture; input = target.
+        # CAS does not have a separate source texture; input = target
         super().__init__(shader_path)
 
     # ------------------------------------------------------------------

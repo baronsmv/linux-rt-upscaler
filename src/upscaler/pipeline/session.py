@@ -79,7 +79,7 @@ def create_pipeline_session(
     if overlay.windowHandle():
         overlay.windowHandle().setSurfaceType(QWindow.VulkanSurface)
 
-    # For non-daemon modes, show the overlay immediately.
+    # For non-daemon modes, show the overlay immediately
     if not config.daemon:
         overlay.show()
 

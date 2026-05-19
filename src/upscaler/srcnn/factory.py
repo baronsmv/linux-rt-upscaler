@@ -43,7 +43,6 @@ class PipelineFactory:
         pipelines, cbs = factory.create_stage(
             width, height, input_texture, output_textures, push_size
         )
-        # Use pipelines and cbs in SRCNN wrapper.
 
     TODO: Re-evaluate pipeline caching if performance becomes an issue:
 
@@ -89,11 +88,11 @@ class PipelineFactory:
             filter_mag=SAMPLER_FILTER_LINEAR,
         )
 
-        # Cache for descriptor set layouts.
+        # Cache for descriptor set layouts
         # Key: (push_constant_size, bindless_flag, texture_type_tuple)
         self._dsl_cache: Dict[Tuple, Any] = {}
 
-        # Cache for constant buffers (per pass and dimensions).
+        # Cache for constant buffers (per pass and dimensions)
         # Key: (width, height, pass_index)
         self._cb_cache: Dict[Tuple, Buffer] = {}
 
@@ -117,7 +116,7 @@ class PipelineFactory:
         cb_size = struct.calcsize("IIIIffff")
         cb = Buffer(cb_size)
 
-        # For intermediate passes, output dimensions equal input; final pass outputs 2x.
+        # For intermediate passes, output dimensions equal input, final pass outputs 2x
         if pass_index < self.config.passes - 1:
             out_w, out_h = width, height
         else:

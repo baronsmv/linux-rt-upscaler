@@ -10,8 +10,8 @@ from ..window import close_xcb_connection, open_xcb_connection
 
 logger = logging.getLogger(__name__)
 
-# Mapping from Qt mouse buttons to X11 button numbers.
-# See /usr/include/X11/X.h for X11 button definitions.
+# Mapping from Qt mouse buttons to X11 button numbers
+# See /usr/include/X11/X.h for X11 button definitions
 BUTTON_MAP = {
     Qt.LeftButton: 1,
     Qt.MiddleButton: 2,
@@ -203,9 +203,7 @@ class X11EventForwarder:
             logger.warning(f"Unmapped Qt button {qt_button}, ignoring")
             return
 
-        # Get the current state (buttons + modifiers) before this event.
-        # This is important for proper drag and drop behavior, as the state
-        # field in a press event typically does not yet include the button being pressed.
+        # Get the current state (buttons + modifiers) before this event
         state = self._get_current_state()
 
         if press:
@@ -270,8 +268,8 @@ class X11EventForwarder:
             button = 4 if delta > 0 else 5  # 4 = up, 5 = down
 
         steps = max(1, abs(delta) // 120)
-        # Use the current button+modifier state for each step.
-        # Note: some applications ignore the state field in wheel events.
+        # Use the current button+modifier state for each step
+        # Note: some applications ignore the state field in wheel events
         state = self._get_current_state()
 
         for _ in range(steps):
