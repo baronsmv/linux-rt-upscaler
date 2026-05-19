@@ -239,7 +239,8 @@ class MainWindow(QMainWindow):
         if self.manual_session:
             self.manual_session.pipeline.stop()
             self.manual_session = None
-        QApplication.instance().quit()
+        self.show()
+        QTimer.singleShot(0, self.grid_mgr.start)
 
     def _start_pipeline(self, win_info: WindowInfo) -> None:
         """Create a temporary pipeline session for the given window."""

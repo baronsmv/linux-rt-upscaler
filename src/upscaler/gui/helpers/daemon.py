@@ -4,6 +4,7 @@ import copy
 import logging
 from typing import Optional, TYPE_CHECKING
 
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 from ...pipeline import create_pipeline_session
@@ -171,4 +172,4 @@ class DaemonController:
         self._main_window.raise_()
         self._main_window.activateWindow()
         if self._active:
-            self._grid_mgr.start()
+            QTimer.singleShot(0, self._grid_mgr.start)
