@@ -350,8 +350,12 @@ class Pipeline(QObject):
         self.overlay.update_opacity()
 
         # --- 3. Idle frame detection ---------------------------------------
-        if not self._force_next_frame:
-            current_hash = self._compute_present_state_hash()
+        current_hash = self._compute_present_state_hash()
+
+        if self._force_next_frame:
+            self._force_next_frame = False
+            logger.debug("Forcing first frame after switch")
+        else:
             idle = (
                 not is_dirty
                 and osd_tex is None
@@ -360,7 +364,6 @@ class Pipeline(QObject):
             )
 
             if idle:
-                # Only present if the swapchain is still healthy
                 if self._swapchain_manager.needs_recreation():
                     logger.debug("Swapchain needs recreation, skipping idle present")
                     return
@@ -369,9 +372,9 @@ class Pipeline(QObject):
                     self._scale_factor
                 )
                 return
-        else:
-            self._force_next_frame = False
-            logger.debug("Forcing first frame after switch")
+
+        self._presenter_params_stale = False
+        self._last_present_state_hash = current_hash
 
         # --- 4. Upscale ----------------------------------------------------
         if not self.upscaler_mgr.use_tile:
@@ -531,14 +534,16 @@ class Pipeline(QObject):
             new_win_info.handle, new_win_info.width, new_win_info.height
         )
         self._win_info = new_win_info
-        self._handle_window_change()
-        self._force_next_frame = True
 
-        # Exit daemon waiting state
+        # Show the overlay first so the swapchain is created on a visible surface
         if self._pause_reason == PauseReason.DAEMON_WAITING:
             self._pause_reason = PauseReason.NONE
             self.overlay.show()
             self.daemon_target_acquired.emit()
+
+        # Handle the geometry change
+        self._handle_window_change()
+        self._force_next_frame = True
 
     # ----------------------------------------------------------------------
     # Main loop (runs in dedicated thread)
