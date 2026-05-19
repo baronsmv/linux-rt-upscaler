@@ -5,7 +5,7 @@ from typing import List, Optional, TYPE_CHECKING
 
 import xcffib
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QMessageBox, QMainWindow
+from PySide6.QtWidgets import QMessageBox
 
 from ...window import (
     close_xcb_connection,
@@ -14,6 +14,9 @@ from ...window import (
 )
 
 if TYPE_CHECKING:
+    from ..config import GUIConfig
+    from ..grid import WindowGridScene, FilterBar, WindowGridView
+    from ..main import MainWindow
     from ...window import WindowInfo
 
 logger = logging.getLogger(__name__)
@@ -26,7 +29,7 @@ class WindowGridManager:
 
     Parameters
     ----------
-    main_window: QMainWindow
+    main_window: MainWindow
         The owning main window (used to obtain the native window ID and
         as parent for QMessageBox dialogs).
     gui_config: GUIConfig
@@ -41,13 +44,13 @@ class WindowGridManager:
 
     def __init__(
         self,
-        main_window: QMainWindow,
-        gui_config,
-        scene,
-        view,
-        filter_bar,
+        main_window: MainWindow,
+        gui_config: GUIConfig,
+        scene: WindowGridScene,
+        view: WindowGridView,
+        filter_bar: FilterBar,
     ) -> None:
-        self._mw = main_window
+        self._main_window = main_window
         self._cfg = gui_config
         self._scene = scene
         self._view = view
@@ -69,7 +72,7 @@ class WindowGridManager:
         Begin capturing the window list. Called once after the main
         window is fully constructed.
         """
-        self._own_handle = int(self._mw.winId())
+        self._own_handle = int(self._main_window.winId())
         self._timer.start()
         self._refresh()
 
@@ -120,7 +123,9 @@ class WindowGridManager:
             all_windows: List[WindowInfo] = list_windows(conn=self._conn)
         except Exception:
             logger.exception("Window enumeration failed")
-            QMessageBox.warning(self._mw, "Error", "Could not enumerate windows.")
+            QMessageBox.warning(
+                self._main_window, "Error", "Could not enumerate windows."
+            )
             return
 
         # Filter out own window, empty titles, and apply filter bar text

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import copy
 import logging
 import os
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QTimer, QSettings, QSize, QStandardPaths
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -27,9 +28,13 @@ from .widgets import StyledSplitter
 from ..config import find_matching_profile, parse_config
 from ..pipeline import create_pipeline_session
 from ..utils import system_color_scheme
-from ..window import WindowInfo, activate_window
+from ..window import activate_window
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from ..pipeline import PipelineSession
+    from ..window import WindowInfo
 
 
 class MainWindow(QMainWindow):
@@ -49,7 +54,7 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__(parent)
         self._config_manager = config_manager
-        self._manual_session = None  # used for non-daemon launches
+        self.manual_session: Optional[PipelineSession] = None
 
         # Visual configuration
         scheme = system_color_scheme()
@@ -220,12 +225,20 @@ class MainWindow(QMainWindow):
             self.left_sidebar.set_active_item(profile_name)
             logger.info("Auto-applied profile '%s'.", profile_name)
 
+        # If daemon is running, switch its pipeline to the selected window
+        if self.daemon_ctrl.active:
+            self.grid_mgr.stop()
+            self.hide()
+            activate_window(win_info.handle)
+            self.daemon_ctrl.request_switch(win_info)
+            return
+
         QTimer.singleShot(0, lambda: self._start_pipeline(win_info))
 
     def _on_manual_overlay_closed(self) -> None:
-        if self._manual_session:
-            self._manual_session.pipeline.stop()
-            self._manual_session = None
+        if self.manual_session:
+            self.manual_session.pipeline.stop()
+            self.manual_session = None
         QApplication.instance().quit()
 
     def _start_pipeline(self, win_info: WindowInfo) -> None:
@@ -234,14 +247,16 @@ class MainWindow(QMainWindow):
         self.grid_mgr.stop()
         activate_window(win_info.handle)
         self.hide()
-        parse_config(self._config_manager.effective_config)
+        eff_cfg = copy.deepcopy(self._config_manager.effective_config)
+        eff_cfg.daemon = False
+        parse_config(eff_cfg)
 
         try:
-            self._manual_session = create_pipeline_session(
-                self._config_manager.effective_config,
+            self.manual_session = create_pipeline_session(
+                eff_cfg,
                 win_info,
             )
-            self._manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
+            self.manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
         except Exception as e:
             logger.exception("Failed to start pipeline")
             QMessageBox.critical(None, "Error", f"Could not start pipeline:\n{e}")
