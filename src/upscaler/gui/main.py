@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
         # ------------------------------------------------------------------
         # Background tasks
         # ------------------------------------------------------------------
-        self.grid_mgr.start()
+        QTimer.singleShot(0, self.grid_mgr.start)
         self._settings = QSettings("linux-rt-upscaler")
         geometry = self._settings.value("mainwindow/geometry")
         if geometry is not None:
