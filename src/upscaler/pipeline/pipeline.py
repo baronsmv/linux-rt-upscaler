@@ -1,6 +1,7 @@
 import copy
 import logging
 import threading
+import time
 from enum import Enum, auto
 from queue import Empty, Queue
 from typing import Any, Dict, Optional, Tuple
@@ -269,6 +270,7 @@ class Pipeline(QObject):
             self.overlay.hide()
         elif old != PauseReason.NONE and reason == PauseReason.NONE:
             self.overlay.show()
+            time.sleep(0.1)
             self._presenter_params_stale = True
 
     # ----------------------------------------------------------------------
