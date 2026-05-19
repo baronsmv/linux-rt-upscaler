@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from PySide6.QtCore import QSharedMemory
 
 from ..env import setup_environment
 
@@ -18,6 +19,13 @@ from ..config import parse_args, validate_overrides, setup_logging
 
 def main() -> None:
     """Start the upscaler GUI application."""
+    # Single-instance guard
+    shared = QSharedMemory("linux-rt-upscaler")
+    if not shared.create(1):
+        # Another instance is already running
+        print("Another instance of upscale-gui is already running.")
+        sys.exit(0)
+
     # Parse CLI arguments (the GUI accepts the same options as the non-GUI version)
     overrides, profile_name, config_path = parse_args()
     validate_overrides(overrides)
