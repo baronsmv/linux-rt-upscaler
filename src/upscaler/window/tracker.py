@@ -119,7 +119,7 @@ class WindowTracker:
             self.alive = False
             self.handle = 0
             return False
-        except (xcffib.xproto.BadDrawable, xcffib.ConnectionError) as e:
+        except (xcffib.xproto.BadDrawable, xcffib.ConnectionException) as e:
             logger.debug(f"XCB error during alive check: {e}")
             # Could be a stale connection - attempt to reopen
             self._open_connection()
@@ -172,8 +172,9 @@ class WindowTracker:
 
             _, _, new_width, new_height = geom
 
-            # Get window attributes to determine minimised state
+            # Get window attributes to determine minimized state
             attrs = self._conn.core.GetWindowAttributes(self.handle).reply()
+
             # MapState: 0 = Unmapped, 1 = Unviewable, 2 = Viewable
             self.minimized = attrs.map_state != xcffib.xproto.MapState.Viewable
 
@@ -185,7 +186,7 @@ class WindowTracker:
             self.alive = False
             self.handle = 0
             return False
-        except (xcffib.xproto.BadDrawable, xcffib.ConnectionError) as e:
+        except (xcffib.xproto.BadDrawable, xcffib.ConnectionException) as e:
             logger.debug(f"XCB error during update: {e}, attempting reconnect")
             # Attempt to reopen the connection and retry once
             self._open_connection()

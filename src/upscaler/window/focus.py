@@ -103,7 +103,7 @@ class FocusMonitor(QObject):
                             # Emit signal (queued to main thread)
                             self.focus_changed.emit(win_info)
 
-                except (xcffib.ConnectionError, xcffib.xproto.BadWindow) as e:
+                except (xcffib.ConnectionException, xcffib.xproto.BadWindow) as e:
                     logger.warning(f"XCB connection error in focus monitor: {e}")
                     # Attempt to reconnect
                     close_xcb_connection(conn)

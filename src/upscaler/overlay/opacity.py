@@ -132,7 +132,7 @@ class OpacityController(QObject):
             opacity = self.max_opacity if inside else self.min_opacity
             self.overlay.setWindowOpacity(opacity)
 
-        except (xcffib.ConnectionError, xcffib.xproto.BadWindow) as e:
+        except (xcffib.ConnectionException, xcffib.xproto.BadWindow) as e:
             logger.debug(f"XCB error in opacity update: {e}, reopening connection")
             self.close()
             self._open_connection()
