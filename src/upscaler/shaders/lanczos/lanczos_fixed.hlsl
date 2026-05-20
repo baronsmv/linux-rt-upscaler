@@ -1,54 +1,31 @@
-// =============================================================================
-//  Lanczos2 (Fixed Radius 2) - Compute Shader
-//  ------------------------------------------
-//  High-performance 4x4 Lanczos-2 resampling for upscaling.
-//  Exact replica of the original working Lanczos-2 upscaler, with optional
-//  blur/softness. Uses hardware Gather for optimal memory throughput.
-//  Anti-ringing clamps to the full 4x4 pixel window - the only configuration
-//  that proved artifact-free in practice. Linear-light processing (square ->
-//  process -> sqrt) is always applied; this matches the original behaviour.
+// ============================================================================
+//  Lanczos2 (Fixed Radius 2)
+//  -------------------------
+//  Single-pass 2D resampling for upscaling.
 //
-//  This shader is used automatically when radiusX = radiusY = 2 (upscaling).
-//  For downscaling or non-uniform scaling, lanczos_adaptive.hlsl is used.
+//  This shader should be only be used when radiusX = radiusY = 2 (upscaling),
+//  otherwise lanczos_adaptive.hlsl should be used for better antialiasing.
 //
 //  Features:
-//    - Lanczos-2 kernel (fixed radius 2)
-//    - Hardware Gather (4 Gather calls per color channel)
-//    - Separable, normalised weights - zero sum drift
-//    - Full 4x4 anti-ringing clamp (proven, block-free)
-//    - Implicit linear-light processing (squaring / sqrt)
-//    - Integer-pixel alignment - no jitter
-//    - Optional blur parameter (1.0 = standard Lanczos-2)
+//    - Lanczos-2 kernel (fixed radius 2).
+//    - Hardware Gather (4 Gather calls per color channel).
+//    - Full 4x4 anti-ringing clamp.
+//    - Implicit linear-light processing.
+//    - Integer-pixel alignment.
 //
-//  Observations:
-//    - Every deviation we tested (variable anti-ringing neighborhood, soft
-//      clamp, togglable linear light, different gather offset) introduced
-//      visible or subtle blockiness.
-//    - The adaptive shader (lanczos_adaptive.hlsl) handles the advanced
-//      features (tight/soft anti-ringing, linear-light toggle) correctly
-//      because its explicit pixel-offset loop makes the center region trivial
-//      to define. For radius 2 upscaling, these features are not needed and
-//      the fixed shader is kept simple and safe.
-//
-//  Constant buffer layout (must match CB_FORMAT_FIXED):
-//    float4 bgColor;               // color outside the destination rect
-//    uint   srcWidth, srcHeight;
-//    uint   dstTotalWidth, dstTotalHeight;
-//    int    dstX, dstY, dstW, dstH;
-//    float  blur;                  // kernel softness (1.0 = standard)
-//
-//  Workgroup size: 16x16.
-//  Dispatch:
-//    groupsX = ceil(dstTotalWidth  / 16)
-//    groupsY = ceil(dstTotalHeight / 16)
+//  Note: Every deviation tested (variable anti-ringing neighborhood, soft
+//        clamp, togglable linear light, different gather offset) introduced
+//        visible or subtle blockiness. Thus, these features are only applied
+//        to the adaptive shader (lanczos_adaptive.hlsl), not here.
 //
 //  Adapted from Magpie effect by funnyplanter for linux-rt-upscaler.
-// =============================================================================
+//  Distributed under the GPL-3.0 license.
+// ============================================================================
 
-Texture2D<float4>   InputTex    : register(t0);
+Texture2D<float4>   InputTex     : register(t0);
 [[vk::image_format("rgba8")]]
-RWTexture2D<float4> OutputTex   : register(u0);
-SamplerState        PointSampler: register(s0);
+RWTexture2D<float4> OutputTex    : register(u0);
+SamplerState        PointSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
@@ -59,11 +36,11 @@ cbuffer Constants : register(b0)
     float  blur;
 }
 
-// -------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 //  Lanczos-2 kernel
 //  L(x) = sinc(x) · sinc(x/2)   for |x| < 2,  1 at x=0.
 //  blur > 1.0 softens the kernel (x -> x / blur).
-// -------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 #define PI 3.1415926535897932
 
 float lanczos(float x)

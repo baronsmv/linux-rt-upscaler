@@ -1,37 +1,24 @@
-// =============================================================================
-//  Radial Vignette - Compute Shader
-//  --------------------------------
-//  Darkens the screen corners softly, drawing the eye toward the center.
+// ============================================================================
+//  Radial Vignette
+//  ---------------
+//  Darkens the screen corners.
 //
-//  Features:
-//    - Configurable strength, radius, and falloff.
-//    - Smooth, distance-based darkening with no hard edges.
-//    - Operates directly on the screen texture (in-place, safe).
-//    - Alpha-preserving - only RGB is affected.
-//    - Zero-cost when strength = 0.0.
-//
-//  Workgroup size: 16x16 threads.
-//  Dispatch:
-//    groupsX = ceil(dstWidth  / 16)
-//    groupsY = ceil(dstHeight / 16)
+//  Components:
+//    - Distance-based darkening with no hard edges.
 //
 //  Tuning:
-//      strength = 0.0   -> off (default)
+//    - strength = 0.0   -> off
 //                 0.2   -> barely visible
 //                 0.5   -> moderate
 //                 1.0   -> black corners
-//      radius   = 0.0   -> darkening starts at center
-//                 0.7   -> keeps center bright (recommended)
+//    - radius   = 0.0   -> darkening starts at center
+//                 0.7   -> keeps center bright
 //                 1.2   -> only extreme corners
-//      falloff  = 1.0   -> gentle, wide transition
+//    - falloff  = 1.0   -> gentle, wide transition
 //                 3.0   -> sharp vignette ring
 //
-//  Integration:
-//    - Place after Bloom and before Film Grain.
-//    - Uses the screen texture as both input and output.
-//
-//  Based on standard vignette techniques for linux-rt-upscaler.
-// =============================================================================
+//  Written for linux-rt-upscaler. Distributed under the GPL-3.0 license.
+// ============================================================================
 
 Texture2D<float4> InputTex  : register(t0);
 [[vk::image_format("rgba8")]]
@@ -42,8 +29,8 @@ cbuffer Constants : register(b0)
     float vignetteStrength;     // 0.0 - 1.0
     uint  dstWidth;
     uint  dstHeight;
-    float vignetteRadius;       // distance where darkening starts (0.0 = center, 1.5 = extreme)
-    float vignetteFalloff;      // soft edge sharpness (higher = sharper transition)
+    float vignetteRadius;       // distance where darkening starts (0.0 - 1.5)
+    float vignetteFalloff;      // soft edge sharpness (higher = sharper)
 };
 
 [numthreads(16, 16, 1)]
@@ -56,17 +43,17 @@ void main(uint3 dtid : SV_DispatchThreadID)
     // ---- 1. Load original color --------------------------------------------
     float4 color = InputTex.Load(int3(pos, 0));
 
-    // ---- 2. Distance from center (normalised to [0, ~0.707] for square image) -----
+    // ---- 2. Distance from center (norm. to [0, ~0.707] for square image) ---
     float2 uv   = (float2(pos) + 0.5) / float2(dstWidth, dstHeight) - 0.5;
     float  dist = length(uv);
 
-    // ---- 3. Darkening factor -------------------------------------------------
+    // ---- 3. Darkening factor -----------------------------------------------
     //  factor = smoothstep-like blend: 0.0 where dist <= radius,
     //  rising linearly (or faster with falloff exponent) beyond it.
     float factor = saturate((dist - vignetteRadius) * vignetteFalloff);
     float darken = 1.0 - vignetteStrength * factor;
 
-    // ---- 4. Apply and preserve alpha -----------------------------------------
+    // ---- 4. Apply and preserve alpha ---------------------------------------
     color.rgb *= darken;
 
     OutputTex[pos] = float4(color.rgb, color.a);

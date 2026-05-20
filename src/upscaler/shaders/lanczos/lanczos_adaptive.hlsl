@@ -1,42 +1,22 @@
-// =============================================================================
-//  Adaptive Lanczos (Variable Radius) - Compute Shader
-//  ---------------------------------------------------
-//  Single-pass, high-quality 2D resampling for downscaling and non-uniform
-//  scaling. Uses a generic variable-radius Lanczos kernel with integer-pixel
-//  alignment. Optimised for correctness, not for speed - the host ensures this
-//  shader is only used when the filter radius is not 2 in both directions
-//  (upscaling is handled by the dedicated `lanczos_fixed.hlsl`).
+// ============================================================================
+//  Adaptive Lanczos (Variable Radius)
+//  ----------------------------------
+//  Single-pass 2D resampling for downscaling and non-uniform scaling.
 //
-//  Features:
-//    - Correct variable-radius Lanczos kernel (sinc-based)
-//    - Independent X/Y radii (pre-computed by the host)
-//    - Linear-light processing (optional)
-//    - Soft anti-ringing with configurable neighborhood
-//    - Integer-pixel alignment - no jitter
-//
-//  Constant buffer (must match LanczosScaler.CB_FORMAT_ADAPTIVE):
-//    float4 bgColor;           // color outside the destination rect
-//    uint   srcWidth, srcHeight;
-//    uint   dstTotalWidth, dstTotalHeight;
-//    int    dstX, dstY, dstW, dstH;
-//    uint   radiusX;           // pre-computed filter radius in X
-//    uint   radiusY;           // pre-computed filter radius in Y
-//    float  blur;              // kernel softness (1.0 = standard)
-//    float  antiringStrength;  // 0.0 - 1.0
-//    bool   linearLight;
-//    bool   tightAntiring;     // true = central 2x2 only for ringing bounds
-//
-//  Workgroup size: 16x16.
-//  Dispatch:
-//    groupsX = ceil(dstTotalWidth  / 16)
-//    groupsY = ceil(dstTotalHeight / 16)
+//  Components:
+//    - Variable-radius Lanczos kernel (sinc-based).
+//    - Independent X/Y radii.
+//    - Optional linear-light processing.
+//    - Optional soft anti-ringing.
+//    - Integer-pixel alignment.
 //
 //  Adapted from Magpie effect by funnyplanter for linux-rt-upscaler.
-// =============================================================================
+//  Distributed under the GPL-3.0 license.
+// ============================================================================
 
-Texture2D<float4>   InputTex    : register(t0);
+Texture2D<float4>   InputTex  : register(t0);
 [[vk::image_format("rgba8")]]
-RWTexture2D<float4> OutputTex   : register(u0);
+RWTexture2D<float4> OutputTex : register(u0);
 
 cbuffer Constants : register(b0)
 {
@@ -52,12 +32,12 @@ cbuffer Constants : register(b0)
     bool   tightAntiring;        // true = only central 2x2 for ringing bounds
 }
 
-// =============================================================================
-//  Correct Lanczos kernel
+// ============================================================================
+//  Lanczos kernel
 //  L(x) = sinc(x) · sinc(x / r)    for |x| < r
 //       = 1                        for x = 0
 //       = 0                        for |x| ≥ r
-// =============================================================================
+// ============================================================================
 #define PI 3.1415926535897932f
 
 float lanczos(float x, float r)
@@ -70,9 +50,9 @@ float lanczos(float x, float r)
     return (r * sin(pi_x) * sin(pi_x / r)) / (pi_x * pi_x);
 }
 
-// =============================================================================
+// ============================================================================
 //  Main entry point - generic variable-radius convolution
-// =============================================================================
+// ============================================================================
 [numthreads(16, 16, 1)]
 void main(uint3 dtid : SV_DispatchThreadID)
 {
@@ -88,7 +68,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
         return;
     }
 
-    // ---- Map destination pixel to continuous source coordinate ------------
+    // ---- Map destination pixel to continuous source coordinate -------------
     float2 uv       = (float2(outPos.x - dstX, outPos.y - dstY) + 0.5f) / float2(dstW, dstH);
     float2 srcCoord = uv * float2(srcWidth, srcHeight);
 
@@ -100,7 +80,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
     float  weightSum = 0.0f;
     float3 vmin      = 1e6f, vmax = -1e6f;
 
-    // ---- Walk the sampling window (size determined by radiusX/radiusY) ----
+    // ---- Walk the sampling window (size determined by radiusX/radiusY) -----
     //   iy from -iry+1 to iry   (e.g. for radius 3: -2, -1, 0, 1, 2, 3)
     //   ix from -irx+1 to irx
     int irx = int(radiusX);

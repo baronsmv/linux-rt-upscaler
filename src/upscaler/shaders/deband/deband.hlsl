@@ -1,59 +1,25 @@
 // =============================================================================
-//  Anisotropic Stochastic Debanding - Compute Shader
-//  -------------------------------------------------
-//  Removes color banding artifacts that occasionally survive AI upscaling,
-//  particularly visible in smooth gradients (skies, fog, flat backgrounds).
+//  Anisotropic Stochastic Debanding
+//  --------------------------------
+//  Removes color banding artifacts from SRCNN upscaling, visible in gradients.
 //
-//  How it works:
-//    - Four pseudo-random sample points are chosen per pixel, varying in angle
-//      and distance up to a strength-controlled radius (max 16 pixels).
-//    - Each sample is compared to the center pixel - if the difference is small
-//      (band-like), it contributes to a weighted average; large differences
-//      (real edges) are ignored.
-//    - A small amount of high-frequency dither (0.5/255) is injected per frame,
-//      breaking any remaining spatial correlation and preventing the GPU’s
-//      output pipeline from re-banding during the final 8-bit conversion.
-//    - The result is clamped to the local min/max of all the samples,
-//      guaranteeing no overshoot or haloing.
+//  Components:
+//    - Linear-light processing.
+//    - Dynamic 4-tap sampling.
+//    - Edge-preserving threshold.
+//    - Grain / dither injection.
+//    - Frame-index parameter.
 //
-//  Features:
-//    - Linear-light processing - samples squared before filtering, sqrt after,
-//      for perceptually uniform smoothing.
-//    - Dynamic 4-tap sampling - breaks band structures statistically.
-//    - Edge-preserving threshold - line art and text remain sharp.
-//    - Grain / dither injection - eliminates "shimmer" or static patterns
-//      when strength is high.
-//    - Frame-index parameter - to avoid static noise, pass an increasing
-//      integer each frame (e.g., frame count).
+//  Tuning (strength):
+//    - strength = 0.0   ->  pass-through (original image)
+//    - strength = 0.3   ->  subtle debanding
+//    - strength = 0.6   ->  strong, use with grain for best results
+//    - strength = 1.0   ->  maximum (may soften very fine textures)
 //
-//  Workgroup size: 16x16 threads.
-//  Dispatch:
-//    groupsX = ceil(dstWidth  / 16)
-//    groupsY = ceil(dstHeight / 16)
-//
-//  Tuning:
-//      strength = 0.0   ->  pass-through (original image)
-//      strength = 0.3   ->  subtle debanding
-//      strength = 0.6   ->  strong, use with grain for best results
-//      strength = 1.0   ->  maximum (may soften very fine textures)
-//
-//  Constant buffer layout (must match Python struct packing):
-//      float debandStrength;    // 0.0 - 1.0
-//      uint  dstWidth;
-//      uint  dstHeight;
-//      uint  frameIndex;        // optional frame counter (0-based)
-//
-//  Integration:
-//    - Place between CuNNy AI upscale and Lanczos scaling.
-//    - Input and output textures must be separate (avoid read-after-write
-//      hazards when using an intermediate texture).
-//    - Pass an incrementing `frameIndex` from the pipeline to get
-//      temporally varying dither.
-//
-//  Adapted from libplacebo / f3kdb for linux-rt-upscaler.
-// =============================================================================
+//  Written for linux-rt-upscaler. Distributed under the GPL-3.0 license.
+// ============================================================================
 
-Texture2D<float4> InputTex  : register(t0);
+Texture2D<float4>   InputTex  : register(t0);
 [[vk::image_format("rgba8")]]
 RWTexture2D<float4> OutputTex : register(u0);
 
