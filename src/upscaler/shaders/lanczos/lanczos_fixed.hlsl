@@ -3,7 +3,7 @@
 //  -------------------------
 //  Single-pass 2D resampling for upscaling.
 //
-//  This shader should be only be used when radiusX = radiusY = 2 (upscaling),
+//  This shader should only be used when radiusX = radiusY = 2 (upscaling),
 //  otherwise lanczos_adaptive.hlsl should be used for better antialiasing.
 //
 //  Features:
