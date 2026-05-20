@@ -3,7 +3,7 @@ from dataclasses import dataclass, field, fields
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from platformdirs import user_pictures_dir
+from PySide6.QtCore import QStandardPaths
 
 UPSCALING_MODELS = (
     "veryfast",
@@ -141,7 +141,9 @@ class Config:
     overlay_opacity_max: float = 1.0  # Not in argparser
 
     # Screenshots
-    screenshot_dir: str = os.path.join(user_pictures_dir(), "Screenshots")
+    screenshot_dir: str = os.path.join(
+        QStandardPaths.writableLocation(QStandardPaths.PicturesLocation), "Screenshots"
+    )
     screenshot_filename: str = "Screenshot_{timestamp:%Y%m%d_%H%M%S}.png"
 
     # OSD

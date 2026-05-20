@@ -29,7 +29,6 @@ requires-python = ">=3.10"
 dependencies = [
     "numpy",
     "pillow",
-    "platformdirs",
     "pyside6",
     "pyyaml",
     "screeninfo",
