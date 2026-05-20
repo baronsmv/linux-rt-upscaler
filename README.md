@@ -52,6 +52,7 @@ A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It u
 > #### Debian / Ubuntu / Linux Mint
 >
 > ```sh
+> sudo apt update
 > sudo apt install libxcb-cursor0
 > ```
 >
