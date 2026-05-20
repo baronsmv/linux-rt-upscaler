@@ -38,6 +38,42 @@ A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It u
 - GNU/Linux (X11 or Wayland with XWayland)
 - Vulkan-capable GPU (NVIDIA, AMD, Intel)
 - Python 3.10 or newer
+- Qt XCB plugin (`libxcb-cursor0` / `xcb-util-cursor`)
+
+> [!IMPORTANT]
+>
+> **Qt XCB plugin**
+>
+> This library is not installed by default on most desktop environments.
+>
+> <details>
+> <summary>Install instructions (click to expand)</summary>
+>
+> #### Debian / Ubuntu / Linux Mint
+>
+> ```sh
+> sudo apt install libxcb-cursor0
+> ```
+>
+> #### Fedora / RHEL / CentOS
+>
+> ```sh
+> sudo dnf install xcb-util-cursor
+> ```
+>
+> #### Arch Linux / CachyOS
+>
+> ```sh
+> sudo pacman -S xcb-util-cursor
+> ```
+>
+> #### openSUSE
+>
+> ```sh
+> sudo zypper install libxcb-cursor0
+> ```
+>
+> </details>
 
 ## Installation
 
