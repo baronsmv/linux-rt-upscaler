@@ -38,7 +38,7 @@ A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It u
 - GNU/Linux (X11 or Wayland with XWayland)
 - Vulkan-capable GPU (NVIDIA, AMD, Intel)
 - Python 3.10 or newer
-- Qt XCB plugin (`libxcb-cursor0` / `xcb-util-cursor`)
+- Qt XCB plugin
 
 > [!IMPORTANT]
 >
