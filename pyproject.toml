@@ -24,10 +24,18 @@ classifiers = [
     "Topic :: Multimedia :: Graphics :: Capture",
     "Topic :: System :: Hardware :: Hardware Drivers",
 ]
-keywords = ["upscaler", "ai", "cunny", "linux", "x11", "vulkan"]
+keywords = [
+    "srcnn",
+    "upscaling",
+    "cunny",
+    "super-resolution",
+    "neural-network",
+    "linux",
+    "x11",
+    "vulkan",
+]
 requires-python = ">=3.10"
 dependencies = [
-    "numpy",
     "pillow",
     "pyside6",
     "pyyaml",
