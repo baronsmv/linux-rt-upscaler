@@ -28,7 +28,7 @@ cbuffer Constants : register(b0)
     uint   radiusY;              // pre-computed filter radius in Y
     float  blur;                 // kernel softness (1.0 = standard)
     float  antiringStrength;     // 0 = off, 1 = full hard clamp
-    bool   linearLight;          // process in linear light (recommended)
+    bool   linearLight;          // process in linear light
     bool   tightAntiring;        // true = only central 2x2 for ringing bounds
 }
 
@@ -51,7 +51,7 @@ float lanczos(float x, float r)
 }
 
 // ============================================================================
-//  Main entry point - generic variable-radius convolution
+//  Main entry point
 // ============================================================================
 [numthreads(16, 16, 1)]
 void main(uint3 dtid : SV_DispatchThreadID)

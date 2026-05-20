@@ -30,7 +30,6 @@ dependencies = [
     "numpy",
     "pillow",
     "platformdirs",
-    "psutil",
     "pyside6",
     "pyyaml",
     "screeninfo",

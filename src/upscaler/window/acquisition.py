@@ -1,29 +1,33 @@
+from __future__ import annotations
+
 import logging
+import os
 import re
 import shutil
 import struct
 import subprocess
 import sys
 import time
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional, Tuple, Set, TYPE_CHECKING
 
-import psutil
 import xcffib
 from xcffib.xproto import Window
 
-from .connection import open_xcb_connection, close_xcb_connection
+from .connection import close_xcb_connection, open_xcb_connection
 from .info import (
-    WindowInfo,
     AtomCache,
+    WindowInfo,
+    enumerate_all_windows,
+    get_window_class,
     get_window_geometry,
     get_window_name,
-    get_window_class,
     get_window_pid,
-    is_viewable,
     is_application_window,
-    enumerate_all_windows,
+    is_viewable,
 )
-from ..config import Config
+
+if TYPE_CHECKING:
+    from ..config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +143,23 @@ def get_active_window() -> Optional[WindowInfo]:
         close_xcb_connection(conn)
 
 
+def _get_all_descendant_pids(pid: int) -> Set[int]:
+    """Return a set containing *pid* and all its descendant PIDs (recursively)."""
+    pids = {pid}
+    try:
+        with open(f"/proc/{pid}/children", "r") as f:
+            children = f.read().strip().split()
+    except (FileNotFoundError, ProcessLookupError):
+        return pids
+    for child_pid_str in children:
+        try:
+            child_pid = int(child_pid_str)
+        except ValueError:
+            continue
+        pids.update(_get_all_descendant_pids(child_pid))
+    return pids
+
+
 def _find_by_pid(
     pid: int,
     pid_timeout: int = 5,
@@ -174,10 +195,10 @@ def _find_by_pid(
     """
     # Gather all PIDs in the process tree
     try:
-        proc = psutil.Process(pid)
-        pids: Set[int] = {pid} | {child.pid for child in proc.children(recursive=True)}
+        os.kill(pid, 0)
+        pids = _get_all_descendant_pids(pid)
         logger.debug(f"Process tree for PID {pid}: {pids}")
-    except psutil.NoSuchProcess:
+    except (ProcessLookupError, FileNotFoundError):
         logger.warning(f"Process {pid} not found; using only the provided PID")
         pids = {pid}
 
