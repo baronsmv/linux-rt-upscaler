@@ -90,22 +90,22 @@ float OrganicNoise(uint2 p, uint frame, float grainSz) {
   float4 source = InputTex.Load(int3(pos, 0));
   float3 color = source.rgb;
 
-  // ---- 1. Perceptual luminance (Rec.709) ---------------------------------
+  // ---- 1. Perceptual luminance (Rec.709) -----------------------------------
   float luma = dot(color, float3(0.2126, 0.7152, 0.0722));
 
   // ---- 2. Luminance masking - peaks at 0.5, falls off to 0 at 0.0 and 1.0
   float lumaMask = saturate(4.0 * luma * (1.0 - luma));
 
-  // ---- 3. Generate organic noise (varies with frame and grain size) ------
+  // ---- 3. Generate organic noise (varies with frame and grain size) --------
   float noise = OrganicNoise(pos, frameIndex, grainSize);
 
-  // ---- 4. Soft-light blending --------------------------------------------
+  // ---- 4. Soft-light blending ----------------------------------------------
   float3 grainResult;
   if (noise < 0.5)
     grainResult = color * (1.0 - (0.5 - noise) * grainStrength * lumaMask);
   else
     grainResult = color + (noise - 0.5) * grainStrength * lumaMask;
 
-  // ---- 5. Output (alpha preserved) ---------------------------------------
+  // ---- 5. Output (alpha preserved) -----------------------------------------
   OutputTex[pos] = float4(saturate(grainResult), source.a);
 }

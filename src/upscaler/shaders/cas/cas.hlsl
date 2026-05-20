@@ -44,7 +44,7 @@ float3 LoadPixel(int2 coord) {
   if (pos.x >= dstWidth || pos.y >= dstHeight)
     return;
 
-  // ---- 1. Sample 5-tap neighborhood (center + N/S/E/W) -------------------
+  // ---- 1. Sample 5-tap neighborhood (center + N/S/E/W) ---------------------
   //  Using only the axial neighbours keeps the kernel compact while
   //  preserving edge features.
   //  The local contrast is measured in these 5 values.
@@ -54,7 +54,7 @@ float3 LoadPixel(int2 coord) {
   float3 e = LoadPixel(int2(pos.x + 1, pos.y)); // east
   float3 w = LoadPixel(int2(pos.x - 1, pos.y)); // west
 
-  // ---- 2. Convert to approximate linear light ----------------------------
+  // ---- 2. Convert to approximate linear light ------------------------------
   //  Sharpening in linear space yields a more natural, perceptually uniform
   //  result. We use a simple squaring from sRGB, accurate enough for this
   //  post-effect and zero extra texture reads.
@@ -64,14 +64,14 @@ float3 LoadPixel(int2 coord) {
   e *= e;
   w *= w;
 
-  // ---- 3. Local min / max for anti-ringing -------------------------------
+  // ---- 3. Local min / max for anti-ringing ---------------------------------
   //  Compute the min and max of the 5 taps. The final sharpened value will
   //  be clamped to this range, guaranteeing no overshoot beyond the local
   //  luminance extremes.
   float3 minRGB = min(c, min(min(n, s), min(e, w)));
   float3 maxRGB = max(c, max(max(n, s), max(e, w)));
 
-  // ---- 4. Compute CAS weight ---------------------------------------------
+  // ---- 4. Compute CAS weight -----------------------------------------------
   //  - For flat regions (contrast ≈ 0), weight -> 0, so no sharpening is
   //    applied, preserving smooth gradients.
   //  - For edges, weight becomes large, allowing strong sharpening.
@@ -84,17 +84,17 @@ float3 LoadPixel(int2 coord) {
   float3 weight =
       max(0.15, saturate(min(minRGB, 1.0 - maxRGB) / (contrast + 1e-5)));
 
-  // ---- 5. Map user `sharpeningStrength` to peak sharpening offset --------
+  // ---- 5. Map user `sharpeningStrength` to peak sharpening offset ----------
   //  The peak value controls how much the center pixel deviates from the
   //  neighborhood average.
   float peak = -1.0 / lerp(8.0, 4.0, sharpeningStrength);
   float3 wRGB = weight * peak;
 
-  // ---- 6. Convolve -------------------------------------------------------
+  // ---- 6. Convolve ---------------------------------------------------------
   //  The sharpening operation blends the center pixel with its neighbours.
   float3 res = (c + (n + s + e + w) * wRGB) / (1.0 + 4.0 * wRGB);
 
-  // ---- 7. Clamp and return to gamma space --------------------------------
+  // ---- 7. Clamp and return to gamma space ----------------------------------
   //  Clamp to local extrema to remove any residual overshoot, then convert
   //  back to sRGB with square-root.
   res = clamp(res, minRGB, maxRGB);

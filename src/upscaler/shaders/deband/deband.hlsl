@@ -1,4 +1,4 @@
-// =============================================================================
+// ============================================================================
 //  Anisotropic Stochastic Debanding
 //  --------------------------------
 //  Removes color banding artifacts from SRCNN upscaling, visible in gradients.
@@ -30,25 +30,25 @@ cbuffer Constants : register(b0) {
   uint frameIndex; // increment every frame for dynamic dither
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 //  High-quality pseudo-random number generator (PCG-ish)
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 float Hash(uint2 seed) {
   return frac(sin(dot(float2(seed), float2(12.9898, 78.233))) * 43758.5453);
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 //  Load a pixel and convert to approximate linear light (sRGB -> linear)
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 float3 LoadPixelLinear(int2 coord) {
   coord = clamp(coord, int2(0, 0), int2(dstWidth - 1, dstHeight - 1));
   float3 col = InputTex.Load(int3(coord, 0)).rgb;
   return col * col;
 }
 
-// =============================================================================
+// ============================================================================
 //  Main kernel
-// =============================================================================
+// ============================================================================
 [numthreads(16, 16, 1)] void main(uint3 dtid : SV_DispatchThreadID) {
   uint2 pos = dtid.xy;
   if (pos.x >= dstWidth || pos.y >= dstHeight)
@@ -57,28 +57,28 @@ float3 LoadPixelLinear(int2 coord) {
   // ---- 1. center pixel (linear light) --------------------------------------
   float3 center = LoadPixelLinear(pos);
 
-  // ---- 2. Pseudo-random parameters from hash --------------------------------
+  // ---- 2. Pseudo-random parameters from hash -------------------------------
   //  seed unique per pixel and frame -> no temporal correlation of artifacts.
   float seed = Hash(pos + frameIndex);
 
-  // ---- 3. Dynamic search radius -------------------------------------------
+  // ---- 3. Dynamic search radius --------------------------------------------
   //  Strength 0.0 -> radius 0, no debanding.
   //  Strength 1.0 -> radius up to 16 pixels (handles wide bands).
   float radius = debandStrength * 16.0;
 
-  // ---- 4. Random angle and distance for first sample direction ------------
+  // ---- 4. Random angle and distance for first sample direction -------------
   float angle = seed * 6.283185f; // [0, 2π)
   float2 dir = float2(cos(angle), sin(angle));
   float dist = seed * radius;
 
-  // ---- 5. Four samples at orthogonal positions, at distance `dist` --------
+  // ---- 5. Four samples at orthogonal positions, at distance `dist` ---------
   //  Two along the random direction, two perpendicular.
   float3 tap1 = LoadPixelLinear(pos + int2(dir * dist));
   float3 tap2 = LoadPixelLinear(pos - int2(dir * dist));
   float3 tap3 = LoadPixelLinear(pos + int2(float2(-dir.y, dir.x) * dist));
   float3 tap4 = LoadPixelLinear(pos - int2(float2(-dir.y, dir.x) * dist));
 
-  // ---- 6. Edge-aware blend weights -----------------------------------------
+  // ---- 6. Edge-aware blend weights ------------------------------------------
   //  The threshold separates "banding" (small difference) from "real edge"
   //  (large difference). The formula is scaled by strength, with a
   //  minimum safety margin of 2/255 (≈0.0078 in linear).
@@ -108,7 +108,7 @@ float3 LoadPixelLinear(int2 coord) {
   float grain = (seed - 0.5f) * (1.0f / 255.0f);
   debanded += grain * debandStrength;
 
-  // ---- 9. Clamp to the local neighborhood’s min/max -----------------------
+  // ---- 9. Clamp to the local neighborhood’s min/max ------------------------
   //  Prevents any overshoot that could create false edges or color shifts.
   float3 minN = min(center, min(min(tap1, tap2), min(tap3, tap4)));
   float3 maxN = max(center, max(max(tap1, tap2), max(tap3, tap4)));

@@ -37,20 +37,20 @@ cbuffer Constants : register(b0) {
   if (pos.x >= dstWidth || pos.y >= dstHeight)
     return;
 
-  // ---- 1. Load original color --------------------------------------------
+  // ---- 1. Load original color ----------------------------------------------
   float4 color = InputTex.Load(int3(pos, 0));
 
-  // ---- 2. Distance from center (norm. to [0, ~0.707] for square image) ---
+  // ---- 2. Distance from center (norm. to [0, ~0.707] for square image) -----
   float2 uv = (float2(pos) + 0.5) / float2(dstWidth, dstHeight) - 0.5;
   float dist = length(uv);
 
-  // ---- 3. Darkening factor -----------------------------------------------
+  // ---- 3. Darkening factor -------------------------------------------------
   //  factor = smoothstep-like blend: 0.0 where dist <= radius,
   //  rising linearly (or faster with falloff exponent) beyond it.
   float factor = saturate((dist - vignetteRadius) * vignetteFalloff);
   float darken = 1.0 - vignetteStrength * factor;
 
-  // ---- 4. Apply and preserve alpha ---------------------------------------
+  // ---- 4. Apply and preserve alpha -----------------------------------------
   color.rgb *= darken;
 
   OutputTex[pos] = float4(color.rgb, color.a);

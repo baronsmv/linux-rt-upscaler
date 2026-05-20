@@ -47,7 +47,7 @@ cbuffer Constants : register(b0) {
   if (pos.x >= dstWidth || pos.y >= dstHeight)
     return;
 
-  // ---- 1. Load original color --------------------------------------------
+  // ---- 1. Load original color ----------------------------------------------
   float4 color = InputTex.Load(int3(pos, 0));
   color.rgb = color.bgr;
 
@@ -57,18 +57,18 @@ cbuffer Constants : register(b0) {
     return;
   }
 
-  // ---- 2. Prepare RGB values (clamped to [0,1]) --------------------------
+  // ---- 2. Prepare RGB values (clamped to [0,1]) ----------------------------
   float3 rgb = saturate(color.rgb);
   float fSize = float(lutSize);
 
-  // ---- 3. Compute LUT UV coordinates with texel-center alignment ---------
+  // ---- 3. Compute LUT UV coordinates with texel-center alignment -----------
   //  The LUT texture is indexed so that input 0.0 lands on the center of
   //  texel 0 and input 1.0 lands on the center of texel (lutSize-1).
   //  Formula:   (r * (fSize - 1) + 0.5) / fSize
   //  =  r * ((fSize - 1.0) / fSize) + (0.5 / fSize)
   float3 lutUV = rgb * ((fSize - 1.0f) / fSize) + (0.5f / fSize);
 
-  // ---- 4. Compute the Blue index and fractional Z blend ------------------
+  // ---- 4. Compute the Blue index and fractional Z blend --------------------
   //  Blue axis spans the array slices. We find the two adjacent slices
   //  and the interpolation weight between them.
   float blueIdx = rgb.b * (fSize - 1.0f);
@@ -76,7 +76,7 @@ cbuffer Constants : register(b0) {
   uint slice1 = min(slice0 + 1u, lutSize - 1u);
   float zLerp = frac(blueIdx);
 
-  // ---- 5. Sample the two Blue slices -------------------------------------
+  // ---- 5. Sample the two Blue slices ---------------------------------------
   //  The linear sampler handles the 2D bilinear interpolation inside each
   //  slice automatically. We pass lutUV.x and lutUV.y as the 2D coordinate,
   //  and the slice index as the third component.
@@ -85,12 +85,12 @@ cbuffer Constants : register(b0) {
   float3 col1 =
       LUTTex.SampleLevel(LUTSampler, float3(lutUV.xy, float(slice1)), 0.0f).rgb;
 
-  // ---- 6. Trilinear blend ------------------------------------------------
+  // ---- 6. Trilinear blend --------------------------------------------------
   //  Interpolate between the two sampled colors based on zLerp.
   float3 graded = lerp(col0, col1, zLerp);
   graded.rgb = graded.bgr;
 
-  // ---- 7. Apply intensity and preserve alpha -----------------------------
+  // ---- 7. Apply intensity and preserve alpha -------------------------------
   color.rgb = lerp(color.rgb, graded, intensity);
   OutputTex[pos] = float4(color.rgb, color.a);
 }

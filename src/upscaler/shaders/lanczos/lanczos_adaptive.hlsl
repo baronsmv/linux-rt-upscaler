@@ -65,7 +65,7 @@ float lanczos(float x, float r) {
     return;
   }
 
-  // ---- Map destination pixel to continuous source coordinate -------------
+  // ---- Map destination pixel to continuous source coordinate ---------------
   float2 uv =
       (float2(outPos.x - dstX, outPos.y - dstY) + 0.5f) / float2(dstW, dstH);
   float2 srcCoord = uv * float2(srcWidth, srcHeight);
@@ -78,7 +78,7 @@ float lanczos(float x, float r) {
   float weightSum = 0.0f;
   float3 vmin = 1e6f, vmax = -1e6f;
 
-  // ---- Walk the sampling window (size determined by radiusX/radiusY) -----
+  // ---- Walk the sampling window (size determined by radiusX/radiusY) -------
   //   iy from -iry+1 to iry   (e.g. for radius 3: -2, -1, 0, 1, 2, 3)
   //   ix from -irx+1 to irx
   int irx = int(radiusX);
