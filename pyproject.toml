@@ -31,7 +31,6 @@ dependencies = [
     "pillow",
     "pyside6",
     "pyyaml",
-    "screeninfo",
     "shiboken6",
     "xcffib",
 ]

@@ -1,24 +1,122 @@
 import logging
 from typing import Optional, Tuple, List
 
+import xcffib
 from PySide6.QtCore import QRect
 from PySide6.QtGui import QGuiApplication, QScreen
-from screeninfo import get_monitors
+from xcffib.randr import Connection as RandRConnection
+
+from ..window import open_xcb_connection, close_xcb_connection
 
 logger = logging.getLogger(__name__)
 
 
+def _get_randr_connection(conn: xcffib.Connection) -> RandRConnection:
+    """Return the RandR extension connection for the given XCB connection."""
+    conn.randr = conn(xcffib.randr.key)
+    return conn.randr
+
+
+def _list_monitor_names(conn: xcffib.Connection) -> List[str]:
+    """
+    Return a list of output names (e.g., 'HDMI-1', 'eDP-1') from RandR.
+    Requires the RandR extension to be present.
+    """
+    randr = _get_randr_connection(conn)
+    root = conn.get_setup().roots[0].root
+    resources = randr.GetScreenResources(root).reply()
+    names = []
+    for output_id in resources.outputs:
+        output_info = randr.GetOutputInfo(output_id, xcffib.CurrentTime).reply()
+        if output_info and output_info.name_len:
+            name = bytes(output_info.name).decode("utf-8")
+            names.append(name)
+    return names
+
+
 def list_monitors() -> List[str]:
     """
-    Return a sorted list of display names known to the system.
-    The special names ``"primary"`` and ``"all"`` are prepended.
+    Return a sorted list of display names known to the system using XCB RandR.
+    Prepends 'primary' and 'all'.
     """
+    conn = open_xcb_connection()
+    if not conn:
+        logger.warning("Cannot enumerate monitors: no XCB connection")
+        return ["primary", "all"]
     try:
-        names = sorted({m.name for m in get_monitors() if m.name})
+        names = sorted(_list_monitor_names(conn))
     except Exception as e:
         logger.warning(f"Could not enumerate monitors: {e}")
         names = []
+    finally:
+        close_xcb_connection(conn)
     return ["primary", "all"] + names
+
+
+def _get_physical_resolution(screen_name: str) -> Optional[Tuple[int, int]]:
+    """
+    Return the physical pixel resolution (width, height) of the monitor
+    matching *screen_name* using XCB RandR.
+    """
+    conn = open_xcb_connection()
+    if not conn:
+        logger.warning("Cannot get physical resolution: no XCB connection")
+        return None
+    try:
+        randr = _get_randr_connection(conn)
+        root = conn.get_setup().roots[0].root
+        resources = randr.GetScreenResources(root).reply()
+        name_lower = screen_name.lower()
+
+        # First try exact match
+        for output_id in resources.outputs:
+            output_info = randr.GetOutputInfo(output_id, xcffib.CurrentTime).reply()
+            if not output_info or output_info.name_len == 0:
+                continue
+            output_name = bytes(output_info.name).decode("utf-8")
+            if output_name.lower() != name_lower:
+                continue
+
+            # Output must be connected and have a CRTC
+            if (
+                output_info.crtc == xcffib.xproto.Atom._None
+                or output_info.connection != 0
+            ):
+                logger.debug(f"Output {output_name} is disconnected or has no CRTC")
+                return None
+
+            crtc_info = randr.GetCrtcInfo(output_info.crtc, xcffib.CurrentTime).reply()
+            if crtc_info and crtc_info.width and crtc_info.height:
+                return crtc_info.width, crtc_info.height
+            else:
+                logger.debug(f"CRTC for {output_name} has no valid dimensions")
+                return None
+
+        # Fallback to substring match
+        for output_id in resources.outputs:
+            output_info = randr.GetOutputInfo(output_id, xcffib.CurrentTime).reply()
+            if not output_info or output_info.name_len == 0:
+                continue
+            output_name = bytes(output_info.name).decode("utf-8")
+            if name_lower in output_name.lower():
+                if output_info.crtc and output_info.connection == 0:
+                    crtc_info = randr.GetCrtcInfo(
+                        output_info.crtc, xcffib.CurrentTime
+                    ).reply()
+                    if crtc_info and crtc_info.width and crtc_info.height:
+                        logger.debug(
+                            f"Substring match: '{screen_name}' -> '{output_name}'"
+                        )
+                        return crtc_info.width, crtc_info.height
+                break
+
+        logger.warning(f"No physical monitor found for screen name '{screen_name}'")
+        return None
+    except Exception as e:
+        logger.error(f"Error querying physical resolution: {e}")
+        return None
+    finally:
+        close_xcb_connection(conn)
 
 
 def _get_screen(screen_spec: str) -> QScreen:
@@ -76,30 +174,6 @@ def _get_virtual_desktop() -> QRect:
     for screen in screens:
         virtual = virtual.united(screen.geometry())
     return virtual
-
-
-def _get_physical_resolution(screen_name: str) -> Optional[Tuple[int, int]]:
-    """
-    Return (width_px, height_px) of the physical monitor matching the given screen name.
-    First tries exact case-insensitive match, then substring match.
-    Returns None if no match is found.
-    """
-    monitors = get_monitors()
-    name_lower = screen_name.lower()
-
-    # Exact match (case-insensitive)
-    for m in monitors:
-        if m.name.lower() == name_lower:
-            return m.width, m.height
-
-    # Substring fallback
-    for m in monitors:
-        if name_lower in m.name.lower():
-            logger.debug(f"Substring match: '{screen_name}' -> '{m.name}'")
-            return m.width, m.height
-
-    logger.warning(f"No physical monitor found for screen name '{screen_name}'")
-    return None
 
 
 def _get_scale_factor(q_screen: QScreen) -> float:
