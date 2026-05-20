@@ -254,9 +254,8 @@ This project stands on the shoulders of several open-source works, mantained by 
 
 - **[L65536](https://github.com/L65536)**, for the original [RealTimeSuperResolutionScreenUpscalerforLinux](https://github.com/L65536/RealTimeSuperResolutionScreenUpscalerforLinux), which demonstrated the feasibility of real-time SRCNN upscaling on Linux and served as a proof-of-concept for this project.
 - **[funnyplanter](https://github.com/funnyplanter)**, for the incredible [CuNNy](https://github.com/funnyplanter/CuNNy) neural network upscaling models.
-- **[Compushady](https://github.com/rdeioris/compushady)**, which served as an invaluable foundation during early development.
+- **[Compushady](https://github.com/rdeioris/compushady)**, which served as an invaluable Vulkan foundation during early development.
 - **[PySide6](https://pypi.org/project/PySide6/)**, the Qt binding that powers the entire graphical interface and overlay window.
-- **[xcffib](https://github.com/tych0/xcffib)**, the low‑level XCB binding used for all window management and event forwarding.
-- **[screeninfo](https://github.com/rr-/screeninfo)**, used for automatic scale factor detection in Wayland.
-- **[psutil](https://github.com/giampaolo/psutil)**, used to locate the target window PID.
-- **[Pillow](https://python-pillow.github.io/)**, used for saving screenshots and rendering OSD messages.
+- **[xcffib](https://github.com/tych0/xcffib)**, the XCB binding used for window management, monitor querying and event forwarding.
+- **[Pillow](https://python-pillow.github.io/)**, the Python Imaging Library, used for saving screenshots and rendering OSD messages.
+- **[PyYAML](https://github.com/yaml/pyyaml)**, the YAML parser used for configuration file operations.
