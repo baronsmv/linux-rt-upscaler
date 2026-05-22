@@ -128,8 +128,13 @@ class DisplayTab(SettingsTab):
                 getattr(self._config, field),
                 slot,
                 baseline=getattr(self.baseline_config, field),
-                help=f"{'Horizontal' if 'X' in label else 'Vertical'} offset from the "
-                "centered position (positive = {'right' if 'X' in label else 'down'}).",
+                help=(
+                    "Horizontal offset from the centered position "
+                    "(positive = right, negative = left)."
+                    if "X" in label
+                    else "Vertical offset from the centered position "
+                    "(positive = down, negative = up)."
+                ),
             )
 
         # ---- Background Color ----
