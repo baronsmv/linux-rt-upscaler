@@ -599,16 +599,6 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
     return nullptr;
   }
 
-  // --- Dimension check ---
-  if (texture->image_extent.width != self->image_extent.width ||
-      texture->image_extent.height != self->image_extent.height) {
-    PyErr_Format(PyExc_ValueError,
-                 "Texture dimensions (%ux%u) must match swapchain (%ux%u)",
-                 texture->image_extent.width, texture->image_extent.height,
-                 self->image_extent.width, self->image_extent.height);
-    return nullptr;
-  }
-
   vk_Device *dev = self->py_device;
   VkResult res;
 
@@ -684,8 +674,13 @@ PyObject *vk_Swapchain_present(vk_Swapchain *self, PyObject *args) {
   copy_region.dstSubresource.layerCount = 1;
   copy_region.srcOffset = {0, 0, 0};
   copy_region.dstOffset = {x, y, 0};
-  copy_region.extent = {texture->image_extent.width,
-                        texture->image_extent.height, 1};
+
+  // Clamp copy region to the smaller of source texture and swapchain image
+  uint32_t copy_w =
+      std::min(texture->image_extent.width, self->image_extent.width);
+  uint32_t copy_h =
+      std::min(texture->image_extent.height, self->image_extent.height);
+  copy_region.extent = {copy_w, copy_h, 1};
   vkCmdCopyImage(cmd, texture->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                  self->images[image_index],
                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
