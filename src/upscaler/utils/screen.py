@@ -53,72 +53,6 @@ def list_monitors() -> List[str]:
     return ["primary", "all"] + names
 
 
-def _get_physical_resolution(screen_name: str) -> Optional[Tuple[int, int]]:
-    """
-    Return the physical pixel resolution (width, height) of the monitor
-    matching *screen_name* using XCB RandR.
-    """
-    conn = open_xcb_connection()
-    if not conn:
-        logger.warning("Cannot get physical resolution: no XCB connection")
-        return None
-    try:
-        randr = _get_randr_connection(conn)
-        root = conn.get_setup().roots[0].root
-        resources = randr.GetScreenResources(root).reply()
-        name_lower = screen_name.lower()
-
-        # First try exact match
-        for output_id in resources.outputs:
-            output_info = randr.GetOutputInfo(output_id, xcffib.CurrentTime).reply()
-            if not output_info or output_info.name_len == 0:
-                continue
-            output_name = bytes(output_info.name).decode("utf-8")
-            if output_name.lower() != name_lower:
-                continue
-
-            # Output must be connected and have a CRTC
-            if (
-                output_info.crtc == xcffib.xproto.Atom._None
-                or output_info.connection != 0
-            ):
-                logger.debug(f"Output {output_name} is disconnected or has no CRTC")
-                return None
-
-            crtc_info = randr.GetCrtcInfo(output_info.crtc, xcffib.CurrentTime).reply()
-            if crtc_info and crtc_info.width and crtc_info.height:
-                return crtc_info.width, crtc_info.height
-            else:
-                logger.debug(f"CRTC for {output_name} has no valid dimensions")
-                return None
-
-        # Fallback to substring match
-        for output_id in resources.outputs:
-            output_info = randr.GetOutputInfo(output_id, xcffib.CurrentTime).reply()
-            if not output_info or output_info.name_len == 0:
-                continue
-            output_name = bytes(output_info.name).decode("utf-8")
-            if name_lower in output_name.lower():
-                if output_info.crtc and output_info.connection == 0:
-                    crtc_info = randr.GetCrtcInfo(
-                        output_info.crtc, xcffib.CurrentTime
-                    ).reply()
-                    if crtc_info and crtc_info.width and crtc_info.height:
-                        logger.debug(
-                            f"Substring match: '{screen_name}' -> '{output_name}'"
-                        )
-                        return crtc_info.width, crtc_info.height
-                break
-
-        logger.warning(f"No physical monitor found for screen name '{screen_name}'")
-        return None
-    except Exception as e:
-        logger.error(f"Error querying physical resolution: {e}")
-        return None
-    finally:
-        close_xcb_connection(conn)
-
-
 def _get_screen(screen_spec: str) -> QScreen:
     """
     Return a single QScreen based on the specification.
@@ -176,41 +110,11 @@ def _get_virtual_desktop() -> QRect:
     return virtual
 
 
-def _get_scale_factor(q_screen: QScreen) -> float:
-    """
-    Compute the scaling factor for a QScreen.
-    Returns physical_width / logical_width, or 1.0 if physical data unavailable.
-    Also validates that the height scaling matches within 1% tolerance.
-    """
-    logical_geom = q_screen.geometry()
-    logical_w = logical_geom.width()
-    logical_h = logical_geom.height()
-
-    phys = _get_physical_resolution(q_screen.name())
-    if phys is None:
-        logger.warning(
-            f"No physical data for {q_screen.name()}, using scale factor 1.0"
-        )
-        return 1.0
-
-    phys_w, phys_h = phys
-    scale_w = phys_w / logical_w
-    scale_h = phys_h / logical_h
-
-    if abs(scale_w - scale_h) > 0.01:
-        logger.warning(
-            f"Asymmetric scaling for {q_screen.name()}: width scale {scale_w:.3f}, "
-            f"height scale {scale_h:.3f}, using width scale"
-        )
-
-    return scale_w
-
-
 def _get_screen_geometry(
     q_screen: QScreen, scale_factor: Optional[float] = None
 ) -> Tuple[int, int, int, int, float]:
     """
-    Return (x, y, width, height) of the given QScreen in physical pixels.
+    Return (x, y, width, height) of the given QScreen.
     If scale_factor is None, it is computed automatically via get_scale_factor().
     """
     geom = q_screen.geometry()
@@ -218,19 +122,16 @@ def _get_screen_geometry(
     logical_w, logical_h = geom.width(), geom.height()
 
     if scale_factor is None:
-        scale_factor: float = _get_scale_factor(q_screen)
+        scale_factor: float = q_screen.devicePixelRatio()
 
-    physical_w = int(round(logical_w * scale_factor))
-    physical_h = int(round(logical_h * scale_factor))
-
-    return x, y, physical_w, physical_h, scale_factor
+    return x, y, logical_w, logical_h, scale_factor
 
 
 def get_base_geometry(
     monitor_spec: str, scale_factor: Optional[float] = None
 ) -> Tuple[int, int, int, int, float]:
     """
-    Return (x, y, width, height, scale_factor) in physical pixels for the
+    Return (x, y, logical_width, logical_height, scale_factor) for the
     given monitor spec.
     """
     if monitor_spec == "all":
