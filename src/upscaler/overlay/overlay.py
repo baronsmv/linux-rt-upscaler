@@ -55,14 +55,19 @@ class OverlayWindow(QMainWindow):
         # Daemon mode handler
         if win_info.width <= 0 or win_info.height <= 0:
             # No real target yet
-            _, _, phys_w, phys_h, _ = get_base_geometry(
+            _, _, logical_w, logical_h, scale = get_base_geometry(
                 config.monitor or "primary", config.scale_factor
             )
+            phys_w = int(round(logical_w * scale))
+            phys_h = int(round(logical_h * scale))
+
             self._geometry = OverlayGeometry(
-                overlay_width=phys_w,
-                overlay_height=phys_h,
-                content_width=phys_w,
-                content_height=phys_h,
+                overlay_width=logical_w,
+                overlay_height=logical_h,
+                physical_overlay_width=phys_w,
+                physical_overlay_height=phys_h,
+                content_width=logical_w,
+                content_height=logical_h,
                 crop_width=phys_w,
                 crop_height=phys_h,
             )
@@ -72,6 +77,9 @@ class OverlayWindow(QMainWindow):
             self._geometry = compute_overlay_geometry(config, win_info)
             self.scale_mode = self._geometry.scale_mode
             self._win_info = win_info
+
+        self.physical_width = self._geometry.physical_overlay_width
+        self.physical_height = self._geometry.physical_overlay_height
 
         # Transparency support (if background has alpha or we want click-through)
         if self._config.background_color[3] < 1.0:
@@ -273,6 +281,8 @@ class OverlayWindow(QMainWindow):
         """
         self._win_info = win_info
         self._geometry = compute_overlay_geometry(self._config, win_info)
+        self.physical_width = self._geometry.physical_overlay_width
+        self.physical_height = self._geometry.physical_overlay_height
         self.scale_mode = self._geometry.scale_mode
         self._update_mapper()
 

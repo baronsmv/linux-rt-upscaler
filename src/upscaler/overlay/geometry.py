@@ -16,6 +16,8 @@ class OverlayGeometry:
         overlay_y: Y position of the overlay window on the screen (pixels).
         overlay_width: Width of the overlay window (pixels).
         overlay_height: Height of the overlay window (pixels).
+        physical_overlay_width: Physical width of the overlay window (pixels).
+        physical_overlay_height: Physical height of the overlay window (pixels).
         content_width: Logical width of the content (before scaling, after cropping).
         content_height: Logical height of the content (before scaling, after cropping).
         scale_mode: Scaling mode string (e.g., "fit", "stretch", "cover").
@@ -31,6 +33,8 @@ class OverlayGeometry:
     overlay_y: int = 0
     overlay_width: int = 0
     overlay_height: int = 0
+    physical_overlay_width: int = 0
+    physical_overlay_height: int = 0
     content_width: int = 0
     content_height: int = 0
     scale_mode: str = "fit"
@@ -67,37 +71,43 @@ def compute_overlay_geometry(
     Raises:
         ValueError: If cropping results in non-positive dimensions.
     """
-    # Step 1: Determine base screen geometry
-    base_x, base_y, base_w, base_h, config.scale_factor = get_base_geometry(
+    # Determine base screen geometry
+    base_x, base_y, logical_w, logical_h, scale = get_base_geometry(
         config.monitor, config.scale_factor
     )
+    phys_base_w = int(round(logical_w * scale))
+    phys_base_h = int(round(logical_h * scale))
 
-    # Step 2: Initial parse using original window dimensions
+    # Initial parse using original window dimensions
     overlay_w, overlay_h, content_w, content_h, mode = parse_output_geometry(
         config.output_geometry,
         win_info.width,
         win_info.height,
-        base_w,
-        base_h,
+        phys_base_w,
+        phys_base_h,
     )
 
-    # Step 3: Adjust overlay position and size based on overlay mode
+    # Adjust overlay position and size based on overlay mode
     if config.overlay_mode == OverlayMode.WINDOWED.value:
         # Windowed mode: center on the monitor, apply offsets, and use computed size
-        win_x = base_x + (base_w - overlay_w) // 2 + config.offset_x
-        win_y = base_y + (base_h - overlay_h) // 2 + config.offset_y
+        win_x = base_x + (phys_base_w - overlay_w) // 2 + config.offset_x
+        win_y = base_y + (phys_base_w - overlay_h) // 2 + config.offset_y
+        physical_overlay_w, physical_overlay_h = overlay_w, overlay_h
         offset_x = 0
         offset_y = 0
     else:
         # Non-windowed modes (fullscreen, always-on-top, transparent): cover the whole monitor
-        win_x = base_x
-        win_y = base_y
-        overlay_w = base_w
-        overlay_h = base_h
+        win_x, win_y = base_x, base_y
+        overlay_w, overlay_h = phys_base_w, phys_base_h
+        physical_overlay_w, physical_overlay_h = phys_base_w, phys_base_h
         offset_x = config.offset_x
         offset_y = config.offset_y
 
-    # Step 4: Compute cropped dimensions
+    # Convert overlay size to logical for the Qt window
+    logical_overlay_w = int(round(overlay_w / scale))
+    logical_overlay_h = int(round(overlay_h / scale))
+
+    # Compute cropped dimensions
     crop_width = win_info.width - config.crop_left - config.crop_right
     crop_height = win_info.height - config.crop_top - config.crop_bottom
     if crop_width <= 0 or crop_height <= 0:
@@ -108,22 +118,26 @@ def compute_overlay_geometry(
             f"top={config.crop_top}, bottom={config.crop_bottom})"
         )
 
-    # Step 5: Re-parse output geometry using cropped dimensions to get final logical content size
+    # Re-parse output geometry using cropped dimensions to get final logical content size
     final_content_w, final_content_h, _, _, mode = parse_output_geometry(
         config.output_geometry,
         crop_width,
         crop_height,
-        base_w,
-        base_h,
+        phys_base_w,
+        phys_base_h,
     )
+    logical_content_w = int(round(final_content_w / scale))
+    logical_content_h = int(round(final_content_h / scale))
 
     return OverlayGeometry(
         overlay_x=win_x,
         overlay_y=win_y,
-        overlay_width=overlay_w,
-        overlay_height=overlay_h,
-        content_width=final_content_w,
-        content_height=final_content_h,
+        overlay_width=logical_overlay_w,
+        overlay_height=logical_overlay_h,
+        physical_overlay_width=physical_overlay_w,
+        physical_overlay_height=physical_overlay_h,
+        content_width=logical_content_w,
+        content_height=logical_content_h,
         scale_mode=mode,
         crop_left=config.crop_left,
         crop_top=config.crop_top,

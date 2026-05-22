@@ -103,8 +103,12 @@ class Pipeline(QObject):
             _, _, _, _, self._scale_factor = get_base_geometry(
                 config.monitor or "primary", None
             )
-        self._screen_width = overlay.width()
-        self._screen_height = overlay.height()
+
+        # Physical size for swapchain and presenter
+        self._screen_width = overlay.physical_width
+        self._screen_height = overlay.physical_height
+        phys_content_w = int(overlay.content_width * self._scale_factor)
+        phys_content_h = int(overlay.content_height * self._scale_factor)
 
         # Controller for external commands (model / geometry / zoom / screenshot)
         self.controller = PipelineController(self)
@@ -137,8 +141,8 @@ class Pipeline(QObject):
         self.presenter = Presenter(
             screen_width=self._screen_width,
             screen_height=self._screen_height,
-            content_width=overlay.content_width,
-            content_height=overlay.content_height,
+            content_width=phys_content_w,
+            content_height=phys_content_h,
             scale_mode=overlay.scale_mode,
             config=self.config,
             osd_manager=self.osd,
@@ -438,6 +442,9 @@ class Pipeline(QObject):
         self.overlay.set_target_handle(self._win_info.handle)
         self.overlay.set_target_size(self._win_info.width, self._win_info.height)
 
+        self._screen_width = self.overlay.physical_width
+        self._screen_height = self.overlay.physical_height
+
         self.crop_width = self._win_info.width - self._crop_left - self._crop_right
         self.crop_height = self._win_info.height - self._crop_top - self._crop_bottom
         self.overlay.set_crop(
@@ -452,38 +459,32 @@ class Pipeline(QObject):
 
     def update_content_dimensions(self) -> None:
         """Recalculate content dimensions based on overlay size and output geometry."""
-        overlay_w = self.overlay.width()
-        overlay_h = self.overlay.height()
-
         new_cw, new_ch, _, _, _ = parse_output_geometry(
             self.config.output_geometry,
             self.crop_width,
             self.crop_height,
-            overlay_w,
-            overlay_h,
+            self._screen_width,
+            self._screen_height,
         )
-        if (
-            new_cw != self.presenter.content_width
-            or new_ch != self.presenter.content_height
-        ):
-            self.presenter.content_width = new_cw
-            self.presenter.content_height = new_ch
-            self.overlay.set_content_dimensions(new_cw, new_ch)
+        logical_cw = int(round(new_cw / self._scale_factor))
+        logical_ch = int(round(new_ch / self._scale_factor))
+
+        self.presenter.content_width = new_cw
+        self.presenter.content_height = new_ch
+        self.overlay.set_content_dimensions(logical_cw, logical_ch)
 
     def _recreate_swapchain(self) -> None:
         """Recreate the swapchain and dependent resources (overlay resize)."""
-        new_w = self.overlay.width()
-        new_h = self.overlay.height()
-
+        new_w = self._screen_width
+        new_h = self._screen_height
         try:
-            if new_w != self._screen_width or new_h != self._screen_height:
-                self._screen_width = new_w
-                self._screen_height = new_h
+            if (
+                new_w != self.presenter.screen_width
+                or new_h != self.presenter.screen_height
+            ):
                 self.presenter.resize(new_w, new_h)
-                self._swapchain_manager.recreate(new_w, new_h)
-                self.update_content_dimensions()
-            else:
-                self._swapchain_manager.recreate(new_w, new_h)
+            self._swapchain_manager.recreate(new_w, new_h)
+            self.update_content_dimensions()
             self.osd.clear_compute_cache()
             self._presenter_params_stale = True
         except Exception as e:
