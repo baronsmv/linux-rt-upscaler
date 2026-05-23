@@ -4,13 +4,14 @@ from typing import List, Optional, TYPE_CHECKING
 
 from ..config import Config
 from ..shaders import (
-    LanczosScaler,
-    CASPass,
     BloomPass,
-    VignettePass,
-    FilmGrainPass,
-    LUTPass,
+    CASPass,
+    CopyPass,
     DebandPass,
+    FilmGrainPass,
+    LanczosScaler,
+    LUTPass,
+    VignettePass,
 )
 from ..utils import calculate_scaling_rect
 from ..vulkan import Texture2D
@@ -71,10 +72,15 @@ class Presenter:
 
         # --- Screen texture (rendered by Lanczos and all post-FX) ---------------
         self.screen_tex = Texture2D(screen_width, screen_height)
+        self._active_source_texture: Optional[Texture2D] = None
 
         # --- Lanczos scaler -----------------------------------------------------
         self.lanczos = LanczosScaler()
         self.lanczos.set_target_texture(self.screen_tex)
+
+        # --- Copy pass (1:1 scaler) ---------------------------------------------
+        self._copy_pass = CopyPass()
+        self._copy_pass.set_target_texture(self.screen_tex)
 
         # --- Post-processing passes (only created if config enables them) ------
         # Debanding (needs separate textures)
@@ -155,11 +161,40 @@ class Presenter:
 
         # ---- 1. Debanding (optional) -----------------------------------------
         src = self._apply_deband_if_enabled(src)
+        self._active_source_texture = src
 
         # ---- 2. Lanczos scaling ---------------------------------------------
-        self.lanczos.set_source_texture(src)
-        self._update_lanczos_constants(src.width, src.height)
-        self.lanczos.dispatch_auto()
+        r_x, r_y, r_w, r_h, dst_x, dst_y = self._compute_scaling_params(
+            src.width, src.height
+        )
+
+        is_identity = (
+            r_w == src.width
+            and r_h == src.height
+            and self.offset_x == 0
+            and self.offset_y == 0
+        )
+
+        if is_identity:
+            self._copy_pass.set_source_texture(src)
+            self._copy_pass.update_constants(
+                self.background_color,
+                src.width,
+                src.height,
+                self.screen_width,
+                self.screen_height,
+                dst_x,
+                dst_y,
+                r_w,
+                r_h,
+            )
+            self._copy_pass.dispatch_auto()
+        else:
+            self.lanczos.set_source_texture(src)
+            self._update_lanczos_constants(
+                src.width, src.height, r_w, r_h, dst_x, dst_y
+            )
+            self.lanczos.dispatch_auto()
 
         # ---- 3. CAS ----------------------------------------------------------
         self._apply_cas_if_enabled()
@@ -253,7 +288,7 @@ class Presenter:
         Return the rectangle (in overlay widget coordinates) where content is
         drawn. Used by the overlay window for mouse-event mapping.
         """
-        src_tex = self.lanczos.source_texture
+        src_tex = self._active_source_texture
         if src_tex is None:
             return [0, 0, 0, 0]
 
@@ -288,6 +323,7 @@ class Presenter:
 
         # Rebind screen texture to all passes
         self.lanczos.set_target_texture(self.screen_tex)
+        self._copy_pass.set_target_texture(self.screen_tex)
         for pass_ in (self._cas, self._bloom, self._vignette, self._lut, self._grain):
             if pass_ is not None:
                 pass_.set_target_texture(self.screen_tex)
@@ -359,8 +395,11 @@ class Presenter:
             )
             self._grain.dispatch_auto()
 
-    def _update_lanczos_constants(self, src_width: int, src_height: int) -> None:
-        """Compute destination rectangle and upload Lanczos constants."""
+    def _compute_scaling_params(self, src_width: int, src_height: int):
+        """
+        Compute the destination rectangle and screen position.
+        Returns (r_x, r_y, r_w, r_h, dst_x, dst_y).
+        """
         r_x, r_y, r_w, r_h = calculate_scaling_rect(
             src_width,
             src_height,
@@ -372,14 +411,26 @@ class Presenter:
         canvas_y = (self.screen_height - self.content_height) // 2
         dst_x = canvas_x + r_x + self.offset_x
         dst_y = canvas_y + r_y + self.offset_y
+        return r_x, r_y, r_w, r_h, dst_x, dst_y
+
+    def _update_lanczos_constants(
+        self,
+        src_width: int,
+        src_height: int,
+        r_w: int,
+        r_h: int,
+        dst_x: int,
+        dst_y: int,
+    ) -> None:
+        """Upload Lanczos constants using pre‑computed destination rect."""
+        if r_w <= 0 or r_h <= 0:
+            logger.warning(f"Invalid Lanczos rect: {r_w}x{r_h}, skipping update")
+            return
+
         scale_x = r_w / src_width
         scale_y = r_h / src_height
         radius_x = 2 if scale_x >= 1.0 else math.ceil(2.0 / scale_x)
         radius_y = 2 if scale_y >= 1.0 else math.ceil(2.0 / scale_y)
-
-        if r_w <= 0 or r_h <= 0:
-            logger.warning(f"Invalid Lanczos rect: {r_w}x{r_h}, skipping update")
-            return
 
         self.lanczos.update_constants(
             self.background_color,

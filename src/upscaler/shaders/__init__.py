@@ -2,6 +2,7 @@
 
 from .bloom import BloomPass
 from .cas import CASPass
+from .copy import CopyPass
 from .deband import DebandPass
 from .grain import FilmGrainPass
 from .lanczos import LanczosScaler
@@ -12,6 +13,7 @@ from .vignette import VignettePass
 __all__ = [
     "BloomPass",
     "CASPass",
+    "CopyPass",
     "DebandPass",
     "FilmGrainPass",
     "LanczosScaler",
