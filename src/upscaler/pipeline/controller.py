@@ -10,6 +10,7 @@ from PySide6.QtCore import Q_ARG, QMetaObject, Qt
 from PySide6.QtWidgets import QApplication
 
 from ..config import OUTPUT_GEOMETRIES, UPSCALING_MODELS, ZOOM_LEVELS
+from ..utils import parse_output_geometry
 from ..vulkan import Texture2D
 
 if TYPE_CHECKING:
@@ -415,9 +416,16 @@ class PipelineController:
                 geometry_name
             )
         else:
-            logger.warning(
-                f"Geometry '{geometry_name}' not in available geometries list"
-            )
+            try:
+                parse_output_geometry(geometry_name, 1920, 1080, 1920, 1080)
+                logger.debug(
+                    "Geometry '%s' is a custom mode, not in cycle list", geometry_name
+                )
+                self._current_geometry_index = 0
+            except ValueError:
+                logger.warning(
+                    "Geometry '%s' not in available geometries list", geometry_name
+                )
 
     def set_initial_zoom_index(self) -> None:
         """Set the current zoom index based on the initial output geometry."""
