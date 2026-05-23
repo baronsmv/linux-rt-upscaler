@@ -405,6 +405,9 @@ Common modes:
   stretch - Fill, ignore aspect ratio
   cover   - Fill and crop to fit
 
+Note: Custom modes (e.g., x1440p, 50%%) can be combined with
+--overlay-mode windowed to define the overlay window size.
+
 """,
     )
     presentation_group.add_argument(
@@ -1013,8 +1016,6 @@ Minimum is 0.0. Default: %(default)s.""",
         pre_processing_group,
         post_processing_group,
         additional_presentation_group,
-        overlay_group,
-        screenshot_group,
         osd_group,
         vulkan_group,
         tile_group,
