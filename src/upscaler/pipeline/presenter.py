@@ -168,12 +168,7 @@ class Presenter:
             src.width, src.height
         )
 
-        is_identity = (
-            r_w == src.width
-            and r_h == src.height
-            and self.offset_x == 0
-            and self.offset_y == 0
-        )
+        is_identity = r_w == src.width and r_h == src.height
 
         if is_identity:
             self._copy_pass.set_source_texture(src)
