@@ -14,14 +14,34 @@ end
 
 function hlsl_to_spv -a hlsl
     set spv (echo "$hlsl" | sed 's/\.hlsl/\.spv/')
-    dxc -T cs_6_0 -E main -spirv "$hlsl" \
-        -fvk-auto-shift-bindings \
-        -fvk-t-shift 1024 0 \
-        -fvk-u-shift 2048 0 \
-        -fvk-s-shift 3072 0 \
-        -fvk-use-dx-layout \
-        -fvk-use-scalar-layout \
-        -Fo "$spv"
+    if echo "$hlsl" | grep -q "fsr"
+        # FSR shader
+        dxc -spirv "$hlsl" \
+            -Fo "$spv" \
+            -T cs_6_2 \
+            -E main \
+            -D SAMPLE_EASU=1 \
+            -D A_GPU=1 \
+            -D A_HLSL=1 \
+            -D A_HLSL_6_2=1 \
+            -D A_NO_16_BIT_CAST=1 \
+            -D WIDTH=64 \
+            -D HEIGHT=1 \
+            -D DEPTH=1 \
+            -enable-16bit-types \
+            -I (dirname "$hlsl")
+    else
+        dxc -spirv "$hlsl" \
+            -Fo "$spv" \
+            -T cs_6_0 \
+            -E main \
+            -fvk-auto-shift-bindings \
+            -fvk-t-shift 1024 0 \
+            -fvk-u-shift 2048 0 \
+            -fvk-s-shift 3072 0 \
+            -fvk-use-dx-layout \
+            -fvk-use-scalar-layout
+    end
 end
 
 for hlsl in (
