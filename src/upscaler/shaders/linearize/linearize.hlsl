@@ -11,16 +11,14 @@ Texture2D<float4> InputTex : register(t0);
 RWTexture2D<float4> OutputTex : register(u0);
 
 float3 Linearize(float3 srgb) {
-    // Choice between two (comment/uncomment):
+    // Gamma-2.2 approximation (faster)
+    // return pow(srgb, 2.2);
 
     // IEC 61966-2-1 sRGB -> linear (slower)
     // https://entropymine.com/imageworsener/srgbformula/
     float3 low  = srgb / 12.92;
     float3 high = pow((srgb + 0.055) / 1.055, 2.4);
     return lerp(high, low, step(srgb, 0.04045));
-
-    // Gamma-2.2 approximation (faster)
-    // return pow(srgb, 2.2);
 }
 
 // ============================================================================
