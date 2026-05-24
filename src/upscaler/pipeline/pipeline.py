@@ -80,7 +80,7 @@ class Pipeline(QObject):
         """Initialize the pipeline. Resources are allocated later, on the pipeline thread."""
         QObject.__init__(self)
         self.config = config
-        self._win_info = win_info
+        self.win_info = win_info
         self.overlay = overlay
         self.base_config = base_config or copy.deepcopy(config)
         self.profiles = profiles or {}
@@ -438,19 +438,19 @@ class Pipeline(QObject):
     def _handle_window_change(self) -> None:
         """Recreate resources when the target window changes size or handle."""
         logger.debug("Handling window change")
-        self._win_info.handle = self._window_tracker.handle
-        self._win_info.width = self._window_tracker.width
-        self._win_info.height = self._window_tracker.height
+        self.win_info.handle = self._window_tracker.handle
+        self.win_info.width = self._window_tracker.width
+        self.win_info.height = self._window_tracker.height
 
-        self.overlay.update_geometry(self._win_info)
-        self.overlay.set_target_handle(self._win_info.handle)
-        self.overlay.set_target_size(self._win_info.width, self._win_info.height)
+        self.overlay.update_geometry(self.win_info)
+        self.overlay.set_target_handle(self.win_info.handle)
+        self.overlay.set_target_size(self.win_info.width, self.win_info.height)
 
         self._screen_width = self.overlay.physical_width
         self._screen_height = self.overlay.physical_height
 
-        self.crop_width = self._win_info.width - self._crop_left - self._crop_right
-        self.crop_height = self._win_info.height - self._crop_top - self._crop_bottom
+        self.crop_width = self.win_info.width - self._crop_left - self._crop_right
+        self.crop_height = self.win_info.height - self._crop_top - self._crop_bottom
         self.overlay.set_crop(
             self._crop_left, self._crop_top, self.crop_width, self.crop_height
         )
@@ -500,7 +500,7 @@ class Pipeline(QObject):
         if self._grabber:
             self._grabber.close()
         self._grabber = FrameGrabber(
-            self._win_info,
+            self.win_info,
             crop_left=self._crop_left,
             crop_top=self._crop_top,
             crop_right=self._crop_right,
@@ -535,7 +535,7 @@ class Pipeline(QObject):
         self._window_tracker = WindowTracker(
             new_win_info.handle, new_win_info.width, new_win_info.height
         )
-        self._win_info = new_win_info
+        self.win_info = new_win_info
 
         # Show the overlay first so the swapchain is created on a visible surface
         if self._pause_reason == PauseReason.DAEMON_WAITING:
@@ -615,7 +615,7 @@ class Pipeline(QObject):
                         )
                         self._set_pause_reason(PauseReason.DAEMON_WAITING)
                         self._window_tracker = None
-                        self._win_info = None
+                        self.win_info = None
                         self.daemon_scan_start.emit()
                         self._wake_event.wait(
                             timeout=self.config.pipeline_poll_interval

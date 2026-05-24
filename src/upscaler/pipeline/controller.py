@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import threading
@@ -12,6 +14,12 @@ from PySide6.QtWidgets import QApplication
 from ..config import OUTPUT_GEOMETRIES, UPSCALING_MODELS, ZOOM_LEVELS
 from ..utils import parse_output_geometry
 from ..vulkan import Texture2D
+from ..window import (
+    AtomCache,
+    close_xcb_connection,
+    get_window_name,
+    open_xcb_connection,
+)
 
 if TYPE_CHECKING:
     from .pipeline import Pipeline
@@ -38,7 +46,7 @@ class PipelineController:
 
     def __init__(
         self,
-        pipeline: "Pipeline",
+        pipeline: Pipeline,
         available_models: Tuple[str, ...] = UPSCALING_MODELS,
         available_geometries: Tuple[str, ...] = OUTPUT_GEOMETRIES,
         available_zoom_levels: Tuple[str, ...] = ZOOM_LEVELS,
@@ -288,8 +296,37 @@ class PipelineController:
             (f"Zoom: {new_zoom}", self._pipeline.config.osd_duration)
         )
 
+    def _get_current_window_title(self) -> str:
+        """
+        Return the up-to-date title of the pipeline’s target window.
+        Falls back to the stored title if the query fails.
+        """
+        if self._pipeline.win_info is None:
+            return ""
+        handle = self._pipeline.win_info.handle
+        try:
+            conn = open_xcb_connection()
+            if conn is None:
+                raise RuntimeError("Could not open XCB connection")
+            try:
+                atoms = AtomCache(conn)
+                title = get_window_name(conn, handle, atoms)
+                return title or self._pipeline.win_info.title or ""
+            finally:
+                close_xcb_connection(conn)
+        except Exception:
+            logger.warning(
+                "Failed to fetch live window title for screenshot", exc_info=True
+            )
+            return self._pipeline.win_info.title or ""
+
     def _download_and_save(
-        self, texture: Texture2D, width: int, height: int, pipeline: "Pipeline"
+        self,
+        texture: Texture2D,
+        title: str,
+        width: int,
+        height: int,
+        pipeline: Pipeline,
     ) -> None:
         """
         Download texture data from GPU and save as PNG.
@@ -300,6 +337,7 @@ class PipelineController:
 
         Args:
             texture: Source texture to capture (usually the upscaled output).
+            title: Current window title at screenshot time.
             width: Texture width in pixels.
             height: Texture height in pixels.
             pipeline: Reference to the Pipeline instance (for config and OSD queue).
@@ -314,6 +352,7 @@ class PipelineController:
             now = datetime.now()
             fmt_vars = {
                 "timestamp": now,  # datetime object to supports {timestamp:%Y-%m-%d ...}
+                "title": title,
                 "model": pipeline.config.model,
                 "width": width,
                 "height": height,
@@ -367,11 +406,14 @@ class PipelineController:
             temp_tex = Texture2D(src_tex.width, src_tex.height)
             src_tex.copy_to(temp_tex)
 
+            window_title = self._get_current_window_title()
+
             # Offload download and save to a background thread
             threading.Thread(
                 target=self._download_and_save,
                 args=(
                     temp_tex,
+                    window_title,
                     src_tex.width,
                     src_tex.height,
                     self._pipeline,
