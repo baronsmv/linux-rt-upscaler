@@ -353,6 +353,7 @@ class PipelineController:
             fmt_vars = {
                 "timestamp": now,  # datetime object to supports {timestamp:%Y-%m-%d ...}
                 "title": title,
+                "profile": pipeline.profile_name or title,
                 "model": pipeline.config.model,
                 "width": width,
                 "height": height,

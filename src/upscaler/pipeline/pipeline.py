@@ -84,6 +84,7 @@ class Pipeline(QObject):
         self.overlay = overlay
         self.base_config = base_config or copy.deepcopy(config)
         self.profiles = profiles or {}
+        self.profile_name: Optional[str] = None
 
         # Crop margins (fixed for the session)
         self._crop_left = config.crop_left
@@ -300,8 +301,10 @@ class Pipeline(QObject):
         )
         if profile_data:
             apply_overrides(new_config, profile_data.get("options", {}))
+            self.profile_name = profile_name
             logger.info("Auto-applied profile '%s'", profile_name)
         else:
+            self.profile_name = None
             logger.debug(
                 "No matching profile for '%s', using base config",
                 win_info.title,
