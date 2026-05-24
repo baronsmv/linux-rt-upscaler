@@ -393,7 +393,7 @@ osd_duration: 1.5
 # Frame rate cap.
 # Limits the number of frames processed per second by sleeping the pipeline
 # thread between frames. This can reduce power consumption and produce
-# consistent frame pacing without relying on V‑Sync.
+# consistent frame pacing in high-rate monitors.
 # Default: null (no cap)
 max_fps: null
 
