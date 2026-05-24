@@ -20,6 +20,10 @@ function hlsl_to_spv -a hlsl
             -Fo "$spv" \
             -T cs_6_2 \
             -E main \
+            -fvk-auto-shift-bindings \
+            -fvk-t-shift 1024 0 \
+            -fvk-u-shift 2048 0 \
+            -fvk-s-shift 3072 0 \
             -D SAMPLE_EASU=1 \
             -D A_GPU=1 \
             -D A_HLSL=1 \

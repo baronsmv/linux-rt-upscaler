@@ -33,12 +33,21 @@
 #define A_HLSL_6_2 1
 #define A_NO_16_BIT_CAST 1
 
-[[vk::binding(3, 0)]] SamplerState		samLinearClamp : register(s0);
+/* Modification of original code to adjust bindings to pipeline.
+ * Original:
+ * [[vk::binding(3, 0)]] SamplerState		samLinearClamp : register(s0);
+**/
+[[vk::binding(3072, 0)]] SamplerState samLinearClamp : register(s0);
 
 #if SAMPLE_SLOW_FALLBACK
 	#include "ffx_a.h"
-	[[vk::binding(1, 0)]] Texture2D InputTexture : register(t0);
-	[[vk::binding(2, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
+	/* Modification of original code to adjust bindings to pipeline.
+     * Original:
+	 * [[vk::binding(1, 0)]] Texture2D InputTexture : register(t0);
+	 * [[vk::binding(2, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
+    **/
+	[[vk::binding(1024, 0)]] Texture2D InputTexture : register(t0);
+    [[vk::binding(2048, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
 	#if SAMPLE_EASU
 		#define FSR_EASU_F 1
 		AF4 FsrEasuRF(AF2 p) { AF4 res = InputTexture.GatherRed(samLinearClamp, p, int2(0, 0)); return res; }
@@ -53,8 +62,13 @@
 #else
 	#define A_HALF
 	#include "ffx_a.h"
-	[[vk::binding(1, 0)]] Texture2D<float4> InputTexture : register(t0);
-	[[vk::binding(2, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
+    /* Modification of original code to adjust bindings to pipeline.
+     * Original:
+	 * [[vk::binding(1, 0)]] Texture2D<float4> InputTexture : register(t0);
+	 * [[vk::binding(2, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
+	**/
+	[[vk::binding(1024, 0)]] Texture2D<float4> InputTexture : register(t0);
+    [[vk::binding(2048, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
 	#if SAMPLE_EASU
 		#define FSR_EASU_H 1
 		AH4 FsrEasuRH(AF2 p) { AH4 res = (AH4)InputTexture.GatherRed(samLinearClamp, p, int2(0, 0)); return res; }
