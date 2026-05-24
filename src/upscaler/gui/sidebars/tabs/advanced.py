@@ -73,6 +73,27 @@ class AdvancedTab(SettingsTab):
 
         # ---- Vulkan Rendering ----
         self._add_section("Vulkan Rendering")
+        self._fps_cap_cb = self._add_cb(
+            "Limit FPS",
+            self._config.max_fps is not None,
+            self._on_fps_cap_toggle,
+            baseline=self.baseline_config.max_fps is not None,
+            help="Enable an upper frame-rate limit.",
+        )
+        self._fps_slider = self._add_slider(
+            "Max FPS",
+            1,
+            240,
+            self._config.max_fps if self._config.max_fps is not None else 60,
+            slot=self._on_fps_slider,
+            baseline=(
+                self.baseline_config.max_fps
+                if self.baseline_config.max_fps is not None
+                else 60
+            ),
+            help="Target maximum frames per second.",
+        )
+        self._fps_slider.setEnabled(self._config.max_fps is not None)
         self._present_combo = self._add_combo(
             "Present Mode",
             [e.value for e in VulkanPresentMode],
@@ -255,6 +276,20 @@ class AdvancedTab(SettingsTab):
     def _on_tight_antiring(self, state: int):
         self._config.lanczos_tight_antiring = bool(state)
         self.config_changed.emit()
+
+    def _on_fps_cap_toggle(self, state: int) -> None:
+        enabled = bool(state)
+        self._fps_slider.setEnabled(enabled)
+        if enabled:
+            self._config.max_fps = self._fps_slider.value()
+        else:
+            self._config.max_fps = None
+        self.config_changed.emit()
+
+    def _on_fps_slider(self, value: int) -> None:
+        if self._fps_slider.isEnabled():
+            self._config.max_fps = value
+            self.config_changed.emit()
 
     def _on_present_mode(self, text: str):
         self._config.vulkan_present_mode = text
