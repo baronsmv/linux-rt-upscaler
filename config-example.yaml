@@ -362,6 +362,8 @@ screenshot_dir: "~/Pictures/Screenshots"
 
 # File name template for screenshots. Supports Python format placeholders:
 #   {timestamp}  - capture time (may include strftime format specs)
+#   {title}      - current window title at screenshot time
+#   {profile}    - name of the applied profile, or {title} if none
 #   {model}      - active upscaling model name
 #   {width}      - upscaled image width in pixels
 #   {height}     - upscaled image height in pixels

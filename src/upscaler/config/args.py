@@ -765,6 +765,9 @@ Default: 'Screenshot_{timestamp:%%Y%%m%%d_%%H%%M%%S}.png'.
 Available placeholders:
   {timestamp} - capture time (supports strftime,
                 e.g. '{timestamp:%%Y-%%m-%%d_%%H-%%M-%%S}').
+  {title}     - current window title.
+  {profile}   - active profile name (fallback to {title}
+                if no profile).
   {model}     - active upscaling model.
   {width}     - upscaled image width in pixels.
   {height}    - upscaled image height in pixels.

@@ -41,11 +41,13 @@ class ExtrasTab(SettingsTab):
             self._on_file_changed,
             baseline=self.baseline_config.screenshot_filename,
             help="Filename template for screenshots. Available placeholders:\n"
-            "{timestamp}: capture time (supports strftime, e.g. "
+            f"{chr(8226)} {{timestamp}}: capture time (supports strftime, e.g. "
             "{timestamp:%Y-%m-%d-%H-%M-%S})\n"
-            "{model}: active upscaling model\n"
-            "{width}: upscaled image width\n"
-            "{height}: upscaled image height",
+            f"{chr(8226)} {{title}}: current window title\n"
+            f"{chr(8226)} {{profile}}: active profile name (fallback to {{title}} if no profile)\n"
+            f"{chr(8226)} {{model}}: active upscaling model\n"
+            f"{chr(8226)} {{width}}: upscaled image width\n"
+            f"{chr(8226)} {{height}}: upscaled image height",
         )
 
         # ---- On-Screen Display ----
