@@ -151,6 +151,7 @@ class Config:
     osd_duration: float = 1.5
 
     # Vulkan
+    max_fps: Optional[int] = None
     vulkan_present_mode: str = VulkanPresentMode.FIFO.value
     vulkan_buffer_pool_size: int = 8
     frame_timeout: int = 1_000_000_000

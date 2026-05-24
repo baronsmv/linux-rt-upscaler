@@ -390,6 +390,13 @@ osd_duration: 1.5
 # Vulkan Performance Options (Advanced)
 # ------------------------------------------------------------------------------
 
+# Frame rate cap.
+# Limits the number of frames processed per second by sleeping the pipeline
+# thread between frames. This can reduce power consumption and produce
+# consistent frame pacing without relying on V‑Sync.
+# Default: null (no cap)
+max_fps: null
+
 # Vulkan presentation mode.
 #   - "fifo"      : V-Sync on. Limits FPS to display refresh rate.
 #                   Lowest power consumption, no tearing. (Default)

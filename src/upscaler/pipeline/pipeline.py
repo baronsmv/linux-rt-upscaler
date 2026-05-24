@@ -191,8 +191,11 @@ class Pipeline(QObject):
         # Frame grabber (created on pipeline thread)
         self._grabber: Optional[FrameGrabber] = None
 
+        # FPS counter
+        self._next_frame_time: float = 0.0
+
         # Failure counter
-        self._consecutive_capture_failures = 0
+        self._consecutive_capture_failures: int = 0
 
         # Pre-upload OSD textures (requires Vulkan device to be ready)
         self.osd.prepare_textures()
@@ -276,6 +279,7 @@ class Pipeline(QObject):
             self.overlay.show()
             time.sleep(0.1)
             self._presenter_params_stale = True
+            self._next_frame_time = time.perf_counter()
 
     # ----------------------------------------------------------------------
     # Configuration change
@@ -542,6 +546,44 @@ class Pipeline(QObject):
         # Handle the geometry change
         self._handle_window_change()
 
+    def _apply_fps_cap(self) -> bool:
+        """
+        Pace the pipeline to respect `self.config.max_fps`.
+
+        Sleeps the calling thread (the pipeline thread) when the
+        next frame is scheduled too early. The sleep is interruptible
+        by `self._wake_event`, which is set when the pipeline is
+        stopping.
+
+        Returns:
+            True if the sleep was interrupted by a stop signal
+                  (caller should exit or restart its loop).
+            False if the cap was applied or no cap is active.
+        """
+        if not self.config.max_fps:
+            return False
+
+        interval = 1.0 / self.config.max_fps
+        now = time.perf_counter()
+        remaining = self._next_frame_time - now
+
+        if remaining > 0:
+            if self._wake_event.wait(remaining):
+                return True
+
+            # Catch-up after a possible wake-up
+            now = time.perf_counter()
+            remaining = self._next_frame_time - now
+            if remaining > 0:
+                time.sleep(remaining)
+
+        # If already behind, reset to avoid debt
+        self._next_frame_time += interval
+        if self._next_frame_time < time.perf_counter():
+            self._next_frame_time = time.perf_counter() + interval
+
+        return False
+
     # ----------------------------------------------------------------------
     # Main loop (runs in dedicated thread)
     # ----------------------------------------------------------------------
@@ -606,6 +648,8 @@ class Pipeline(QObject):
                 # Process a frame if upscaler exists
                 try:
                     if self.upscaler_mgr:
+                        if self._apply_fps_cap():
+                            continue
                         self._process_one_frame()
                     else:
                         self._wake_event.wait(
