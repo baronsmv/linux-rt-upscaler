@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import logging
 import os
 import struct
-from typing import Optional, Tuple
+from typing import Optional, TYPE_CHECKING
 
 from ..shader import ShaderPass
 from ...vulkan import Sampler, Texture2D, SAMPLER_FILTER_POINT
+
+if TYPE_CHECKING:
+    from ...config import BackgroundColor
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +17,11 @@ logger = logging.getLogger(__name__)
 # Constant buffer layouts for the two Lanczos shaders
 # ---------------------------------------------------------------------------
 
-# Lanczos Fixed (fixed radius 2) - no radiusX/radiusY fields
+# Lanczos Fixed (fixed radius 2): no radiusX/radiusY fields
 CB_FORMAT_FIXED = "ffffIIIIiiiif"
 CB_SIZE_FIXED = struct.calcsize(CB_FORMAT_FIXED)
 
-# Lanczos Adaptive (variable radius) - includes radiusX/radiusY
+# Lanczos Adaptive (variable radius): includes radiusX/radiusY
 CB_FORMAT_ADAPTIVE = "ffffIIIIiiiiIIffII"
 CB_SIZE_ADAPTIVE = struct.calcsize(CB_FORMAT_ADAPTIVE)
 
@@ -33,8 +38,8 @@ class LanczosScaler(ShaderPass):
     Adaptive Lanczos resampler - single-pass 2D scaling via compute shader.
 
     Internally uses two Vulkan compute shaders:
-        * `lanczos_fixed.spv` - highly optimised for radius 2 (upscaling).
-        * `lanczos_adaptive.spv` - general variable-radius path for
+        - `lanczos_fixed.spv` - highly optimized for radius 2 (upscaling).
+        - `lanczos_adaptive.spv` - general variable-radius path for
           downscaling or non-uniform scaling.
 
     The appropriate shader is chosen automatically based on the pre-computed
@@ -57,11 +62,7 @@ class LanczosScaler(ShaderPass):
         self._load_shader_variants(shader_path_l2, shader_path_adapt)
 
         # Let the base class handle persistent resources and pipeline creation
-        # Important: super().__init__() sets self._shader = None internally,
-        # so we must assign self._shader *after* the super call
-        super().__init__(
-            shader_path_adapt
-        )  # path is ignored because _load_shader is overridden
+        super().__init__(shader_path_adapt)
 
         # Now set the initial shader to the adaptive variant (safe default)
         self._shader = self._shader_adapt
@@ -139,7 +140,7 @@ class LanczosScaler(ShaderPass):
     # ------------------------------------------------------------------
     def update_constants(
         self,
-        background_color: Tuple[float, float, float, float],
+        background_color: BackgroundColor,
         src_width: int,
         src_height: int,
         dst_total_width: int,

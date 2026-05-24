@@ -163,7 +163,7 @@ class ShaderPass(ABC):
             self._shader,
             srv=srvs if srvs else None,
             uav=uavs if uavs else None,
-            cbv=[self._cb],
+            cbv=[self._cb] if self._cb else [],
             samplers=samplers if samplers else None,
             push_size=0,
         )

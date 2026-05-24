@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import logging
 import os
 import struct
-from typing import Tuple
+from typing import TYPE_CHECKING
 
 from ..shader import ShaderPass
 from ...vulkan import Texture2D
+
+if TYPE_CHECKING:
+    from ...config import BackgroundColor
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +72,7 @@ class CopyPass(ShaderPass):
     # ------------------------------------------------------------------
     def update_constants(
         self,
-        background_color: Tuple[float, float, float, float],
+        background_color: BackgroundColor,
         src_width: int,
         src_height: int,
         dst_total_width: int,
