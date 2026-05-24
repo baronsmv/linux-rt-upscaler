@@ -390,13 +390,6 @@ osd_duration: 1.5
 # Vulkan Performance Options (Advanced)
 # ------------------------------------------------------------------------------
 
-# Frame rate cap.
-# Limits the number of frames processed per second by sleeping the pipeline
-# thread between frames. This can reduce power consumption and produce
-# consistent frame pacing in high-rate monitors.
-# Default: null (no cap)
-max_fps: null
-
 # Vulkan presentation mode.
 #   - "fifo"      : V-Sync on. Limits FPS to display refresh rate.
 #                   Lowest power consumption, no tearing. (Default)
@@ -406,6 +399,18 @@ max_fps: null
 #                   may cause visible tearing.
 # Default: fifo
 vulkan_present_mode: fifo
+
+# Frame rate cap.
+# Limits the number of frames processed per second by sleeping the pipeline
+# thread between frames. This can reduce power consumption and produce
+# consistent frame pacing in high-rate monitors.
+#
+# It's recommended to set Vulkan presentation mode to 'mailbox' for the best
+# experience, since 'fifo' may cause micro-stutters and 'immediate' may still
+# present tearing.
+#
+# Default: null (no cap)
+max_fps: null
 
 # Number of reusable staging buffers (each ~2 MB) for partial texture uploads.
 # A larger pool reduces the overhead of allocating temporary buffers during

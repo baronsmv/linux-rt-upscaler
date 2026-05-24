@@ -797,18 +797,6 @@ Default: %(default)s.""",
     # ----------------------------------------------------------------------
     vulkan_group = parser.add_argument_group("VULKAN PERFORMANCE OPTIONS")
     vulkan_group.add_argument(
-        "--max-fps",
-        type=int,
-        default=DEFAULT_CONFIG.max_fps,
-        help="""Cap the pipeline frame rate to this value.
-Useful for power saving or consistent frame pacing.
-
-Note: This cap will not exceed the display refresh rate
-when combined with V‑Sync (fifo present mode).
-
-""",
-    )
-    vulkan_group.add_argument(
         "--vulkan-present-mode",
         choices=["fifo", "mailbox", "immediate"],
         default=DEFAULT_CONFIG.vulkan_present_mode,
@@ -823,6 +811,19 @@ Modes:
               is displayed. Higher power usage.
   immediate - Lowest latency, no V-Sync. Frames are displayed
               immediately, may cause visible tearing.
+
+""",
+    )
+    vulkan_group.add_argument(
+        "--max-fps",
+        type=int,
+        default=DEFAULT_CONFIG.max_fps,
+        help="""Cap the pipeline frame rate to this value.
+Useful for power saving or consistent frame pacing.
+
+Note: It's recommended to set --vulkan-present-mode to
+'mailbox' for the best experience, since 'fifo' may cause
+micro-stutters and 'immediate' may still present tearing.
 
 """,
     )

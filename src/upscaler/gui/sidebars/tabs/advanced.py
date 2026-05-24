@@ -73,12 +73,24 @@ class AdvancedTab(SettingsTab):
 
         # ---- Vulkan Rendering ----
         self._add_section("Vulkan Rendering")
+        self._present_combo = self._add_combo(
+            "Present Mode",
+            [e.value for e in VulkanPresentMode],
+            self._config.vulkan_present_mode,
+            self._on_present_mode,
+            baseline=self.baseline_config.vulkan_present_mode,
+            help="Vulkan presentation mode:\n"
+            f"{chr(8226)} fifo: VSync on, lowest power, no tearing\n"
+            f"{chr(8226)} mailbox: tear-free, lower latency, higher power\n"
+            f"{chr(8226)} immediate: no VSync, lowest latency, may tear",
+        )
         self._fps_cap_cb = self._add_cb(
             "Limit FPS",
             self._config.max_fps is not None,
             self._on_fps_cap_toggle,
             baseline=self.baseline_config.max_fps is not None,
-            help="Enable an upper frame-rate limit.",
+            help="Enable an upper frame-rate limit.\n"
+            "It's recommended to use 'mailbox' presentation mode when limiting FPS.",
         )
         self._fps_slider = self._add_slider(
             "Max FPS",
@@ -94,17 +106,6 @@ class AdvancedTab(SettingsTab):
             help="Target maximum frames per second.",
         )
         self._fps_slider.setEnabled(self._config.max_fps is not None)
-        self._present_combo = self._add_combo(
-            "Present Mode",
-            [e.value for e in VulkanPresentMode],
-            self._config.vulkan_present_mode,
-            self._on_present_mode,
-            baseline=self.baseline_config.vulkan_present_mode,
-            help="Vulkan presentation mode:\n"
-            f"{chr(8226)} fifo: VSync on, lowest power, no tearing\n"
-            f"{chr(8226)} mailbox: tear-free, lower latency, higher power\n"
-            f"{chr(8226)} immediate: no VSync, lowest latency, may tear",
-        )
         self._buffer_pool = self._add_slider(
             "Buffer Pool Size",
             2,
