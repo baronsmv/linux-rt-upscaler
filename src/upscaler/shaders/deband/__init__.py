@@ -3,7 +3,7 @@ import os
 import struct
 from typing import Optional
 
-from ..shader import ShaderPass
+from ..shader import Shader
 from ...vulkan import Texture2D
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ _SHADER_DIR = os.path.dirname(__file__)
 DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "deband.spv")
 
 
-class DebandPass(ShaderPass):
+class Deband(Shader):
     """
     Anisotropic stochastic debanding post-effect.
 

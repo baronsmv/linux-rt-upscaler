@@ -7,7 +7,7 @@ from ..vulkan import Buffer, Compute, Sampler, Texture2D
 logger = logging.getLogger(__name__)
 
 
-class ShaderPass(ABC):
+class Shader(ABC):
     """
     Abstract base class for a single-dispatch compute shader pass.
 
@@ -32,7 +32,7 @@ class ShaderPass(ABC):
         _shader (bytes | None): Shader bytecode, cached after loading.
         _cb (Buffer | None): Constant buffer.
         _sampler (Sampler | None): Optional sampler for the pass.
-        _compute (Compute | None): The compute pipeline object.
+        compute (Compute | None): The compute pipeline object.
     """
 
     # ------------------------------------------------------------------
@@ -116,7 +116,7 @@ class ShaderPass(ABC):
         self._shader: Optional[bytes] = None
         self._sampler: Optional[Sampler] = None
         self._cb: Optional[Buffer] = None
-        self._compute: Optional[Compute] = None
+        self.compute: Optional[Compute] = None
         self.target_texture: Optional[Texture2D] = None
 
         self._load_shader()
@@ -159,7 +159,7 @@ class ShaderPass(ABC):
 
         srvs, uavs, samplers = self._get_bindings()
 
-        self._compute = Compute(
+        self.compute = Compute(
             self._shader,
             srv=srvs if srvs else None,
             uav=uavs if uavs else None,
@@ -171,7 +171,7 @@ class ShaderPass(ABC):
 
     def _check_ready(self) -> None:
         """Raise if the pipeline is not yet ready."""
-        if self._compute is None:
+        if self.compute is None:
             raise RuntimeError(
                 f"{type(self).__name__} pipeline is not ready, "
                 "call set_target_texture() (and set_source_texture() if needed) first"
@@ -201,4 +201,4 @@ class ShaderPass(ABC):
             groups_z: Number of workgroups in Z (always 1).
         """
         self._check_ready()
-        self._compute.dispatch(groups_x, groups_y, groups_z)
+        self.compute.dispatch(groups_x, groups_y, groups_z)

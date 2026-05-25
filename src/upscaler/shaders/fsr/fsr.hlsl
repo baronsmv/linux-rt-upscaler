@@ -24,6 +24,9 @@
   uint4 Const2;
   uint4 Const3;
   uint4 Sample;
+  //Modification of original code to add push variables for background color box:
+  uint4 dstRect; // x = dstX, y = dstY, z = dstW, w = dstH
+  float4 bgColor;
 };
 
 #define A_GPU 1
@@ -101,6 +104,15 @@ void FsrRcasInputH(inout AH1 r, inout AH1 g, inout AH1 b) {}
 #include "ffx_fsr1.h"
 
 void CurrFilter(int2 pos) {
+  // Modification of original code to add a custom background color box:
+  int2 rectXY = int2(dstRect.xy);
+  int2 rectWH = int2(dstRect.zw);
+  if (pos.x < rectXY.x || pos.x >= rectXY.x + rectWH.x || pos.y < rectXY.y ||
+      pos.y >= rectXY.y + rectWH.y) {
+    OutputTexture[pos] = bgColor;
+    return;
+  }
+
 #if SAMPLE_BILINEAR
   AF2 pp = (AF2(pos) * AF2_AU2(Const0.xy) + AF2_AU2(Const0.zw)) *
                AF2_AU2(Const1.xy) +

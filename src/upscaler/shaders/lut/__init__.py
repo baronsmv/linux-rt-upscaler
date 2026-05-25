@@ -4,7 +4,7 @@ import struct
 from typing import Optional
 
 from .presets import BUILT_IN_PRESETS, LUT_SIZE
-from ..shader import ShaderPass
+from ..shader import Shader
 from ...vulkan import Sampler, Texture2D, SAMPLER_FILTER_LINEAR
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ _SHADER_DIR = os.path.dirname(__file__)
 DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "lut.spv")
 
 
-class LUTPass(ShaderPass):
+class LUT(Shader):
     """
     Color grading via 3D LUT.
 

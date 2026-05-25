@@ -2,7 +2,7 @@ import logging
 import os
 import struct
 
-from ..shader import ShaderPass
+from ..shader import Shader
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ _SHADER_DIR = os.path.dirname(__file__)
 DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "cas.spv")
 
 
-class CASPass(ShaderPass):
+class CAS(Shader):
     """
     Contrast Adaptive Sharpening - single-pass screen-space sharpening.
 

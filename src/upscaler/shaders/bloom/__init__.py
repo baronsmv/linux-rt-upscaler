@@ -2,7 +2,7 @@ import logging
 import os
 import struct
 
-from ..shader import ShaderPass
+from ..shader import Shader
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ _SHADER_DIR = os.path.dirname(__file__)
 DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "bloom.spv")
 
 
-class BloomPass(ShaderPass):
+class Bloom(Shader):
     """
     Soft bloom effect for bright regions of the screen.
 

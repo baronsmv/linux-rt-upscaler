@@ -1,30 +1,32 @@
 """HLSL/SPIR-V shaders modules."""
 
-from .bloom import BloomPass
-from .cas import CASPass
-from .copy import CopyPass
-from .deband import DebandPass
-from .delinearize import DelinearizePass
-from .fsr import FSRUpscaler
-from .grain import FilmGrainPass
+from .bloom import Bloom
+from .cas import CAS
+from .copy import CopyScaler
+from .deband import Deband
+from .delinearize import Delinearize
+from .fsr import FSRScaler
+from .grain import FilmGrain
 from .lanczos import LanczosScaler
-from .linearize import LinearizePass
-from .lut import LUTPass, BUILT_IN_PRESETS
+from .linearize import Linearize
+from .lut import LUT, BUILT_IN_PRESETS
 from .overlay_blender import OverlayBlender
-from .vignette import VignettePass
+from .scaler import Scaler
+from .vignette import Vignette
 
 __all__ = [
-    "BloomPass",
-    "CASPass",
-    "CopyPass",
-    "DebandPass",
-    "DelinearizePass",
-    "FilmGrainPass",
-    "FSRUpscaler",
+    "Bloom",
+    "CAS",
+    "CopyScaler",
+    "Deband",
+    "Delinearize",
+    "FilmGrain",
+    "FSRScaler",
     "LanczosScaler",
-    "LinearizePass",
-    "LUTPass",
+    "Linearize",
+    "LUT",
     "OverlayBlender",
-    "VignettePass",
+    "Scaler",
+    "Vignette",
     "BUILT_IN_PRESETS",
 ]

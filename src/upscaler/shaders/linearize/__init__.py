@@ -1,19 +1,20 @@
 import logging
 import os
+from typing import Optional
 
-from ..shader import ShaderPass
+from ..shader import Shader
 from ...vulkan import Texture2D
 
 logger = logging.getLogger(__name__)
 
 
-class LinearizePass(ShaderPass):
+class Linearize(Shader):
     """Converts a sRGB texture to linear color space."""
 
     def __init__(self, shader_path: str = None) -> None:
         if shader_path is None:
             shader_path = os.path.join(os.path.dirname(__file__), "linearize.spv")
-        self.source_texture: Texture2D | None = None
+        self.source_texture: Optional[Texture2D] = None
         super().__init__(shader_path)
 
     @staticmethod
@@ -43,7 +44,7 @@ class LinearizePass(ShaderPass):
 
     def dispatch_auto(self) -> None:
         # Override to avoid constant-buffer check
-        if self._compute is None:
+        if self.compute is None:
             raise RuntimeError("Pipeline not ready")
         w, h = self.target_texture.width, self.target_texture.height
         self.dispatch((w + 15) // 16, (h + 15) // 16)

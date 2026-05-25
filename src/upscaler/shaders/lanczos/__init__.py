@@ -1,21 +1,18 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import struct
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
-from ..shader import ShaderPass
-from ...vulkan import Sampler, Texture2D, SAMPLER_FILTER_POINT
+from ..scaler import Scaler
+from ...vulkan import Buffer
 
 if TYPE_CHECKING:
     from ...config import BackgroundColor
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Constant buffer layouts for the two Lanczos shaders
-# ---------------------------------------------------------------------------
 
 # Lanczos Fixed (fixed radius 2): no radiusX/radiusY fields
 CB_FORMAT_FIXED = "ffffIIIIiiiif"
@@ -33,7 +30,7 @@ DEFAULT_SHADER_PATH_FIXED = os.path.join(_SHADER_DIR, "lanczos_fixed.spv")
 DEFAULT_SHADER_PATH_ADAPTIVE = os.path.join(_SHADER_DIR, "lanczos_adaptive.spv")
 
 
-class LanczosScaler(ShaderPass):
+class LanczosScaler(Scaler):
     """
     Adaptive Lanczos resampler - single-pass 2D scaling via compute shader.
 
@@ -54,8 +51,6 @@ class LanczosScaler(ShaderPass):
         shader_path_l2: str = DEFAULT_SHADER_PATH_FIXED,
         shader_path_adapt: str = DEFAULT_SHADER_PATH_ADAPTIVE,
     ) -> None:
-        self.source_texture: Optional[Texture2D] = None
-
         # Pre-load both SPIR-V binaries into memory
         self._shader_l2 = None
         self._shader_adapt = None
@@ -70,18 +65,16 @@ class LanczosScaler(ShaderPass):
         self._cb_format = CB_FORMAT_ADAPTIVE
         self._cb_size_current = CB_SIZE_ADAPTIVE
 
-    # ------------------------------------------------------------------
-    #  Constant buffer size
-    # ------------------------------------------------------------------
+        # Custom options
+        self.blur = 1.0
+        self.antiring_strength = 1.0
+        self.tight_antiring = True
+
     @staticmethod
     def _cb_size() -> int:
         return CB_SIZE_MAX
 
-    # ------------------------------------------------------------------
-    #  Override _load_shader to avoid loading from disk
-    # ------------------------------------------------------------------
     def _load_shader(self) -> None:
-        # Do nothing, already have the shader bytes
         pass
 
     def _load_shader_variants(self, path_lanczos: str, path_adapt: str) -> None:
@@ -100,66 +93,46 @@ class LanczosScaler(ShaderPass):
         except OSError as e:
             raise RuntimeError(f"Failed to load Lanczos adaptive shader: {e}") from e
 
-    # ------------------------------------------------------------------
-    #  Persistent resources (sampler + constant buffer)
-    # ------------------------------------------------------------------
-    def _create_persistent_resources(self) -> None:
-        """Create constant buffer and point sampler."""
-        # Base class would normally create a constant buffer of _cb_size()
-        super()._create_persistent_resources()  # creates self._cb with size CB_SIZE_MAX
-        self._sampler = Sampler(
-            filter_min=SAMPLER_FILTER_POINT,
-            filter_mag=SAMPLER_FILTER_POINT,
-        )
+    def _create_persistent_resources(self):
+        self._cb = Buffer(CB_SIZE_MAX)
+        self._sampler = None
 
-    # ------------------------------------------------------------------
-    #  Binding layout
-    # ------------------------------------------------------------------
     def _get_bindings(self):
-        return [self.source_texture], [self.target_texture], [self._sampler]
+        return [self.source_texture], [self.target_texture], []
 
-    # ------------------------------------------------------------------
-    #  Rebuild compute (called by base when textures change)
-    # ------------------------------------------------------------------
-    def _rebuild_compute(self) -> None:
-        if self.target_texture is None or self.source_texture is None:
-            return
-        super()._rebuild_compute()
+    def configure(
+        self,
+        blur: float = 1.0,
+        antiring_strength: float = 1.0,
+        tight_antiring: bool = True,
+    ):
+        """Set custom parameters."""
+        self.blur = blur
+        self.antiring_strength = antiring_strength
+        self.tight_antiring = tight_antiring
 
-    # ------------------------------------------------------------------
-    #  Set the input (upscaled) texture
-    # ------------------------------------------------------------------
-    def set_source_texture(self, tex: Texture2D) -> None:
-        if tex is self.source_texture:
-            return
-        self.source_texture = tex
-        self._rebuild_compute()
-
-    # ------------------------------------------------------------------
-    #  Constant buffer update - this is where we decide which shader to use
-    # ------------------------------------------------------------------
     def update_constants(
         self,
         background_color: BackgroundColor,
         src_width: int,
         src_height: int,
-        dst_total_width: int,
-        dst_total_height: int,
+        dst_width: int,
+        dst_height: int,
         dst_x: int,
         dst_y: int,
         dst_w: int,
         dst_h: int,
-        radius_x: int,
-        radius_y: int,
-        blur: float = 1.0,
-        antiring_strength: float = 1.0,
-        tight_antiring: bool = True,
     ) -> None:
         """
         Pack and upload the constant buffer, automatically selecting the
         optimal shader based on the computed filter radii.
         """
-        # ---- 1. Select the correct shader variant ---------------------------
+        # ---- Select the correct shader variant -------------------------------
+        scale_x = dst_w / src_width
+        scale_y = dst_h / src_height
+        radius_x = 2 if scale_x >= 1.0 else math.ceil(2.0 / scale_x)
+        radius_y = 2 if scale_y >= 1.0 else math.ceil(2.0 / scale_y)
+
         need_adaptive = not (radius_x == 2 and radius_y == 2)
         self._ensure_shader_variant(adaptive=need_adaptive)
 
@@ -170,13 +143,13 @@ class LanczosScaler(ShaderPass):
                 *background_color,
                 src_width,
                 src_height,
-                dst_total_width,
-                dst_total_height,
+                dst_width,
+                dst_height,
                 dst_x,
                 dst_y,
                 dst_w,
                 dst_h,
-                blur,
+                self.blur,
             )
         else:  # adaptive
             data = struct.pack(
@@ -184,17 +157,17 @@ class LanczosScaler(ShaderPass):
                 *background_color,  # 4 floats
                 src_width,
                 src_height,  # 2 uint32
-                dst_total_width,
-                dst_total_height,  # 2 uint32
+                dst_width,
+                dst_height,  # 2 uint32
                 dst_x,
                 dst_y,
                 dst_w,
                 dst_h,  # 4 int32
                 radius_x,
                 radius_y,  # 2 uint32
-                blur,  # float
-                antiring_strength,  # float
-                1 if tight_antiring else 0,  # uint32 (bool)
+                self.blur,  # float
+                self.antiring_strength,  # float
+                1 if self.tight_antiring else 0,  # uint32 (bool)
             )
 
         # ---- 3. Upload -------------------------------------------------------

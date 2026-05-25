@@ -1,19 +1,20 @@
 import logging
 import os
+from typing import Optional
 
-from ..shader import ShaderPass
+from ..shader import Shader
 from ...vulkan import Texture2D
 
 logger = logging.getLogger(__name__)
 
 
-class DelinearizePass(ShaderPass):
+class Delinearize(Shader):
     """Converts a linear-light texture back to sRGB space."""
 
     def __init__(self, shader_path: str = None) -> None:
         if shader_path is None:
             shader_path = os.path.join(os.path.dirname(__file__), "delinearize.spv")
-        self.source_texture: Texture2D | None = None
+        self.source_texture: Optional[Texture2D] = None
         super().__init__(shader_path)
 
     @staticmethod
