@@ -8,8 +8,11 @@ from ..shaders import (
     CASPass,
     CopyPass,
     DebandPass,
+    DelinearizePass,
     FilmGrainPass,
+    FSRUpscaler,
     LanczosScaler,
+    LinearizePass,
     LUTPass,
     VignettePass,
 )
@@ -74,13 +77,26 @@ class Presenter:
         self.screen_tex = Texture2D(screen_width, screen_height)
         self._active_source_texture: Optional[Texture2D] = None
 
-        # --- Lanczos scaler -----------------------------------------------------
+        # --- Helpers ------------------------------------------------------------
+        # Linear pass
+        self.linearize_pass = LinearizePass()
+        self._linear_tex = None
+
+        self.delinearize_pass = DelinearizePass()
+        self.delinearize_pass.set_target_texture(self.screen_tex)
+
+        # --- Scalers ------------------------------------------------------------
+        # Copy pass (1:1 scaler)
+        self._copy_pass = CopyPass()
+        self._copy_pass.set_target_texture(self.screen_tex)
+
+        # Lanczos
         self.lanczos = LanczosScaler()
         self.lanczos.set_target_texture(self.screen_tex)
 
-        # --- Copy pass (1:1 scaler) ---------------------------------------------
-        self._copy_pass = CopyPass()
-        self._copy_pass.set_target_texture(self.screen_tex)
+        # FSR
+        self.fsr = FSRUpscaler()
+        self.fsr.set_target_texture(self.screen_tex)
 
         # --- Post-processing passes (only created if config enables them) ------
         # Debanding (needs separate textures)
@@ -159,60 +175,47 @@ class Presenter:
             logger.warning("No source texture set, skipping present")
             return
 
-        # ---- 1. Debanding (optional) -----------------------------------------
+        # ---- Debanding ------------------------------------------------------
         src = self._apply_deband_if_enabled(src)
         self._active_source_texture = src
 
-        # ---- 2. Lanczos scaling ---------------------------------------------
+        # ---- Linearize and scale --------------------------------------------
         r_x, r_y, r_w, r_h, dst_x, dst_y = self._compute_scaling_params(
             src.width, src.height
         )
-
-        is_identity = r_w == src.width and r_h == src.height
-
-        if is_identity:
-            self._copy_pass.set_source_texture(src)
-            self._copy_pass.update_constants(
-                self.background_color,
-                src.width,
-                src.height,
-                self.screen_width,
-                self.screen_height,
-                dst_x,
-                dst_y,
-                r_w,
-                r_h,
-            )
-            self._copy_pass.dispatch_auto()
+        if r_w == src.width and r_h == src.height:
+            self._scale_identity(src, src.width, src.height, dst_x, dst_y, r_w, r_h)
+        elif r_w >= src.width or r_h >= src.height:
+            self._upscale(src, src.width, src.height, dst_x, dst_y)
         else:
-            self.lanczos.set_source_texture(src)
-            self._update_lanczos_constants(
-                src.width, src.height, r_w, r_h, dst_x, dst_y
-            )
-            self.lanczos.dispatch_auto()
+            self._downscale(src, src.width, src.height, r_w, r_h, dst_x, dst_y)
 
-        # ---- 3. CAS ----------------------------------------------------------
+        # ---- CAS ------------------------------------------------------------
         self._apply_cas_if_enabled()
 
-        # ---- 4. Bloom --------------------------------------------------------
+        # ---- Bloom ----------------------------------------------------------
         self._apply_bloom_if_enabled()
 
-        # ---- 5. Vignette -----------------------------------------------------
+        # ---- Vignette -------------------------------------------------------
         self._apply_vignette_if_enabled()
 
-        # ---- 6. LUT ----------------------------------------------------------
+        # ---- Delinearize ----------------------------------------------------
+        self.delinearize_pass.set_source_texture(self.screen_tex)
+        self.delinearize_pass.dispatch_auto()
+
+        # ---- LUT ------------------------------------------------------------
         self._apply_lut_if_enabled()
 
-        # ---- 7. Film grain ---------------------------------------------------
+        # ---- Film grain -----------------------------------------------------
         self._apply_grain_if_enabled()
 
-        # ---- 8. OSD blend (always) -------------------------------------------
+        # ---- OSD blend ------------------------------------------------------
         self.osd.blend_active(self.screen_tex)
 
-        # ---- 9. Swapchain present --------------------------------------------
+        # ---- Swapchain present ----------------------------------------------
         self.swapchain.present(self.screen_tex, wait_for_fence=wait_for_fence)
 
-        # ---- 10. Advance frame counter ---------------------------------------
+        # ---- Advance frame counter ------------------------------------------
         self._frame_counter += 1
 
     def present_unchanged(self):
@@ -328,6 +331,104 @@ class Presenter:
     # ------------------------------------------------------------------
     #  Internal helpers
     # ------------------------------------------------------------------
+
+    def _scale_identity(
+        self,
+        src: Texture2D,
+        src_width: int,
+        src_height: int,
+        dst_x: int,
+        dst_y: int,
+        r_w: int,
+        r_h: int,
+    ) -> None:
+        """1:1 copy with background fill."""
+        self._copy_pass.set_source_texture(src)
+        self._copy_pass.update_constants(
+            background_color=self.background_color,
+            src_width=src_width,
+            src_height=src_height,
+            dst_total_width=self.screen_width,
+            dst_total_height=self.screen_height,
+            dst_x=dst_x,
+            dst_y=dst_y,
+            dst_w=r_w,
+            dst_h=r_h,
+        )
+        self._copy_pass.dispatch_auto()
+
+    def _upscale(
+        self,
+        src: Texture2D,
+        src_width: int,
+        src_height: int,
+        dst_x: int,
+        dst_y: int,
+    ) -> None:
+        """Linearize the source, then upscale with FSR 1.0 EASU."""
+        # Ensure the intermediate linear texture exists
+        if (
+            self._linear_tex is None
+            or self._linear_tex.width != src_width
+            or self._linear_tex.height != src_height
+        ):
+            self._linear_tex = Texture2D(src_width, src_height)
+
+        # Linearization pass
+        self.linearize_pass.set_source_texture(src)
+        self.linearize_pass.set_target_texture(self._linear_tex)
+
+        # FSR
+        self.fsr.set_source_texture(self._linear_tex)
+        self.fsr.update_constants(
+            src_width=src_width,
+            src_height=src_height,
+            dst_width=self.screen_width,
+            dst_height=self.screen_height,
+            dst_x=dst_x,
+            dst_y=dst_y,
+        )
+
+        # Combined dispatch
+        sequence = [
+            (
+                self.linearize_pass._compute,
+                (src_width + 15) // 16,
+                (src_height + 15) // 16,
+                1,
+                b"",
+            ),
+            (
+                self.fsr._compute,
+                (self.screen_width + 15) // 16,
+                (self.screen_height + 15) // 16,
+                1,
+                b"",
+            ),
+        ]
+        self.linearize_pass._compute.dispatch_sequence(sequence)
+
+    def _downscale(
+        self,
+        src: Texture2D,
+        src_width: int,
+        src_height: int,
+        r_w: int,
+        r_h: int,
+        dst_x: int,
+        dst_y: int,
+    ) -> None:
+        """Downscale using Lanczos resampling."""
+        self.lanczos.set_source_texture(src)
+        self._update_lanczos_constants(
+            src_width=src_width,
+            src_height=src_height,
+            r_w=r_w,
+            r_h=r_h,
+            dst_x=dst_x,
+            dst_y=dst_y,
+        )
+        self.lanczos.dispatch_auto()
 
     def _apply_deband_if_enabled(self, src: Texture2D) -> Texture2D:
         """Run the debanding pass if enabled; return the (possibly debanded) texture."""
