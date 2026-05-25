@@ -207,7 +207,7 @@ class Presenter:
         if r_w == src.width and r_h == src.height:
             self._scale(self._copy, *data)
         elif r_w >= src.width or r_h >= src.height:
-            self._scale(self._nis, *data)
+            self._scale(self._fsr, *data)
         else:
             self._scale(self._lanczos, *data)
 

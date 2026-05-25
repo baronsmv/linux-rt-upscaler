@@ -1,4 +1,4 @@
-// -
+// FidelityFX Super Resolution 1.0 (FSR)
 // https://github.com/GPUOpen-Effects/FidelityFX-FSR/blob/master/sample/src/VK/FSR_Pass.hlsl
 //
 // Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
