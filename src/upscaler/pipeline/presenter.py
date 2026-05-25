@@ -14,6 +14,7 @@ from ..shaders import (
     LanczosScaler,
     Linearize,
     LUT,
+    NISScaler,
     Vignette,
 )
 from ..utils import calculate_scaling_rect
@@ -106,6 +107,10 @@ class Presenter:
         self._fsr = FSRScaler()
         self._fsr.set_target_texture(self.screen_tex)
 
+        # NIS
+        self._nis = NISScaler()
+        self._nis.set_target_texture(self.screen_tex)
+
         # --- Post-processing passes (only created if config enables them) ------
         # Debanding (needs separate textures)
         self._deband: Optional[Deband] = None
@@ -195,7 +200,7 @@ class Presenter:
         if r_w == src.width and r_h == src.height:
             self._scale(self._copy, *data)
         elif r_w >= src.width or r_h >= src.height:
-            self._scale(self._fsr, *data)
+            self._scale(self._nis, *data)
         else:
             self._scale(self._lanczos, *data)
 
@@ -362,7 +367,7 @@ class Presenter:
         """Linearize the source, then upscale with FSR 1.0 EASU."""
         if not scaler.requires_linear_input:
             # Only scaler pass, no linearize
-            scaler.set_source_texture(self._linear_tex)
+            scaler.set_source_texture(src)
             scaler.update_constants(
                 background_color=self.background_color,
                 src_width=src_width,

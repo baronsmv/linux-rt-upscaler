@@ -1,24 +1,172 @@
-from __future__ import annotations
-
 import logging
 import os
 import struct
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 from ..scaler import Scaler
-from ....vulkan import Buffer, Sampler, Texture2D, SAMPLER_FILTER_LINEAR
+from ....vulkan import (
+    Buffer,
+    Sampler,
+    Texture2D,
+    SAMPLER_FILTER_LINEAR,
+    R32G32B32A32_FLOAT,
+)
 
 logger = logging.getLogger(__name__)
 
-NIS_THREAD_GROUP_SIZE = 64
+NIS_BLOCK_WIDTH = 32
+NIS_BLOCK_HEIGHT = 24
+NIS_THREAD_GROUP_SIZE = 256
+
 CB_SIZE_NIS = 28 * 4 + 4 * 4 + 4 * 4
 CB_FORMAT_NIS = "<" + "f" * 28 + "I" * 4 + "f" * 4
 
-_COEF_SCALER_SIZE = (8, 32)
-_COEF_USM_SIZE = (8, 32)
+SHADER_DIR = os.path.dirname(__file__)
+DEFAULT_NIS_SHADER = os.path.join(SHADER_DIR, "nis.spv")
 
-_SHADER_DIR = os.path.dirname(__file__)
-DEFAULT_NIS_SHADER = os.path.join(_SHADER_DIR, "nis.spv")
+Coef = List[List[float]]
+_coef_scale: Coef = [
+    [0.0, 0.0, 1.0000, 0.0, 0.0, 0.0, 0.0, 0.0],
+    [0.0029, -0.0127, 1.0000, 0.0132, -0.0034, 0.0, 0.0, 0.0],
+    [0.0063, -0.0249, 0.9985, 0.0269, -0.0068, 0.0, 0.0, 0.0],
+    [0.0088, -0.0361, 0.9956, 0.0415, -0.0103, 0.0005, 0.0, 0.0],
+    [0.0117, -0.0474, 0.9932, 0.0562, -0.0142, 0.0005, 0.0, 0.0],
+    [0.0142, -0.0576, 0.9897, 0.0713, -0.0181, 0.0005, 0.0, 0.0],
+    [0.0166, -0.0674, 0.9844, 0.0874, -0.0220, 0.0010, 0.0, 0.0],
+    [0.0186, -0.0762, 0.9785, 0.1040, -0.0264, 0.0015, 0.0, 0.0],
+    [0.0205, -0.0850, 0.9727, 0.1206, -0.0308, 0.0020, 0.0, 0.0],
+    [0.0225, -0.0928, 0.9648, 0.1382, -0.0352, 0.0024, 0.0, 0.0],
+    [0.0239, -0.1006, 0.9575, 0.1558, -0.0396, 0.0029, 0.0, 0.0],
+    [0.0254, -0.1074, 0.9487, 0.1738, -0.0439, 0.0034, 0.0, 0.0],
+    [0.0264, -0.1138, 0.9390, 0.1929, -0.0488, 0.0044, 0.0, 0.0],
+    [0.0278, -0.1191, 0.9282, 0.2119, -0.0537, 0.0049, 0.0, 0.0],
+    [0.0288, -0.1245, 0.9170, 0.2310, -0.0581, 0.0059, 0.0, 0.0],
+    [0.0293, -0.1294, 0.9058, 0.2510, -0.0630, 0.0063, 0.0, 0.0],
+    [0.0303, -0.1333, 0.8926, 0.2710, -0.0679, 0.0073, 0.0, 0.0],
+    [0.0308, -0.1367, 0.8789, 0.2915, -0.0728, 0.0083, 0.0, 0.0],
+    [0.0308, -0.1401, 0.8657, 0.3120, -0.0776, 0.0093, 0.0, 0.0],
+    [0.0313, -0.1426, 0.8506, 0.3330, -0.0825, 0.0103, 0.0, 0.0],
+    [0.0313, -0.1445, 0.8354, 0.3540, -0.0874, 0.0112, 0.0, 0.0],
+    [0.0313, -0.1460, 0.8193, 0.3755, -0.0923, 0.0122, 0.0, 0.0],
+    [0.0313, -0.1470, 0.8022, 0.3965, -0.0967, 0.0137, 0.0, 0.0],
+    [0.0308, -0.1479, 0.7856, 0.4185, -0.1016, 0.0146, 0.0, 0.0],
+    [0.0303, -0.1479, 0.7681, 0.4399, -0.1060, 0.0156, 0.0, 0.0],
+    [0.0298, -0.1479, 0.7505, 0.4614, -0.1104, 0.0166, 0.0, 0.0],
+    [0.0293, -0.1470, 0.7314, 0.4829, -0.1147, 0.0181, 0.0, 0.0],
+    [0.0288, -0.1460, 0.7119, 0.5049, -0.1187, 0.0190, 0.0, 0.0],
+    [0.0278, -0.1445, 0.6929, 0.5264, -0.1226, 0.0200, 0.0, 0.0],
+    [0.0273, -0.1431, 0.6724, 0.5479, -0.1260, 0.0215, 0.0, 0.0],
+    [0.0264, -0.1411, 0.6528, 0.5693, -0.1299, 0.0225, 0.0, 0.0],
+    [0.0254, -0.1387, 0.6323, 0.5903, -0.1328, 0.0234, 0.0, 0.0],
+    [0.0244, -0.1357, 0.6113, 0.6113, -0.1357, 0.0244, 0.0, 0.0],
+    [0.0234, -0.1328, 0.5903, 0.6323, -0.1387, 0.0254, 0.0, 0.0],
+    [0.0225, -0.1299, 0.5693, 0.6528, -0.1411, 0.0264, 0.0, 0.0],
+    [0.0215, -0.1260, 0.5479, 0.6724, -0.1431, 0.0273, 0.0, 0.0],
+    [0.0200, -0.1226, 0.5264, 0.6929, -0.1445, 0.0278, 0.0, 0.0],
+    [0.0190, -0.1187, 0.5049, 0.7119, -0.1460, 0.0288, 0.0, 0.0],
+    [0.0181, -0.1147, 0.4829, 0.7314, -0.1470, 0.0293, 0.0, 0.0],
+    [0.0166, -0.1104, 0.4614, 0.7505, -0.1479, 0.0298, 0.0, 0.0],
+    [0.0156, -0.1060, 0.4399, 0.7681, -0.1479, 0.0303, 0.0, 0.0],
+    [0.0146, -0.1016, 0.4185, 0.7856, -0.1479, 0.0308, 0.0, 0.0],
+    [0.0137, -0.0967, 0.3965, 0.8022, -0.1470, 0.0313, 0.0, 0.0],
+    [0.0122, -0.0923, 0.3755, 0.8193, -0.1460, 0.0313, 0.0, 0.0],
+    [0.0112, -0.0874, 0.3540, 0.8354, -0.1445, 0.0313, 0.0, 0.0],
+    [0.0103, -0.0825, 0.3330, 0.8506, -0.1426, 0.0313, 0.0, 0.0],
+    [0.0093, -0.0776, 0.3120, 0.8657, -0.1401, 0.0308, 0.0, 0.0],
+    [0.0083, -0.0728, 0.2915, 0.8789, -0.1367, 0.0308, 0.0, 0.0],
+    [0.0073, -0.0679, 0.2710, 0.8926, -0.1333, 0.0303, 0.0, 0.0],
+    [0.0063, -0.0630, 0.2510, 0.9058, -0.1294, 0.0293, 0.0, 0.0],
+    [0.0059, -0.0581, 0.2310, 0.9170, -0.1245, 0.0288, 0.0, 0.0],
+    [0.0049, -0.0537, 0.2119, 0.9282, -0.1191, 0.0278, 0.0, 0.0],
+    [0.0044, -0.0488, 0.1929, 0.9390, -0.1138, 0.0264, 0.0, 0.0],
+    [0.0034, -0.0439, 0.1738, 0.9487, -0.1074, 0.0254, 0.0, 0.0],
+    [0.0029, -0.0396, 0.1558, 0.9575, -0.1006, 0.0239, 0.0, 0.0],
+    [0.0024, -0.0352, 0.1382, 0.9648, -0.0928, 0.0225, 0.0, 0.0],
+    [0.0020, -0.0308, 0.1206, 0.9727, -0.0850, 0.0205, 0.0, 0.0],
+    [0.0015, -0.0264, 0.1040, 0.9785, -0.0762, 0.0186, 0.0, 0.0],
+    [0.0010, -0.0220, 0.0874, 0.9844, -0.0674, 0.0166, 0.0, 0.0],
+    [0.0005, -0.0181, 0.0713, 0.9897, -0.0576, 0.0142, 0.0, 0.0],
+    [0.0005, -0.0142, 0.0562, 0.9932, -0.0474, 0.0117, 0.0, 0.0],
+    [0.0005, -0.0103, 0.0415, 0.9956, -0.0361, 0.0088, 0.0, 0.0],
+    [0.0, -0.0068, 0.0269, 0.9985, -0.0249, 0.0063, 0.0, 0.0],
+    [0.0, -0.0034, 0.0132, 1.0000, -0.0127, 0.0029, 0.0, 0.0],
+]
+_coef_usm: Coef = [
+    [0.0, -0.6001, 1.2002, -0.6001, 0.0, 0.0, 0.0, 0.0],
+    [0.0029, -0.6084, 1.1987, -0.5903, -0.0029, 0.0, 0.0, 0.0],
+    [0.0049, -0.6147, 1.1958, -0.5791, -0.0068, 0.0005, 0.0, 0.0],
+    [0.0073, -0.6196, 1.1890, -0.5659, -0.0103, 0.0, 0.0, 0.0],
+    [0.0093, -0.6235, 1.1802, -0.5513, -0.0151, 0.0, 0.0, 0.0],
+    [0.0112, -0.6265, 1.1699, -0.5352, -0.0195, 0.0005, 0.0, 0.0],
+    [0.0122, -0.6270, 1.1582, -0.5181, -0.0259, 0.0005, 0.0, 0.0],
+    [0.0142, -0.6284, 1.1455, -0.5005, -0.0317, 0.0005, 0.0, 0.0],
+    [0.0156, -0.6265, 1.1274, -0.4790, -0.0386, 0.0005, 0.0, 0.0],
+    [0.0166, -0.6235, 1.1089, -0.4570, -0.0454, 0.0010, 0.0, 0.0],
+    [0.0176, -0.6187, 1.0879, -0.4346, -0.0532, 0.0010, 0.0, 0.0],
+    [0.0181, -0.6138, 1.0659, -0.4102, -0.0615, 0.0015, 0.0, 0.0],
+    [0.0190, -0.6069, 1.0405, -0.3843, -0.0698, 0.0015, 0.0, 0.0],
+    [0.0195, -0.6006, 1.0161, -0.3574, -0.0796, 0.0020, 0.0, 0.0],
+    [0.0200, -0.5928, 0.9893, -0.3286, -0.0898, 0.0024, 0.0, 0.0],
+    [0.0200, -0.5820, 0.9580, -0.2988, -0.1001, 0.0029, 0.0, 0.0],
+    [0.0200, -0.5728, 0.9292, -0.2690, -0.1104, 0.0034, 0.0, 0.0],
+    [0.0200, -0.5620, 0.8975, -0.2368, -0.1226, 0.0039, 0.0, 0.0],
+    [0.0205, -0.5498, 0.8643, -0.2046, -0.1343, 0.0044, 0.0, 0.0],
+    [0.0200, -0.5371, 0.8301, -0.1709, -0.1465, 0.0049, 0.0, 0.0],
+    [0.0195, -0.5239, 0.7944, -0.1367, -0.1587, 0.0054, 0.0, 0.0],
+    [0.0195, -0.5107, 0.7598, -0.1021, -0.1724, 0.0059, 0.0, 0.0],
+    [0.0190, -0.4966, 0.7231, -0.0649, -0.1865, 0.0063, 0.0, 0.0],
+    [0.0186, -0.4819, 0.6846, -0.0288, -0.1997, 0.0068, 0.0, 0.0],
+    [0.0186, -0.4668, 0.6460, 0.0093, -0.2144, 0.0073, 0.0, 0.0],
+    [0.0176, -0.4507, 0.6055, 0.0479, -0.2290, 0.0083, 0.0, 0.0],
+    [0.0171, -0.4370, 0.5693, 0.0859, -0.2446, 0.0088, 0.0, 0.0],
+    [0.0161, -0.4199, 0.5283, 0.1255, -0.2598, 0.0098, 0.0, 0.0],
+    [0.0161, -0.4048, 0.4883, 0.1655, -0.2754, 0.0103, 0.0, 0.0],
+    [0.0151, -0.3887, 0.4497, 0.2041, -0.2910, 0.0107, 0.0, 0.0],
+    [0.0142, -0.3711, 0.4072, 0.2446, -0.3066, 0.0117, 0.0, 0.0],
+    [0.0137, -0.3555, 0.3672, 0.2852, -0.3228, 0.0122, 0.0, 0.0],
+    [0.0132, -0.3394, 0.3262, 0.3262, -0.3394, 0.0132, 0.0, 0.0],
+    [0.0122, -0.3228, 0.2852, 0.3672, -0.3555, 0.0137, 0.0, 0.0],
+    [0.0117, -0.3066, 0.2446, 0.4072, -0.3711, 0.0142, 0.0, 0.0],
+    [0.0107, -0.2910, 0.2041, 0.4497, -0.3887, 0.0151, 0.0, 0.0],
+    [0.0103, -0.2754, 0.1655, 0.4883, -0.4048, 0.0161, 0.0, 0.0],
+    [0.0098, -0.2598, 0.1255, 0.5283, -0.4199, 0.0161, 0.0, 0.0],
+    [0.0088, -0.2446, 0.0859, 0.5693, -0.4370, 0.0171, 0.0, 0.0],
+    [0.0083, -0.2290, 0.0479, 0.6055, -0.4507, 0.0176, 0.0, 0.0],
+    [0.0073, -0.2144, 0.0093, 0.6460, -0.4668, 0.0186, 0.0, 0.0],
+    [0.0068, -0.1997, -0.0288, 0.6846, -0.4819, 0.0186, 0.0, 0.0],
+    [0.0063, -0.1865, -0.0649, 0.7231, -0.4966, 0.0190, 0.0, 0.0],
+    [0.0059, -0.1724, -0.1021, 0.7598, -0.5107, 0.0195, 0.0, 0.0],
+    [0.0054, -0.1587, -0.1367, 0.7944, -0.5239, 0.0195, 0.0, 0.0],
+    [0.0049, -0.1465, -0.1709, 0.8301, -0.5371, 0.0200, 0.0, 0.0],
+    [0.0044, -0.1343, -0.2046, 0.8643, -0.5498, 0.0205, 0.0, 0.0],
+    [0.0039, -0.1226, -0.2368, 0.8975, -0.5620, 0.0200, 0.0, 0.0],
+    [0.0034, -0.1104, -0.2690, 0.9292, -0.5728, 0.0200, 0.0, 0.0],
+    [0.0029, -0.1001, -0.2988, 0.9580, -0.5820, 0.0200, 0.0, 0.0],
+    [0.0024, -0.0898, -0.3286, 0.9893, -0.5928, 0.0200, 0.0, 0.0],
+    [0.0020, -0.0796, -0.3574, 1.0161, -0.6006, 0.0195, 0.0, 0.0],
+    [0.0015, -0.0698, -0.3843, 1.0405, -0.6069, 0.0190, 0.0, 0.0],
+    [0.0015, -0.0615, -0.4102, 1.0659, -0.6138, 0.0181, 0.0, 0.0],
+    [0.0010, -0.0532, -0.4346, 1.0879, -0.6187, 0.0176, 0.0, 0.0],
+    [0.0010, -0.0454, -0.4570, 1.1089, -0.6235, 0.0166, 0.0, 0.0],
+    [0.0005, -0.0386, -0.4790, 1.1274, -0.6265, 0.0156, 0.0, 0.0],
+    [0.0005, -0.0317, -0.5005, 1.1455, -0.6284, 0.0142, 0.0, 0.0],
+    [0.0005, -0.0259, -0.5181, 1.1582, -0.6270, 0.0122, 0.0, 0.0],
+    [0.0005, -0.0195, -0.5352, 1.1699, -0.6265, 0.0112, 0.0, 0.0],
+    [0.0, -0.0151, -0.5513, 1.1802, -0.6235, 0.0093, 0.0, 0.0],
+    [0.0, -0.0103, -0.5659, 1.1890, -0.6196, 0.0073, 0.0, 0.0],
+    [0.0005, -0.0068, -0.5791, 1.1958, -0.6147, 0.0049, 0.0, 0.0],
+    [0.0, -0.0029, -0.5903, 1.1987, -0.6084, 0.0029, 0.0, 0.0],
+]
+
+
+def _pack_coefficient_texture(data_64x8: Coef):
+    """Pack a 64x8 float array into a 2x64 RGBA32F texture bytes."""
+    texels = []
+    for phase in range(64):
+        row = data_64x8[phase]
+        texels.append(struct.pack("4f", row[0], row[1], row[2], row[3]))
+        texels.append(struct.pack("4f", row[4], row[5], row[6], row[7]))
+    return b"".join(texels)
 
 
 class NISScaler(Scaler):
@@ -30,19 +178,19 @@ class NISScaler(Scaler):
     shader_path : str
         Path to the compiled SPIR‑V file.
     sharpness : float
-        Default sharpness [0.0 – 1.0].  Used when :meth:`update_constants` is
+        Default sharpness [0.0 – 1.0]. Used when :meth:`update_constants` is
         called without an explicit sharpness.
     """
 
-    requires_linear_input = False  # NIS works in sRGB, not linear
+    requires_linear_input = False
 
     def __init__(
         self, shader_path: str = DEFAULT_NIS_SHADER, sharpness: float = 0.5
     ) -> None:
         super().__init__(shader_path)
         self._sharpness = sharpness
-        self._coef_scaler = self._load_coefficient_texture("coef_scaler")
-        self._coef_usm = self._load_coefficient_texture("coef_usm")
+        self._coef_scaler = self._create_coef_texture(_coef_scale)
+        self._coef_usm = self._create_coef_texture(_coef_usm)
 
     @staticmethod
     def _cb_size() -> int:
@@ -65,8 +213,8 @@ class NISScaler(Scaler):
     def dispatch_auto(self) -> None:
         self._check_ready()
         w, h = self.target_texture.width, self.target_texture.height
-        groups_x = (w + NIS_THREAD_GROUP_SIZE - 1) // NIS_THREAD_GROUP_SIZE
-        groups_y = h
+        groups_x = (w + NIS_BLOCK_WIDTH - 1) // NIS_BLOCK_WIDTH
+        groups_y = (h + NIS_BLOCK_HEIGHT - 1) // NIS_BLOCK_HEIGHT
         self.dispatch(groups_x, groups_y, 1)
 
     def update_constants(
@@ -80,10 +228,10 @@ class NISScaler(Scaler):
         dst_y: int,
         dst_w: int,
         dst_h: int,
-        sharpness: float = None,
+        sharpness: Optional[float] = None,
     ) -> None:
-        if sharpness is None:
-            sharpness = self._sharpness
+        sharpness = sharpness or self._sharpness
+        sharpness = max(0.0, min(sharpness, 1.0))
 
         consts = self._compute_nis_constants(
             src_width, src_height, dst_w, dst_h, sharpness
@@ -107,98 +255,61 @@ class NISScaler(Scaler):
         out_h: int,
         sharpness: float,
     ) -> Tuple[float, ...]:
-        sharpness = max(0.0, min(sharpness, 1.0))
+        sharpen_slider = sharpness - 0.5
+        MaxScale = 1.25 if sharpen_slider >= 0 else 1.75
+        MinScale = 1.25 if sharpen_slider >= 0 else 1.0
+        LimitScale = 1.25 if sharpen_slider >= 0 else 1.0
 
-        # Scale factors
-        kScaleX = float(src_w) / float(out_w)
-        kScaleY = float(src_h) / float(out_h)
+        kDetectRatio = 2 * 1127.0 / 1024.0
+        kDetectThres = 64.0 / 1024.0
+        kMinContrastRatio = 2.0
+        kMaxContrastRatio = 10.0
+        kSharpStartY = 0.45
+        kSharpEndY = 0.9
+        kSharpStrengthMin = max(0.0, 0.4 + sharpen_slider * MinScale * 1.2)
+        kSharpStrengthMax = 1.6 + sharpen_slider * MaxScale * 1.8
+        kSharpLimitMin = max(0.1, 0.14 + sharpen_slider * LimitScale * 0.32)
+        kSharpLimitMax = 0.5 + sharpen_slider * LimitScale * 0.6
 
-        # Normalisation factors
-        kDstNormX = 1.0 / float(out_w)
-        kDstNormY = 1.0 / float(out_h)
-        kSrcNormX = 1.0 / float(src_w)
-        kSrcNormY = 1.0 / float(src_h)
-
-        # Viewport (full image)
-        kInputViewportOriginX = 0
-        kInputViewportOriginY = 0
-        kInputViewportWidth = src_w
-        kInputViewportHeight = src_h
-        kOutputViewportOriginX = 0
-        kOutputViewportOriginY = 0
-        kOutputViewportWidth = out_w
-        kOutputViewportHeight = out_h
-
-        # Sharpness / filter coefficients
-        kDetectRatio = 0.5 + 0.5 * sharpness
-        kDetectThres = 0.015
-        kMinContrastRatio = 0.125
-        kRatioNorm = 1.0 / (1.0 - kMinContrastRatio)
-
-        kContrastBoost = 0.1
-        kEps = 1e-5
-        kSharpStartY = 0.015
-        kSharpScaleY = 1.0 / (1.0 - kSharpStartY)
-
-        kSharpStrengthMin = 0.2
-        kSharpStrengthScale = 0.8
-        kSharpLimitMin = 0.1
-        kSharpLimitScale = 0.9
-
-        reserved0 = 0.0
-        reserved1 = 0.0
+        kRatioNorm = 1.0 / (kMaxContrastRatio - kMinContrastRatio)
+        kSharpScaleY = 1.0 / (kSharpEndY - kSharpStartY)
+        kSharpStrengthScale = kSharpStrengthMax - kSharpStrengthMin
+        kSharpLimitScale = kSharpLimitMax - kSharpLimitMin
 
         return (
             kDetectRatio,
             kDetectThres,
             kMinContrastRatio,
             kRatioNorm,
-            kContrastBoost,
-            kEps,
+            1.0,
+            1.0 / 255.0,
             kSharpStartY,
             kSharpScaleY,
             kSharpStrengthMin,
             kSharpStrengthScale,
             kSharpLimitMin,
             kSharpLimitScale,
-            kScaleX,
-            kScaleY,
-            kDstNormX,
-            kDstNormY,
-            kSrcNormX,
-            kSrcNormY,
-            kInputViewportOriginX,
-            kInputViewportOriginY,
-            kInputViewportWidth,
-            kInputViewportHeight,
-            kOutputViewportOriginX,
-            kOutputViewportOriginY,
-            kOutputViewportWidth,
-            kOutputViewportHeight,
-            reserved0,
-            reserved1,
+            float(src_w) / out_w,
+            float(src_h) / out_h,
+            1.0 / out_w,
+            1.0 / out_h,
+            1.0 / src_w,
+            1.0 / src_h,
+            0,
+            0,
+            src_w,
+            src_h,
+            0,
+            0,
+            out_w,
+            out_h,
+            0.0,
+            0.0,
         )
 
     @staticmethod
-    def _load_coefficient_texture(name: str) -> Texture2D:
-        """
-        Load a small RGBA8 coefficient texture.
-
-        The texture data is expected to reside in a file next to the shader,
-        e.g. ``coef_scaler.bin``.  If the file is missing, a black stub is
-        returned so that the pipeline does not crash (visual quality will
-        degrade).
-        """
-        filename = os.path.join(_SHADER_DIR, f"{name}.bin")
-        try:
-            with open(filename, "rb") as f:
-                raw = f.read()
-        except FileNotFoundError:
-            logger.warning("NIS coefficient texture '%s' not found, using stub", name)
-            raw = b"\x00" * (_COEF_SCALER_SIZE[0] * _COEF_SCALER_SIZE[1] * 4)
-
-        # Determine size from the expected dimensions
-        size = _COEF_SCALER_SIZE if name == "coef_scaler" else _COEF_USM_SIZE
-        tex = Texture2D(size[0], size[1])
-        tex.upload_subresources([(raw, 0, 0, size[0], size[1])])
+    def _create_coef_texture(data_64x8: Coef):
+        raw = _pack_coefficient_texture(data_64x8)
+        tex = Texture2D(2, 64, R32G32B32A32_FLOAT)
+        tex.upload_subresources([(raw, 0, 0, 2, 64)])
         return tex

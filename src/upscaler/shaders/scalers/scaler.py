@@ -3,8 +3,9 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Optional, TYPE_CHECKING
 
+from ..shader import Shader
+
 if TYPE_CHECKING:
-    from ..shader import Shader
     from ...vulkan import Texture2D
 
 

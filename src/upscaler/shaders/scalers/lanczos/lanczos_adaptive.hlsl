@@ -26,7 +26,7 @@ cbuffer Constants : register(b0) {
   uint radiusY;           // pre-computed filter radius in Y
   float blur;             // kernel softness (1.0 = standard)
   float antiringStrength; // 0 = off, 1 = full hard clamp
-  bool tightAntiring;     // true = only central 2×2 for ringing bounds
+  bool tightAntiring;     // true = only central 2x2 for ringing bounds
 }
 
 // ============================================================================
