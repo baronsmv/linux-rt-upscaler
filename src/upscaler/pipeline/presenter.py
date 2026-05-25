@@ -6,6 +6,7 @@ from typing import List, Optional, TYPE_CHECKING
 from ..shaders import (
     Bloom,
     CAS,
+    Clear,
     CopyScaler,
     Deband,
     Delinearize,
@@ -88,6 +89,9 @@ class Presenter:
 
         self.delinearize_pass = Delinearize()
         self.delinearize_pass.set_target_texture(self.screen_tex)
+
+        self.clear_pass = Clear()
+        self.clear_pass.set_target_texture(self.screen_tex)
 
         # --- Scalers ------------------------------------------------------------
         # Copy
@@ -364,12 +368,14 @@ class Presenter:
         r_w: int,
         r_h: int,
     ) -> None:
-        """Linearize the source, then upscale with FSR 1.0 EASU."""
         if not scaler.requires_linear_input:
-            # Only scaler pass, no linearize
+            # Clear the whole screen with the background color
+            self.clear_pass.update_constants(self.background_color)
+            self.clear_pass.dispatch_auto()
+
+            # Only scaler pass, no linearize and no background color
             scaler.set_source_texture(src)
             scaler.update_constants(
-                background_color=self.background_color,
                 src_width=src_width,
                 src_height=src_height,
                 dst_width=self.screen_width,

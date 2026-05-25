@@ -83,11 +83,6 @@ NIS_BINDING(0) cbuffer cb : register(b0) {
 
   float reserved0;
   float reserved1;
-
-  // ---- Modification of original code to add background color box. ----------
-  uint4 dstRect;  // x = dstX, y = dstY, z = dstW, w = dstH
-  float4 bgColor; // background color
-  // ---- End of modification. ------------------------------------------------
 };
 
 /* ---- Modification of original code to adjust bindings to pipeline. ---------
@@ -123,32 +118,13 @@ NIS_BINDING(0) cbuffer cb : register(b0) {
 #define NIS_BLOCK_WIDTH 32
 #define NIS_BLOCK_HEIGHT 24
 #define NIS_THREAD_GROUP_SIZE 256
+#define NIS_VIEWPORT_SUPPORT 1
 // ---- End of modification. --------------------------------------------------
 
 #include "NIS_Scaler.h"
 
 [numthreads(NIS_THREAD_GROUP_SIZE, 1, 1)] void
 main(uint3 blockIdx : SV_GroupID, uint3 threadIdx : SV_GroupThreadID) {
-  // ---- Modification of original code to add a background color box. --------
-  uint2 outputPos =
-      blockIdx.xy * uint2(NIS_BLOCK_WIDTH, NIS_BLOCK_HEIGHT) +
-      uint2(threadIdx.x % NIS_BLOCK_WIDTH, threadIdx.x / NIS_BLOCK_WIDTH);
-
-  // Clip to output viewport
-  if (outputPos.x >= kOutputViewportWidth ||
-      outputPos.y >= kOutputViewportHeight)
-    return;
-
-  // Background-fill check
-  int2 rectXY = int2(dstRect.xy);
-  int2 rectWH = int2(dstRect.zw);
-  if (outputPos.x < rectXY.x || outputPos.x >= rectXY.x + rectWH.x ||
-      outputPos.y < rectXY.y || outputPos.y >= rectXY.y + rectWH.y) {
-    out_texture[outputPos] = bgColor;
-    return;
-  }
-  // ---- End of modification. ------------------------------------------------
-
 #if NIS_SCALER
   NVScaler(blockIdx.xy, threadIdx.x);
 #else

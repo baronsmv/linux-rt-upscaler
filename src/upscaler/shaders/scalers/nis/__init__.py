@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import struct
@@ -18,8 +20,8 @@ NIS_BLOCK_WIDTH = 32
 NIS_BLOCK_HEIGHT = 24
 NIS_THREAD_GROUP_SIZE = 256
 
-CB_SIZE_NIS = 28 * 4 + 4 * 4 + 4 * 4
-CB_FORMAT_NIS = "<" + "f" * 28 + "I" * 4 + "f" * 4
+CB_SIZE_NIS = 28 * 4
+CB_FORMAT_NIS = "<" + "f" * 28
 
 SHADER_DIR = os.path.dirname(__file__)
 DEFAULT_NIS_SHADER = os.path.join(SHADER_DIR, "nis.spv")
@@ -188,6 +190,7 @@ class NISScaler(Scaler):
         self, shader_path: str = DEFAULT_NIS_SHADER, sharpness: float = 0.5
     ) -> None:
         super().__init__(shader_path)
+        self._rect: Optional[Tuple[int, int, int, int]] = None
         self._sharpness = sharpness
         self._coef_scaler = self._create_coef_texture(_coef_scale)
         self._coef_usm = self._create_coef_texture(_coef_usm)
@@ -212,14 +215,13 @@ class NISScaler(Scaler):
 
     def dispatch_auto(self) -> None:
         self._check_ready()
-        w, h = self.target_texture.width, self.target_texture.height
-        groups_x = (w + NIS_BLOCK_WIDTH - 1) // NIS_BLOCK_WIDTH
-        groups_y = (h + NIS_BLOCK_HEIGHT - 1) // NIS_BLOCK_HEIGHT
+        dst_x, dst_y, dst_w, dst_h = self._rect
+        groups_x = (dst_w + NIS_BLOCK_WIDTH - 1) // NIS_BLOCK_WIDTH
+        groups_y = (dst_h + NIS_BLOCK_HEIGHT - 1) // NIS_BLOCK_HEIGHT
         self.dispatch(groups_x, groups_y, 1)
 
     def update_constants(
         self,
-        background_color: Tuple[float, float, float, float],
         src_width: int,
         src_height: int,
         dst_width: int,
@@ -232,27 +234,21 @@ class NISScaler(Scaler):
     ) -> None:
         sharpness = sharpness or self._sharpness
         sharpness = max(0.0, min(sharpness, 1.0))
-
+        self._rect = (dst_x, dst_y, dst_w, dst_h)
         consts = self._compute_nis_constants(
-            src_width, src_height, dst_w, dst_h, sharpness
+            src_width, src_height, dst_x, dst_y, dst_w, dst_h, sharpness
         )
-        data = struct.pack(
-            CB_FORMAT_NIS,
-            *consts,
-            dst_x,
-            dst_y,
-            dst_w,
-            dst_h,
-            *background_color,
-        )
+        data = struct.pack(CB_FORMAT_NIS, *consts)
         self._cb.upload(data)
 
     @staticmethod
     def _compute_nis_constants(
         src_w: int,
         src_h: int,
-        out_w: int,
-        out_h: int,
+        dst_x: int,
+        dst_y: int,
+        dst_w: int,
+        dst_h: int,
         sharpness: float,
     ) -> Tuple[float, ...]:
         sharpen_slider = sharpness - 0.5
@@ -289,20 +285,20 @@ class NISScaler(Scaler):
             kSharpStrengthScale,
             kSharpLimitMin,
             kSharpLimitScale,
-            float(src_w) / out_w,
-            float(src_h) / out_h,
-            1.0 / out_w,
-            1.0 / out_h,
-            1.0 / src_w,
-            1.0 / src_h,
+            float(src_w) / float(dst_w),  # kScaleX
+            float(src_h) / float(dst_h),  # kScaleY
+            1.0 / float(dst_w),  # kDstNormX
+            1.0 / float(dst_h),  # kDstNormY
+            1.0 / float(src_w),  # kSrcNormX
+            1.0 / float(src_h),  # kSrcNormY
             0,
             0,
-            src_w,
+            src_w,  # kInputViewportOriginX/Y, Width/Height
             src_h,
-            0,
-            0,
-            out_w,
-            out_h,
+            dst_x,  # kOutputViewportOriginX/Y, Width/Height
+            dst_y,
+            dst_w,
+            dst_h,
             0.0,
             0.0,
         )
