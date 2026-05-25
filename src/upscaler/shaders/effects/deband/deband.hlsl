@@ -16,7 +16,7 @@
 //    - strength = 0.6   ->  strong, use with grain for best results
 //    - strength = 1.0   ->  maximum (may soften very fine textures)
 //
-//  Written for linux-rt-upscaler. Distributed under the GPL-3.0 license.
+//  Distributed under the GPL-3.0 license.
 // ============================================================================
 
 Texture2D<float4> InputTex : register(t0);

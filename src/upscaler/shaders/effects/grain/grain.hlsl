@@ -19,7 +19,7 @@
 //                   2.0    ->  coarser, more visible grain clumps
 //    - frameIndex = increasing integer each frame for temporal variation
 //
-//  Written for linux-rt-upscaler. Distributed under the GPL-3.0 license.
+//  Distributed under the GPL-3.0 license.
 // ============================================================================
 
 Texture2D<float4> InputTex : register(t0);

@@ -616,7 +616,7 @@ def footer_save_button_style(cfg: GUIConfig) -> str:
 def footer_reset_button_style(
     cfg: GUIConfig, *, main_active: bool, enabled: bool
 ) -> str:
-    """Style for the 'Reset' split‑button with dynamic split‑line color."""
+    """Style for the 'Reset' split-button with dynamic split-line color."""
     bg = cfg.footer_reset_bg if main_active else cfg.footer_reset_disabled_bg
     text = cfg.footer_reset_text if main_active else cfg.footer_reset_disabled_text
     border = (

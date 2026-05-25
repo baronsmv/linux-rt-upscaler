@@ -3,7 +3,7 @@
 //  ------------------------------------------
 //  Transforms an sRGB-encoded color texture to linear light.
 //
-//  Written for linux-rt-upscaler. Distributed under the GPL-3.0 license.
+//  Distributed under the GPL-3.0 license.
 // ============================================================================
 
 Texture2D<float4> InputTex : register(t0);

@@ -21,7 +21,7 @@ DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "copy.spv")
 
 class CopyScaler(Scaler):
     """
-    Point‑sample copy from source to destination rectangle.
+    Point-sample copy from source to destination rectangle.
 
     Bypasses Lanczos when no resampling is needed (1:1 mapping).
     The source texture is placed exactly at (dstX, dstY) with

@@ -15,7 +15,7 @@
 //    - bloomThreshold  = 0.7 (wide glow) - 0.95 (only pure white)
 //    - radius          = integer, 2 - 8 (blur extent)
 //
-//  Written for linux-rt-upscaler. Distributed under the GPL-3.0 license.
+//  Distributed under the GPL-3.0 license.
 // ============================================================================
 
 Texture2D<float4> InputTex : register(t0);

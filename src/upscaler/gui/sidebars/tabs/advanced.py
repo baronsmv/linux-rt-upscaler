@@ -231,7 +231,7 @@ class AdvancedTab(SettingsTab):
             slot=self._on_max_capture_failures_changed,
             scale_factor=1,
             baseline=self.baseline_config.max_capture_failures,
-            help="Consecutive frame‑grab failures before the pipeline stops.",
+            help="Consecutive frame-grab failures before the pipeline stops.",
         )
         self._add_slider(
             "Capture Failure Delay (s)",

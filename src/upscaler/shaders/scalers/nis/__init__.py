@@ -178,9 +178,9 @@ class NISScaler(Scaler):
     Parameters
     ----------
     shader_path : str
-        Path to the compiled SPIR‑V file.
+        Path to the compiled SPIR-V file.
     sharpness : float
-        Default sharpness [0.0 – 1.0]. Used when :meth:`update_constants` is
+        Default sharpness [0.0 - 1.0]. Used when :meth:`update_constants` is
         called without an explicit sharpness.
     """
 

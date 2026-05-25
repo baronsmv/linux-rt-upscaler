@@ -11,7 +11,7 @@
 //
 //  Note: This shader does not perform any operation. It is a simple blit.
 //
-//  Written for linux-rt-upscaler. Distributed under the GPL-3.0 license.
+//  Distributed under the GPL-3.0 license.
 // ============================================================================
 
 Texture2D<float4> InputTex : register(t0);

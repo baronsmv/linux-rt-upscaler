@@ -51,7 +51,7 @@ class ProfileActions:
     # Public API
     # ------------------------------------------------------------------
     def maybe_save_before_switch(self) -> bool:
-        """Return False if the user cancels an unsaved‑changes dialog."""
+        """Return False if the user cancels an unsaved-changes dialog."""
         if self._config_manager.is_dirty():
             reply = QMessageBox.question(
                 self._main_window,

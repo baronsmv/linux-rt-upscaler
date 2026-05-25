@@ -7,7 +7,7 @@
 //    - overlayPos  : top-left corner of the overlay in screen coordinates.
 //    - overlaySize : width and height of the overlay region (pixels).
 //
-//  Written for linux-rt-upscaler. Distributed under the GPL-3.0 license.
+//  Distributed under the GPL-3.0 license.
 // ============================================================================
 
 Texture2D<float4> ScreenTex : register(t0);

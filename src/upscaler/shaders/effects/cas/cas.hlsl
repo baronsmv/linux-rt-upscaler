@@ -14,7 +14,7 @@
 //    - strength = 0.4   ->  moderate (good for text / line art)
 //    - strength = 0.6+  ->  aggressive (risk of visible ringing)
 //
-//  Written for linux-rt-upscaler. Distributed under the GPL-3.0 license.
+//  Distributed under the GPL-3.0 license.
 // ============================================================================
 
 Texture2D<float4> InputTex : register(t0);

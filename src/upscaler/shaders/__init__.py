@@ -3,10 +3,18 @@
 from .converters import Delinearize, Linearize
 from .effects import Bloom, CAS, Deband, FilmGrain, LUT, LUT_PRESETS, Vignette
 from .misc import Clear, OverlayBlender
-from .scalers import CopyScaler, FSRScaler, LanczosScaler, NISScaler, Scaler
+from .scalers import (
+    CatmullRomScaler,
+    CopyScaler,
+    FSRScaler,
+    LanczosScaler,
+    NISScaler,
+    Scaler,
+)
 
 __all__ = [
     "Bloom",
+    "CatmullRomScaler",
     "CAS",
     "Clear",
     "CopyScaler",

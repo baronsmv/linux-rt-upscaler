@@ -23,7 +23,7 @@
 //    - lutSize   = common values: 16, 32 (default), 64
 //                  larger -> smoother gradients, but more GPU memory
 //
-//  Written for linux-rt-upscaler. Distributed under the GPL-3.0 license.
+//  Distributed under the GPL-3.0 license.
 // ============================================================================
 
 Texture2D<float4> InputTex : register(t0);
