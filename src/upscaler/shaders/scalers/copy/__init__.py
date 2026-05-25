@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from ..scaler import Scaler
 
 if TYPE_CHECKING:
-    from ...config import BackgroundColor
+    from ....config import BackgroundColor
 
 logger = logging.getLogger(__name__)
 

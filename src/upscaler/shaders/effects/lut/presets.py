@@ -273,7 +273,7 @@ def _lofi() -> bytes:
 # ---------------------------------------------------------------------------
 #  Preset registry
 # ---------------------------------------------------------------------------
-BUILT_IN_PRESETS: Dict[str, Callable[[], bytes]] = {
+LUT_PRESETS: Dict[str, Callable[[], bytes]] = {
     "identity": _identity,
     "warm": _warm_sunset,
     "cool": _cool_night,

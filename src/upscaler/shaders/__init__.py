@@ -1,18 +1,9 @@
 """HLSL/SPIR-V shaders modules."""
 
-from .bloom import Bloom
-from .cas import CAS
-from .copy import CopyScaler
-from .deband import Deband
-from .delinearize import Delinearize
-from .fsr import FSRScaler
-from .grain import FilmGrain
-from .lanczos import LanczosScaler
-from .linearize import Linearize
-from .lut import LUT, BUILT_IN_PRESETS
-from .overlay_blender import OverlayBlender
-from .scaler import Scaler
-from .vignette import Vignette
+from .converters import Delinearize, Linearize
+from .effects import Bloom, CAS, Deband, FilmGrain, LUT, LUT_PRESETS, Vignette
+from .misc import OverlayBlender
+from .scalers import CopyScaler, FSRScaler, LanczosScaler, Scaler
 
 __all__ = [
     "Bloom",
@@ -28,5 +19,5 @@ __all__ = [
     "OverlayBlender",
     "Scaler",
     "Vignette",
-    "BUILT_IN_PRESETS",
+    "LUT_PRESETS",
 ]

@@ -3,9 +3,9 @@ import os
 import struct
 from typing import Optional
 
-from .presets import BUILT_IN_PRESETS, LUT_SIZE
-from ..shader import Shader
-from ...vulkan import Sampler, Texture2D, SAMPLER_FILTER_LINEAR
+from .presets import LUT_PRESETS, LUT_SIZE
+from ...shader import Shader
+from ....vulkan import Sampler, Texture2D, SAMPLER_FILTER_LINEAR
 
 logger = logging.getLogger(__name__)
 
@@ -79,12 +79,12 @@ class LUT(Shader):
     # ------------------------------------------------------------------
     def _apply_preset(self, preset_name: str) -> None:
         """Upload a built-in preset to the LUT texture."""
-        if preset_name not in BUILT_IN_PRESETS:
+        if preset_name not in LUT_PRESETS:
             logger.warning(
                 "Preset '%s' not found, falling back to identity", preset_name
             )
             preset_name = "identity"
-        lut_data = BUILT_IN_PRESETS[preset_name]()
+        lut_data = LUT_PRESETS[preset_name]()
         self._upload_lut_data(lut_data)
         self._preset_name = preset_name
         logger.debug("LUT preset set to '%s'", preset_name)

@@ -1,8 +1,8 @@
 from abc import abstractmethod
 from typing import Optional
 
-from .shader import Shader
-from ..vulkan import Texture2D
+from ..shader import Shader
+from ...vulkan import Texture2D
 
 
 class Scaler(Shader):

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..common import SettingsTab
-from ....shaders import BUILT_IN_PRESETS
+from ....shaders import LUT_PRESETS
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -213,7 +213,7 @@ class EffectsTab(SettingsTab):
         )
         self._lut_combo = self._add_combo(
             "Preset",
-            list(BUILT_IN_PRESETS.keys()),
+            list(LUT_PRESETS.keys()),
             self._config.lut_preset,
             self._on_lut_preset,
             baseline=self.baseline_config.lut_preset,

@@ -6,7 +6,7 @@ from typing import Tuple, Dict, Optional, Any
 
 from .logging import setup_logging
 from .models import Config, OverlayMode, DEFAULT_CONFIG, UPSCALING_MODELS
-from ..shaders import BUILT_IN_PRESETS
+from ..shaders import LUT_PRESETS
 
 logger = logging.getLogger(__name__)
 
@@ -713,7 +713,7 @@ presets, or any global color transform.
     post_processing_group.add_argument(
         "--lut-preset",
         type=str,
-        choices=tuple(BUILT_IN_PRESETS.keys()),
+        choices=tuple(LUT_PRESETS.keys()),
         default=DEFAULT_CONFIG.lut_preset,
         help="""Built-in 3D LUT preset for color grading.
 

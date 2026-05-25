@@ -2,7 +2,7 @@ import logging
 import os
 import struct
 
-from ..shader import Shader
+from ...shader import Shader
 
 logger = logging.getLogger(__name__)
 

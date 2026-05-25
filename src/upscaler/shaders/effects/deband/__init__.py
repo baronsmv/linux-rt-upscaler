@@ -3,8 +3,8 @@ import os
 import struct
 from typing import Optional
 
-from ..shader import Shader
-from ...vulkan import Texture2D
+from ...shader import Shader
+from ....vulkan import Texture2D
 
 logger = logging.getLogger(__name__)
 

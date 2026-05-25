@@ -3,7 +3,7 @@ import os
 import struct
 from typing import Dict, Optional
 
-from ...vulkan import Buffer, Compute, Sampler, Texture2D, SAMPLER_FILTER_POINT
+from ....vulkan import Buffer, Compute, Sampler, Texture2D, SAMPLER_FILTER_POINT
 
 logger = logging.getLogger(__name__)
 

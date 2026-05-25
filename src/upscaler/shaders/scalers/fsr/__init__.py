@@ -6,14 +6,14 @@ import struct
 from typing import TYPE_CHECKING
 
 from ..scaler import Scaler
-from ...vulkan import (
+from ....vulkan import (
     Sampler,
     SAMPLER_ADDRESS_MODE_CLAMP,
     SAMPLER_FILTER_LINEAR,
 )
 
 if TYPE_CHECKING:
-    from ...config import BackgroundColor
+    from ....config import BackgroundColor
 
 logger = logging.getLogger(__name__)
 

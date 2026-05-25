@@ -7,10 +7,10 @@ import struct
 from typing import TYPE_CHECKING
 
 from ..scaler import Scaler
-from ...vulkan import Buffer, Sampler, SAMPLER_FILTER_POINT
+from ....vulkan import Buffer, Sampler, SAMPLER_FILTER_POINT
 
 if TYPE_CHECKING:
-    from ...config import BackgroundColor
+    from ....config import BackgroundColor
 
 logger = logging.getLogger(__name__)
 
