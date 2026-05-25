@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import struct
-from typing import Optional, Tuple
+from typing import Optional, TYPE_CHECKING
 
 from ..scaler import Scaler
 from ....vulkan import (
@@ -11,6 +11,9 @@ from ....vulkan import (
     Sampler,
     SAMPLER_FILTER_LINEAR,
 )
+
+if TYPE_CHECKING:
+    from ....config import BackgroundColor
 
 logger = logging.getLogger(__name__)
 
@@ -54,11 +57,11 @@ class CatmullRomScaler(Scaler):
 
     def update_constants(
         self,
-        background_color: Tuple[float, float, float, float],
+        background_color: BackgroundColor,
         src_width: int,
         src_height: int,
-        dst_total_width: int,
-        dst_total_height: int,
+        dst_width: int,
+        dst_height: int,
         dst_x: int,
         dst_y: int,
         dst_w: int,
@@ -85,8 +88,8 @@ class CatmullRomScaler(Scaler):
             *background_color,
             src_width,
             src_height,
-            dst_total_width,
-            dst_total_height,
+            dst_width,
+            dst_height,
             dst_x,
             dst_y,
             dst_w,

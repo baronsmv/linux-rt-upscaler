@@ -6,6 +6,7 @@ from typing import List, Optional, TYPE_CHECKING
 from ..shaders import (
     Bloom,
     CAS,
+    CatmullRomScaler,
     Clear,
     CopyScaler,
     Deband,
@@ -110,6 +111,10 @@ class Presenter:
             tight_antiring=self.config.lanczos_tight_antiring,
         )
 
+        # Catmull-Rom
+        self._catmull_rom = CatmullRomScaler()
+        self._catmull_rom.set_target_texture(self.screen_tex)
+
         # FSR
         self._fsr = FSRScaler()
         self._fsr.set_target_texture(self.screen_tex)
@@ -209,7 +214,7 @@ class Presenter:
         elif r_w >= src.width or r_h >= src.height:
             self._scale(self._fsr, *data)
         else:
-            self._scale(self._lanczos, *data)
+            self._scale(self._catmull_rom, *data)
 
         # ---- CAS ------------------------------------------------------------
         self._apply_cas_if_enabled()
