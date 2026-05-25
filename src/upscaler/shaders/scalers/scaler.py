@@ -1,29 +1,28 @@
-from abc import abstractmethod
-from typing import Optional
+from __future__ import annotations
 
-from ..shader import Shader
-from ...vulkan import Texture2D
+from abc import abstractmethod
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..shader import Shader
+    from ...vulkan import Texture2D
 
 
 class Scaler(Shader):
     """Common ground for all scaling passes."""
 
+    requires_linear_input: bool = True
+
     def __init__(self, shader_path: str) -> None:
         self.source_texture: Optional[Texture2D] = None
         super().__init__(shader_path)
 
-    # ------------------------------------------------------------------
-    #  Mandatory implementations
-    # ------------------------------------------------------------------
     @staticmethod
     @abstractmethod
     def _cb_size() -> int:
         """Size of the constant buffer in bytes (0 if none)."""
         ...
 
-    # ------------------------------------------------------------------
-    #  Source texture management (DRY)
-    # ------------------------------------------------------------------
     def set_source_texture(self, tex: Texture2D) -> None:
         if tex is self.source_texture:
             return

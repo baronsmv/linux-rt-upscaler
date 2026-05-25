@@ -360,6 +360,23 @@ class Presenter:
         r_h: int,
     ) -> None:
         """Linearize the source, then upscale with FSR 1.0 EASU."""
+        if not scaler.requires_linear_input:
+            # Only scaler pass, no linearize
+            scaler.set_source_texture(self._linear_tex)
+            scaler.update_constants(
+                background_color=self.background_color,
+                src_width=src_width,
+                src_height=src_height,
+                dst_width=self.screen_width,
+                dst_height=self.screen_height,
+                dst_x=dst_x,
+                dst_y=dst_y,
+                dst_w=r_w,
+                dst_h=r_h,
+            )
+            scaler.dispatch_auto()
+            return
+
         # Ensure the intermediate linear texture exists
         if (
             self._linear_tex is None

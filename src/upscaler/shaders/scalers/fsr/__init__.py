@@ -6,11 +6,7 @@ import struct
 from typing import TYPE_CHECKING
 
 from ..scaler import Scaler
-from ....vulkan import (
-    Sampler,
-    SAMPLER_ADDRESS_MODE_CLAMP,
-    SAMPLER_FILTER_LINEAR,
-)
+from ....vulkan import Sampler, SAMPLER_FILTER_LINEAR
 
 if TYPE_CHECKING:
     from ....config import BackgroundColor
@@ -39,8 +35,6 @@ class FSRScaler(Scaler):
         self._sampler = Sampler(
             filter_min=SAMPLER_FILTER_LINEAR,
             filter_mag=SAMPLER_FILTER_LINEAR,
-            address_mode_u=SAMPLER_ADDRESS_MODE_CLAMP,
-            address_mode_v=SAMPLER_ADDRESS_MODE_CLAMP,
         )
 
     def _get_bindings(self):

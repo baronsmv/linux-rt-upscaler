@@ -25,10 +25,10 @@
   uint4 Const3;
   uint4 Sample;
 
-  // Modification of original code to add background color box:
+  // ---- Modification of original code to add background color box. ----------
   uint4 dstRect;  // x = dstX, y = dstY, z = dstW, w = dstH
   float4 bgColor; // background color
-  // End of modification
+  // ---- End of modification. ------------------------------------------------
 };
 
 #define A_GPU 1
@@ -36,24 +36,24 @@
 #define A_HLSL_6_2 1
 #define A_NO_16_BIT_CAST 1
 
-/* Modification of original code to adjust bindings to pipeline.
+/* ---- Modification of original code to adjust bindings to pipeline. ---------
  * Original:
  * [[vk::binding(3, 0)]] SamplerState		samLinearClamp : register(s0);
  **/
 [[vk::binding(3072, 0)]] SamplerState samLinearClamp : register(s0);
-// End of modification
+// ---- End of modification. --------------------------------------------------
 
 #if SAMPLE_SLOW_FALLBACK
 #include "ffx_a.h"
 
-/* Modification of original code to adjust bindings to pipeline.
+/* ---- Modification of original code to adjust bindings to pipeline. ---------
  * Original:
  * [[vk::binding(1, 0)]] Texture2D InputTexture : register(t0);
  * [[vk::binding(2, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
  **/
 [[vk::binding(1024, 0)]] Texture2D InputTexture : register(t0);
 [[vk::binding(2048, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
-// End of modification
+// ---- End of modification. --------------------------------------------------
 
 #if SAMPLE_EASU
 #define FSR_EASU_F 1
@@ -79,14 +79,14 @@ void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b) {}
 #define A_HALF
 #include "ffx_a.h"
 
-/* Modification of original code to adjust bindings to pipeline.
+/* ---- Modification of original code to adjust bindings to pipeline. ---------
  * Original:
  * [[vk::binding(1, 0)]] Texture2D<float4> InputTexture : register(t0);
  * [[vk::binding(2, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
  **/
 [[vk::binding(1024, 0)]] Texture2D<float4> InputTexture : register(t0);
 [[vk::binding(2048, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
-// End of modification
+// ---- End of modification. --------------------------------------------------
 
 #if SAMPLE_EASU
 #define FSR_EASU_H 1
@@ -114,7 +114,7 @@ void FsrRcasInputH(inout AH1 r, inout AH1 g, inout AH1 b) {}
 
 void CurrFilter(int2 pos) {
 
-  // Modification of original code to add a custom background color box:
+  // ---- Modification of original code to add a background color box. --------
   int2 rectXY = int2(dstRect.xy);
   int2 rectWH = int2(dstRect.zw);
   if (pos.x < rectXY.x || pos.x >= rectXY.x + rectWH.x || pos.y < rectXY.y ||
@@ -123,7 +123,7 @@ void CurrFilter(int2 pos) {
     return;
   }
   int2 localPos = pos - rectXY;
-  // End of modification
+  // ---- End of modification. ------------------------------------------------
 
 #if SAMPLE_BILINEAR
   AF2 pp = (AF2(pos) * AF2_AU2(Const0.xy) + AF2_AU2(Const0.zw)) *
@@ -135,12 +135,12 @@ void CurrFilter(int2 pos) {
 #if SAMPLE_SLOW_FALLBACK
   AF3 c;
 
-  /* Modification of original code to offset content to background box.
+  /* ---- Modification of original code to offset content to bg box. ----------
    * Original:
    * FsrEasuF(c, pos, Const0, Const1, Const2, Const3);
    **/
   FsrEasuF(c, localPos, Const0, Const1, Const2, Const3);
-  // End of modification
+  // ---- End of modification. ------------------------------------------------
 
   if (Sample.x == 1)
     c *= c;
@@ -148,12 +148,12 @@ void CurrFilter(int2 pos) {
 #else
   AH3 c;
 
-  /* Modification of original code to offset content to background box.
+  /* ---- Modification of original code to offset content to bg box. ----------
    * Original:
    * FsrEasuH(c, pos, Const0, Const1, Const2, Const3);
    **/
   FsrEasuH(c, localPos, Const0, Const1, Const2, Const3);
-  // End of modification
+  // ---- End of modification. ------------------------------------------------
 
   if (Sample.x == 1)
     c *= c;
