@@ -44,8 +44,8 @@ class CopyScaler(Scaler):
         background_color: BackgroundColor,
         src_width: int,
         src_height: int,
-        dst_total_width: int,
-        dst_total_height: int,
+        dst_width: int,
+        dst_height: int,
         dst_x: int,
         dst_y: int,
         dst_w: int,
@@ -58,8 +58,8 @@ class CopyScaler(Scaler):
             background_color: RGBA color for areas outside the content rect.
             src_width: Width of the source texture.
             src_height: Height of the source texture.
-            dst_total_width: Width of the target (screen) texture.
-            dst_total_height: Height of the target (screen) texture.
+            dst_width: Width of the target (screen) texture.
+            dst_height: Height of the target (screen) texture.
             dst_x: Left edge of the destination rectangle.
             dst_y: Top edge of the destination rectangle.
             dst_w: Width of the destination rectangle.
@@ -70,8 +70,8 @@ class CopyScaler(Scaler):
             *background_color,
             src_width,
             src_height,
-            dst_total_width,
-            dst_total_height,
+            dst_width,
+            dst_height,
             dst_x,
             dst_y,
             dst_w,

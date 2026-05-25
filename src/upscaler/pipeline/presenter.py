@@ -90,21 +90,21 @@ class Presenter:
 
         # --- Scalers ------------------------------------------------------------
         # Copy
-        self._copy_pass = CopyScaler()
-        self._copy_pass.set_target_texture(self.screen_tex)
+        self._copy = CopyScaler()
+        self._copy.set_target_texture(self.screen_tex)
 
         # Lanczos
-        self.lanczos = LanczosScaler()
-        self.lanczos.set_target_texture(self.screen_tex)
-        self.lanczos.configure(
+        self._lanczos = LanczosScaler()
+        self._lanczos.set_target_texture(self.screen_tex)
+        self._lanczos.configure(
             blur=self.config.lanczos_blur,
             antiring_strength=self.config.lanczos_antiring_strength,
             tight_antiring=self.config.lanczos_tight_antiring,
         )
 
         # FSR
-        self.fsr = FSRScaler()
-        self.fsr.set_target_texture(self.screen_tex)
+        self._fsr = FSRScaler()
+        self._fsr.set_target_texture(self.screen_tex)
 
         # --- Post-processing passes (only created if config enables them) ------
         # Debanding (needs separate textures)
@@ -193,12 +193,11 @@ class Presenter:
         )
         data = src, src.width, src.height, dst_x, dst_y, r_w, r_h
         if r_w == src.width and r_h == src.height:
-            self._scale_identity(*data)
+            self._scale(self._copy, *data)
         elif r_w >= src.width or r_h >= src.height:
-            # self._scale(self.fsr, *data)
-            self._scale(self.lanczos, *data)
+            self._scale(self._fsr, *data)
         else:
-            self._scale(self.lanczos, *data)
+            self._scale(self._lanczos, *data)
 
         # ---- CAS ------------------------------------------------------------
         self._apply_cas_if_enabled()
@@ -237,7 +236,7 @@ class Presenter:
         self.config = config
 
         # ---- Lanczos ----
-        self.lanczos.configure(
+        self._lanczos.configure(
             blur=self.config.lanczos_blur,
             antiring_strength=self.config.lanczos_antiring_strength,
             tight_antiring=self.config.lanczos_tight_antiring,
@@ -337,8 +336,8 @@ class Presenter:
         self.screen_tex = Texture2D(new_width, new_height)
 
         # Rebind screen texture to all passes
-        self.lanczos.set_target_texture(self.screen_tex)
-        self._copy_pass.set_target_texture(self.screen_tex)
+        self._lanczos.set_target_texture(self.screen_tex)
+        self._copy.set_target_texture(self.screen_tex)
         for pass_ in (self._cas, self._bloom, self._vignette, self._lut, self._grain):
             if pass_ is not None:
                 pass_.set_target_texture(self.screen_tex)
@@ -348,31 +347,6 @@ class Presenter:
     # ------------------------------------------------------------------
     #  Internal helpers
     # ------------------------------------------------------------------
-
-    def _scale_identity(
-        self,
-        src: Texture2D,
-        src_width: int,
-        src_height: int,
-        dst_x: int,
-        dst_y: int,
-        r_w: int,
-        r_h: int,
-    ) -> None:
-        """1:1 copy with background fill."""
-        self._copy_pass.set_source_texture(src)
-        self._copy_pass.update_constants(
-            background_color=self.background_color,
-            src_width=src_width,
-            src_height=src_height,
-            dst_total_width=self.screen_width,
-            dst_total_height=self.screen_height,
-            dst_x=dst_x,
-            dst_y=dst_y,
-            dst_w=r_w,
-            dst_h=r_h,
-        )
-        self._copy_pass.dispatch_auto()
 
     def _scale(
         self,
