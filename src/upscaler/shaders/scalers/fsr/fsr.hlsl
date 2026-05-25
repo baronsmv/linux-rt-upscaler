@@ -24,9 +24,11 @@
   uint4 Const2;
   uint4 Const3;
   uint4 Sample;
-  //Modification of original code to add push variables for background color box:
+  // Modification of original code to add push variables for background color
+  // box:
   uint4 dstRect; // x = dstX, y = dstY, z = dstW, w = dstH
   float4 bgColor;
+  // End of modification
 };
 
 #define A_GPU 1
@@ -39,6 +41,7 @@
  * [[vk::binding(3, 0)]] SamplerState		samLinearClamp : register(s0);
  **/
 [[vk::binding(3072, 0)]] SamplerState samLinearClamp : register(s0);
+// End of modification
 
 #if SAMPLE_SLOW_FALLBACK
 #include "ffx_a.h"
@@ -49,6 +52,8 @@
  **/
 [[vk::binding(1024, 0)]] Texture2D InputTexture : register(t0);
 [[vk::binding(2048, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
+// End of modification
+
 #if SAMPLE_EASU
 #define FSR_EASU_F 1
 AF4 FsrEasuRF(AF2 p) {
@@ -79,6 +84,8 @@ void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b) {}
  **/
 [[vk::binding(1024, 0)]] Texture2D<float4> InputTexture : register(t0);
 [[vk::binding(2048, 0)]] RWTexture2D<float4> OutputTexture : register(u0);
+// End of modification
+
 #if SAMPLE_EASU
 #define FSR_EASU_H 1
 AH4 FsrEasuRH(AF2 p) {
@@ -112,6 +119,8 @@ void CurrFilter(int2 pos) {
     OutputTexture[pos] = bgColor;
     return;
   }
+  int2 localPos = pos - rectXY;
+  // End of modification
 
 #if SAMPLE_BILINEAR
   AF2 pp = (AF2(pos) * AF2_AU2(Const0.xy) + AF2_AU2(Const0.zw)) *
@@ -122,13 +131,25 @@ void CurrFilter(int2 pos) {
 #if SAMPLE_EASU
 #if SAMPLE_SLOW_FALLBACK
   AF3 c;
-  FsrEasuF(c, pos, Const0, Const1, Const2, Const3);
+  /* Modification of original code to offset content to background box.
+   * Original:
+   * FsrEasuF(c, pos, Const0, Const1, Const2, Const3);
+   **/
+  FsrEasuF(c, localPos, Const0, Const1, Const2, Const3);
+  // End of modification
+
   if (Sample.x == 1)
     c *= c;
   OutputTexture[pos] = float4(c, 1);
 #else
   AH3 c;
-  FsrEasuH(c, pos, Const0, Const1, Const2, Const3);
+  /* Modification of original code to offset content to background box.
+   * Original:
+   * FsrEasuH(c, pos, Const0, Const1, Const2, Const3);
+   **/
+  FsrEasuH(c, localPos, Const0, Const1, Const2, Const3);
+  // End of modification
+
   if (Sample.x == 1)
     c *= c;
   OutputTexture[pos] = AH4(c, 1);
