@@ -3,7 +3,7 @@
 //                                               [A] SHADER PORTABILITY 1.20210629
 //
 //==============================================================================================================================
-// FidelityFX Super Resolution Sample
+// FidelityFX Super Resolution 1.0 (FSR)
 // https://github.com/GPUOpen-Effects/FidelityFX-FSR/blob/master/ffx-fsr/ffx_a.h
 //
 // Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
