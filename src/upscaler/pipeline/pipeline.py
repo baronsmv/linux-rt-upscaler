@@ -698,7 +698,6 @@ class Pipeline(QObject):
                 c.background_color,
                 round(c.lanczos_blur, 6),
                 round(c.lanczos_antiring_strength, 6),
-                c.lanczos_linear_light,
                 c.lanczos_tight_antiring,
                 c.cas_enabled,
                 c.bloom_enabled,

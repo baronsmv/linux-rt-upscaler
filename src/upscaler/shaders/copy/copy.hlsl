@@ -19,19 +19,18 @@ Texture2D<float4> InputTex : register(t0);
 RWTexture2D<float4> OutputTex : register(u0);
 
 cbuffer Constants : register(b0) {
-  float4 bgColor;          // color outside the destination rectangle
+  float4 bgColor; // color outside the destination rectangle
   uint srcWidth;
   uint srcHeight;
   uint dstTotalWidth;
   uint dstTotalHeight;
-  int dstX;                // top-left corner of the destination rect
+  int dstX; // top-left corner of the destination rect
   int dstY;
-  int dstW;                // width and height of the destination rect
+  int dstW; // width and height of the destination rect
   int dstH;
 };
 
-[numthreads(16, 16, 1)]
-void main(uint3 dtid : SV_DispatchThreadID) {
+[numthreads(16, 16, 1)] void main(uint3 dtid : SV_DispatchThreadID) {
   uint2 outPos = dtid.xy;
   if (outPos.x >= dstTotalWidth || outPos.y >= dstTotalHeight)
     return;
@@ -48,6 +47,6 @@ void main(uint3 dtid : SV_DispatchThreadID) {
   // Map to source coordinates (point sample)
   float2 uv = (float2(x - dstX, y - dstY) + 0.5) / float2(dstW, dstH);
   int2 srcCoord = int2(uv * float2(srcWidth, srcHeight));
-  srcCoord = clamp(srcCoord, int2(0,0), int2(srcWidth-1, srcHeight-1));
+  srcCoord = clamp(srcCoord, int2(0, 0), int2(srcWidth - 1, srcHeight - 1));
   OutputTex[outPos] = InputTex.Load(int3(srcCoord, 0));
 }

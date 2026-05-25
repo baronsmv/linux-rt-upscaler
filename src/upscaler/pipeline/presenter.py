@@ -542,6 +542,5 @@ class Presenter:
             radius_y=radius_y,
             blur=self.config.lanczos_blur,
             antiring_strength=self.config.lanczos_antiring_strength,
-            linear_light=self.config.lanczos_linear_light,
             tight_antiring=self.config.lanczos_tight_antiring,
         )

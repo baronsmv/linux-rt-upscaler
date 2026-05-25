@@ -27,8 +27,7 @@ cbuffer Constants : register(b0) {
   uint radiusY;           // pre-computed filter radius in Y
   float blur;             // kernel softness (1.0 = standard)
   float antiringStrength; // 0 = off, 1 = full hard clamp
-  bool linearLight;       // process in linear light
-  bool tightAntiring;     // true = only central 2x2 for ringing bounds
+  bool tightAntiring;     // true = only central 2×2 for ringing bounds
 }
 
 // ============================================================================
@@ -60,6 +59,8 @@ float lanczos(float x, float r) {
 
   int x = int(outPos.x);
   int y = int(outPos.y);
+
+  // Background fill
   if (x < dstX || x >= dstX + dstW || y < dstY || y >= dstY + dstH) {
     OutputTex[outPos] = bgColor;
     return;
@@ -78,9 +79,7 @@ float lanczos(float x, float r) {
   float weightSum = 0.0f;
   float3 vmin = 1e6f, vmax = -1e6f;
 
-  // ---- Walk the sampling window (size determined by radiusX/radiusY) -------
-  //   iy from -iry+1 to iry   (e.g. for radius 3: -2, -1, 0, 1, 2, 3)
-  //   ix from -irx+1 to irx
+  // ---- Walk the sampling window (radiusX/radiusY) -------------------------
   int irx = int(radiusX);
   int iry = int(radiusY);
 
@@ -93,19 +92,17 @@ float lanczos(float x, float r) {
                       int2(srcWidth - 1, srcHeight - 1));
 
       float3 color = InputTex.Load(int3(sc, 0)).rgb;
-      float3 val = linearLight ? color * color : color;
-
       float wx = lanczos(abs(float(ix) - f.x), float(irx));
       float w = wx * wy;
 
-      accum += val * w;
+      accum += color * w;
       weightSum += w;
 
       // Anti-ringing bounds
       bool isCentral = (abs(ix) <= 1 && abs(iy) <= 1);
       if (!tightAntiring || isCentral) {
-        vmin = min(vmin, val);
-        vmax = max(vmax, val);
+        vmin = min(vmin, color);
+        vmax = max(vmax, color);
       }
     }
   }
@@ -116,8 +113,5 @@ float lanczos(float x, float r) {
   v = clamp(v, lerp(v, vmin, antiringStrength),
             lerp(v, vmax, antiringStrength));
 
-  // Convert back from linear light if necessary
-  float3 finalColor = linearLight ? sqrt(max(v, 0.0f)) : v;
-
-  OutputTex[outPos] = float4(finalColor, 1.0f);
+  OutputTex[outPos] = float4(v, 1.0f);
 }

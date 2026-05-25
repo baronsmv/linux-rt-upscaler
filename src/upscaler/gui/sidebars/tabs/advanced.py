@@ -54,14 +54,6 @@ class AdvancedTab(SettingsTab):
             "Lower values soften the clamp, preserving more detail at the cost of possible ringing.\n"
             "Recommended range: 0.7 - 1.0.",
         )
-        self._linear_cb = self._add_cb(
-            "Linear Light",
-            self._config.lanczos_linear_light,
-            self._on_linear_light,
-            baseline=self.baseline_config.lanczos_linear_light,
-            help=f"Process the image in linear light (sRGB {chr(8594)} linear {chr(8594)} sRGB).\n"
-            "Disabling may improve text clarity on some content but colors could lose saturation when downscaling.",
-        )
         self._tight_cb = self._add_cb(
             "Tight Antiring",
             self._config.lanczos_tight_antiring,
@@ -268,10 +260,6 @@ class AdvancedTab(SettingsTab):
 
     def _on_antiring(self, value: float):
         self._config.lanczos_antiring_strength = value
-        self.config_changed.emit()
-
-    def _on_linear_light(self, state: int):
-        self._config.lanczos_linear_light = bool(state)
         self.config_changed.emit()
 
     def _on_tight_antiring(self, state: int):

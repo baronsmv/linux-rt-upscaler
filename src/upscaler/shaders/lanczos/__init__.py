@@ -22,7 +22,7 @@ CB_FORMAT_FIXED = "ffffIIIIiiiif"
 CB_SIZE_FIXED = struct.calcsize(CB_FORMAT_FIXED)
 
 # Lanczos Adaptive (variable radius): includes radiusX/radiusY
-CB_FORMAT_ADAPTIVE = "ffffIIIIiiiiIIffII"
+CB_FORMAT_ADAPTIVE = "ffffIIIIiiiiIIffI"
 CB_SIZE_ADAPTIVE = struct.calcsize(CB_FORMAT_ADAPTIVE)
 
 # Maximum buffer size needed (we allocate once and reuse)
@@ -153,7 +153,6 @@ class LanczosScaler(ShaderPass):
         radius_y: int,
         blur: float = 1.0,
         antiring_strength: float = 1.0,
-        linear_light: bool = True,
         tight_antiring: bool = True,
     ) -> None:
         """
@@ -195,7 +194,6 @@ class LanczosScaler(ShaderPass):
                 radius_y,  # 2 uint32
                 blur,  # float
                 antiring_strength,  # float
-                1 if linear_light else 0,  # uint32 (bool)
                 1 if tight_antiring else 0,  # uint32 (bool)
             )
 

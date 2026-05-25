@@ -87,7 +87,6 @@ class Config:
     # Lanczos
     lanczos_blur: float = 1.0
     lanczos_antiring_strength: float = 1.0
-    lanczos_linear_light: bool = True
     lanczos_tight_antiring: bool = True
 
     # Debanding
