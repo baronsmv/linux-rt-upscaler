@@ -225,6 +225,8 @@ class Pipeline(QObject):
             self._grabber.close()
         if self._window_tracker is not None:
             self._window_tracker.close()
+        if self.presenter is not None:
+            self.presenter.close()
         self._swapchain_manager.close()
 
     def update_base_config(self, new_base: Config) -> None:

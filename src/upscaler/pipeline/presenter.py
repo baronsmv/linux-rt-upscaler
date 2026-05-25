@@ -357,6 +357,28 @@ class Presenter:
 
         self.osd.clear_compute_cache()
 
+    def close(self) -> None:
+        """Release all GPU resources while the Vulkan device is still alive."""
+        self._nis = None
+        self._fsr = None
+        self._lanczos = None
+        self._copy = None
+
+        self.linearize_pass = None
+        self.delinearize_pass = None
+        self.clear_pass = None
+
+        self._deband = None
+        self._deband_tex = None
+        self._cas = None
+        self._bloom = None
+        self._vignette = None
+        self._lut = None
+        self._grain = None
+
+        self._linear_tex = None
+        self.screen_tex = None
+
     # ------------------------------------------------------------------
     #  Internal helpers
     # ------------------------------------------------------------------
