@@ -7,7 +7,7 @@ import struct
 from typing import TYPE_CHECKING
 
 from ..scaler import Scaler
-from ...vulkan import Buffer
+from ...vulkan import Buffer, Sampler, SAMPLER_FILTER_POINT
 
 if TYPE_CHECKING:
     from ...config import BackgroundColor
@@ -96,9 +96,15 @@ class LanczosScaler(Scaler):
     def _create_persistent_resources(self):
         self._cb = Buffer(CB_SIZE_MAX)
         self._sampler = None
+        self._point_sampler = Sampler(
+            filter_min=SAMPLER_FILTER_POINT, filter_mag=SAMPLER_FILTER_POINT
+        )
 
     def _get_bindings(self):
-        return [self.source_texture], [self.target_texture], []
+        if self._current_variant == "fixed":
+            return [self.source_texture], [self.target_texture], [self._point_sampler]
+        else:
+            return [self.source_texture], [self.target_texture], []
 
     def configure(
         self,

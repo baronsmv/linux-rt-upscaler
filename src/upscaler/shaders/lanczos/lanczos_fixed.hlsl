@@ -10,7 +10,6 @@
 //    - Lanczos-2 kernel (fixed radius 2).
 //    - Hardware Gather (4 Gather calls per color channel).
 //    - Full 4x4 anti-ringing clamp.
-//    - Implicit linear-light processing.
 //    - Integer-pixel alignment.
 //
 //  Note: Every deviation tested (variable anti-ringing neighborhood, soft
@@ -50,7 +49,6 @@ float lanczos(float x) {
 }
 
 #define K(x) lanczos(x)
-#define E(x) sqrt(x)
 
 [numthreads(16, 16, 1)] void main(uint3 dtid : SV_DispatchThreadID) {
   uint2 outPos = dtid.xy;
@@ -94,14 +92,9 @@ float lanczos(float x) {
     for (int x = 0; x < 4; x += 2) {
       float2 t = s + float2(x, y) * pt;
 
-      float4 r_raw = InputTex.GatherRed(PointSampler, t);
-      float4 g_raw = InputTex.GatherGreen(PointSampler, t);
-      float4 b_raw = InputTex.GatherBlue(PointSampler, t);
-
-      // Implicit linear-light: square during gather
-      float4 r = r_raw * r_raw;
-      float4 g = g_raw * g_raw;
-      float4 b = b_raw * b_raw;
+      float4 r = InputTex.GatherRed(PointSampler, t);
+      float4 g = InputTex.GatherGreen(PointSampler, t);
+      float4 b = InputTex.GatherBlue(PointSampler, t);
 
       // Gather return order: .w = top-left, .z = top-right,
       //                      .x = bottom-left, .y = bottom-right
@@ -122,6 +115,6 @@ float lanczos(float x) {
   // Hard anti-ringing clamp (full 4x4 neighborhood)
   v = clamp(v, vmin, vmax);
 
-  // Linear-light output: sqrt to return to sRGB
-  OutputTex[outPos] = float4(E(v), 1.0);
+  // Linear-light output
+  OutputTex[outPos] = float4(v, 1.0);
 }

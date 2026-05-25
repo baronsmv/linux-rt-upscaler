@@ -6,7 +6,6 @@
 //  Components:
 //    - Variable-radius Lanczos kernel (sinc-based).
 //    - Independent X/Y radii.
-//    - Optional linear-light processing.
 //    - Optional soft anti-ringing.
 //    - Integer-pixel alignment.
 //
