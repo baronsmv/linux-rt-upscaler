@@ -13,6 +13,7 @@ class Scaler(Shader):
     """Common ground for all scaling passes."""
 
     requires_linear_input: bool = True
+    linear_output: bool = True
 
     def __init__(self, shader_path: str) -> None:
         self.source_texture: Optional[Texture2D] = None

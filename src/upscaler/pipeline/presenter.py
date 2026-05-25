@@ -83,13 +83,16 @@ class Presenter:
         self._active_source_texture: Optional[Texture2D] = None
 
         # --- Helpers ------------------------------------------------------------
-        # Linear pass
+        # Linear/Delinear passes
+        self._needs_delinearize: bool = True
+
         self.linearize_pass = Linearize()
         self._linear_tex = None
 
         self.delinearize_pass = Delinearize()
         self.delinearize_pass.set_target_texture(self.screen_tex)
 
+        # Clear pass
         self.clear_pass = Clear()
         self.clear_pass.set_target_texture(self.screen_tex)
 
@@ -218,8 +221,9 @@ class Presenter:
         self._apply_vignette_if_enabled()
 
         # ---- Delinearize ----------------------------------------------------
-        self.delinearize_pass.set_source_texture(self.screen_tex)
-        self.delinearize_pass.dispatch_auto()
+        if self._needs_delinearize:
+            self.delinearize_pass.set_source_texture(self.screen_tex)
+            self.delinearize_pass.dispatch_auto()
 
         # ---- LUT ------------------------------------------------------------
         self._apply_lut_if_enabled()
@@ -368,6 +372,9 @@ class Presenter:
         r_w: int,
         r_h: int,
     ) -> None:
+        # Remember whether the output is linear
+        self._needs_delinearize = scaler.linear_output
+
         if not scaler.requires_linear_input:
             # Clear the whole screen with the background color
             self.clear_pass.update_constants(self.background_color)

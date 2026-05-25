@@ -20,8 +20,8 @@ NIS_BLOCK_WIDTH = 32
 NIS_BLOCK_HEIGHT = 24
 NIS_THREAD_GROUP_SIZE = 256
 
-CB_SIZE_NIS = 28 * 4
-CB_FORMAT_NIS = "<" + "f" * 28
+CB_FORMAT_NIS = "<" + "f" * 18 + "I" * 8 + "f" * 2
+CB_SIZE_NIS = struct.calcsize(CB_FORMAT_NIS)
 
 SHADER_DIR = os.path.dirname(__file__)
 DEFAULT_NIS_SHADER = os.path.join(SHADER_DIR, "nis.spv")
@@ -185,6 +185,7 @@ class NISScaler(Scaler):
     """
 
     requires_linear_input = False
+    linear_output = False
 
     def __init__(
         self, shader_path: str = DEFAULT_NIS_SHADER, sharpness: float = 0.5
