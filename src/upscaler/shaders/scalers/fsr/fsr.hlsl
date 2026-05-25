@@ -24,10 +24,10 @@
   uint4 Const2;
   uint4 Const3;
   uint4 Sample;
-  // Modification of original code to add push variables for background color
-  // box:
-  uint4 dstRect; // x = dstX, y = dstY, z = dstW, w = dstH
-  float4 bgColor;
+
+  // Modification of original code to add background color box:
+  uint4 dstRect;  // x = dstX, y = dstY, z = dstW, w = dstH
+  float4 bgColor; // background color
   // End of modification
 };
 
@@ -45,6 +45,7 @@
 
 #if SAMPLE_SLOW_FALLBACK
 #include "ffx_a.h"
+
 /* Modification of original code to adjust bindings to pipeline.
  * Original:
  * [[vk::binding(1, 0)]] Texture2D InputTexture : register(t0);
@@ -77,6 +78,7 @@ void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b) {}
 #else
 #define A_HALF
 #include "ffx_a.h"
+
 /* Modification of original code to adjust bindings to pipeline.
  * Original:
  * [[vk::binding(1, 0)]] Texture2D<float4> InputTexture : register(t0);
@@ -111,6 +113,7 @@ void FsrRcasInputH(inout AH1 r, inout AH1 g, inout AH1 b) {}
 #include "ffx_fsr1.h"
 
 void CurrFilter(int2 pos) {
+
   // Modification of original code to add a custom background color box:
   int2 rectXY = int2(dstRect.xy);
   int2 rectWH = int2(dstRect.zw);
@@ -131,6 +134,7 @@ void CurrFilter(int2 pos) {
 #if SAMPLE_EASU
 #if SAMPLE_SLOW_FALLBACK
   AF3 c;
+
   /* Modification of original code to offset content to background box.
    * Original:
    * FsrEasuF(c, pos, Const0, Const1, Const2, Const3);
@@ -143,6 +147,7 @@ void CurrFilter(int2 pos) {
   OutputTexture[pos] = float4(c, 1);
 #else
   AH3 c;
+
   /* Modification of original code to offset content to background box.
    * Original:
    * FsrEasuH(c, pos, Const0, Const1, Const2, Const3);
