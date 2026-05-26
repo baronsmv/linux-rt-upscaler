@@ -535,7 +535,7 @@ def acquire_target_window(
         )
         if win_info is None:
             logger.error("No window matching the title criteria found")
-            return None, None
+            sys.exit(1)
 
         activate_window(win_info.handle)
         logger.debug(
@@ -549,13 +549,11 @@ def acquire_target_window(
         windows = list_windows()
         if not windows:
             logger.error("No visible windows found")
-            return None, None
+            sys.exit(1)
 
         win_info = _select_window_interactive(windows)
         if win_info is None:
             return None, None
-        if config.log_level != "ERROR":
-            logger.debug(f"Selected: '%s'", win_info.title)
         logger.debug(
             f"Window acquired interactively in {time.perf_counter() - start_time:.2f}s"
         )

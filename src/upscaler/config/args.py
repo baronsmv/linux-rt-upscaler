@@ -422,8 +422,7 @@ Examples:
         type=str,
         default=DEFAULT_CONFIG.gpu,
         help="""GPU to use: an index (e.g., 0) or a device name substring.
-If not set, the best available device is chosen automatically.
-Use --list-gpus to see available devices.""",
+If not set, the best available device is chosen automatically.""",
     )
 
     # ----------------------------------------------------------------------
