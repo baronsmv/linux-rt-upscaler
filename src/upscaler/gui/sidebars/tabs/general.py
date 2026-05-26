@@ -12,6 +12,9 @@ if TYPE_CHECKING:
     from ...config import GUIConfig
     from ....config import Config
 
+UPSAMPLER_NAMES = {v: k for k, v in UPSAMPLERS.items()}
+DOWNSAMPLER_NAMES = {v: k for k, v in DOWNSAMPLERS.items()}
+
 
 class GeneralTab(SettingsTab):
 
@@ -59,24 +62,26 @@ class GeneralTab(SettingsTab):
         self._add_section("Sampler Algorithm")
         self._upsampler_combo = self._add_combo(
             "Upsampler",
-            UPSAMPLERS,
-            self._config.upsampler,
+            list(UPSAMPLERS.keys()),
+            UPSAMPLER_NAMES.get(self._config.upsampler, "Lanczos"),
             self._on_upsampler,
-            baseline=self.baseline_config.upsampler,
-            help="Spatial upscaler used when the output is larger than the input.\n"
-            f"{chr(8226)} lanczos: Fixed Lanczos-2 (sharp, linear-light, best for 2D art)\n"
-            f"{chr(8226)} fsr: AMD FidelityFX Super Resolution 1.0 (edge-adaptive, best for 3D content)\n"
-            f"{chr(8226)} nis: NVIDIA Image Scaling (directional sharpening, sRGB, may look oversharpened)",
+            baseline=UPSAMPLER_NAMES.get(self.baseline_config.upsampler, "Lanczos"),
+            help=f"Applied after SRCNN upscaling to reach the target output size (e.g., 1440p {chr(8594)} 4k).\n"
+            f"{chr(8226)} Fixed Lanczos-2 {chr(8212)} sharp, linear-light, best for 2D art\n"
+            f"{chr(8226)} AMD FidelityFX Super Resolution 1.0 {chr(8212)} fast, edge-adaptive, best for 3D content\n"
+            f"{chr(8226)} NVIDIA Image Scaling {chr(8212)} directional sharpening, sRGB, may look oversharpened",
         )
         self._downsampler_combo = self._add_combo(
             "Downsampler",
-            DOWNSAMPLERS,
-            self._config.downsampler,
+            list(DOWNSAMPLERS.keys()),
+            DOWNSAMPLER_NAMES.get(self._config.downsampler, "Catmull-Rom"),
             self._on_downsampler,
-            baseline=self.baseline_config.downsampler,
-            help="Spatial downscaler used when the output is smaller than the input.\n"
-            f"{chr(8226)} catmull: Catmull-Rom bicubic (sharp, fast, linear-light)\n"
-            f"{chr(8226)} lanczos: Adaptive Lanczos (variable radius, high quality for any ratio)",
+            baseline=DOWNSAMPLER_NAMES.get(
+                self.baseline_config.downsampler, "Catmull-Rom"
+            ),
+            help=f"Applied after SRCNN upscaling to reduce the image to the target output size (e.g., 1440p {chr(8594)} 1080p).\n"
+            f"{chr(8226)} Catmull-Rom (bicubic) {chr(8212)} sharper and faster than Lanczos for mild downscaling\n"
+            f"{chr(8226)} Adaptive Lanczos {chr(8212)} variable radius, high quality even in extreme downscales",
         )
 
         # ---- Focus Tracking ----
@@ -126,11 +131,11 @@ class GeneralTab(SettingsTab):
         self.config_changed.emit()
 
     def _on_upsampler(self, text: str):
-        self._config.upsampler = text
+        self._config.upsampler = UPSAMPLERS.get(text, "lanczos")
         self.config_changed.emit()
 
     def _on_downsampler(self, text: str):
-        self._config.downsampler = text
+        self._config.downsampler = DOWNSAMPLERS.get(text, "catmull")
         self.config_changed.emit()
 
     def _on_follow_focus(self, state: int):

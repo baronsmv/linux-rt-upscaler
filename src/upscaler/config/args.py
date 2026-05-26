@@ -288,7 +288,7 @@ screens (4k, 1440p) or low-resolution sources.""",
     sampler_selection_group.add_argument(
         "-U",
         "--upsampler",
-        choices=UPSAMPLERS,
+        choices=UPSAMPLERS.values(),
         default=DEFAULT_CONFIG.upsampler,
         help="""Spatial upscaler used when the output is larger than the
 input. Default: %(default)s.
@@ -306,7 +306,7 @@ input. Default: %(default)s.
     sampler_selection_group.add_argument(
         "-D",
         "--downsampler",
-        choices=DOWNSAMPLERS,
+        choices=DOWNSAMPLERS.values(),
         default=DEFAULT_CONFIG.downsampler,
         help="""Spatial downscaler used when the output is smaller than the
 input. Default: %(default)s.

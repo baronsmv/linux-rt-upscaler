@@ -41,7 +41,7 @@ class AdvancedTab(SettingsTab):
             float_slot=self._on_blur,
             baseline=self.baseline_config.blur,
             help="Kernel width (blur factor) for Lanczos and Catmull-Rom.\n"
-            "Lower values increase sharpness/ringing; higher values smooth the result.\n"
+            "Lower values increase sharpness/ringing, while higher values smooth the result.\n"
             "Recommended range: 0.8 - 1.2.",
         )
         self._antiring = self._add_slider(
@@ -52,13 +52,12 @@ class AdvancedTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_antiring,
             baseline=self.baseline_config.antiring_strength,
-            help="Anti-ringing strength (0.0 - 1.0).\n"
+            help="Anti-ringing strength (0.0 - 1.0) for Adaptive Lanczos and Catmull-Rom.\n"
             "Lower values soften the clamp, preserving more detail at the cost of possible ringing.\n"
-            "Values of 0.9-1.0 are recommended for Lanczos to eliminate ringing entirely, while 0.7–0.8 works well for Catmull‑Rom."
             "Recommended range: 0.7 - 1.0.",
         )
         self._tight_cb = self._add_cb(
-            "Tight Antiring",
+            "Lanczos Tight Antiring",
             self._config.tight_antiring,
             self._on_tight_antiring,
             baseline=self.baseline_config.tight_antiring,

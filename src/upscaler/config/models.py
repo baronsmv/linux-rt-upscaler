@@ -16,8 +16,15 @@ UPSCALING_MODELS = (
     "4x32",
     "8x32",
 )
-UPSAMPLERS = ("lanczos", "fsr", "nis")
-DOWNSAMPLERS = ("catmull", "lanczos")
+UPSAMPLERS: Dict[str, str] = {
+    "Lanczos-2": "lanczos",
+    "FSR 1.0": "fsr",
+    "NIS (NVIDIA)": "nis",
+}
+DOWNSAMPLERS: Dict[str, str] = {
+    "Catmull-Rom": "catmull",
+    "Lanczos (adaptive)": "lanczos",
+}
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
 ZOOM_LEVELS = ("50%", "75%", "100%", "150%", "200%", "300%", "400%")
 
