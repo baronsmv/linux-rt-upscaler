@@ -70,8 +70,8 @@ class DisplayTab(SettingsTab):
         )
         self._scale_slider.setEnabled(self._config.scale_factor is not None)
 
-        # ---- Overlay Mode ----
-        self._add_section("Overlay Mode")
+        # ---- Overlay ----
+        self._add_section("Overlay")
         self._overlay_combo = self._add_combo(
             "Mode",
             [e.value for e in OverlayMode],
@@ -84,6 +84,34 @@ class DisplayTab(SettingsTab):
             f"{chr(8226)} fullscreen: covers entire monitor\n"
             f"{chr(8226)} windowed: normal window with decorations",
         )
+
+        # ---- Cursor ----
+        self._add_section("Cursor")
+        self._hide_cursor_cb = self._add_cb(
+            "Hide cursor",
+            self._config.hide_cursor is not None,
+            self._on_hide_cursor_toggle,
+            baseline=self.baseline_config.hide_cursor is not None,
+            help="Automatically hide the mouse cursor after a period of inactivity.",
+        )
+        bl_ms = self.baseline_config.hide_cursor
+        if bl_ms is not None and bl_ms > 0:
+            bl_seconds = bl_ms / 1000.0
+        elif bl_ms == 0:
+            bl_seconds = 0.0
+        else:
+            bl_seconds = 2.0
+        self._hide_cursor_timeout = self._add_slider(
+            "Hide Timeout (s)",
+            0,
+            10000,
+            self._config.hide_cursor if self._config.hide_cursor is not None else 2000,
+            scale_factor=1000,
+            float_slot=self._on_hide_cursor_timeout,
+            baseline=bl_seconds,
+            help="Time in seconds after which the cursor disappears.",
+        )
+        self._hide_cursor_timeout.setEnabled(self._config.hide_cursor is not None)
 
         # ---- Output Geometry ----
         self._add_section("Output Geometry")
@@ -173,6 +201,20 @@ class DisplayTab(SettingsTab):
     def _on_overlay_mode(self, text: str):
         self._config.overlay_mode = text
         self.config_changed.emit()
+
+    def _on_hide_cursor_toggle(self, state: int) -> None:
+        enabled = bool(state)
+        self._hide_cursor_timeout.setEnabled(enabled)
+        if enabled:
+            self._config.hide_cursor = self._hide_cursor_timeout.value()
+        else:
+            self._config.hide_cursor = None
+        self.config_changed.emit()
+
+    def _on_hide_cursor_timeout(self, value: int) -> None:
+        if self._hide_cursor_timeout.isEnabled():
+            self._config.hide_cursor = int(value * 1000)
+            self.config_changed.emit()
 
     def _on_geometry_changed(self, text: str) -> None:
         self._config.output_geometry = text

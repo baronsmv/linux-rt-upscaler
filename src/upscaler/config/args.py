@@ -454,6 +454,12 @@ Modes:
                     size.
 """,
     )
+    overlay_group.add_argument(
+        "--hide-cursor",
+        type=int,
+        default=DEFAULT_CONFIG.hide_cursor,
+        help="Hide the mouse cursor after inactivity (milliseconds).",
+    )
 
     # ----------------------------------------------------------------------
     # Presentation options

@@ -167,6 +167,8 @@ _VALIDATORS: Dict[str, Tuple] = {
     "lut_intensity": (validate_number, 0.0, 1.0),
     # Display
     "scale_factor": (validate_number, 0, None, False),
+    # Overlay
+    "hide_cursor": (validate_number, 0),
     # Presentation
     "output_geometry": (validate_geometry,),
     "crop_top": (validate_number, 0),

@@ -141,6 +141,7 @@ class Config:
 
     # Overlay
     overlay_mode: str = OverlayMode.ALWAYS_ON_TOP.value
+    hide_cursor: Optional[int] = None
     overlay_opacity_min: float = 0.2  # Not in argparser
     overlay_opacity_max: float = 1.0  # Not in argparser
 

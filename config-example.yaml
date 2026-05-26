@@ -169,6 +169,10 @@ scale_factor: null
 # Default: always-on-top
 overlay_mode: always-on-top
 
+# Milliseconds of inactivity before the cursor is hidden (0 = always hidden).
+# Default: null (never hide)
+hide_cursor: null
+
 # ------------------------------------------------------------------------------
 # Presentation
 # ------------------------------------------------------------------------------

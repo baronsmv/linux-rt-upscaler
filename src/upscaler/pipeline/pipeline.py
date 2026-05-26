@@ -277,9 +277,9 @@ class Pipeline(QObject):
         old = self._pause_reason
         self._pause_reason = reason
         if old == PauseReason.NONE and reason != PauseReason.NONE:
-            self.overlay.hide()
+            self.overlay.requestHide.emit()
         elif old != PauseReason.NONE and reason == PauseReason.NONE:
-            self.overlay.show()
+            self.overlay.requestShow.emit()
             time.sleep(0.1)
             self._presenter_params_stale = True
             self._next_frame_time = time.perf_counter()
@@ -545,7 +545,7 @@ class Pipeline(QObject):
         # Show the overlay first so the swapchain is created on a visible surface
         if self._pause_reason == PauseReason.DAEMON_WAITING:
             self._pause_reason = PauseReason.NONE
-            self.overlay.show()
+            self.overlay.requestShow.emit()
             self.daemon_target_acquired.emit()
 
         # Handle the geometry change

@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Any, List, Optional
 
-from PySide6.QtCore import QEvent, Qt, Signal, Slot
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow
 
@@ -35,6 +35,8 @@ class OverlayWindow(QMainWindow):
     """
 
     closed = Signal()
+    requestShow = Signal()
+    requestHide = Signal()
 
     def __init__(self, config: Config, win_info: WindowInfo) -> None:
         """
@@ -46,6 +48,8 @@ class OverlayWindow(QMainWindow):
         """
         super().__init__()
         self._config = config
+        self.requestShow.connect(self._on_request_show)
+        self.requestHide.connect(self.hide)
         start_time = time.perf_counter()
         logger.debug(
             f"Initializing OverlayWindow: mode={config.overlay_mode}, "
@@ -97,6 +101,18 @@ class OverlayWindow(QMainWindow):
         self._forwarder.enabled = self._should_forward
         self._forwarder.target_handle = win_info.handle
 
+        # Inactivity cursor hiding
+        self._cursor_hidden = False
+        self._cursor_hide_timer = QTimer(self)
+        self._cursor_hide_timer.setSingleShot(True)
+        self._cursor_hide_timer.timeout.connect(self._hide_cursor)
+
+        if self._config.hide_cursor is None:
+            pass
+        elif self._config.hide_cursor == 0:
+            self.setCursor(Qt.BlankCursor)
+            self._cursor_hidden = True
+
         # Configure coordinate mapper with initial values
         self._update_mapper()
 
@@ -126,6 +142,13 @@ class OverlayWindow(QMainWindow):
             flags = self.windowFlags() | Qt.WindowTransparentForInput
             self.setWindowFlags(flags)
             self.show()
+
+        if not config.daemon:
+            if self._config.hide_cursor is not None and self._config.hide_cursor > 0:
+                self._cursor_hide_timer.start(self._config.hide_cursor)
+            elif self._config.hide_cursor == 0:
+                self.setCursor(Qt.BlankCursor)
+                self._cursor_hidden = True
 
         logger.debug(
             f"OverlayWindow initialized in {(time.perf_counter() - start_time) * 1000:.2f} ms"
@@ -331,6 +354,34 @@ class OverlayWindow(QMainWindow):
                 self._forwarder.enabled = True
         super().changeEvent(event)
 
+    def hideEvent(self, event):
+        """Stop cursor hiding when the overlay is hidden."""
+        self._cursor_hide_timer.stop()
+        self._cursor_hidden = False
+        super().hideEvent(event)
+
+    def showEvent(self, event):
+        """Restart cursor hiding when the overlay becomes visible."""
+        if self._should_forward:
+            hc = self._config.hide_cursor
+            if hc is None:
+                # Ensure cursor is normal
+                if self._cursor_hidden:
+                    self.setCursor(Qt.ArrowCursor)
+                    self._cursor_hidden = False
+            elif hc == 0:
+                # Always hidden
+                if not self._cursor_hidden:
+                    self.setCursor(Qt.BlankCursor)
+                    self._cursor_hidden = True
+            else:
+                self._cursor_hide_timer.stop()
+                self._cursor_hide_timer.start(hc)
+                if self._cursor_hidden:
+                    self.setCursor(Qt.ArrowCursor)
+                    self._cursor_hidden = False
+        super().showEvent(event)
+
     def closeEvent(self, event: QCloseEvent) -> None:
         """
         Quit the application when the overlay window is closed.
@@ -338,6 +389,7 @@ class OverlayWindow(QMainWindow):
         Args:
             event: The close event.
         """
+        self._cursor_hide_timer.stop()
         self.hide()
         self.closed.emit()
         event.ignore()
@@ -351,6 +403,11 @@ class OverlayWindow(QMainWindow):
             mode: New scaling mode string.
         """
         self.scale_mode = mode
+
+    @Slot()
+    def _on_request_show(self):
+        """Show the overlay and start the cursor-hide timer (GUI thread)."""
+        self.show()
 
     # ----------------------------------------------------------------------
     # Mouse event forwarding
@@ -378,6 +435,7 @@ class OverlayWindow(QMainWindow):
             QEvent.MouseButtonRelease,
             QEvent.Wheel,
         ):
+            self._on_mouse_activity()
             self._handle_mouse(event)
 
             # Swallow the event (prevents interaction with underlying window)
@@ -440,3 +498,25 @@ class OverlayWindow(QMainWindow):
 
         else:
             logger.warning(f"Unexpected event type in _handle_mouse: {event.type()}")
+
+    def _on_mouse_activity(self):
+        """Called whenever the user moves the mouse or presses a button."""
+        hc = self._config.hide_cursor
+        if hc is not None and hc > 0:
+            if self._cursor_hidden:
+                self.setCursor(Qt.ArrowCursor)
+                self._cursor_hidden = False
+            self._cursor_hide_timer.start(hc)
+
+    def _hide_cursor(self):
+        """Set the cursor to blank, hiding it."""
+        self.setCursor(Qt.BlankCursor)
+        self._cursor_hidden = True
+
+    def _start_cursor_hide_timer(self):
+        self._cursor_hide_timer.start(self._config.hide_cursor)
+
+    def start_cursor_hiding(self):
+        """Start the inactivity cursor-hide timer (called after overlay is shown)."""
+        if self._config.hide_cursor > 0:
+            self._cursor_hide_timer.start(self._config.hide_cursor)

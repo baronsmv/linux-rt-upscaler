@@ -56,7 +56,7 @@ class GeneralTab(SettingsTab):
         )
 
         # ---- Sampler Selection ----
-        self._add_section("Sampler Selection")
+        self._add_section("Sampler Algorithm")
         self._upsampler_combo = self._add_combo(
             "Upsampler",
             UPSAMPLERS,
