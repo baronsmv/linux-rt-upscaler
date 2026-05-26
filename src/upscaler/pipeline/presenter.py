@@ -100,73 +100,87 @@ class Presenter:
         # --- Scalers ------------------------------------------------------------
         # Copy
         self._copy = CopyScaler()
-        self._copy.set_target_texture(self.screen_tex)
 
-        # Lanczos
-        self._lanczos = LanczosScaler()
-        self._lanczos.set_target_texture(self.screen_tex)
-        self._lanczos.configure(
+        # Upsampler
+        if config.upsampler == "lanczos":
+            self._upsampler = LanczosScaler()
+        elif config.upsampler == "fsr":
+            self._upsampler = FSRScaler()
+        elif config.upsampler == "nis":
+            self._upsampler = NISScaler()
+        else:
+            logger.warning(
+                "Upsampler '%s' not recognized. Falling back to default.",
+                config.upsampler,
+            )
+            self._upsampler = LanczosScaler()
+
+        # Downsampler
+        if config.downsampler == "catmull":
+            self._downsampler = CatmullRomScaler()
+        elif config.downsampler == "lanczos":
+            self._downsampler = LanczosScaler()
+        else:
+            logger.warning(
+                "Downsampler '%s' not recognized. Falling back to default.",
+                config.upsampler,
+            )
+            self._upsampler = CatmullRomScaler()
+
+        self._copy.set_target_texture(self.screen_tex)
+        self._upsampler.set_target_texture(self.screen_tex)
+        self._downsampler.set_target_texture(self.screen_tex)
+
+        self._downsampler.configure(
             blur=self.config.blur,
             antiring_strength=self.config.antiring_strength,
             tight_antiring=self.config.tight_antiring,
         )
 
-        # Catmull-Rom
-        self._catmull_rom = CatmullRomScaler()
-        self._catmull_rom.set_target_texture(self.screen_tex)
-
-        # FSR
-        self._fsr = FSRScaler()
-        self._fsr.set_target_texture(self.screen_tex)
-
-        # NIS
-        self._nis = NISScaler()
-        self._nis.set_target_texture(self.screen_tex)
-
         # --- Post-processing passes (only created if config enables them) ------
-        # Debanding (needs separate textures)
+        # Debanding
         self._deband: Optional[Deband] = None
         self._deband_tex: Optional[Texture2D] = None  # temp debanded output
         if config.deband_enabled:
             self._deband = Deband()
             logger.debug("Deband pass created")
 
-        # CAS (in-place)
+        # CAS
         self._cas: Optional[CAS] = None
         if config.cas_enabled:
             self._cas = CAS()
             self._cas.set_target_texture(self.screen_tex)
             logger.debug("CAS pass created")
 
-        # Bloom (in-place)
+        # Bloom
         self._bloom: Optional[Bloom] = None
         if config.bloom_enabled:
             self._bloom = Bloom()
             self._bloom.set_target_texture(self.screen_tex)
             logger.debug("Bloom pass created")
 
-        # Vignette (in-place)
+        # Vignette
         self._vignette: Optional[Vignette] = None
         if config.vignette_enabled:
             self._vignette = Vignette()
             self._vignette.set_target_texture(self.screen_tex)
             logger.debug("Vignette pass created")
 
-        # LUT (in-place)
+        # LUT
         self._lut: Optional[LUT] = None
         if config.lut_enabled:
             self._lut = LUT(preset=config.lut_preset)
             self._lut.set_target_texture(self.screen_tex)
             logger.debug("LUT pass created")
 
-        # Film grain (in-place)
+        # Film grain
         self._grain: Optional[FilmGrain] = None
         if config.grain_enabled:
             self._grain = FilmGrain()
             self._grain.set_target_texture(self.screen_tex)
             logger.debug("Film grain pass created")
 
-        # Frame counter - incremented each frame for temporal effects
+        # Frame counter, incremented each frame for temporal effects
         self._frame_counter: int = 0
 
     # ------------------------------------------------------------------
@@ -212,9 +226,9 @@ class Presenter:
         if r_w == src.width and r_h == src.height:
             self._scale(self._copy, *data)
         elif r_w >= src.width or r_h >= src.height:
-            self._scale(self._fsr, *data)
+            self._scale(self._upsampler, *data)
         else:
-            self._scale(self._catmull_rom, *data)
+            self._scale(self._downsampler, *data)
 
         # ---- CAS ------------------------------------------------------------
         self._apply_cas_if_enabled()
@@ -253,8 +267,8 @@ class Presenter:
         """Update post-processing passes to match a new configuration."""
         self.config = config
 
-        # ---- Lanczos ----
-        self._lanczos.configure(
+        # ---- Downsampler ----
+        self._downsampler.configure(
             blur=self.config.blur,
             antiring_strength=self.config.antiring_strength,
             tight_antiring=self.config.tight_antiring,
@@ -364,10 +378,9 @@ class Presenter:
 
     def close(self) -> None:
         """Release all GPU resources while the Vulkan device is still alive."""
-        self._nis = None
-        self._fsr = None
-        self._lanczos = None
         self._copy = None
+        self._upsampler = None
+        self._downsampler = None
 
         self.linearize_pass = None
         self.delinearize_pass = None
