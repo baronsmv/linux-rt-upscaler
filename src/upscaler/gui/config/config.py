@@ -48,15 +48,15 @@ class GUIConfig:
 
     @property
     def tile_title_overlay_start(self) -> Tuple[int, int, int, int]:
-        return (0, 0, 0, 0)
+        return 0, 0, 0, 0
 
     @property
     def tile_title_overlay_mid(self) -> Tuple[int, int, int, int]:
-        return (0, 0, 0, 160)
+        return 0, 0, 0, 160
 
     @property
     def tile_title_overlay_end(self) -> Tuple[int, int, int, int]:
-        return (0, 0, 0, 200)
+        return 0, 0, 0, 200
 
     # ── Drop shadow ────────────────────────────────────────────
     shadow_blur_radius: int = 20
@@ -623,10 +623,6 @@ class GUIConfig:
     @property
     def dialog_button_hover_background(self) -> str:
         return self.palette.bg_input
-
-    @property
-    def dialog_button_pressed_background(self) -> str:
-        return self.palette.bg_button_pressed
 
     @property
     def dialog_button_border(self) -> str:
