@@ -6,7 +6,7 @@ import sys
 from importlib.metadata import version, PackageNotFoundError
 from typing import Any, Dict, List, Optional, Tuple
 
-from .listing import print_devices, print_windows
+from .listing import print_devices, print_monitors, print_windows
 from .logging import setup_logging
 from .models import (
     Config,
@@ -430,6 +430,11 @@ Use --list-gpus to see available devices.""",
     # Display section
     # ----------------------------------------------------------------------
     display_group = parser.add_argument_group("DISPLAY OPTIONS")
+    display_group.add_argument(
+        "--list-monitors",
+        action="store_true",
+        help="List available monitors and exit.",
+    )
     display_group.add_argument(
         "--monitor",
         type=str,
@@ -1192,6 +1197,9 @@ Minimum is 0.0. Default: %(default)s.""",
         sys.exit(0)
     if args.list_gpus:
         print_devices()
+        sys.exit(0)
+    if args.list_monitors:
+        print_monitors()
         sys.exit(0)
 
     # Scan sys.argv for options that were actually typed by the user

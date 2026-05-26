@@ -5,8 +5,6 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 from PySide6.QtGui import QColor
 
-from ..vulkan import get_discovered_devices
-
 logger = logging.getLogger(__name__)
 
 
@@ -145,7 +143,10 @@ def validate_gpu(identifier: Optional[str], _: str) -> None:
     if identifier is None:
         return
 
+    from ..vulkan import get_discovered_devices
+
     devices = get_discovered_devices()
+
     # Try integer index
     try:
         idx = int(identifier)
@@ -167,6 +168,47 @@ def validate_gpu(identifier: Optional[str], _: str) -> None:
     logger.error(
         f"No Vulkan device matches '{identifier}'. "
         "Use --list-gpus to see available devices."
+    )
+    sys.exit(1)
+
+
+def validate_monitor(identifier: Optional[str], _: str) -> None:
+    """Verify that the monitor spec matches a known display."""
+    if identifier is None:
+        return
+
+    from ..utils import list_monitors
+
+    available = list_monitors()
+
+    # Try exact match or primary / all
+    if identifier in available:
+        return
+
+    # Try integer index
+    physical = [m for m in available if m not in ("primary", "all")]
+    try:
+        idx = int(identifier)
+        if 0 <= idx < len(physical):
+            return
+        else:
+            logger.error(
+                f"Monitor index {idx} is out of range (0 – {len(physical)-1})."
+            )
+            sys.exit(1)
+    except ValueError:
+        pass
+
+    # Try name substring match
+    lower = identifier.lower()
+    for name in available:
+        if lower in name.lower():
+            return
+
+    # No match
+    logger.error(
+        f"No monitor matches '{identifier}'. "
+        "Use --list-monitors to see available monitors."
     )
     sys.exit(1)
 
@@ -201,6 +243,7 @@ _VALIDATORS: Dict[str, Tuple] = {
     # GPU
     "gpu": (validate_gpu,),
     # Display
+    "monitor": (validate_monitor,),
     "scale_factor": (validate_number, 0, None, False),
     # Overlay
     "hide_cursor": (validate_number, 0),

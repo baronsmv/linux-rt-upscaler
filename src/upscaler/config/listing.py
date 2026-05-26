@@ -81,3 +81,16 @@ def print_devices():
         )
         rows.append((str(i), d.name, dtype, vram))
     _print_table(header, rows, "No Vulkan devices found.")
+
+
+def print_monitors():
+    from ..utils import list_monitors
+
+    monitors = list_monitors()
+    if not monitors:
+        print("No monitors detected.")
+        return
+
+    header = ("Name",)
+    rows = [(m,) for m in monitors]
+    _print_table(header, rows)
