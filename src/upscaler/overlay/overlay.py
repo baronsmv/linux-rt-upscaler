@@ -399,10 +399,9 @@ class OverlayWindow(QMainWindow):
                     self._cursor_hidden = True
             else:
                 self._cursor_hide_timer.stop()
+                self.setCursor(Qt.ArrowCursor)
+                self._cursor_hidden = False
                 self._cursor_hide_timer.start(hc)
-                if self._cursor_hidden:
-                    self.setCursor(Qt.ArrowCursor)
-                    self._cursor_hidden = False
         super().showEvent(event)
 
     def closeEvent(self, event: QCloseEvent) -> None:
