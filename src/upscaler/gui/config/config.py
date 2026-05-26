@@ -199,7 +199,7 @@ class GUIConfig:
         return self.palette.accent_blue
 
     sidebar_icon_columns: int = 7
-    sidebar_icon_size: int = 32
+    sidebar_icon_size: int = 28
     sidebar_row_spacing: int = 6
 
     # ── Scrollbar ──────────────────────────────────────────────
