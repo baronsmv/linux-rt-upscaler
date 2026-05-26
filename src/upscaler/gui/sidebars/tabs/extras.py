@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
+
+from PySide6.QtWidgets import QWidget
 
 from ..common import SettingsTab
 
@@ -15,7 +17,7 @@ class ExtrasTab(SettingsTab):
         gui_config: GUIConfig,
         config: Config,
         baseline_config: Config,
-        parent=None,
+        parent: Optional[QWidget] = None,
     ) -> None:
         self._config = config
         super().__init__(

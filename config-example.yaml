@@ -115,6 +115,8 @@ blur: 1.0
 # Anti-ringing strength for Adaptive Lanczos and Catmull-Rom (0.0 - 1.0).
 #   - 1.0 eliminates ringing entirely (ideal for text/UI).
 #   - Lower values (0.7-0.9) preserve more fine detail on illustrations.
+# Values of 0.9 - 1.0 are recommended for Lanczos to eliminate ringing entirely,
+# while 0.7 – 0.8 works well for Catmull‑Rom.
 # Recommended range: 0.7 - 1.0
 # Default: 0.8
 antiring_strength: 0.8

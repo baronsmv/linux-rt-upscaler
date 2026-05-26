@@ -90,7 +90,7 @@ class Config:
     upsampler: str = "lanczos"
     downsampler: str = "catmull"
     blur: float = 1.0
-    antiring_strength: float = 1.0
+    antiring_strength: float = 0.8
     tight_antiring: bool = True
     kernel_radius: Optional[int] = None
 

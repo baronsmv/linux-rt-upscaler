@@ -308,8 +308,8 @@ input. Default: %(default)s.
         "--downsampler",
         choices=DOWNSAMPLERS,
         default=DEFAULT_CONFIG.downsampler,
-        help="""Spatial downscaler used when the output is smaller than the input.
-Default: %(default)s.
+        help="""Spatial downscaler used when the output is smaller than the
+input. Default: %(default)s.
 
   catmull  - Catmull-Rom bicubic (9-tap, linear-light).
              Sharper and faster than Lanczos for mild
@@ -347,6 +347,9 @@ Only used by Adaptive Lanczos and Catmull-Rom.
 
 Lower values soften the clamp, preserving more detail at
 the cost of possible ringing.
+
+Values of 0.9 - 1.0 are recommended for Lanczos to eliminate
+ringing entirely, while 0.7 – 0.8 works well for Catmull‑Rom.
 
 Recommended range: 0.7 - 1.0. Default: %(default)s.
 

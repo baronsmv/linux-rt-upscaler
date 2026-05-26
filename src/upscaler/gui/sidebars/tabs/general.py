@@ -6,7 +6,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget
 
 from ..common import SettingsTab
-from ....config import UPSCALING_MODELS
+from ....config import DOWNSAMPLERS, UPSAMPLERS, UPSCALING_MODELS
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -55,6 +55,30 @@ class GeneralTab(SettingsTab):
             "or low-resolution sources. Uses more GPU resources.",
         )
 
+        # ---- Sampler Selection ----
+        self._add_section("Sampler Selection")
+        self._upsampler_combo = self._add_combo(
+            "Upsampler",
+            UPSAMPLERS,
+            self._config.upsampler,
+            self._on_upsampler,
+            baseline=self.baseline_config.upsampler,
+            help="Spatial upscaler used when the output is larger than the input.\n"
+            f"{chr(8226)} lanczos: Fixed Lanczos-2 (sharp, linear-light, best for 2D art)\n"
+            f"{chr(8226)} fsr: AMD FidelityFX Super Resolution 1.0 (edge-adaptive, best for 3D content)\n"
+            f"{chr(8226)} nis: NVIDIA Image Scaling (directional sharpening, sRGB, may look oversharpened)",
+        )
+        self._downsampler_combo = self._add_combo(
+            "Downsampler",
+            DOWNSAMPLERS,
+            self._config.downsampler,
+            self._on_downsampler,
+            baseline=self.baseline_config.downsampler,
+            help="Spatial downscaler used when the output is smaller than the input.\n"
+            f"{chr(8226)} catmull: Catmull-Rom bicubic (sharp, fast, linear-light)\n"
+            f"{chr(8226)} lanczos: Adaptive Lanczos (variable radius, high quality for any ratio)",
+        )
+
         # ---- Focus Tracking ----
         self._add_section("Focus Tracking")
         self._follow_focus_cb = self._add_cb(
@@ -99,6 +123,14 @@ class GeneralTab(SettingsTab):
 
     def _on_double_changed(self, state: int) -> None:
         self._config.double_upscale = bool(state)
+        self.config_changed.emit()
+
+    def _on_upsampler(self, text: str):
+        self._config.upsampler = text
+        self.config_changed.emit()
+
+    def _on_downsampler(self, text: str):
+        self._config.downsampler = text
         self.config_changed.emit()
 
     def _on_follow_focus(self, state: int):
