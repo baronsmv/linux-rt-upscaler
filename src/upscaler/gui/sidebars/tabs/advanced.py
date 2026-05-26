@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QWidget
 
 from ..common import SettingsTab
 from ....config import VulkanPresentMode
+from ....vulkan import get_discovered_devices
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -30,6 +31,23 @@ class AdvancedTab(SettingsTab):
         )
 
     def _build_content(self) -> None:
+        # ---- GPU Selection ----
+        self._add_section("GPU")
+        device_names = ["Auto (best)"] + [d.name for d in get_discovered_devices()]
+        current_name = self._config.gpu if self._config.gpu else "Auto (best)"
+        if current_name not in device_names:
+            current_name = "Auto (best)"
+        self._gpu_combo = self._add_combo(
+            "Device",
+            device_names,
+            current_name,
+            self._on_gpu_changed,
+            baseline=(
+                self.baseline_config.gpu if self.baseline_config.gpu else "Auto (best)"
+            ),
+            help="Vulkan GPU used for rendering. Auto (best) selects the most powerful GPU found.",
+        )
+
         # ---- Sampler ----
         self._add_section("Sampler Parameters")
         self._blur = self._add_slider(
@@ -279,6 +297,10 @@ class AdvancedTab(SettingsTab):
             baseline=self.baseline_config.swapchain_debounce,
             help="Minimum time between two Vulkan swapchain recreations.",
         )
+
+    def _on_gpu_changed(self, text: str) -> None:
+        self._config.gpu = None if text == "Auto (best)" else text
+        self.config_changed.emit()
 
     def _on_blur(self, value: float):
         self._config.blur = value
