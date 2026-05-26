@@ -34,10 +34,10 @@ class AdvancedTab(SettingsTab):
             "Blur",
             1,
             200,
-            max(1, int(self._config.lanczos_blur * 100)),
+            max(1, int(self._config.blur * 100)),
             scale_factor=100,
             float_slot=self._on_blur,
-            baseline=self.baseline_config.lanczos_blur,
+            baseline=self.baseline_config.blur,
             help="Kernel width for the final resampling step (>0.0 - 2.0).\n"
             "Lower values increase sharpness/ringing; higher values smooth the result.\n"
             "Recommended range: 0.8 - 1.2.",
@@ -46,19 +46,19 @@ class AdvancedTab(SettingsTab):
             "Antiring Strength",
             0,
             100,
-            int(self._config.lanczos_antiring_strength * 100),
+            int(self._config.antiring_strength * 100),
             scale_factor=100,
             float_slot=self._on_antiring,
-            baseline=self.baseline_config.lanczos_antiring_strength,
+            baseline=self.baseline_config.antiring_strength,
             help="Anti-ringing strength (0.0 - 1.0).\n"
             "Lower values soften the clamp, preserving more detail at the cost of possible ringing.\n"
             "Recommended range: 0.7 - 1.0.",
         )
         self._tight_cb = self._add_cb(
             "Tight Antiring",
-            self._config.lanczos_tight_antiring,
+            self._config.tight_antiring,
             self._on_tight_antiring,
-            baseline=self.baseline_config.lanczos_tight_antiring,
+            baseline=self.baseline_config.tight_antiring,
             help="Use only the central 2x2 neighborhood for anti-ringing bounds.\n"
             "Keeps thin text and line art sharp. Disable if you see distant ringing artifacts on high-contrast edges.",
         )
@@ -255,15 +255,15 @@ class AdvancedTab(SettingsTab):
         )
 
     def _on_blur(self, value: float):
-        self._config.lanczos_blur = value
+        self._config.blur = value
         self.config_changed.emit()
 
     def _on_antiring(self, value: float):
-        self._config.lanczos_antiring_strength = value
+        self._config.antiring_strength = value
         self.config_changed.emit()
 
     def _on_tight_antiring(self, state: int):
-        self._config.lanczos_tight_antiring = bool(state)
+        self._config.tight_antiring = bool(state)
         self.config_changed.emit()
 
     def _on_fps_cap_toggle(self, state: int) -> None:

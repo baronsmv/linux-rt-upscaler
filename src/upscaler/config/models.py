@@ -16,6 +16,8 @@ UPSCALING_MODELS = (
     "4x32",
     "8x32",
 )
+UPSAMPLERS = ("lanczos", "fsr", "nis")
+DOWNSAMPLERS = ("catmull", "lanczos")
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
 ZOOM_LEVELS = ("50%", "75%", "100%", "150%", "200%", "300%", "400%")
 
@@ -84,10 +86,12 @@ class Config:
     model: str = "fast"
     double_upscale: bool = False
 
-    # Lanczos
-    lanczos_blur: float = 1.0
-    lanczos_antiring_strength: float = 1.0
-    lanczos_tight_antiring: bool = True
+    # Samplers
+    upsampler: str = "lanczos"
+    downsampler: str = "catmull"
+    blur: float = 1.0
+    antiring_strength: float = 1.0
+    tight_antiring: bool = True
 
     # Debanding
     deband_enabled: bool = False

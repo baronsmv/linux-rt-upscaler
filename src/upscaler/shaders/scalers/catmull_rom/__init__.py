@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-CB_FORMAT_CATMULL = "ffffIIIIiiiif"
+CB_FORMAT_CATMULL = "ffffIIIIiiiiff"
 CB_SIZE_CATMULL = struct.calcsize(CB_FORMAT_CATMULL)
 
 SHADER_DIR = os.path.dirname(__file__)
@@ -30,17 +30,23 @@ class CatmullRomScaler(Scaler):
 
     Parameters
     ----------
-    shader_path : str
+    shader_path: str
         Path to the compiled SPIR-V file.
-    blur : float
-        Default kernel stretch (1.0 = standard, >1.0 = softer).
+    blur: float
+        Default kernel stretch (1.0 = standard Catmull-Rom, >1.0 = softer).
+    antiring_strength: float
+        Default anti-ringing strength (0.0 = off, 1.0 = full clamp).
     """
 
     def __init__(
-        self, shader_path: str = DEFAULT_SHADER_PATH, blur: float = 1.0
+        self,
+        shader_path: str = DEFAULT_SHADER_PATH,
+        blur: float = 1.0,
+        antiring_strength: float = 0.8,
     ) -> None:
         super().__init__(shader_path)
         self._blur = blur
+        self._antiring_strength = antiring_strength
 
     @staticmethod
     def _cb_size() -> int:
@@ -67,6 +73,7 @@ class CatmullRomScaler(Scaler):
         dst_w: int,
         dst_h: int,
         blur: Optional[float] = None,
+        antiring_strength: Optional[float] = None,
     ) -> None:
         """
         Pack and upload the constant buffer.
@@ -79,9 +86,13 @@ class CatmullRomScaler(Scaler):
             dst_w, dst_h: Dimensions of the destination rectangle.
             blur: Kernel stretch (1.0 = standard Catmull-Rom). If None, the
                   value given to the constructor is used.
+            antiring_strength: Anti‑ringing clamp strength (0.0‑1.0). If None,
+                              the constructor default is used.
         """
-        blur = blur or self._blur
-        blur = max(blur, 0.001)
+        blur = max(blur or self._blur, 0.001)
+        antiring_strength = max(
+            0.0, min(antiring_strength or self._antiring_strength, 1.0)
+        )
 
         data = struct.pack(
             CB_FORMAT_CATMULL,
@@ -95,5 +106,6 @@ class CatmullRomScaler(Scaler):
             dst_w,
             dst_h,
             blur,
+            antiring_strength,
         )
         self._cb.upload(data)

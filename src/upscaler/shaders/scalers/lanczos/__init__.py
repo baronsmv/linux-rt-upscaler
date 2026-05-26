@@ -38,12 +38,6 @@ class LanczosScaler(Scaler):
         - `lanczos_fixed.spv` - highly optimized for radius 2 (upscaling).
         - `lanczos_adaptive.spv` - general variable-radius path for
           downscaling or non-uniform scaling.
-
-    The appropriate shader is chosen automatically based on the pre-computed
-    filter radii. Switching between shaders happens only when the scaling
-    setup changes (e.g. after a window resize) - never per frame.
-
-    Public API identical to other :class:`ShaderPass` subclasses.
     """
 
     def __init__(
@@ -64,11 +58,6 @@ class LanczosScaler(Scaler):
         self._current_variant = "adaptive"
         self._cb_format = CB_FORMAT_ADAPTIVE
         self._cb_size_current = CB_SIZE_ADAPTIVE
-
-        # Custom options
-        self.blur = 1.0
-        self.antiring_strength = 1.0
-        self.tight_antiring = True
 
     @staticmethod
     def _cb_size() -> int:
@@ -106,17 +95,6 @@ class LanczosScaler(Scaler):
         else:
             return [self.source_texture], [self.target_texture], []
 
-    def configure(
-        self,
-        blur: float = 1.0,
-        antiring_strength: float = 1.0,
-        tight_antiring: bool = True,
-    ):
-        """Set custom parameters."""
-        self.blur = blur
-        self.antiring_strength = antiring_strength
-        self.tight_antiring = tight_antiring
-
     def update_constants(
         self,
         background_color: BackgroundColor,
@@ -133,7 +111,7 @@ class LanczosScaler(Scaler):
         Pack and upload the constant buffer, automatically selecting the
         optimal shader based on the computed filter radii.
         """
-        # ---- Select the correct shader variant -------------------------------
+        # Select the correct shader variant
         scale_x = dst_w / src_width
         scale_y = dst_h / src_height
         radius_x = 2 if scale_x >= 1.0 else math.ceil(2.0 / scale_x)
@@ -142,7 +120,7 @@ class LanczosScaler(Scaler):
         need_adaptive = not (radius_x == 2 and radius_y == 2)
         self._ensure_shader_variant(adaptive=need_adaptive)
 
-        # ---- 2. Pack constants according to the current format ---------------
+        # Pack constants according to the current format
         if self._current_variant == "fixed":
             data = struct.pack(
                 CB_FORMAT_FIXED,
@@ -176,12 +154,8 @@ class LanczosScaler(Scaler):
                 1 if self.tight_antiring else 0,  # uint32 (bool)
             )
 
-        # ---- 3. Upload -------------------------------------------------------
         self._cb.upload(data)
 
-    # ------------------------------------------------------------------
-    #  Shader switching logic
-    # ------------------------------------------------------------------
     def _ensure_shader_variant(self, adaptive: bool) -> None:
         """
         Switch to the desired shader variant if not already active.
@@ -200,14 +174,3 @@ class LanczosScaler(Scaler):
 
         # Rebuild the Vulkan pipeline with the new shader bytes
         self._rebuild_compute()
-
-    # ------------------------------------------------------------------
-    #  Convenience accessors
-    # ------------------------------------------------------------------
-    @property
-    def source_width(self) -> int:
-        return self.source_texture.width if self.source_texture else 0
-
-    @property
-    def source_height(self) -> int:
-        return self.source_texture.height if self.source_texture else 0

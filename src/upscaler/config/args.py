@@ -5,7 +5,14 @@ from importlib.metadata import version, PackageNotFoundError
 from typing import Tuple, Dict, Optional, Any
 
 from .logging import setup_logging
-from .models import Config, OverlayMode, DEFAULT_CONFIG, UPSCALING_MODELS
+from .models import (
+    Config,
+    OverlayMode,
+    DEFAULT_CONFIG,
+    DOWNSAMPLERS,
+    UPSAMPLERS,
+    UPSCALING_MODELS,
+)
 from ..shaders import LUT_PRESETS
 
 logger = logging.getLogger(__name__)
@@ -275,14 +282,53 @@ screens (4k, 1440p) or low-resolution sources.""",
     )
 
     # ----------------------------------------------------------------------
-    # Lanczos Scaler Options
+    # Scaler Selection Options
     # ----------------------------------------------------------------------
-    lanczos_group = parser.add_argument_group("LANCZOS SCALER OPTIONS")
-    lanczos_group.add_argument(
-        "--lanczos-blur",
+    sampler_selection_group = parser.add_argument_group("SAMPLER SELECTION OPTIONS")
+    sampler_selection_group.add_argument(
+        "--upsampler",
+        choices=UPSAMPLERS,
+        default=DEFAULT_CONFIG.upsampler,
+        help="""Spatial upscaler used when the output is larger than the
+input. Default: %(default)s.
+
+  lanczos  - Fixed Lanczos-2 (hardware gather, linear-
+             light). Best for 2D art and clean edges.
+  fsr      - AMD FidelityFX Super Resolution 1.0
+             (edge-adaptive, linear-light, good quality).
+             Better for 3D/photographic content.
+  nis      - NVIDIA Image Scaling (directional sharpening,
+             works in sRGB). May look oversharpened.
+
+""",
+    )
+    sampler_selection_group.add_argument(
+        "--downsampler",
+        choices=DOWNSAMPLERS,
+        default=DEFAULT_CONFIG.downsampler,
+        help="""Spatial downscaler used when the output is smaller than the input.
+
+  catmull  - Catmull-Rom bicubic (9-tap, linear-light).
+             Sharper and faster than Lanczos for mild
+             downscales, excellent for 2D art.
+  lanczos  - Adaptive Lanczos (variable radius, linear-
+             light). High quality for any ratio.
+             Better than catmull for extreme downscales.
+
+Default: %(default)s.
+    """,
+    )
+
+    # ----------------------------------------------------------------------
+    # Scaler Options
+    # ----------------------------------------------------------------------
+    sampler_group = parser.add_argument_group("SAMPLER OPTIONS")
+    sampler_group.add_argument(
+        "--blur",
         type=float,
-        default=DEFAULT_CONFIG.lanczos_blur,
+        default=DEFAULT_CONFIG.blur,
         help="""Kernel width for the final resampling step (>0.0 - 2.0).
+Only used by downsamplers.
 
 Lower values increase sharpness/ringing; higher values
 smooth the result.
@@ -291,33 +337,18 @@ Recommended range: 0.8 - 1.2. Default: %(default)s.
 
 """,
     )
-    lanczos_group.add_argument(
-        "--lanczos-antiring-strength",
+    sampler_group.add_argument(
+        "--antiring-strength",
         type=float,
-        default=DEFAULT_CONFIG.lanczos_antiring_strength,
+        default=DEFAULT_CONFIG.antiring_strength,
         help="""Anti-ringing strength (0.0 - 1.0).
+Only used by downsamplers.
 
 Lower values soften the clamp, preserving more detail at
 the cost of possible ringing.
 
 Recommended range: 0.7 - 1.0. Default: %(default)s.
 
-""",
-    )
-    lanczos_group.add_argument(
-        "--no-lanczos-tight-antiring",
-        action="store_false",
-        dest="lanczos_tight_antiring",
-        help="""Disable tight anti-ringing.
-
-When enabled (default), ringing bounds are derived only
-from the central 2x2 neighborhood, which keeps thin text
-and line art sharp. When disabled, the full filter
-footprint is used for a more conservative clamp that may
-soften edge details.
-
-Leave this enabled unless you notice distant ringing
-artifacts on high-contrast edges.
 """,
     )
 
@@ -1016,7 +1047,8 @@ Minimum is 0.0. Default: %(default)s.""",
     additional_groups = [
         interval_group,
         window_detection_group,
-        lanczos_group,
+        sampler_selection_group,
+        sampler_group,
         pre_processing_group,
         post_processing_group,
         additional_presentation_group,

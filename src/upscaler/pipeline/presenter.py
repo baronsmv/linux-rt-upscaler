@@ -106,9 +106,9 @@ class Presenter:
         self._lanczos = LanczosScaler()
         self._lanczos.set_target_texture(self.screen_tex)
         self._lanczos.configure(
-            blur=self.config.lanczos_blur,
-            antiring_strength=self.config.lanczos_antiring_strength,
-            tight_antiring=self.config.lanczos_tight_antiring,
+            blur=self.config.blur,
+            antiring_strength=self.config.antiring_strength,
+            tight_antiring=self.config.tight_antiring,
         )
 
         # Catmull-Rom
@@ -255,9 +255,9 @@ class Presenter:
 
         # ---- Lanczos ----
         self._lanczos.configure(
-            blur=self.config.lanczos_blur,
-            antiring_strength=self.config.lanczos_antiring_strength,
-            tight_antiring=self.config.lanczos_tight_antiring,
+            blur=self.config.blur,
+            antiring_strength=self.config.antiring_strength,
+            tight_antiring=self.config.tight_antiring,
         )
 
         # ---- Debanding ----
