@@ -33,7 +33,7 @@ class PresentationTab(SettingsTab):
         # ---- Overlay ----
         self._add_section("Overlay")
         self._overlay_combo = self._add_combo(
-            "Overlay mode",
+            "Overlay Mode",
             [e.value for e in OverlayMode],
             self._config.overlay_mode,
             self._on_overlay_mode,
@@ -45,7 +45,7 @@ class PresentationTab(SettingsTab):
             f"{chr(8226)} windowed: normal window with decorations",
         )
         self._geom_combo = self._add_combo(
-            "Output geometry",
+            "Output Geometry",
             ["fit", "stretch", "cover"],
             self._config.output_geometry,
             self._on_geometry_changed,

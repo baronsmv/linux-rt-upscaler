@@ -18,9 +18,6 @@ if TYPE_CHECKING:
 def _short_device_name(raw_name: str) -> str:
     """Return a compact version of a Vulkan device name."""
     cleaned = re.sub(r"\s*\([^)]+\)$", "", raw_name).strip()
-    if "llvmpipe" in cleaned.lower():
-        cleaned = "llvmpipe (CPU)"
-
     return cleaned or raw_name
 
 
