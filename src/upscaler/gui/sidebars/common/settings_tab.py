@@ -80,7 +80,7 @@ class SettingsTab(QWidget):
         content = QWidget()
         self.content_layout = QVBoxLayout(content)
         self.content_layout.setContentsMargins(16, 8, 16, 8)
-        self.content_layout.setSpacing(12)
+        self.content_layout.setSpacing(16)
 
         self._build_content()
         self.content_layout.addStretch()
