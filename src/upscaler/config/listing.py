@@ -84,13 +84,64 @@ def print_devices():
 
 
 def print_monitors():
-    from ..utils import list_monitors
+    """Print detailed monitor information using Qt's screen API."""
+    from PySide6.QtWidgets import QApplication
+    from PySide6.QtGui import QGuiApplication
 
-    monitors = list_monitors()
-    if not monitors:
-        print("No monitors detected.")
-        return
+    app = QApplication.instance()
+    if app is None:
+        import sys
 
-    header = ("Name",)
-    rows = [(m,) for m in monitors]
-    _print_table(header, rows)
+        app = QApplication(sys.argv)
+
+    screens = QGuiApplication.screens()
+    primary_name = QGuiApplication.primaryScreen().name() if screens else None
+
+    header = (
+        "Name",
+        "Res W",
+        "Res H",
+        "Scale",
+        "Phys W",
+        "Phys H",
+        "Pos X",
+        "Pos Y",
+        "Manufacturer",
+        "Model",
+    )
+    rows = []
+    for screen in screens:
+        name = screen.name()
+        # Mark primary screen
+        if name == primary_name:
+            name = f"* {name}"
+        geo = screen.geometry()
+        res_w = str(geo.width())
+        res_h = str(geo.height())
+        scale = f"{screen.devicePixelRatio():.2f}"
+        phys_size = screen.physicalSize()
+        if phys_size.isValid():
+            phys_w = f"{phys_size.width() / 10:.1f}"
+            phys_h = f"{phys_size.height() / 10:.1f}"
+        else:
+            phys_w = phys_h = "N/A"
+        pos_x = str(geo.x())
+        pos_y = str(geo.y())
+        manufacturer = screen.manufacturer() or "Unknown"
+        model = screen.model() or "-"
+        rows.append(
+            (
+                name,
+                res_w,
+                res_h,
+                scale,
+                phys_w,
+                phys_h,
+                pos_x,
+                pos_y,
+                manufacturer,
+                model,
+            )
+        )
+
+    _print_table(header, rows, "No monitors detected.")
