@@ -29,6 +29,11 @@ class GuiPalette:
     border_profile_sep: str = "#333"
     border_icon_preview: str = "#444"
 
+    # ── Tile overlay ──────────────────────────────────────────────
+    tile_overlay_start: str = "#00000000"
+    tile_overlay_mid: str = "#88000000"
+    tile_overlay_end: str = "#dd000000"
+
     # ── Text ──────────────────────────────────────────────────────
     text_primary: str = "#ffffff"
     text_secondary: str = "#cccccc"
@@ -37,7 +42,7 @@ class GuiPalette:
     text_placeholder: str = "#666"
     text_filter: str = "#eee"
 
-    # ── Accent colors ────────────────────────────────────────────
+    # ── Accent colors ─────────────────────────────────────────────
     accent_blue: str = "#4a9eff"
     accent_blue_light: str = "#6aade5"
     accent_blue_bg: str = "#1a2b3c"

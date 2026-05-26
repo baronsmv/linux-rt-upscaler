@@ -323,9 +323,9 @@ class WindowTileItem(QGraphicsObject):
 
         # Gradient overlay
         grad = QLinearGradient(0, h / 2 - 40, 0, h / 2)
-        grad.setColorAt(0, QColor(*self._cfg.tile_title_overlay_start))
-        grad.setColorAt(0.7, QColor(*self._cfg.tile_title_overlay_mid))
-        grad.setColorAt(1.0, QColor(*self._cfg.tile_title_overlay_end))
+        grad.setColorAt(0, QColor(self._cfg.tile_overlay_start))
+        grad.setColorAt(0.7, QColor(self._cfg.tile_overlay_mid))
+        grad.setColorAt(1.0, QColor(self._cfg.tile_overlay_end))
         painter.fillRect(QRectF(-w / 2, h / 2 - 40, w, 40), grad)
 
         # Title

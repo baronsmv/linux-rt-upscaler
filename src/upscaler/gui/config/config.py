@@ -58,6 +58,18 @@ class GUIConfig:
     def tile_title_overlay_end(self) -> Tuple[int, int, int, int]:
         return 0, 0, 0, 200
 
+    @property
+    def tile_overlay_start(self) -> str:
+        return self.palette.tile_overlay_start
+
+    @property
+    def tile_overlay_mid(self) -> str:
+        return self.palette.tile_overlay_mid
+
+    @property
+    def tile_overlay_end(self) -> str:
+        return self.palette.tile_overlay_end
+
     # ── Drop shadow ────────────────────────────────────────────
     shadow_blur_radius: int = 20
     shadow_offset: Tuple[int, int] = (0, 4)
