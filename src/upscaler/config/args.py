@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import logging
 import sys
@@ -144,6 +146,12 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'.""",
     # Target Selection section
     # ----------------------------------------------------------------------
     target_selection_group = parser.add_argument_group("TARGET SELECTION OPTIONS")
+    target_selection_group.add_argument(
+        "-l",
+        "--list-windows",
+        action="store_true",
+        help="List visible windows and exit.",
+    )
     target_selection_group.add_argument(
         "-s",
         "--select",
@@ -1157,6 +1165,14 @@ Minimum is 0.0. Default: %(default)s.""",
     unknown_args = _warn_and_filter(unknown_args)
     if unknown_args:
         parser.error(f"unrecognized arguments: {' '.join(unknown_args)}")
+
+    # List windows
+    if args.list_windows:
+        from ..window import list_windows
+        from .utils import print_windows
+
+        print_windows(list_windows())
+        sys.exit(0)
 
     # Scan sys.argv for options that were actually typed by the user
     explicit_dests = set()
