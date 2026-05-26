@@ -62,7 +62,7 @@ class ScalingTab(SettingsTab):
         )
 
         # ---- Sampler Options ----
-        self._add_section("Downsampler Options")
+        self._add_section("Sampler Options")
         self._blur = self._add_slider(
             "Blur",
             1,
