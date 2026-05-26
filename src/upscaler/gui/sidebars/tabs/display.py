@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget
@@ -7,10 +8,20 @@ from PySide6.QtWidgets import QWidget
 from ..common import SettingsTab
 from ....config import OverlayMode, VulkanPresentMode
 from ....utils import list_monitors
+from ....vulkan import get_discovered_devices
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
     from ....config import Config
+
+
+def _short_device_name(raw_name: str) -> str:
+    """Return a compact version of a Vulkan device name."""
+    cleaned = re.sub(r"\s*\([^)]+\)$", "", raw_name).strip()
+    if "llvmpipe" in cleaned.lower():
+        cleaned = "llvmpipe (CPU)"
+
+    return cleaned or raw_name
 
 
 class DisplayTab(SettingsTab):
@@ -42,32 +53,24 @@ class DisplayTab(SettingsTab):
             "or a specific output name (e.g., 'HDMI-1').",
         )
 
-        # ---- Scale Factor ----
-        self._add_section("Scale Factor")
-        self._auto_scale_cb = self._add_cb(
-            "Auto Scale",
-            self._config.scale_factor is None,
-            self._on_auto_scale_changed,
-            baseline=self.baseline_config.scale_factor is None,
-            help="Let the application automatically detect the correct scale factor "
-            "based on the physical monitor resolution.",
-        )
-        self._scale_slider = self._add_slider(
-            "Scale Factor %",
-            100,
-            400,
-            max(100, int((self._config.scale_factor or 1.0) * 100)),
-            scale_factor=100,
-            float_slot=self._on_scale_slider_changed,
+        # ---- GPU ----
+        self._add_section("GPU")
+        device_names = ["Auto (best)"] + [
+            _short_device_name(d.name) for d in get_discovered_devices()
+        ]
+        current_name = self._config.gpu if self._config.gpu else "Auto (best)"
+        if current_name not in device_names:
+            current_name = "Auto (best)"
+        self._gpu_combo = self._add_combo(
+            "Device",
+            device_names,
+            current_name,
+            self._on_gpu_changed,
             baseline=(
-                self.baseline_config.scale_factor
-                if self.baseline_config.scale_factor is not None
-                else 1.0
+                self.baseline_config.gpu if self.baseline_config.gpu else "Auto (best)"
             ),
-            help="Manual scale factor (e.g., 1.50 for 150% scaling). "
-            "Only available when 'Auto Scale' is disabled.",
+            help="Vulkan GPU used for rendering. Auto (best) selects the most powerful GPU found.",
         )
-        self._scale_slider.setEnabled(self._config.scale_factor is not None)
 
         # ---- V-Sync ----
         self._add_section("V-Sync")
@@ -104,6 +107,33 @@ class DisplayTab(SettingsTab):
             help="Target maximum frames per second.",
         )
         self._fps_slider.setEnabled(self._config.max_fps is not None)
+
+        # ---- Scale Factor ----
+        self._add_section("Scale Factor")
+        self._auto_scale_cb = self._add_cb(
+            "Auto Scale",
+            self._config.scale_factor is None,
+            self._on_auto_scale_changed,
+            baseline=self.baseline_config.scale_factor is None,
+            help="Let the application automatically detect the correct scale factor "
+            "based on the physical monitor resolution.",
+        )
+        self._scale_slider = self._add_slider(
+            "Scale Factor %",
+            100,
+            400,
+            max(100, int((self._config.scale_factor or 1.0) * 100)),
+            scale_factor=100,
+            float_slot=self._on_scale_slider_changed,
+            baseline=(
+                self.baseline_config.scale_factor
+                if self.baseline_config.scale_factor is not None
+                else 1.0
+            ),
+            help="Manual scale factor (e.g., 1.50 for 150% scaling). "
+            "Only available when 'Auto Scale' is disabled.",
+        )
+        self._scale_slider.setEnabled(self._config.scale_factor is not None)
 
         # ---- Overlay ----
         self._add_section("Overlay")
@@ -150,6 +180,10 @@ class DisplayTab(SettingsTab):
 
     def _on_monitor_changed(self, text: str):
         self._config.monitor = text
+        self.config_changed.emit()
+
+    def _on_gpu_changed(self, text: str) -> None:
+        self._config.gpu = None if text == "Auto (best)" else text
         self.config_changed.emit()
 
     def _on_fps_cap_toggle(self, state: int) -> None:
