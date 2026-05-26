@@ -73,7 +73,7 @@ class SettingsSidebar(IconSidebarBase):
         tabs = [
             (general_tab, "general", "General"),
             (ScalingTab(*tab_args), "scaling", "Scaling"),
-            (DisplayTab(*tab_args), "display", "Display & Overlay"),
+            (DisplayTab(*tab_args), "display", "Display"),
             (PresentationTab(*tab_args), "presentation", "Presentation"),
             (EffectsTab(*tab_args), "effects", "Effects"),
             (ExtrasTab(*tab_args), "extras", "Extras"),
