@@ -203,10 +203,11 @@ class OverlayWindow(QMainWindow):
 
         if mode == OverlayMode.FULLSCREEN.value:
             flags |= Qt.FramelessWindowHint
+            self.setWindowFlags(flags)
             self.setGeometry(x, y, width, height)
-            self._fullscreen_geometry = x, y, width, height
+            self.showFullScreen()
             logger.debug(
-                f"Overlay set to fullscreen on geometry ({x},{y},{width}x{height})"
+                f"Overlay set to fullscreen on screen at ({x},{y}) size {width}x{height}"
             )
             return
 
@@ -310,20 +311,18 @@ class OverlayWindow(QMainWindow):
         self._update_mapper()
 
         # Apply new geometry to the overlay window
-        if self._config.overlay_mode == OverlayMode.FULLSCREEN.value:
-            # Fullscreen mode uses the entire monitor, so no resize needed
-            pass
-        else:
-            self.setGeometry(
-                self._geometry.overlay_x,
-                self._geometry.overlay_y,
-                self._geometry.overlay_width,
-                self._geometry.overlay_height,
+        self.setGeometry(
+            self._geometry.overlay_x,
+            self._geometry.overlay_y,
+            self._geometry.overlay_width,
+            self._geometry.overlay_height,
+        )
+        if self._config.overlay_mode == OverlayMode.WINDOWED.value:
+            self.setFixedSize(
+                self._geometry.overlay_width, self._geometry.overlay_height
             )
-            if self._config.overlay_mode == OverlayMode.WINDOWED.value:
-                self.setFixedSize(
-                    self._geometry.overlay_width, self._geometry.overlay_height
-                )
+        elif self._config.overlay_mode == OverlayMode.FULLSCREEN.value:
+            self.showFullScreen()
 
         logger.debug(
             f"Overlay geometry updated: {self._geometry.overlay_width}x{self._geometry.overlay_height}"
