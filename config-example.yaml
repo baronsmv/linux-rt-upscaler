@@ -136,6 +136,17 @@ tight_antiring: true
 kernel_radius: null
 
 # ------------------------------------------------------------------------------
+# GPU Device
+# ------------------------------------------------------------------------------
+
+# Vulkan GPU used for rendering:
+#   - null             : automatically choose the best GPU available
+#   - an integer       : device index (e.g., 0, 1)
+#   - a name substring : e.g. "NVIDIA", "Radeon", "llvmpipe"
+# Default: null (auto)
+gpu: null
+
+# ------------------------------------------------------------------------------
 # Monitor / Display
 # ------------------------------------------------------------------------------
 
