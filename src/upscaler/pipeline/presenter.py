@@ -272,6 +272,7 @@ class Presenter:
             blur=self.config.blur,
             antiring_strength=self.config.antiring_strength,
             tight_antiring=self.config.tight_antiring,
+            radius_override=self.config.kernel_radius,
         )
 
         # ---- Debanding ----

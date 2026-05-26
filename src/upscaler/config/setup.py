@@ -143,6 +143,9 @@ def setup_config() -> (
     """
     from ..window import acquire_target_window
 
+    # Initial logging setup
+    setup_logging()
+
     # Parse the command line
     overrides, profile_name, config_path = parse_args()
     validate_overrides(overrides)

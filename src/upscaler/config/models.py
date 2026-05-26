@@ -92,6 +92,7 @@ class Config:
     blur: float = 1.0
     antiring_strength: float = 1.0
     tight_antiring: bool = True
+    kernel_radius: Optional[int] = None
 
     # Debanding
     deband_enabled: bool = False
@@ -170,7 +171,7 @@ class Config:
     # Error handling
     max_capture_failures: int = 10
     capture_failure_delay: float = 0.05
-    swapchain_recreate_debounce: float = 1.0
+    swapchain_debounce: float = 1.0
 
     # Logging (set via flags, not directly from CLI)
     log_level: str = "INFO"

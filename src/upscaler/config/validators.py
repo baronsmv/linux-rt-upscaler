@@ -148,9 +148,10 @@ _VALIDATORS: Dict[str, Tuple] = {
     "pid_timeout": (validate_number, 0),
     "class_timeout": (validate_number, 0),
     "total_timeout": (validate_number, 0),
-    # Lanczos
-    "lanczos_blur": (validate_number, 0, 2, False),
-    "lanczos_antiring_strength": (validate_number, 0, 1),
+    # Sampler
+    "blur": (validate_number, 0, 2, False),
+    "antiring_strength": (validate_number, 0, 1),
+    "kernel_radius": (validate_number, 2, 10),
     # Pre-processing
     "deband_strength": (validate_number, 0.0, 1.0),
     # Post-processing

@@ -34,7 +34,7 @@ class ConsoleFormatter(logging.Formatter):
         return f"{record.levelname}: {msg}"
 
 
-def setup_logging(level: str, log_file: Optional[str]) -> None:
+def setup_logging(level: str = "INFO", log_file: Optional[str] = None) -> None:
     """Configure logging with the given level and optional file output.
 
     Console uses a minimal format; file output always includes full timestamps

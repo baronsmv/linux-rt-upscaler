@@ -111,13 +111,24 @@ class LanczosScaler(Scaler):
         Pack and upload the constant buffer, automatically selecting the
         optimal shader based on the computed filter radii.
         """
-        # Select the correct shader variant
-        scale_x = dst_w / src_width
-        scale_y = dst_h / src_height
-        radius_x = 2 if scale_x >= 1.0 else math.ceil(2.0 / scale_x)
-        radius_y = 2 if scale_y >= 1.0 else math.ceil(2.0 / scale_y)
+        # If an override is set, force the adaptive shader with that radius
+        if self.radius_override is not None:
+            radius_x = radius_y = self.radius_override
+            need_adaptive = True
 
-        need_adaptive = not (radius_x == 2 and radius_y == 2)
+        else:
+            # Select the correct shader variant
+            scale_x = dst_w / src_width
+            scale_y = dst_h / src_height
+            radius_x = 2 if scale_x >= 1.0 else math.ceil(2.0 / scale_x)
+            radius_y = 2 if scale_y >= 1.0 else math.ceil(2.0 / scale_y)
+
+            # Clamp
+            MAX_RADIUS = 10
+            radius_x = min(radius_x, MAX_RADIUS)
+            radius_y = min(radius_y, MAX_RADIUS)
+            need_adaptive = not (radius_x == 2 and radius_y == 2)
+
         self._ensure_shader_variant(adaptive=need_adaptive)
 
         # Pack constants according to the current format

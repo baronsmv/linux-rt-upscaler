@@ -15,10 +15,11 @@ class Scaler(Shader):
     requires_linear_input: bool = True
     linear_output: bool = True
 
-    # Used by downsamplers
+    # Used by some
     blur: float = 1.0
     antiring_strength: float = 1.0
     tight_antiring: bool = True
+    radius_override: Optional[int] = None
 
     def __init__(self, shader_path: str) -> None:
         self.source_texture: Optional[Texture2D] = None
@@ -46,9 +47,10 @@ class Scaler(Shader):
         blur: float = 1.0,
         antiring_strength: float = 1.0,
         tight_antiring: bool = True,
-        *_,
+        radius_override: Optional[int] = None,
     ):
         """Set custom parameters."""
         self.blur = blur
         self.antiring_strength = antiring_strength
         self.tight_antiring = tight_antiring
+        self.radius_override = radius_override

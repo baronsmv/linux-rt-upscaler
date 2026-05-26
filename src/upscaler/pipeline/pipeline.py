@@ -126,7 +126,7 @@ class Pipeline(QObject):
             self._screen_width,
             self._screen_height,
             present_mode=config.vulkan_present_mode,
-            min_recreate_interval=config.swapchain_recreate_debounce,
+            min_recreate_interval=config.swapchain_debounce,
         )
 
         # On-screen display (pre-render all possible messages)

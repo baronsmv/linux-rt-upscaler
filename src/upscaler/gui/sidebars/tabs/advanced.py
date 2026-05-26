@@ -247,10 +247,10 @@ class AdvancedTab(SettingsTab):
             "Swapchain Debounce (s)",
             0,
             100,
-            int(self._config.swapchain_recreate_debounce * 10),
+            int(self._config.swapchain_debounce * 10),
             float_slot=self._on_swapchain_recreate_debounce_changed,
             scale_factor=10,
-            baseline=self.baseline_config.swapchain_recreate_debounce,
+            baseline=self.baseline_config.swapchain_debounce,
             help="Minimum time between two Vulkan swapchain recreations.",
         )
 
@@ -337,5 +337,5 @@ class AdvancedTab(SettingsTab):
         self.config_changed.emit()
 
     def _on_swapchain_recreate_debounce_changed(self, value: float):
-        self._config.swapchain_recreate_debounce = value
+        self._config.swapchain_debounce = value
         self.config_changed.emit()

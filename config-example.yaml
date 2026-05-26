@@ -88,40 +88,50 @@ model: fast
 double_upscale: false
 
 # ------------------------------------------------------------------------------
-# Lanczos Scaler / Resampling Options
+# Resampling Options
 # ------------------------------------------------------------------------------
 
-# Kernel width (blur factor) for the final Lanczos resampling pass.
-# - 1.0 is the standard Lanczos-2 (sharp, mild ringing).
-# - Values below 1.0 increase sharpness and ringing.
-# - Values above 1.0 produce a smoother, softer image.
+# Spatial upsampler used when the output is larger than the input.
+#   - lanczos : Fixed Lanczos-2 (hardware gather, linear-light). Best for 2D art.
+#   - fsr     : AMD FidelityFX Super Resolution 1.0 (edge-adaptive, linear-light).
+#   - nis     : NVIDIA Image Scaling (directional sharpening, sRGB). May oversharpen.
+# Default: lanczos
+upsampler: lanczos
+
+# Spatial downsampler used when the output is smaller than the input.
+#  - catmull : Catmull-Rom bicubic (9-tap, linear-light). Sharper & faster for mild downscales.
+#  - lanczos : Adaptive Lanczos (variable radius, linear-light). High quality for any ratio.
+# Default: catmull
+downsampler: catmull
+
+# Kernel width (blur factor) for Lanczos and Catmull-Rom.
+#   - 1.0 is the standard sharpness.
+#   - Values above 1.0 smooth the image, reducing ringing.
+#   - Values below 1.0 increase sharpness but may cause halos.
 # Recommended range: 0.8 - 1.2
 # Default: 1.0
-lanczos_blur: 1.0
+blur: 1.0
 
-# Anti-ringing strength (0 = off, 1 = full hard clamp).
-# A value of 1.0 eliminates ringing artifacts entirely, which is ideal
-# for text and UI. Lower values (0.7-0.9) preserve more fine detail
-# on illustrations but may allow faint halos.
+# Anti-ringing strength for Adaptive Lanczos and Catmull-Rom (0.0 - 1.0).
+#   - 1.0 eliminates ringing entirely (ideal for text/UI).
+#   - Lower values (0.7-0.9) preserve more fine detail on illustrations.
 # Recommended range: 0.7 - 1.0
-# Default: 1.0
-lanczos_antiring_strength: 1.0
+# Default: 0.8
+antiring_strength: 0.8
 
-# Enable linear-light resampling (sRGB-linear-sRGB).
-# This is the mathematically correct way to resample colors.
-# Disabling it (false) may make thin white text on dark backgrounds
-# appear slightly fatter, but can improve perceived text clarity
-# on some content.
+# Use tight anti-ringing (central 2×2 neighborhood) in Adaptive Lanczos.
+#   - true  : Clamp is less aggressive, keeping thin lines crisp.
+#   - false : Full filter footprint used for a more conservative clamp.
 # Default: true
-lanczos_linear_light: true
+tight_antiring: true
 
-# Use only the central 2x2 neighborhood for anti-ringing clamping.
-# When enabled (true), the clamp is less aggressive, keeping thin text
-# and line art crisp. Disable this if you notice distant ringing artifacts
-# on high-contrast edges, the full filter footprint will then be used
-# for a more conservative clamp.
-# Default: true
-lanczos_tight_antiring: true
+# Force a specific Lanczos kernel radius (2 - 10).
+#   - null : automatic selection (2 for upscaling, variable for downscaling).
+#   - 2    : standard Lanczos2 (fastest, 4-tap).
+#   - 3    : Lanczos3 (sharper, 6-tap).
+#   - 4+   : higher quality but significantly heavier.
+# Default: null (automatic)
+kernel_radius: null
 
 # ------------------------------------------------------------------------------
 # Monitor / Display
@@ -504,7 +514,7 @@ capture_failure_delay: 0.05
 # When the surface is constantly invalidated, this prevents the
 # pipeline from recreating the swapchain on every frame.
 # Minimum: 0.0. Default: 1.0
-swapchain_recreate_debounce: 1.0
+swapchain_debounce: 1.0
 
 # ------------------------------------------------------------------------------
 # Logging

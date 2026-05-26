@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 from importlib.metadata import version, PackageNotFoundError
-from typing import Tuple, Dict, Optional, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 from .logging import setup_logging
 from .models import (
@@ -328,7 +328,7 @@ Default: %(default)s.
         type=float,
         default=DEFAULT_CONFIG.blur,
         help="""Kernel width for the final resampling step (>0.0 - 2.0).
-Only used by downsamplers.
+Only used by Adaptive Lanczos and Catmull-Rom.
 
 Lower values increase sharpness/ringing; higher values
 smooth the result.
@@ -342,7 +342,7 @@ Recommended range: 0.8 - 1.2. Default: %(default)s.
         type=float,
         default=DEFAULT_CONFIG.antiring_strength,
         help="""Anti-ringing strength (0.0 - 1.0).
-Only used by downsamplers.
+Only used by Adaptive Lanczos and Catmull-Rom.
 
 Lower values soften the clamp, preserving more detail at
 the cost of possible ringing.
@@ -351,7 +351,49 @@ Recommended range: 0.7 - 1.0. Default: %(default)s.
 
 """,
     )
+    sampler_group.add_argument(
+        "--no-tight-antiring",
+        action="store_false",
+        dest="tight_antiring",
+        help="""Disable tight anti-ringing.
+Only used by Adaptive Lanczos.
 
+When enabled (default), ringing bounds are derived only
+from the central 2x2 neighborhood, which keeps thin text
+and line art sharp. When disabled, the full filter
+footprint is used for a more conservative clamp that may
+soften edge details.
+
+Leave this enabled unless you notice distant ringing
+artifacts on high-contrast edges.
+
+""",
+    )
+    sampler_group.add_argument(
+        "--kernel-radius",
+        type=int,
+        default=DEFAULT_CONFIG.kernel_radius,
+        help="""Override the automatic Lanczos radius selection (2 - 10).
+
+When unset (default), the scaler automatically picks the
+optimal radius based on the scale factor:
+  Upscaling    - radius 2 (Lanczos2, fast and sharp).
+  Downscaling  - variable radius (up to 10), slightly
+                 slower but with better antialiasing.
+
+When set to a specific value (e.g., 2, 3, 4):
+  - The adaptive Lanczos shader is always used.
+  - Higher radii (3-4) reduce aliasing on diagonal lines
+    but increase GPU load (a 3x3 window becomes 6x6).
+  - Radii above 5 are expensive and usually unnecessary.
+
+Examples:
+  --kernel-radius 2  - force Lanczos2 (4-tap, fastest)
+  --kernel-radius 3  - force Lanczos3 (6-tap, sharper)
+  --kernel-radius 4  - force Lanczos4 (8-tap, even sharper)
+
+""",
+    )
     # ----------------------------------------------------------------------
     # Display section
     # ----------------------------------------------------------------------
@@ -1014,9 +1056,9 @@ Minimum is 1. Default: %(default)s.""",
 Minimum is 0.0. Default: %(default)s.""",
     )
     error_group.add_argument(
-        "--swapchain-recreate-debounce",
+        "--swapchain-debounce",
         type=float,
-        default=DEFAULT_CONFIG.swapchain_recreate_debounce,
+        default=DEFAULT_CONFIG.swapchain_debounce,
         help="""Minimum seconds between two Vulkan swapchain recreations.
 Minimum is 0.0. Default: %(default)s.""",
     )
@@ -1061,6 +1103,40 @@ Minimum is 0.0. Default: %(default)s.""",
         grp.additional = True
 
     # ----------------------------------------------------------------------
+    # Deprecated options
+    # ----------------------------------------------------------------------
+    renamed = {
+        "--lanczos-blur": "--blur",
+        "--lanczos-antiring-strength": "--antiring-strength",
+        "--no-lanczos-tight-antiring": "--no-tight-antiring",
+        "--swapchain-recreate-debounce": "--swapchain-debounce",
+    }
+    deprecated = {
+        "--no-lanczos-linear-light": "Linear light is now automatic based on each algorithm."
+    }
+
+    def _warn_and_filter(unknown_args: List[str]) -> List[str]:
+        """Log warnings for renamed/deprecated flags, return a list of still‑unknown args."""
+        still_unknown = []
+        for arg in unknown_args:
+            if arg in renamed:
+                logger.warning(
+                    "The option '%s' is deprecated and will be ignored. "
+                    "Please use '%s' instead.",
+                    arg,
+                    renamed[arg],
+                )
+            elif arg in deprecated:
+                logger.warning(
+                    "The option '%s' is deprecated and will be ignored. Reason: %s",
+                    arg,
+                    deprecated[arg],
+                )
+            else:
+                still_unknown.append(arg)
+        return still_unknown
+
+    # ----------------------------------------------------------------------
     # Argument parse and map
     # ----------------------------------------------------------------------
 
@@ -1068,7 +1144,10 @@ Minimum is 0.0. Default: %(default)s.""",
     opt_to_dest = {
         opt: action.dest for action in parser._actions for opt in action.option_strings
     }
-    args = parser.parse_args()
+    args, unknown_args = parser.parse_known_args()
+    unknown_args = _warn_and_filter(unknown_args)
+    if unknown_args:
+        parser.error(f"unrecognized arguments: {' '.join(unknown_args)}")
 
     # Scan sys.argv for options that were actually typed by the user
     explicit_dests = set()
