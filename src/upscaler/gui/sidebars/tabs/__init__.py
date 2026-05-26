@@ -5,11 +5,13 @@ from .display import DisplayTab
 from .effects import EffectsTab
 from .extras import ExtrasTab
 from .general import GeneralTab
+from .scaler import ScalingTab
 
 __all__ = [
     "AdvancedTab",
     "DisplayTab",
     "EffectsTab",
-    "GeneralTab",
     "ExtrasTab",
+    "GeneralTab",
+    "ScalingTab",
 ]

@@ -198,7 +198,7 @@ class GUIConfig:
     def sidebar_combo_border_focus(self) -> str:
         return self.palette.accent_blue
 
-    sidebar_icon_columns: int = 5
+    sidebar_icon_columns: int = 7
     sidebar_icon_size: int = 32
     sidebar_row_spacing: int = 6
 

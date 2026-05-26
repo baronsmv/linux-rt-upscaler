@@ -16,13 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from .common import IconSidebarBase
-from .tabs import (
-    AdvancedTab,
-    DisplayTab,
-    EffectsTab,
-    ExtrasTab,
-    GeneralTab,
-)
+from .tabs import AdvancedTab, DisplayTab, EffectsTab, ExtrasTab, GeneralTab, ScalingTab
 from ..styles import (
     footer_menu_style,
     footer_reset_button_style,
@@ -71,6 +65,7 @@ class SettingsSidebar(IconSidebarBase):
         tabs = [
             (general_tab, "general", "General"),
             (DisplayTab(*tab_args), "display", "Display & Overlay"),
+            (ScalingTab(*tab_args), "scaling", "Scaling"),
             (EffectsTab(*tab_args), "effects", "Effects"),
             (ExtrasTab(*tab_args), "extras", "Extras"),
             (AdvancedTab(*tab_args), "advanced", "Advanced"),

@@ -48,65 +48,6 @@ class AdvancedTab(SettingsTab):
             help="Vulkan GPU used for rendering. Auto (best) selects the most powerful GPU found.",
         )
 
-        # ---- Sampler ----
-        self._add_section("Sampler Parameters")
-        self._blur = self._add_slider(
-            "Blur",
-            1,
-            200,
-            max(1, int(self._config.blur * 100)),
-            scale_factor=100,
-            float_slot=self._on_blur,
-            baseline=self.baseline_config.blur,
-            help="Kernel width (blur factor) for Lanczos and Catmull-Rom.\n"
-            "Lower values increase sharpness/ringing, while higher values smooth the result.\n"
-            "Recommended range: 0.8 - 1.2.",
-        )
-        self._antiring = self._add_slider(
-            "Antiring Strength",
-            0,
-            100,
-            int(self._config.antiring_strength * 100),
-            scale_factor=100,
-            float_slot=self._on_antiring,
-            baseline=self.baseline_config.antiring_strength,
-            help="Anti-ringing strength (0.0 - 1.0) for Adaptive Lanczos and Catmull-Rom.\n"
-            "Lower values soften the clamp, preserving more detail at the cost of possible ringing.\n"
-            "Recommended range: 0.7 - 1.0.",
-        )
-        self._tight_cb = self._add_cb(
-            "Lanczos Tight Antiring",
-            self._config.tight_antiring,
-            self._on_tight_antiring,
-            baseline=self.baseline_config.tight_antiring,
-            help="Use only the central 2x2 neighborhood for anti-ringing bounds.\n"
-            "Keeps thin text and line art sharp. Disable if you see distant ringing artifacts "
-            "on high-contrast edges.",
-        )
-        self._radius_override_cb = self._add_cb(
-            "Override Lanczos Radius",
-            self._config.kernel_radius is not None,
-            self._on_radius_override_toggle,
-            baseline=self.baseline_config.kernel_radius is not None,
-            help="Force a specific Lanczos kernel radius instead of the automatic selection.\n"
-            "When unchecked, radius is chosen automatically (2 for upscaling, variable for downscaling).",
-        )
-        self._radius_slider = self._add_slider(
-            "Radius",
-            2,
-            10,
-            self._config.kernel_radius if self._config.kernel_radius is not None else 2,
-            slot=self._on_radius_slider,
-            baseline=(
-                self.baseline_config.kernel_radius
-                if self.baseline_config.kernel_radius is not None
-                else 2
-            ),
-            help="Lanczos kernel radius (2 = standard Lanczos2, 3 = sharper 6‑tap, etc.).\n"
-            "Higher radii reduce aliasing but increase GPU load.",
-        )
-        self._radius_slider.setEnabled(self._config.kernel_radius is not None)
-
         # ---- Vulkan Rendering ----
         self._add_section("Vulkan Rendering")
         self._present_combo = self._add_combo(
@@ -301,32 +242,6 @@ class AdvancedTab(SettingsTab):
     def _on_gpu_changed(self, text: str) -> None:
         self._config.gpu = None if text == "Auto (best)" else text
         self.config_changed.emit()
-
-    def _on_blur(self, value: float):
-        self._config.blur = value
-        self.config_changed.emit()
-
-    def _on_antiring(self, value: float):
-        self._config.antiring_strength = value
-        self.config_changed.emit()
-
-    def _on_tight_antiring(self, state: int):
-        self._config.tight_antiring = bool(state)
-        self.config_changed.emit()
-
-    def _on_radius_override_toggle(self, state: int) -> None:
-        enabled = bool(state)
-        self._radius_slider.setEnabled(enabled)
-        if enabled:
-            self._config.kernel_radius = self._radius_slider.value()
-        else:
-            self._config.kernel_radius = None
-        self.config_changed.emit()
-
-    def _on_radius_slider(self, value: int) -> None:
-        if self._radius_slider.isEnabled():
-            self._config.kernel_radius = value
-            self.config_changed.emit()
 
     def _on_fps_cap_toggle(self, state: int) -> None:
         enabled = bool(state)
