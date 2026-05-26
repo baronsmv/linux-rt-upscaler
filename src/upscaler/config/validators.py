@@ -172,9 +172,9 @@ def validate_gpu(identifier: Optional[str], _: str) -> None:
     sys.exit(1)
 
 
-def validate_monitor(identifier: Optional[str], _: str) -> None:
+def validate_monitor(identifier: str, _: str) -> None:
     """Verify that the monitor spec matches a known display."""
-    if identifier is None:
+    if identifier in ("primary", "all"):
         return
 
     from ..utils import list_monitors
