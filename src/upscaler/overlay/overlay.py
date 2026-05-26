@@ -2,9 +2,9 @@ import logging
 import time
 from typing import Any, List, Optional
 
-from PySide6.QtCore import QEvent, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal, Slot, QSettings, QRect, QPoint
 from PySide6.QtGui import QCloseEvent
-from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow, QApplication
 
 from .coordinates import CoordinateMapper
 from .events import X11EventForwarder
@@ -118,6 +118,25 @@ class OverlayWindow(QMainWindow):
 
         # Set up the Qt window according to mode
         self._setup_window(self._geometry, config.overlay_mode)
+
+        # Window settings (to persist window position)
+        self._settings = QSettings("linux-rt-upscaler")
+        if config.overlay_mode == OverlayMode.WINDOWED.value:
+            saved_pos = self._settings.value("overlay/windowed_position")
+            if saved_pos is not None and isinstance(saved_pos, QPoint):
+                rect = QRect(saved_pos, self.size())
+                valid = False
+                for screen in QApplication.screens():
+                    if screen.availableGeometry().intersects(rect):
+                        valid = True
+                        break
+                if valid:
+                    self.move(saved_pos)
+                    logger.debug(
+                        "Restored windowed overlay to saved position: (%d,%d)",
+                        saved_pos.x(),
+                        saved_pos.y(),
+                    )
 
         # Enable mouse tracking if we forward events
         self.setMouseTracking(self._should_forward)
@@ -353,6 +372,11 @@ class OverlayWindow(QMainWindow):
                 self._forwarder.enabled = True
         super().changeEvent(event)
 
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        if self._config.overlay_mode == OverlayMode.WINDOWED.value:
+            self._settings.setValue("overlay/windowed_position", self.pos())
+
     def hideEvent(self, event):
         """Stop cursor hiding when the overlay is hidden."""
         self._cursor_hide_timer.stop()
@@ -389,6 +413,8 @@ class OverlayWindow(QMainWindow):
             event: The close event.
         """
         self._cursor_hide_timer.stop()
+        if self._config.overlay_mode == OverlayMode.WINDOWED.value:
+            self._settings.setValue("overlay/windowed_position", self.pos())
         self.hide()
         self.closed.emit()
         event.ignore()
