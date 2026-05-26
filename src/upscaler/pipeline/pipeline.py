@@ -26,7 +26,7 @@ from ..config import (
 from ..overlay import OverlayWindow
 from ..tiles import extract_expanded_tiles
 from ..utils import get_base_geometry, parse_output_geometry
-from ..vulkan import SwapchainError, configure_device
+from ..vulkan import SwapchainError, configure_device, select_device
 from ..window import WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,7 @@ class Pipeline(QObject):
     ) -> None:
         """Initialize the pipeline. Resources are allocated later, on the pipeline thread."""
         QObject.__init__(self)
+        select_device(config.gpu)
         self.config = config
         self.win_info = win_info
         self.overlay = overlay

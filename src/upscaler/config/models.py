@@ -132,6 +132,9 @@ class Config:
     grain_strength: float = 0.15
     grain_size: float = 1.0
 
+    # GPU
+    gpu: Optional[str] = None
+
     # Display
     monitor: str = "primary"
     scale_factor: Optional[float] = None

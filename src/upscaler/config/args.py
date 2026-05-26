@@ -6,6 +6,7 @@ import sys
 from importlib.metadata import version, PackageNotFoundError
 from typing import Any, Dict, List, Optional, Tuple
 
+from .listing import print_devices, print_windows
 from .logging import setup_logging
 from .models import (
     Config,
@@ -147,7 +148,6 @@ Default: '~/.config/linux-rt-upscaler/config.yaml'.""",
     # ----------------------------------------------------------------------
     target_selection_group = parser.add_argument_group("TARGET SELECTION OPTIONS")
     target_selection_group.add_argument(
-        "-l",
         "--list-windows",
         action="store_true",
         help="List visible windows and exit.",
@@ -406,6 +406,26 @@ Examples:
 
 """,
     )
+
+    # ----------------------------------------------------------------------
+    # GPU section
+    # ----------------------------------------------------------------------
+    gpu_group = parser.add_argument_group("GPU OPTIONS")
+    gpu_group.add_argument(
+        "--list-gpus",
+        action="store_true",
+        help="List Vulkan devices and exit.",
+    )
+    gpu_group.add_argument(
+        "-g",
+        "--gpu",
+        type=str,
+        default=DEFAULT_CONFIG.gpu,
+        help="""GPU to use: an index (e.g., 0) or a device name substring.
+If not set, the best available device is chosen automatically.
+Use --list-gpus to see available devices.""",
+    )
+
     # ----------------------------------------------------------------------
     # Display section
     # ----------------------------------------------------------------------
@@ -1166,12 +1186,12 @@ Minimum is 0.0. Default: %(default)s.""",
     if unknown_args:
         parser.error(f"unrecognized arguments: {' '.join(unknown_args)}")
 
-    # List windows
+    # Listings
     if args.list_windows:
-        from ..window import list_windows
-        from .utils import print_windows
-
-        print_windows(list_windows())
+        print_windows()
+        sys.exit(0)
+    if args.list_gpus:
+        print_devices()
         sys.exit(0)
 
     # Scan sys.argv for options that were actually typed by the user

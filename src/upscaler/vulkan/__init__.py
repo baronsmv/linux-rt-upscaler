@@ -1,8 +1,11 @@
 import atexit
+import logging
 import os
 from typing import List, Optional, Tuple, Union
 
 from . import vulkan as _vk  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------
 # Constants
@@ -186,10 +189,48 @@ class VulkanContext:
             except (ValueError, IndexError):
                 pass
 
-        def key(d: "Device") -> tuple:
-            return (d.is_hardware, d.is_discrete, d.dedicated_video_memory)
+        def key(d: "Device") -> Tuple:
+            return d.is_hardware, d.is_discrete, d.dedicated_video_memory
 
         return sorted(devices, key=key)[-1]
+
+
+def select_device(identifier: Optional[str]) -> None:
+    """Set the current Vulkan device from a user‑friendly string.
+
+    * None          - automatic (best device, possibly overridden by VULKAN_DEVICE env var).
+    * digit string  - use as an index into the device list.
+    * any other     - case‑insensitive substring match against device names.
+    """
+    if identifier is None:
+        # Automatic selection already handled by get_current_device()
+        return
+
+    devices = get_discovered_devices()
+    if not devices:
+        logger.warning("No Vulkan devices found; using default.")
+        return
+
+    # Try integer index
+    try:
+        idx = int(identifier)
+        set_current_device(idx)
+        logger.info("Selected Vulkan GPU: %s", get_current_device().name)
+        return
+    except (ValueError, IndexError):
+        pass
+
+    # Try name substring match
+    lower = identifier.lower()
+    for i, d in enumerate(devices):
+        if lower in d.name.lower():
+            set_current_device(i)
+            logger.info("Selected Vulkan GPU: %s", d.name)
+            return
+
+    logger.warning(
+        "GPU identifier '%s' not found; falling back to automatic.", identifier
+    )
 
 
 # Global default context for simple scripts
@@ -327,7 +368,7 @@ class Device:
         timeout_ns: int = 1_000_000_000,  # 1 second
     ) -> bool:
         """
-        Wait until one or all fences are signalled.
+        Wait until one or all fences are signaled.
 
         Args:
             fences: List of native fence handles (integers).
@@ -335,7 +376,7 @@ class Device:
             timeout_ns: Timeout in nanoseconds (default 1 s).
 
         Returns:
-            True if the fences were signalled, False on timeout.
+            True if the fences were signaled, False on timeout.
         """
         return self._handle.wait_for_fences(fences, wait_all, timeout_ns)
 
