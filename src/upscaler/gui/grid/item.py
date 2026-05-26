@@ -336,18 +336,28 @@ class WindowTileItem(QGraphicsObject):
         painter.setFont(font)
         painter.setRenderHint(QPainter.TextAntialiasing, True)
 
-        text_rect = QRectF(-w / 2 + 10, h / 2 - 32, w - 20, 20)
+        # Measure text
+        fm = painter.fontMetrics()
+        text_width = fm.horizontalAdvance(title)
+        text_height = fm.height()
 
-        # Shadow offset
-        shadow_color = QColor(0, 0, 0, 160)
-        painter.setPen(shadow_color)
-        painter.drawText(
-            text_rect.adjusted(1, 1, 1, 1), Qt.AlignLeft | Qt.AlignVCenter, title
-        )
+        # Pill dimensions (with horizontal padding)
+        pill_w = min(text_width + 16, w - 20)  # cap at tile width
+        pill_h = text_height + 6
+        pill_x = -pill_w / 2.0
+        pill_y = h / 2 - pill_h - 6  # bottom of tile, with margin
+        pill_rect = QRectF(pill_x, pill_y, pill_w, pill_h)
+        pill_radius = 4
 
-        # Main text
-        painter.setPen(QColor(self._cfg.title_text_color))
-        painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, title)
+        # Draw pill background
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(self._cfg.tile_title_bg))
+        painter.drawRoundedRect(pill_rect, pill_radius, pill_radius)
+
+        # Draw text centered in pill
+        text_rect = pill_rect.adjusted(8, 0, -8, 0)
+        painter.setPen(QColor(self._cfg.tile_title_text))
+        painter.drawText(text_rect, Qt.AlignCenter, title)
 
         painter.restore()
 

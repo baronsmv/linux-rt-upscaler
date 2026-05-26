@@ -33,6 +33,8 @@ class GuiPalette:
     tile_overlay_start: str = "#00000000"
     tile_overlay_mid: str = "#88000000"
     tile_overlay_end: str = "#dd000000"
+    tile_title_bg: str = "#99000000"
+    tile_title_text: str = "#ffffff"
 
     # ── Text ──────────────────────────────────────────────────────
     text_primary: str = "#ffffff"
