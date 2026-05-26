@@ -5,6 +5,8 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 from PySide6.QtGui import QColor
 
+from ..vulkan import get_discovered_devices
+
 logger = logging.getLogger(__name__)
 
 
@@ -138,6 +140,37 @@ def validate_color(color: Union[Tuple, str], _: str) -> None:
         sys.exit(1)
 
 
+def validate_gpu(identifier: Optional[str], _: str) -> None:
+    """If `identifier` does not match any Vulkan device, print an error and exit."""
+    if identifier is None:
+        return
+
+    devices = get_discovered_devices()
+    # Try integer index
+    try:
+        idx = int(identifier)
+        if 0 <= idx < len(devices):
+            return
+        else:
+            logger.error(f"GPU index {idx} is out of range (0 – {len(devices)-1}).")
+            sys.exit(1)
+    except ValueError:
+        pass
+
+    # Try name substring match
+    lower = identifier.lower()
+    for d in devices:
+        if lower in d.name.lower():
+            return
+
+    # No match
+    logger.error(
+        f"No Vulkan device matches '{identifier}'. "
+        "Use --list-gpus to see available devices."
+    )
+    sys.exit(1)
+
+
 _VALIDATORS: Dict[str, Tuple] = {
     # Timing
     "daemon_poll_interval": (validate_number, 0.1),
@@ -165,6 +198,8 @@ _VALIDATORS: Dict[str, Tuple] = {
     "grain_strength": (validate_number, 0.0, 1.0),
     "grain_size": (validate_number, 1.0, 10.0),
     "lut_intensity": (validate_number, 0.0, 1.0),
+    # GPU
+    "gpu": (validate_gpu,),
     # Display
     "scale_factor": (validate_number, 0, None, False),
     # Overlay
@@ -192,7 +227,7 @@ _VALIDATORS: Dict[str, Tuple] = {
     # Error recovery
     "max_capture_failures": (validate_number, 1),
     "capture_failure_delay": (validate_number, 0.0),
-    "swapchain_recreate_debounce": (validate_number, 0.0),
+    "swapchain_debounce": (validate_number, 0.0),
 }
 
 
