@@ -286,6 +286,7 @@ screens (4k, 1440p) or low-resolution sources.""",
     # ----------------------------------------------------------------------
     sampler_selection_group = parser.add_argument_group("SAMPLER SELECTION OPTIONS")
     sampler_selection_group.add_argument(
+        "-U",
         "--upsampler",
         choices=UPSAMPLERS,
         default=DEFAULT_CONFIG.upsampler,
@@ -295,7 +296,7 @@ input. Default: %(default)s.
   lanczos  - Fixed Lanczos-2 (hardware gather, linear-
              light). Best for 2D art and clean edges.
   fsr      - AMD FidelityFX Super Resolution 1.0
-             (edge-adaptive, linear-light, good quality).
+             (edge-adaptive, linear-light, fast).
              Better for 3D/photographic content.
   nis      - NVIDIA Image Scaling (directional sharpening,
              works in sRGB). May look oversharpened.
@@ -303,10 +304,12 @@ input. Default: %(default)s.
 """,
     )
     sampler_selection_group.add_argument(
+        "-D",
         "--downsampler",
         choices=DOWNSAMPLERS,
         default=DEFAULT_CONFIG.downsampler,
         help="""Spatial downscaler used when the output is smaller than the input.
+Default: %(default)s.
 
   catmull  - Catmull-Rom bicubic (9-tap, linear-light).
              Sharper and faster than Lanczos for mild
@@ -314,9 +317,7 @@ input. Default: %(default)s.
   lanczos  - Adaptive Lanczos (variable radius, linear-
              light). High quality for any ratio.
              Better than catmull for extreme downscales.
-
-Default: %(default)s.
-    """,
+""",
     )
 
     # ----------------------------------------------------------------------
@@ -1089,7 +1090,6 @@ Minimum is 0.0. Default: %(default)s.""",
     additional_groups = [
         interval_group,
         window_detection_group,
-        sampler_selection_group,
         sampler_group,
         pre_processing_group,
         post_processing_group,
