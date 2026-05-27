@@ -600,6 +600,9 @@ class Pipeline(QObject):
         if self._window_tracker is not None:
             self._create_grabber()
 
+        if self.win_info is not None and self.win_info.handle != 0:
+            self._apply_configuration_for_window(self.win_info)
+
         while self._running:
             try:
                 # Process window switch requests
