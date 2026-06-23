@@ -392,6 +392,9 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args) {
  *   present_image (vk.Resource, optional): Texture to transition for
  *       presentation (layout switch to PRESENT_SRC_KHR).
  *   timestamps (bool, optional): If `True`, collect GPU timestamps.
+ *   output_texture (vk.Resource, optional): If given, an image memory barrier
+ *       is appended after the sequence to make shader writes to this texture
+ *       available to later submissions.
  *
  * Returns:
  *   If `timestamps` is enabled, returns `(None, timestamps_list)` where
@@ -400,19 +403,19 @@ PyObject *vk_Compute_dispatch(vk_Compute *self, PyObject *args) {
  */
 PyObject *vk_Compute_dispatch_sequence(vk_Compute * /*self*/, PyObject *args,
                                        PyObject *kwds) {
-  static const char *kwlist[] = {"sequence",   "copy_src",      "copy_dst",
-                                 "copy_slice", "present_image", "timestamps",
-                                 nullptr};
+  static const char *kwlist[] = {
+      "sequence",      "copy_src",   "copy_dst",       "copy_slice",
+      "present_image", "timestamps", "output_texture", nullptr};
   PyObject *sequence_list;
   PyObject *copy_src_obj = Py_None, *copy_dst_obj = Py_None,
-           *present_obj = Py_None;
+           *present_obj = Py_None, *output_texture_obj = Py_None;
   int copy_slice = 0;
   int enable_timestamps = 0;
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|OOiOp", (char **)kwlist,
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|OOiOpO", (char **)kwlist,
                                    &PyList_Type, &sequence_list, &copy_src_obj,
                                    &copy_dst_obj, &copy_slice, &present_obj,
-                                   &enable_timestamps))
+                                   &enable_timestamps, &output_texture_obj))
     return nullptr;
 
   Py_ssize_t num_items = PyList_Size(sequence_list);
@@ -597,6 +600,33 @@ PyObject *vk_Compute_dispatch_sequence(vk_Compute * /*self*/, PyObject *args,
     // Transition the present image if requested
     if (present_img) {
       vk_cmd_transition_for_present(cmd, present_img->image);
+    }
+
+    // Availability barrier for the final output texture
+    if (output_texture_obj != Py_None) {
+      if (!PyObject_TypeCheck(output_texture_obj, &vk_Resource_Type)) {
+        PyErr_SetString(PyExc_TypeError, "output_texture must be a Resource");
+        return;
+      }
+      vk_Resource *out_tex =
+          reinterpret_cast<vk_Resource *>(output_texture_obj);
+      if (!out_tex->image) {
+        PyErr_SetString(PyExc_TypeError, "output_texture must be an image");
+        return;
+      }
+      VkImageMemoryBarrier out_barrier = {
+          VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+      out_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+      out_barrier.dstAccessMask = 0;
+      out_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+      out_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+      out_barrier.image = out_tex->image;
+      out_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      out_barrier.subresourceRange.levelCount = 1;
+      out_barrier.subresourceRange.layerCount = 1;
+      vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                           VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr,
+                           0, nullptr, 1, &out_barrier);
     }
   });
 

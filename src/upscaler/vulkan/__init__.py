@@ -952,6 +952,7 @@ class Compute:
         copy_slice: int = 0,
         present_image: Optional[Texture2D] = None,
         timestamps: bool = False,
+        output_texture: Optional[Texture2D] = None,
     ) -> Optional[Tuple[None, List[float]]]:
         """
         Submit a sequence of dispatches with optional pre/post copies.
@@ -963,21 +964,19 @@ class Compute:
             copy_slice: Destination texture slice.
             present_image: Texture to transition for presentation.
             timestamps: If True, return GPU timings.
+            output_texture: Texture for the image memory barrier.
 
         Returns:
             None, or (None, timestamps_list) if timestamps=True.
         """
-        seq = [(c._handle, x, y, z, p) for c, x, y, z, p in sequence]
-        src = copy_src._handle if copy_src else None
-        dst = copy_dst._handle if copy_dst else None
-        pres = present_image._handle if present_image else None
         return self._handle.dispatch_sequence(
-            sequence=seq,
-            copy_src=src,
-            copy_dst=dst,
+            sequence=[(c._handle, x, y, z, p) for c, x, y, z, p in sequence],
+            copy_src=copy_src._handle if copy_src else None,
+            copy_dst=copy_dst._handle if copy_dst else None,
             copy_slice=copy_slice,
-            present_image=pres,
+            present_image=present_image._handle if present_image else None,
             timestamps=timestamps,
+            output_texture=output_texture._handle if output_texture else None,
         )
 
 

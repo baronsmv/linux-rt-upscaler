@@ -451,32 +451,32 @@ class TileProcessor:
     def _dispatch_single(self, specs: List[TileSpec]) -> None:
         """2x upscale: one stage, all tiles in a single `dispatch_sequence`."""
         gx, gy = self.groups_per_stage[0]
+
         dispatches = []
         for i, spec in enumerate(specs):
             push = self._make_push_bytes(i, spec, self.margin)
             for pipe in self.stages[0].pipelines:
                 dispatches.append((pipe, gx, gy, 1, push))
-        if dispatches:
-            self.stages[0].pipelines[0].dispatch_sequence(sequence=dispatches)
+
+        self.stages[0].pipelines[0].dispatch_sequence(
+            sequence=dispatches, output_texture=self.output_texture
+        )
 
     def _dispatch_double(self, specs: List[TileSpec]) -> None:
         """4x upscale: two stages submitted separately to ensure barriers."""
-        # Stage 1
         gx1, gy1 = self.groups_per_stage[0]
-        s1 = []
+        gx2, gy2 = self.groups_per_stage[1]
+
+        dispatches = []
         for i, spec in enumerate(specs):
             push = self._make_push_bytes(i, spec, self.margin)
             for pipe in self.stages[0].pipelines:
-                s1.append((pipe, gx1, gy1, 1, push))
-        if s1:
-            self.stages[0].pipelines[0].dispatch_sequence(sequence=s1)
-
-        # Stage 2
-        gx2, gy2 = self.groups_per_stage[1]
-        s2 = []
+                dispatches.append((pipe, gx1, gy1, 1, push))
         for i, spec in enumerate(specs):
             push = self._make_push_bytes(i, spec, self.margin * 2)
             for pipe in self.stages[1].pipelines:
-                s2.append((pipe, gx2, gy2, 1, push))
-        if s2:
-            self.stages[1].pipelines[0].dispatch_sequence(sequence=s2)
+                dispatches.append((pipe, gx2, gy2, 1, push))
+
+        self.stages[0].pipelines[0].dispatch_sequence(
+            sequence=dispatches, output_texture=self.output_texture
+        )

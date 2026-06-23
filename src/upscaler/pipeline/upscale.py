@@ -342,9 +342,14 @@ class UpscalerManager:
         Execute all full-frame compute dispatches in a single command
         buffer per SRCNN stage, reducing submission overhead.
         """
-        for stage, (gx, gy) in zip(self.full_stages, self.full_groups):
-            seq = [(pipe, gx, gy, 1, b"") for pipe in stage.pipelines]
-            stage.pipelines[0].dispatch_sequence(sequence=seq)
+        seq = [
+            (pipe, gx, gy, 1, b"")
+            for stage, (gx, gy) in zip(self.full_stages, self.full_groups)
+            for pipe in stage.pipelines
+        ]
+        self.full_stages[0].pipelines[0].dispatch_sequence(
+            sequence=seq, output_texture=self.output
+        )
 
     # ==================================================================
     #  Fallback decision (rect-based)
