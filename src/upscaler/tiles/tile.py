@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 import logging
 import struct
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from ..config import Config
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_model
 from ..vulkan import Buffer, Compute, Texture2D
+
+if TYPE_CHECKING:
+    from .utils import DirtyTiles, DirtyTilesCoords, DirtyTilesRects
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +26,6 @@ class TileSpec:
 
     Attributes:
         tx, ty: Tile grid indices (0-based).
-        valid_lr_offset_x, valid_lr_offset_y: Offset from the expanded tile’s top-left
-            to the start of the valid interior (≤ margin). Provided by the extraction
-            step; currently unused by the shader but kept for debugging.
         dst_out_px_x, dst_out_px_y: Top-left of the output rectangle (upscaled pixels).
         tile_out_extent_w, tile_out_extent_h: Output region size (may be clipped at
             the right / bottom image border).
@@ -31,8 +33,6 @@ class TileSpec:
 
     tx: int
     ty: int
-    valid_lr_offset_x: int
-    valid_lr_offset_y: int
     dst_out_px_x: int
     dst_out_px_y: int
     tile_out_extent_w: int
@@ -43,8 +43,6 @@ class TileSpec:
         cls,
         tx: int,
         ty: int,
-        valid_x: int,
-        valid_y: int,
         tile_size: int,
         scale: int,
         full_out_w: int,
@@ -58,7 +56,7 @@ class TileSpec:
         extent_w = min(tile_size * scale, full_out_w - dst_out_x)
         extent_h = min(tile_size * scale, full_out_h - dst_out_y)
 
-        return cls(tx, ty, valid_x, valid_y, dst_out_x, dst_out_y, extent_w, extent_h)
+        return cls(tx, ty, dst_out_x, dst_out_y, extent_w, extent_h)
 
 
 def _collect_intermediate_names(model_config):
@@ -167,6 +165,11 @@ class TileProcessor:
             self.scale,
             self.max_layers,
         )
+
+    @property
+    def _shader_margin(self) -> int:
+        """Feature‑map margin used by the shader (doubled for 4×)."""
+        return self.margin * (2 if self.double_upscale else 1)
 
     # ======================================================================
     #  Internal factory helpers
@@ -299,10 +302,7 @@ class TileProcessor:
     # ======================================================================
     #  Tile processing (CPU extraction + upload)
     # ======================================================================
-    def process_tiles(
-        self,
-        dirty_tiles: List[Tuple[int, int, bytes, int, int]],
-    ) -> None:
+    def process_tiles(self, dirty_tiles: DirtyTiles) -> bool:
         """
         Process a batch of dirty tiles.
 
@@ -312,21 +312,30 @@ class TileProcessor:
         from `residual_2x` via GPU image copies.
         """
         if not dirty_tiles:
-            return
+            return True
 
         batch = dirty_tiles[: self.max_layers]
 
         if self.double_upscale:
-            self._process_4x(batch)
+            return self._process_4x(batch)
         else:
             self._process_2x(batch)
+            return True
 
-    def _process_4x(self, batch) -> None:
+    def _process_4x(self, batch: DirtyTilesCoords) -> bool:
         """4x tile processing: copy 2x patches, then dispatch the second stage."""
         # Copy the required 2x regions from residual_2x into the input array
         regions = []
-        for layer, (tx, ty, data, vx, vy) in enumerate(batch):
-            # low-res expanded region
+        for layer, (tx, ty) in enumerate(batch):
+            if (
+                tx * self.tile_size - self.margin < 0
+                or ty * self.tile_size - self.margin < 0
+                or (tx + 1) * self.tile_size + self.margin > self.crop_width
+                or (ty + 1) * self.tile_size + self.margin > self.crop_height
+            ):
+                # Edge tile, would need clamping: skip tile mode for this frame
+                return False
+
             exp_x0 = max(0, tx * self.tile_size - self.margin)
             exp_y0 = max(0, ty * self.tile_size - self.margin)
             exp_x1 = min(self.crop_width, (tx + 1) * self.tile_size + self.margin)
@@ -344,12 +353,10 @@ class TileProcessor:
 
         # Build output specs and dispatch
         specs = []
-        for layer, (tx, ty, data, vx, vy) in enumerate(batch):
+        for layer, (tx, ty) in enumerate(batch):
             spec = TileSpec.from_raw(
                 tx,
                 ty,
-                vx,
-                vy,
                 self.tile_size,
                 scale=4,
                 full_out_w=self.full_out_w,
@@ -357,20 +364,19 @@ class TileProcessor:
             )
             specs.append(spec)
 
-        self._dispatch(specs, margin=self.margin * 2)
+        self._dispatch(specs, margin=self._shader_margin)
+        return True
 
-    def _process_2x(self, batch) -> None:
+    def _process_2x(self, batch: DirtyTilesRects) -> None:
         """2x tile processing: upload low-res patches and dispatch."""
         specs = []
         upload_list = []
         tile_bytes = self.expanded_tile_size * self.expanded_tile_size * 4
 
-        for layer, (tx, ty, data, vx, vy) in enumerate(batch):
+        for layer, (tx, ty, data, _vx, _vy) in enumerate(batch):  # vx,vy ignored
             spec = TileSpec.from_raw(
                 tx,
                 ty,
-                vx,
-                vy,
                 self.tile_size,
                 scale=2,
                 full_out_w=self.full_out_w,

@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 import ctypes
 import importlib.util
 import logging
 import os
-from typing import Any, List, Tuple
+from typing import Any, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..tiles import DamageRects
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +97,7 @@ class FrameGrabber:
         """Return the raw xcb_connection_t* as an integer."""
         return _lib.capture_get_xcb_connection(self._ctx)
 
-    def grab(self) -> Tuple[memoryview, bool, List[Tuple[int, int, int, int, int]]]:
+    def grab(self) -> Tuple[memoryview, bool, DamageRects]:
         ctypes.memset(self._rects_buffer, 0, ctypes.sizeof(self._rects_buffer))
         num_rects = _lib.capture_grab_damage(
             self._ctx,

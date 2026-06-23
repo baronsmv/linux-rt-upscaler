@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import logging
 import threading
@@ -24,7 +26,7 @@ from ..config import (
     validate_config,
 )
 from ..overlay import OverlayWindow
-from ..tiles import extract_expanded_tiles
+from ..tiles import collect_dirty_tile_coords, extract_expanded_tiles
 from ..utils import get_base_geometry, parse_output_geometry
 from ..vulkan import SwapchainError, configure_device, select_device
 from ..window import WindowInfo, WindowTracker
@@ -401,17 +403,27 @@ class Pipeline(QObject):
         else:
             # Tile mode
             if self.upscaler_mgr.should_use_tile_mode(rects):
-                # Extract dirty tiles (always CPU path, no GPU copy)
-                dirty_tiles = extract_expanded_tiles(
-                    frame=frame,
-                    rects=rects,
-                    crop_width=self.crop_width,
-                    crop_height=self.crop_height,
-                    tile_size=self.config.tile_size,
-                    margin=self.config.tile_context_margin,
-                    skip_interior=False,  # CPU extraction only
-                )
-                self.upscaler_mgr.process_tile_frame(dirty_tiles, rects, frame)
+                if self.config.double_upscale:
+                    # Double upscale (4x): only tile coordinates
+                    tile_coords = collect_dirty_tile_coords(
+                        rects,
+                        self.crop_width,
+                        self.crop_height,
+                        self.config.tile_size,
+                    )
+                    self.upscaler_mgr.process_tile_frame(tile_coords, rects, frame)
+                else:
+                    # Single upscale (2x): full CPU extraction required
+                    dirty_tiles = extract_expanded_tiles(
+                        frame=frame,
+                        rects=rects,
+                        crop_width=self.crop_width,
+                        crop_height=self.crop_height,
+                        tile_size=self.config.tile_size,
+                        margin=self.config.tile_context_margin,
+                        skip_interior=False,
+                    )
+                    self.upscaler_mgr.process_tile_frame(dirty_tiles, rects, frame)
                 src_tex = self.upscaler_mgr.get_output_texture()
             else:
                 # Too many dirty tiles, fall back to full-frame

@@ -1,15 +1,24 @@
-from typing import List, Tuple, Set, Optional
+from __future__ import annotations
+
+from typing import List, Optional, Set, Tuple, Union
+
+DamageRects = List[Tuple[int, int, int, int, int]]
+ExpandedRects = List[Tuple[int, int, int, int]]
+
+DirtyTilesRects = List[Tuple[int, int, Optional[bytes], int, int]]
+DirtyTilesCoords = List[Tuple[int, int]]
+DirtyTiles = Union[DirtyTilesRects, DirtyTilesCoords]
 
 
 # ------------------------------------------------------------------------------
 #  Damage Region Expansion
 # ------------------------------------------------------------------------------
 def expand_damage_rects(
-    rects: List[Tuple[int, int, int, int, int]],
+    rects: DamageRects,
     crop_width: int,
     crop_height: int,
     margin: int,
-) -> List[Tuple[int, int, int, int]]:
+) -> ExpandedRects:
     """
     Expand each damage rectangle by `margin` pixels, clamped to the crop area.
 
@@ -32,7 +41,7 @@ def expand_damage_rects(
     if crop_width <= 0 or crop_height <= 0:
         raise ValueError(f"Invalid crop dimensions: {crop_width}x{crop_height}")
 
-    expanded: List[Tuple[int, int, int, int]] = []
+    expanded: ExpandedRects = []
 
     for rx, ry, rw, rh, _ in rects:
         # Skip invalid rectangles
@@ -57,13 +66,13 @@ def expand_damage_rects(
 # ------------------------------------------------------------------------------
 def extract_expanded_tiles(
     frame: memoryview,
-    rects: List[Tuple[int, int, int, int, int]],
+    rects: DamageRects,
     crop_width: int,
     crop_height: int,
     tile_size: int,
     margin: int,
     skip_interior: bool = False,
-) -> List[Tuple[int, int, Optional[bytes], int, int]]:
+) -> DirtyTilesRects:
     """
     Extract expanded pixel data for every tile cell that touches a damage rectangle.
 
@@ -126,7 +135,7 @@ def extract_expanded_tiles(
 
     expanded_side = tile_size + 2 * margin
     expanded_bytes = expanded_side * expanded_side * 4
-    result: List[Tuple[int, int, Optional[bytes], int, int]] = []
+    result: DirtyTilesRects = []
 
     for tx, ty in dirty:
         tile_x0 = tx * tile_size
@@ -216,8 +225,32 @@ def extract_expanded_tiles(
     return result
 
 
+def collect_dirty_tile_coords(
+    rects: DamageRects,
+    crop_width: int,
+    crop_height: int,
+    tile_size: int,
+) -> DirtyTilesCoords:
+    """Return (tx, ty) of every tile touched by at least one damage rect."""
+    tiles_x = (crop_width + tile_size - 1) // tile_size
+    tiles_y = (crop_height + tile_size - 1) // tile_size
+    dirty = set()
+
+    for rx, ry, rw, rh, _ in rects:
+        if rw <= 0 or rh <= 0:
+            continue
+        tx0 = rx // tile_size
+        ty0 = ry // tile_size
+        tx1 = (rx + rw + tile_size - 1) // tile_size
+        ty1 = (ry + rh + tile_size - 1) // tile_size
+        for ty in range(ty0, min(ty1, tiles_y)):
+            for tx in range(tx0, min(tx1, tiles_x)):
+                dirty.add((tx, ty))
+    return list(dirty)
+
+
 # ------------------------------------------------------------------------------
-#  Internal helpers - fast row/column copies with memoryview slicing
+#  Internal helpers
 # ------------------------------------------------------------------------------
 def _copy_region(
     dst: bytearray,

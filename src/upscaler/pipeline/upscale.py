@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import struct
 from typing import Dict, List, Optional, Tuple
@@ -10,7 +12,12 @@ from ..srcnn import (
     dispatch_groups,
     load_model,
 )
-from ..tiles import TileProcessor, expand_damage_rects
+from ..tiles import (
+    DamageRects,
+    DirtyTiles,
+    TileProcessor,
+    expand_damage_rects,
+)
 from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD
 
 logger = logging.getLogger(__name__)
@@ -302,7 +309,7 @@ class UpscalerManager:
     def upload_full_frame(
         self,
         frame: memoryview,
-        rects: List[Tuple[int, int, int, int, int]],
+        rects: DamageRects,
         use_damage_tracking: bool,
         margin: int,
     ) -> None:
@@ -355,9 +362,7 @@ class UpscalerManager:
     #  Fallback decision (rect-based)
     # ==================================================================
 
-    def _count_dirty_tile_cells(
-        self, rects: List[Tuple[int, int, int, int, int]]
-    ) -> int:
+    def _count_dirty_tile_cells(self, rects: DamageRects) -> int:
         """Number of unique tile cells overlapped by raw damage rectangles."""
         tile_size = self.config.tile_size
         tiles = set()
@@ -371,14 +376,14 @@ class UpscalerManager:
                     tiles.add((tx, ty))
         return len(tiles)
 
-    def _should_fallback(self, rects: List[Tuple[int, int, int, int, int]]) -> bool:
+    def _should_fallback(self, rects: DamageRects) -> bool:
         """
-        Return `True` if tile processing should be skipped in
-        favour of a full-frame pass.
+        Return `True` if tile processing should be skipped in favor of a
+        full-frame pass.
 
         The decision is based on two criteria:
-        * The number of dirty tile cells exceeds `max_tile_layers`.
-        * The total expanded pixel area exceeds `area_threshold` of
+        - The number of dirty tile cells exceeds `max_tile_layers`.
+        - The total expanded pixel area exceeds `area_threshold` of
           the crop area.
         """
         if self._count_dirty_tile_cells(rects) >= self.config.max_tile_layers:
@@ -394,29 +399,20 @@ class UpscalerManager:
         threshold = self.config.area_threshold * self.crop_width * self.crop_height
         return total_area > threshold
 
-    def should_use_tile_mode(self, rects: List[Tuple[int, int, int, int, int]]) -> bool:
+    def should_use_tile_mode(self, rects: DamageRects) -> bool:
         """Return `True` if tile mode should be attempted for this frame."""
         return bool(rects) and not self._should_fallback(rects)
 
     # ==================================================================
     #  Tile-frame processing
     # ==================================================================
-
     def process_tile_frame(
         self,
-        dirty_tiles: List[Tuple[int, int, bytes, int, int]],
-        rects: List[Tuple[int, int, int, int, int]],
+        dirty_tiles: DirtyTiles,
+        rects: DamageRects,
         frame_data: memoryview,
     ) -> None:
-        """
-        Process one frame through the tile processor.
-
-        On the very first tile frame a full-frame pass seeds the output.
-        Subsequent frames either fall back to full-frame (if the damage
-        area is too large) or process the dirty tiles. For double-upscale
-        the 2x residual is refreshed from a freshly computed low-res -> 2x
-        pass.
-        """
+        """Process one frame through the tile processor."""
         if not self.use_tile:
             raise RuntimeError("process_tile_frame called when tile mode is disabled")
 
@@ -447,12 +443,11 @@ class UpscalerManager:
             return
 
         # ---- Safety net: too many tiles ----
-        max_layers = self.config.max_tile_layers
-        if len(dirty_tiles) > max_layers:
+        if len(dirty_tiles) > self.config.max_tile_layers:
             logger.warning(
                 "Extracted %d tiles > capacity %d. Falling back to full-frame",
                 len(dirty_tiles),
-                max_layers,
+                self.config.max_tile_layers,
             )
             self.upload_full_frame(
                 frame_data,
@@ -475,17 +470,28 @@ class UpscalerManager:
             if self._residual_upscale_groups is not None:
                 gx, gy = self._residual_upscale_groups
                 self.full_stages[0].dispatch(gx, gy, 1)
+
+            if self.tile_processor is not None:
+                if not self.tile_processor.process_tiles(dirty_tiles):
+                    # Edge tile prevented tiled processing: do full-frame
+                    self.upload_full_frame(
+                        frame_data,
+                        rects,
+                        use_damage_tracking=False,
+                        margin=self.config.tile_context_margin,
+                    )
+                    self.process_full_frame()
+                    return
         else:
-            # Single-upscale: just upload the full frame to self.input
+            # Single-upscale: upload the full frame to self.input
             self.upload_full_frame(
                 frame_data,
                 rects,
                 use_damage_tracking=False,
                 margin=self.config.tile_context_margin,
             )
-
-        if self.tile_processor is not None:
-            self.tile_processor.process_tiles(dirty_tiles)
+            if self.tile_processor is not None:
+                self.tile_processor.process_tiles(dirty_tiles)
 
     # ==================================================================
     #  Output access
