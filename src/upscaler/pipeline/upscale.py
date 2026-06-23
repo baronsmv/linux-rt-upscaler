@@ -354,9 +354,7 @@ class UpscalerManager:
             for stage, (gx, gy) in zip(self.full_stages, self.full_groups)
             for pipe in stage.pipelines
         ]
-        self.full_stages[0].pipelines[0].dispatch_sequence(
-            sequence=seq, output_texture=self.output
-        )
+        self.full_stages[0].pipelines[0].dispatch_sequence(sequence=seq)
 
     # ==================================================================
     #  Fallback decision (rect-based)

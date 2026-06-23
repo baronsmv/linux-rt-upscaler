@@ -168,7 +168,7 @@ class TileProcessor:
 
     @property
     def _shader_margin(self) -> int:
-        """Feature‑map margin used by the shader (doubled for 4×)."""
+        """Feature-map margin used by the shader (doubled for 4x)."""
         return self.margin * (2 if self.double_upscale else 1)
 
     # ======================================================================
@@ -456,6 +456,4 @@ class TileProcessor:
             for pipe in self.stages[0].pipelines:
                 dispatches.append((pipe, gx, gy, 1, push))
 
-        self.stages[0].pipelines[0].dispatch_sequence(
-            sequence=dispatches, output_texture=self.output_texture
-        )
+        self.stages[0].pipelines[0].dispatch_sequence(sequence=dispatches)
