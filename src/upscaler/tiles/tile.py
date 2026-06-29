@@ -457,3 +457,17 @@ class TileProcessor:
                 dispatches.append((pipe, gx, gy, 1, push))
 
         self.stages[0].pipelines[0].dispatch_sequence(sequence=dispatches)
+
+    # ==================================================================
+    #  Teardown
+    # ==================================================================
+    def close(self) -> None:
+        """Explicitly release GPU resources while the device is still alive."""
+        self.output_texture = None
+        self.stage_input = None
+        self.residual_1x = None
+        self.residual_2x = None
+        for stage in self.stages:
+            stage.pipelines.clear()
+        self.stages.clear()
+        self.groups_per_stage.clear()

@@ -498,3 +498,14 @@ class UpscalerManager:
     def get_output_texture(self) -> Texture2D:
         """Return the final upscaled texture (tile-processor or full-frame)."""
         return self.output
+
+    # ==================================================================
+    #  Teardown
+    # ==================================================================
+    def close(self) -> None:
+        """Explicitly release GPU resources while the device is still alive."""
+        if self.tile_processor:
+            self.tile_processor.close()
+        if self.full_stages:
+            for stage in self.full_stages:
+                stage.pipelines.clear()
