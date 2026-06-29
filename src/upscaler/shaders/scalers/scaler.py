@@ -6,6 +6,7 @@ from typing import Optional, TYPE_CHECKING
 from ..shader import Shader
 
 if TYPE_CHECKING:
+    from ...config import Config
     from ...vulkan import Texture2D
 
 
@@ -42,15 +43,9 @@ class Scaler(Shader):
             return
         super()._rebuild_compute()
 
-    def configure(
-        self,
-        blur: float = 1.0,
-        antiring_strength: float = 1.0,
-        tight_antiring: bool = True,
-        radius_override: Optional[int] = None,
-    ):
+    def configure(self, config: Config):
         """Set custom parameters."""
-        self.blur = blur
-        self.antiring_strength = antiring_strength
-        self.tight_antiring = tight_antiring
-        self.radius_override = radius_override
+        self.blur = config.blur
+        self.antiring_strength = config.antiring_strength
+        self.tight_antiring = config.tight_antiring
+        self.radius_override = config.kernel_radius

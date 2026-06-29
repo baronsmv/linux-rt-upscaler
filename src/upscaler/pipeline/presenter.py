@@ -136,11 +136,7 @@ class Presenter:
         for sampler in (self._copy, self._upsampler, self._downsampler):
             if sampler is not None:
                 sampler.set_target_texture(self.screen_tex)
-                sampler.configure(
-                    blur=self.config.blur,
-                    antiring_strength=self.config.antiring_strength,
-                    tight_antiring=self.config.tight_antiring,
-                )
+                sampler.configure(self.config)
 
         # --- Post-processing passes (only created if config enables them) ------
         # Debanding
@@ -227,13 +223,13 @@ class Presenter:
         r_x, r_y, r_w, r_h, dst_x, dst_y = self._compute_scaling_params(
             src.width, src.height
         )
-        data = src, src.width, src.height, dst_x, dst_y, r_w, r_h
         if r_w == src.width and r_h == src.height:
-            self._scale(self._copy, *data)
+            scaler = self._copy
         elif r_w >= src.width or r_h >= src.height:
-            self._scale(self._upsampler, *data)
+            scaler = self._upsampler
         else:
-            self._scale(self._downsampler, *data)
+            scaler = self._downsampler
+        self._scale(scaler, src, src.width, src.height, dst_x, dst_y, r_w, r_h)
 
         # ---- CAS ------------------------------------------------------------
         self._apply_cas_if_enabled()
@@ -277,13 +273,10 @@ class Presenter:
         """Update post-processing passes to match a new configuration."""
         self.config = config
 
-        # ---- Downsampler ----
-        self._downsampler.configure(
-            blur=self.config.blur,
-            antiring_strength=self.config.antiring_strength,
-            tight_antiring=self.config.tight_antiring,
-            radius_override=self.config.kernel_radius,
-        )
+        # ---- Samplers ----
+        for sampler in (self._copy, self._upsampler, self._downsampler):
+            if sampler is not None:
+                sampler.configure(self.config)
 
         # ---- Debanding ----
         if config.deband_enabled:
