@@ -228,6 +228,8 @@ class Pipeline(QObject):
             self._grabber.close()
         if self._window_tracker is not None:
             self._window_tracker.close()
+        if self.upscaler_mgr is not None:
+            self.upscaler_mgr.close()
         if self.presenter is not None:
             self.presenter.close()
         self._swapchain_manager.close()
@@ -248,6 +250,8 @@ class Pipeline(QObject):
             return
 
         logger.debug("Recreating upscaler manager")
+        if self.upscaler_mgr is not None:
+            self.upscaler_mgr.close()
         self.upscaler_mgr = UpscalerManager(
             config=self.config,
             crop_width=self.crop_width,

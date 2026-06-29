@@ -506,6 +506,15 @@ class UpscalerManager:
         """Explicitly release GPU resources while the device is still alive."""
         if self.tile_processor:
             self.tile_processor.close()
-        if self.full_stages:
-            for stage in self.full_stages:
-                stage.pipelines.clear()
+            self.tile_processor = None
+
+        for stage in self.full_stages:
+            stage.pipelines.clear()
+        self.full_stages.clear()
+        self.full_groups.clear()
+
+        self.staging = None
+        self.input = None
+        self.output = None
+        self._residual_dst_tex = None
+        self._residual_upscale_groups = None
