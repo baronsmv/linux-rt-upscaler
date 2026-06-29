@@ -1,6 +1,6 @@
 // ============================================================================
-//  Linear -> sRGB Converter (Gamma Compression)
-//  --------------------------------------------
+//  Linear-to-sRGB with Blue-Noise Dither
+//  -------------------------------------
 //  Inverse of the linearize pass.
 //
 //  Converts a linear-light texture back to sRGB while injecting
@@ -42,7 +42,8 @@ float3 LinearToSRGB(float3 lin) {
   if (pos.x >= outputWidth || pos.y >= outputHeight)
     return;
 
-  float3 lin = InputTex.Load(int3(pos, 0)).rgb;
+  float3 lin = max(0.0, InputTex.Load(int3(pos, 0)).rgb);
+  float3 srgb = LinearToSRGB(lin);
 
   // Base UV for a 64x64 noise texture tile
   float2 uv = (float2(pos) + 0.5) / 64.0;
@@ -54,9 +55,8 @@ float3 LinearToSRGB(float3 lin) {
 
   // Dither
   float3 dither = (float3(r, g, b) - 0.5) * ditherStrength;
-  float3 ditheredLinear = max(0.0, lin + dither);
-  float3 srgb = LinearToSRGB(ditheredLinear);
+  float3 srgb_dithered = srgb + dither;
 
   // Write to the 8-bit UAV
-  OutputTex[pos] = float4(srgb, 1.0);
+  OutputTex[pos] = float4(srgb_dithered, 1.0);
 }
