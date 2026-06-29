@@ -1,6 +1,6 @@
 """HLSL/SPIR-V shaders modules."""
 
-from .converters import Delinearize, Linearize
+from .converters import Delinearize, DitherCopy, Linearize
 from .effects import Bloom, CAS, Deband, FilmGrain, LUT, LUT_PRESETS, Vignette
 from .misc import Clear, OverlayBlender
 from .scalers import (
@@ -20,6 +20,7 @@ __all__ = [
     "CopyScaler",
     "Deband",
     "Delinearize",
+    "DitherCopy",
     "FilmGrain",
     "FSRScaler",
     "LanczosScaler",

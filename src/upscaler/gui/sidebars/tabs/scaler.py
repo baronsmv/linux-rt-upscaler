@@ -118,7 +118,7 @@ class ScalingTab(SettingsTab):
                 if self.baseline_config.kernel_radius is not None
                 else 2
             ),
-            help="Lanczos kernel radius (2 = standard Lanczos2, 3 = sharper 6‑tap, etc.).\n"
+            help="Lanczos kernel radius (2 = standard Lanczos2, 3 = sharper 6-tap, etc.).\n"
             "Higher radii reduce aliasing but increase GPU load.",
         )
         self._radius_slider.setEnabled(self._config.kernel_radius is not None)

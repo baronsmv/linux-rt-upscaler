@@ -116,12 +116,12 @@ blur: 1.0
 #   - 1.0 eliminates ringing entirely (ideal for text/UI).
 #   - Lower values (0.7-0.9) preserve more fine detail on illustrations.
 # Values of 0.9 - 1.0 are recommended for Lanczos to eliminate ringing entirely,
-# while 0.7 – 0.8 works well for Catmull‑Rom.
+# while 0.7 - 0.8 works well for Catmull-Rom.
 # Recommended range: 0.7 - 1.0
 # Default: 0.8
 antiring_strength: 0.8
 
-# Use tight anti-ringing (central 2×2 neighborhood) in Adaptive Lanczos.
+# Use tight anti-ringing (central 2x2 neighborhood) in Adaptive Lanczos.
 #   - true  : Clamp is less aggressive, keeping thin lines crisp.
 #   - false : Full filter footprint used for a more conservative clamp.
 # Default: true

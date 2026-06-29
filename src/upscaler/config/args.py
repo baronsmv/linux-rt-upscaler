@@ -357,7 +357,7 @@ Lower values soften the clamp, preserving more detail at
 the cost of possible ringing.
 
 Values of 0.9 - 1.0 are recommended for Lanczos to eliminate
-ringing entirely, while 0.7 – 0.8 works well for Catmull‑Rom.
+ringing entirely, while 0.7 - 0.8 works well for Catmull-Rom.
 
 Recommended range: 0.7 - 1.0. Default: %(default)s.
 
@@ -1157,7 +1157,7 @@ Minimum is 0.0. Default: %(default)s.""",
     }
 
     def _warn_and_filter(unknown_args: List[str]) -> List[str]:
-        """Log warnings for renamed/deprecated flags, return a list of still‑unknown args."""
+        """Log warnings for renamed/deprecated flags, return a list of still-unknown args."""
         still_unknown = []
         for arg in unknown_args:
             if arg in renamed:

@@ -7,7 +7,7 @@ from typing import List, Tuple
 def _display_width(text: str) -> int:
     """Return the terminal display width of `text`.
 
-    CJK full‑width characters count as 2; most other characters count as 1.
+    CJK full-width characters count as 2; most other characters count as 1.
     """
     return sum(
         2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in text
@@ -37,7 +37,7 @@ def _print_table(
             col_widths[i] = max(col_widths[i], _display_width(cell))
 
     def pad(value, width):
-        """Pad a string to the given display width (left‑justified)."""
+        """Pad a string to the given display width (left-justified)."""
         return value.ljust(width) if _display_width(value) <= width else value
 
     # Header

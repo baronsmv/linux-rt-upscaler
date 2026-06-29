@@ -153,7 +153,7 @@ def validate_gpu(identifier: Optional[str], _: str) -> None:
         if 0 <= idx < len(devices):
             return
         else:
-            logger.error(f"GPU index {idx} is out of range (0 – {len(devices)-1}).")
+            logger.error(f"GPU index {idx} is out of range (0 - {len(devices)-1}).")
             sys.exit(1)
     except ValueError:
         pass
@@ -193,7 +193,7 @@ def validate_monitor(identifier: str, _: str) -> None:
             return
         else:
             logger.error(
-                f"Monitor index {idx} is out of range (0 – {len(physical)-1})."
+                f"Monitor index {idx} is out of range (0 - {len(physical)-1})."
             )
             sys.exit(1)
     except ValueError:

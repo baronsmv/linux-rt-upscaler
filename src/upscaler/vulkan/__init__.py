@@ -196,11 +196,11 @@ class VulkanContext:
 
 
 def select_device(identifier: Optional[str]) -> None:
-    """Set the current Vulkan device from a user‑friendly string.
+    """Set the current Vulkan device from a user-friendly string.
 
     * None          - automatic (best device, possibly overridden by VULKAN_DEVICE env var).
     * digit string  - use as an index into the device list.
-    * any other     - case‑insensitive substring match against device names.
+    * any other     - case-insensitive substring match against device names.
     """
     if identifier is None:
         # Automatic selection already handled by get_current_device()

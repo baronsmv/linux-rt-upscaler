@@ -11,6 +11,7 @@ from ..shaders import (
     CopyScaler,
     Deband,
     Delinearize,
+    DitherCopy,
     FilmGrain,
     FSRScaler,
     LanczosScaler,
@@ -20,7 +21,7 @@ from ..shaders import (
     Vignette,
 )
 from ..utils import calculate_scaling_rect
-from ..vulkan import Texture2D
+from ..vulkan import Texture2D, R16G16B16A16_FLOAT
 
 if TYPE_CHECKING:
     from .osd import OSDManager
@@ -80,22 +81,27 @@ class Presenter:
         self.swapchain = swapchain_manager
 
         # --- Screen texture (rendered by Lanczos and all post-FX) ---------------
-        self.screen_tex = Texture2D(screen_width, screen_height)
+        self.screen_tex = Texture2D(
+            screen_width, screen_height, format=R16G16B16A16_FLOAT
+        )
+        self.screen_tex_8bit = Texture2D(screen_width, screen_height)
         self._active_source_texture: Optional[Texture2D] = None
 
         # --- Helpers ------------------------------------------------------------
-        # Linear/Delinear passes
+        # Linear/Delinear/Dither passes
         self._needs_delinearize: bool = True
-
-        self.linearize_pass = Linearize()
         self._linear_tex = None
-
-        self.delinearize_pass = Delinearize()
-        self.delinearize_pass.set_target_texture(self.screen_tex)
+        self._linearize = Linearize()
+        self._delinearize = Delinearize()
+        self._delinearize.set_noise_texture()
+        self._delinearize.set_target_texture(self.screen_tex_8bit)
+        self._dither_copy = DitherCopy()
+        self._dither_copy.set_noise_texture()
+        self._dither_copy.set_target_texture(self.screen_tex_8bit)
 
         # Clear pass
-        self.clear_pass = Clear()
-        self.clear_pass.set_target_texture(self.screen_tex)
+        self._clear = Clear()
+        self._clear.set_target_texture(self.screen_tex)
 
         # --- Scalers ------------------------------------------------------------
         # Copy
@@ -127,15 +133,14 @@ class Presenter:
             )
             self._upsampler = CatmullRomScaler()
 
-        self._copy.set_target_texture(self.screen_tex)
-        self._upsampler.set_target_texture(self.screen_tex)
-        self._downsampler.set_target_texture(self.screen_tex)
-
-        self._downsampler.configure(
-            blur=self.config.blur,
-            antiring_strength=self.config.antiring_strength,
-            tight_antiring=self.config.tight_antiring,
-        )
+        for sampler in (self._copy, self._upsampler, self._downsampler):
+            if sampler is not None:
+                sampler.set_target_texture(self.screen_tex)
+                sampler.configure(
+                    blur=self.config.blur,
+                    antiring_strength=self.config.antiring_strength,
+                    tight_antiring=self.config.tight_antiring,
+                )
 
         # --- Post-processing passes (only created if config enables them) ------
         # Debanding
@@ -170,14 +175,14 @@ class Presenter:
         self._lut: Optional[LUT] = None
         if config.lut_enabled:
             self._lut = LUT(preset=config.lut_preset)
-            self._lut.set_target_texture(self.screen_tex)
+            self._lut.set_target_texture(self.screen_tex_8bit)
             logger.debug("LUT pass created")
 
         # Film grain
         self._grain: Optional[FilmGrain] = None
         if config.grain_enabled:
             self._grain = FilmGrain()
-            self._grain.set_target_texture(self.screen_tex)
+            self._grain.set_target_texture(self.screen_tex_8bit)
             logger.debug("Film grain pass created")
 
         # Frame counter, incremented each frame for temporal effects
@@ -239,10 +244,15 @@ class Presenter:
         # ---- Vignette -------------------------------------------------------
         self._apply_vignette_if_enabled()
 
-        # ---- Delinearize ----------------------------------------------------
+        # ---- Delinearize or Dither-Copy ------------------------------------
         if self._needs_delinearize:
-            self.delinearize_pass.set_source_texture(self.screen_tex)
-            self.delinearize_pass.dispatch_auto()
+            self._delinearize.update_constants()
+            self._delinearize.set_source_texture(self.screen_tex)
+            self._delinearize.dispatch_auto()
+        else:
+            self._dither_copy.update_constants()
+            self._dither_copy.set_source_texture(self.screen_tex)
+            self._dither_copy.dispatch_auto()
 
         # ---- LUT ------------------------------------------------------------
         self._apply_lut_if_enabled()
@@ -251,17 +261,17 @@ class Presenter:
         self._apply_grain_if_enabled()
 
         # ---- OSD blend ------------------------------------------------------
-        self.osd.blend_active(self.screen_tex)
+        self.osd.blend_active(self.screen_tex_8bit)
 
         # ---- Swapchain present ----------------------------------------------
-        self.swapchain.present(self.screen_tex, wait_for_fence=wait_for_fence)
+        self.swapchain.present(self.screen_tex_8bit, wait_for_fence=wait_for_fence)
 
         # ---- Advance frame counter ------------------------------------------
         self._frame_counter += 1
 
     def present_unchanged(self):
         """Re-present the current screen texture without any processing."""
-        self.swapchain.present(self.screen_tex, wait_for_fence=False)
+        self.swapchain.present(self.screen_tex_8bit, wait_for_fence=False)
 
     def reconfigure_effects(self, config: Config) -> None:
         """Update post-processing passes to match a new configuration."""
@@ -314,7 +324,7 @@ class Presenter:
         # ---- LUT ----
         if config.lut_enabled:
             self._lut = LUT(preset=config.lut_preset)
-            self._lut.set_target_texture(self.screen_tex)
+            self._lut.set_target_texture(self.screen_tex_8bit)
         else:
             self._lut = None
 
@@ -322,7 +332,7 @@ class Presenter:
         if config.grain_enabled:
             if self._grain is None:
                 self._grain = FilmGrain()
-                self._grain.set_target_texture(self.screen_tex)
+                self._grain.set_target_texture(self.screen_tex_8bit)
         else:
             if self._grain is not None:
                 self._grain = None
@@ -366,14 +376,31 @@ class Presenter:
         """
         self.screen_width = new_width
         self.screen_height = new_height
-        self.screen_tex = Texture2D(new_width, new_height)
+        self.screen_tex = Texture2D(new_width, new_height, format=R16G16B16A16_FLOAT)
+        self.screen_tex_8bit = Texture2D(new_width, new_height)
 
-        # Rebind screen texture to all passes
-        self._lanczos.set_target_texture(self.screen_tex)
-        self._copy.set_target_texture(self.screen_tex)
-        for pass_ in (self._cas, self._bloom, self._vignette, self._lut, self._grain):
+        # Rebind 16-bit passes
+        for pass_ in (
+            self._clear,
+            self._copy,
+            self._upsampler,
+            self._downsampler,
+            self._cas,
+            self._bloom,
+            self._vignette,
+        ):
             if pass_ is not None:
                 pass_.set_target_texture(self.screen_tex)
+
+        # Rebind 8-bit passes
+        for pass_ in (
+            self._delinearize,
+            self._dither_copy,
+            self._lut,
+            self._grain,
+        ):
+            if pass_ is not None:
+                pass_.set_target_texture(self.screen_tex_8bit)
 
         self.osd.clear_compute_cache()
 
@@ -383,9 +410,9 @@ class Presenter:
         self._upsampler = None
         self._downsampler = None
 
-        self.linearize_pass = None
-        self.delinearize_pass = None
-        self.clear_pass = None
+        self._linearize = None
+        self._delinearize = None
+        self._clear = None
 
         self._deband = None
         self._deband_tex = None
@@ -397,6 +424,7 @@ class Presenter:
 
         self._linear_tex = None
         self.screen_tex = None
+        self.screen_tex_8bit = None
 
     # ------------------------------------------------------------------
     #  Internal helpers
@@ -418,8 +446,8 @@ class Presenter:
 
         if not scaler.requires_linear_input:
             # Clear the whole screen with the background color
-            self.clear_pass.update_constants(self.background_color)
-            self.clear_pass.dispatch_auto()
+            self._clear.update_constants(self.background_color)
+            self._clear.dispatch_auto()
 
             # Only scaler pass, no linearize and no background color
             scaler.set_source_texture(src)
@@ -442,11 +470,13 @@ class Presenter:
             or self._linear_tex.width != src_width
             or self._linear_tex.height != src_height
         ):
-            self._linear_tex = Texture2D(src_width, src_height)
+            self._linear_tex = Texture2D(
+                src_width, src_height, format=R16G16B16A16_FLOAT
+            )
 
         # Linearization pass
-        self.linearize_pass.set_source_texture(src)
-        self.linearize_pass.set_target_texture(self._linear_tex)
+        self._linearize.set_source_texture(src)
+        self._linearize.set_target_texture(self._linear_tex)
 
         # Scaler pass
         scaler.set_source_texture(self._linear_tex)
@@ -465,7 +495,7 @@ class Presenter:
         # Combined dispatch
         sequence = [
             (
-                self.linearize_pass.compute,
+                self._linearize.compute,
                 (src_width + 15) // 16,
                 (src_height + 15) // 16,
                 1,
@@ -479,7 +509,7 @@ class Presenter:
                 b"",
             ),
         ]
-        self.linearize_pass.compute.dispatch_sequence(sequence)
+        self._linearize.compute.dispatch_sequence(sequence)
 
     def _apply_deband_if_enabled(self, src: Texture2D) -> Texture2D:
         """Run the debanding pass if enabled; return the (possibly debanded) texture."""

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import struct
@@ -9,26 +11,15 @@ from ....vulkan import Sampler, Texture2D
 
 logger = logging.getLogger(__name__)
 
-# Constant buffer layout: 2 uints + 1 float = 12 bytes
 CB_FORMAT = "IIf"
 CB_SIZE = struct.calcsize(CB_FORMAT)
 
 _SHADER_DIR = os.path.dirname(__file__)
-DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "delinearize.spv")
+DEFAULT_SHADER_PATH = os.path.join(_SHADER_DIR, "dither.spv")
 
 
-class Delinearize(Shader):
-    """
-    Converts a linear-light texture back to sRGB with blue-noise dithering.
-
-    A 64x64 blue-noise RGBA8 texture must be provided via
-    :meth:`set_noise_texture` before dispatch. The dither strength
-    should be 1/255 to span exactly one 8-bit step.
-
-    Attributes:
-        source_texture: Input linear image (RGBA8).
-        noise_tex: Blue-noise texture to break up quantization bands.
-    """
+class DitherCopy(Shader):
+    """Adds blue-noise dither to an sRGB image and writes it to an 8-bit target."""
 
     def __init__(self, shader_path: Optional[str] = None) -> None:
         self.source_texture: Optional[Texture2D] = None
@@ -36,23 +27,14 @@ class Delinearize(Shader):
         self._sampler: Optional[Sampler] = None
         super().__init__(shader_path or DEFAULT_SHADER_PATH)
 
-    # ------------------------------------------------------------------
-    #  Constant buffer size
-    # ------------------------------------------------------------------
     @staticmethod
     def _cb_size() -> int:
         return CB_SIZE
 
-    # ------------------------------------------------------------------
-    #  Persistent resources - constant buffer + point sampler
-    # ------------------------------------------------------------------
     def _create_persistent_resources(self) -> None:
         super()._create_persistent_resources()
         self._sampler = Sampler()
 
-    # ------------------------------------------------------------------
-    #  Binding layout: SRV {input, noise}, UAV {output}, sampler
-    # ------------------------------------------------------------------
     def _get_bindings(self):
         return (
             [self.source_texture, self._noise_tex],
@@ -75,9 +57,6 @@ class Delinearize(Shader):
         self.source_texture = tex
         self._rebuild_compute()
 
-    # ------------------------------------------------------------------
-    #  Set the blue-noise texture (must be 64x64 RGBA8)
-    # ------------------------------------------------------------------
     def set_noise_texture(self, tex: Optional[Texture2D] = None) -> None:
         if tex is None:
             if self._noise_tex is None:
@@ -90,16 +69,7 @@ class Delinearize(Shader):
         self._noise_tex = tex
         self._rebuild_compute()
 
-    # ------------------------------------------------------------------
-    #  Upload constant buffer (dimensions + dither strength)
-    # ------------------------------------------------------------------
     def update_constants(self, dither_strength: float = 1.0 / 255.0) -> None:
-        """
-        Pack and upload the dither parameters.
-
-        Args:
-            dither_strength: amplitude in linear light (default 1/255).
-        """
         if self.target_texture is None:
             raise RuntimeError("Target texture not set")
         w = self.target_texture.width

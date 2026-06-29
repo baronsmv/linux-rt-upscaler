@@ -14,7 +14,7 @@
 // ============================================================================
 
 Texture2D<float4> InputTex : register(t0);
-[[vk::image_format("rgba8")]]
+[[vk::image_format("rgba16f")]]
 RWTexture2D<float4> OutputTex : register(u0);
 
 cbuffer Constants : register(b0) {

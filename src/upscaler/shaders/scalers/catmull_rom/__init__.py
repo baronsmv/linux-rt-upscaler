@@ -86,7 +86,7 @@ class CatmullRomScaler(Scaler):
             dst_w, dst_h: Dimensions of the destination rectangle.
             blur: Kernel stretch (1.0 = standard Catmull-Rom). If None, the
                   value given to the constructor is used.
-            antiring_strength: Anti‑ringing clamp strength (0.0‑1.0). If None,
+            antiring_strength: Anti-ringing clamp strength (0.0-1.0). If None,
                               the constructor default is used.
         """
         blur = max(blur or self._blur, 0.001)
