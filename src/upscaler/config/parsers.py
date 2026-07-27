@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict, Tuple, Union
 
 from PySide6.QtGui import QColor
 
@@ -131,7 +131,7 @@ def parse_profile_colors(profiles: Dict) -> Dict:
     return cleaned
 
 
-def parse_interval(interval: str) -> Callable:
+def parse_interval(interval: Union[str, int, float]) -> Callable:
     """
     Returns a function that checks if a number satisfies the interval string.
 
@@ -148,6 +148,15 @@ def parse_interval(interval: str) -> Callable:
         "  < 480  "   ->  n < 480   (spaces ignored)
         "480 < = "    ->  ValueError (malformed)
     """
+    # Already a number: treat as exact equality
+    if isinstance(interval, (int, float)):
+        return lambda n: n == interval
+    try:
+        num = float(interval)
+        return lambda n: n == num
+    except ValueError:
+        pass
+
     # Normalize: remove all whitespace
     s = re.sub(r"\s+", "", interval)
 
@@ -188,11 +197,5 @@ def parse_interval(interval: str) -> Callable:
             return lambda n: n < num
         elif op == ">=":
             return lambda n: n <= num
-
-    # Pure number: exact equality
-    num_match = re.fullmatch(r"([+-]?\d*\.?\d+)", s)
-    if num_match:
-        num = float(num_match.group(1))
-        return lambda n: n == num
 
     raise ValueError(f"Unrecognised interval format: {interval}")
