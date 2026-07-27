@@ -70,7 +70,7 @@ def find_matching_profile(
 ) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
     """
     Find the first profile whose match criteria match the window.
-    Currently uses only window_title and size (width and height).
+    Currently, uses only window_title and size (width and height).
     Match criteria are evaluated with OR logic: any match qualifies.
     """
     window_title = window_info.title.lower()
