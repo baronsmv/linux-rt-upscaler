@@ -4,11 +4,11 @@ from typing import Tuple
 
 @dataclass
 class GuiPalette:
-    """Semantic colour tokens for the entire GUI.
+    """Semantic color tokens for the entire GUI.
 
-    Every colour used by a style sheet must be a palette field.
+    Every color used by a style sheet must be a palette field.
     Themes are swapped by replacing this instance – no other config changes.
-    All names describe the *role* of the colour, never its hue.
+    All names describe the *role* of the color, never its hue.
     """
 
     # ── Backgrounds ──────────────────────────────────────────────
@@ -56,7 +56,7 @@ class GuiPalette:
     accent_secondary: str = (
         "#2b5b84"  # secondary accent (tile hover border, filter focus)
     )
-    accent_icon: str = "#7A9EB1"  # colour of monochrome SVG icons
+    accent_icon: str = "#7A9EB1"  # color of monochrome SVG icons
 
     # ── Slider, scrollbar, etc. ──────────────────────────────────
     slider_groove: str = "#333"
