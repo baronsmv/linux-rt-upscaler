@@ -315,6 +315,24 @@ class OverlayWindow(QMainWindow):
             self._forwarder.target_handle, width, height
         )
 
+    def update_config(self, config: Config) -> None:
+        """Apply a new runtime configuration, restarting cursor hiding if needed."""
+        self._config = config
+        hc = config.hide_cursor
+        if hc is not None and hc > 0:
+            self._cursor_hide_timer.stop()
+            self.setCursor(Qt.ArrowCursor)
+            self._cursor_hidden = False
+            self._cursor_hide_timer.start(hc)
+        elif hc == 0:
+            self._cursor_hide_timer.stop()
+            self.setCursor(Qt.BlankCursor)
+            self._cursor_hidden = True
+        else:  # None
+            self._cursor_hide_timer.stop()
+            self.setCursor(Qt.ArrowCursor)
+            self._cursor_hidden = False
+
     def update_geometry(self, win_info: Optional[WindowInfo]) -> None:
         """
         Recompute overlay geometry after a window or monitor change.

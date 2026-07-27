@@ -327,6 +327,7 @@ class Pipeline(QObject):
         self._crop_bottom = new_config.crop_bottom
         self.presenter.reconfigure_effects(new_config)
         self.overlay.set_scale_mode(new_config.output_geometry)
+        self.overlay.update_config(new_config)
 
     # ----------------------------------------------------------------------
     # Core frame processing
