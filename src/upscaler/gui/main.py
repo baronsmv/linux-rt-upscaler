@@ -254,6 +254,8 @@ class MainWindow(QMainWindow):
             self.manual_session = create_pipeline_session(
                 eff_cfg,
                 win_info,
+                base_config=copy.deepcopy(self._config_manager.persistent_config),
+                profiles=self._config_manager.profiles,
             )
             self.manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
         except Exception as e:
