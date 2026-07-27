@@ -118,12 +118,12 @@ class SettingsTab(QWidget):
 
         lbl = QLabel(label_text)
         lbl.setStyleSheet(row_label_style(self._cfg))
-        lbl.setFixedHeight(self._cfg.sidebar_row_height)
+        lbl.setFixedHeight(self._cfg.sidebar.row_height)
         lbl.setAlignment(Qt.AlignVCenter)
         row.addWidget(lbl)
         row.addStretch()
 
-        widget.setFixedHeight(self._cfg.sidebar_row_height)
+        widget.setFixedHeight(self._cfg.sidebar.row_height)
         row.addWidget(widget)
 
         self.content_layout.addLayout(row)
@@ -190,7 +190,7 @@ class SettingsTab(QWidget):
         current_name: str,
         slot: Callable,
         editable: bool = False,
-        baseline: Optional[str] = None,  # ← new parameter
+        baseline: Optional[str] = None,
         help: Optional[str] = None,
     ) -> SliderRow:
         """Add a slider that displays a name from a list instead of a number."""
@@ -199,7 +199,6 @@ class SettingsTab(QWidget):
         except ValueError:
             index = 0
 
-        # Convert baseline string to index (or None if not provided)
         if baseline is not None:
             try:
                 baseline_index = names.index(baseline)
@@ -222,7 +221,6 @@ class SettingsTab(QWidget):
             baseline=baseline_index,
             tooltip=help,
         )
-        # Map the integer index back to the name before calling the slot
         slider.valueChanged.connect(lambda val: slot(names[val]))
         self.content_layout.addWidget(slider)
         return slider

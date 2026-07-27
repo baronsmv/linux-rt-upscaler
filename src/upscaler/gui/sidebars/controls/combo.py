@@ -35,7 +35,7 @@ class ComboRow(BaseRow):
         self._combo.addItems(items)
         if current is not None and current in items:
             self._combo.setCurrentText(current)
-        self._combo.setFixedHeight(gui_config.sidebar_row_height)
+        self._combo.setFixedHeight(gui_config.sidebar.row_height)
         self._combo.setMinimumWidth(100)
         self._combo.currentTextChanged.connect(self._on_current_text_changed)
         self._content_layout.addWidget(self._combo)

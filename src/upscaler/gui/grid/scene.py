@@ -55,9 +55,9 @@ class WindowGridScene(QGraphicsScene):
         ----------
         gui_config : GUIConfig
             Centralised GUI settings.  The following fields are relevant:
-            ``grid_columns``, ``grid_margin``, ``tile_width``,
-            ``tile_height`` (used only for aspect ratio), ``tile_spacing``,
-            ``tile_spacing_ratio``.
+            ``tile.columns``, ``tile.margin``, ``tile.width``,
+            ``tile.height`` (used only for aspect ratio), ``tile.spacing``,
+            ``tile.spacing_ratio``.
         parent : QGraphicsView, optional
             The view that will display this scene.
         """
@@ -165,11 +165,11 @@ class WindowGridScene(QGraphicsScene):
         Reposition all tiles according to the current viewport width.
 
         Tile width is determined by the number of target columns
-        (``grid_columns``) and the available horizontal space.  Spacing
-        can be proportional (``tile_spacing_ratio > 0``) or fixed, with
-        a configurable minimum floor (``tile_spacing``).  The aspect
-        ratio of each tile is derived from the default ``tile_width``
-        and ``tile_height``.
+        (``tile.columns``) and the available horizontal space.  Spacing
+        can be proportional (``tile.spacing_ratio > 0``) or fixed, with
+        a configurable minimum floor (``tile.spacing``).  The aspect
+        ratio of each tile is derived from the default ``tile.width``
+        and ``tile.height``.
         """
         tiles = self._tiles
         if not tiles:
@@ -182,8 +182,8 @@ class WindowGridScene(QGraphicsScene):
         view = self.views()[0] if self.views() else None
         vp_w = view.viewport().width() if view else 800
 
-        margin = cfg.grid_margin
-        target_cols = cfg.grid_columns
+        margin = cfg.tile.margin
+        target_cols = cfg.tile.columns
 
         # ---- 1. Determine actual column count (never more than tiles) -------
         cols = min(target_cols, len(tiles))
@@ -198,18 +198,18 @@ class WindowGridScene(QGraphicsScene):
             tile_w = avail_w / target_cols
 
         # ---- 3. Compute actual spacing (proportional or fixed) -------------
-        if cfg.tile_spacing_ratio > 0:
-            spacing = max(cfg.tile_spacing, int(tile_w * cfg.tile_spacing_ratio))
+        if cfg.tile.spacing_ratio > 0:
+            spacing = max(cfg.tile.spacing, int(tile_w * cfg.tile.spacing_ratio))
         else:
-            spacing = cfg.tile_spacing
+            spacing = cfg.tile.spacing
 
         # ---- 4. Recompute tile width with spacing --------------------------
         if target_cols > 1:
             total_spacing = (target_cols - 1) * spacing
             tile_w = max(100.0, (avail_w - total_spacing) / target_cols)
             # Re-evaluate spacing if proportional (it depends on tile_w)
-            if cfg.tile_spacing_ratio > 0:
-                spacing = max(cfg.tile_spacing, int(tile_w * cfg.tile_spacing_ratio))
+            if cfg.tile.spacing_ratio > 0:
+                spacing = max(cfg.tile.spacing, int(tile_w * cfg.tile.spacing_ratio))
                 total_spacing = (target_cols - 1) * spacing
                 tile_w = max(100.0, (avail_w - total_spacing) / target_cols)
         else:
@@ -217,10 +217,10 @@ class WindowGridScene(QGraphicsScene):
             tile_w = max(100.0, avail_w)
 
         # ---- 5. Tile height from aspect ratio ------------------------------
-        if cfg.tile_aspect_ratio > 0:
-            aspect = cfg.tile_aspect_ratio
+        if cfg.tile.aspect_ratio > 0:
+            aspect = cfg.tile.aspect_ratio
         else:
-            aspect = cfg.tile_width / cfg.tile_height if cfg.tile_height else 1.0
+            aspect = cfg.tile.width / cfg.tile.height if cfg.tile.height else 1.0
         tile_h = tile_w / aspect
 
         # ---- 6. Update tile sizes (resize if changed) ----------------------
@@ -230,11 +230,7 @@ class WindowGridScene(QGraphicsScene):
                 tile.set_tile_size(tile_w, tile_h)
 
         # ---- 7. Position tiles ---------------------------------------------
-        # center of the first tile in a full row
-        full_row_width = cols * tile_w + (cols - 1) * spacing
-        start_x = (vp_w - full_row_width) / 2.0 + tile_w / 2.0
         start_y = margin + tile_h / 2.0
-
         for i, tile in enumerate(tiles):
             row = i // cols
             col = i % cols

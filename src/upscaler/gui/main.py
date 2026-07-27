@@ -99,7 +99,7 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         central_layout = QVBoxLayout(central_widget)
         central_layout.setContentsMargins(
-            0, self.gui_config.filter_vertical_margin, 0, 0
+            0, self.gui_config.filter.vertical_margin, 0, 0
         )
         central_layout.setSpacing(0)
 
@@ -124,7 +124,7 @@ class MainWindow(QMainWindow):
         self.about_btn.setStyleSheet(about_button_style(self.gui_config))
         self.about_btn.clicked.connect(self._show_about_dialog)
         filter_row.addWidget(self.about_btn)
-        filter_row.addSpacing(self.gui_config.filter_horizontal_margin)
+        filter_row.addSpacing(self.gui_config.filter.horizontal_margin)
 
         # Add filter row
         central_layout.addLayout(filter_row)
@@ -159,7 +159,7 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(central_widget)
         self.splitter.addWidget(self.right_sidebar)
         self.splitter.setSizes(
-            [self.gui_config.sidebar_width, 400, self.gui_config.sidebar_width]
+            [self.gui_config.sidebar.width, 400, self.gui_config.sidebar.width]
         )
         main_layout.addWidget(self.splitter)
 

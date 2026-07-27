@@ -25,9 +25,9 @@ class StyledSplitterHandle(QSplitterHandle):
         painter.setRenderHint(QPainter.Antialiasing)
 
         cfg = self._cfg
-        handle_color = QColor(cfg.splitter_handle_color)
-        hover_color = QColor(cfg.splitter_handle_hover_color)
-        handle_width = cfg.splitter_handle_width
+        handle_color = QColor(cfg.palette.splitter_handle)
+        hover_color = QColor(cfg.palette.splitter_handle_hover)
+        handle_width = cfg.splitter.handle_width
 
         # Determine if mouse is hovering (simplistic: use underMouse)
         is_hover = self.underMouse()
@@ -78,7 +78,7 @@ class StyledSplitter(QSplitter):
         super().__init__(orientation, parent)
         self._cfg = gui_config
         self.setHandleWidth(
-            gui_config.splitter_handle_width + 10
+            gui_config.splitter.handle_width + 10
         )  # enough for grip dots
         self.setStyleSheet("QSplitter::handle { background: transparent; }")
 

@@ -1,278 +1,308 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Tuple
 
-from .palette import GuiPalette
-from .presets import DARK
+
+@dataclass
+class GuiPalette:
+    """Semantic colors, fonts, and shared spacing tokens for the entire GUI.
+
+    Every color used by a style sheet **must** be a palette field.
+    This allows themes to be swapped by simply providing a different
+    :class:`GuiPalette` instance, with no other configuration changes.
+    """
+
+    # ── Backgrounds ──────────────────────────────────────────────
+    bg_deep: str = "#121212"  # main background behind the window grid
+    bg_panel: str = "#161616"  # sidebars, footer area
+    bg_surface: str = "#1e1e1e"  # tiles, tab backgrounds, disabled elements
+    bg_surface_hover: str = "#2c2c2c"  # hovered tiles, active tab, list items
+    bg_input: str = "#2a2a2c"  # combo boxes, line edits
+    bg_input_disabled: str = "#1e1e1e"
+    bg_filter: str = "#2a2a2a"  # filter bar normal background
+    bg_filter_hover: str = "#353535"  # filter bar hover background
+    bg_preview: str = "#2d2d2d"  # icon previews, etc.
+    bg_icon_tab_bar: str = "#1a1a1a"  # the icon‑only tab bar on the right
+    bg_button_pressed: str = "#222"  # dialog buttons when pressed
+
+    # ── Borders & separators ─────────────────────────────────────
+    border_subtle: str = "#444"  # subtle borders (tabs, panels)
+    border_focus: str = "#4a9eff"  # focus ring on inputs
+    border_hover: str = "#555555"  # hover border on controls
+    border_red: str = "#914343"  # red border (reset button, errors)
+    border_red_hover: str = "#b55a5a"
+    border_red_dim: str = "#6b2e2e"
+    border_profile_sep: str = "#333"  # separators in the profile sidebar
+    border_icon_preview: str = "#444"  # border around icon previews
+
+    # ── Tile overlay (gradient stops) ────────────────────────────
+    tile_overlay_start: str = "#00000000"
+    tile_overlay_mid: str = "#88000000"
+    tile_overlay_end: str = "#dd000000"
+    tile_title_bg: str = "#99000000"  # background behind the tile title
+    tile_title_text: str = "#ffffff"  # color of the tile title text
+
+    # ── Text ─────────────────────────────────────────────────────
+    text_primary: str = "#ffffff"  # main text on dark backgrounds
+    text_secondary: str = "#cccccc"  # secondary labels
+    text_dim: str = "#888888"  # dimmed hints, placeholder
+    text_disabled: str = "#555"  # disabled control text
+    text_placeholder: str = "#666"  # placeholder in filter bar
+    text_filter: str = "#eee"  # text inside the filter bar
+
+    # ── Accent colors ───────────────────────────────────────────
+    accent_blue: str = "#4a9eff"  # primary accent: focus, selections, sliders
+    accent_blue_light: str = "#6aade5"  # lighter version for hover states
+    accent_blue_bg: str = "#1a2b3c"  # highlighted row background
+    accent_cyan: str = "#2b5b84"  # tile hover border, filter focus
+    accent_icon: str = "#7A9EB1"  # color of monochrome SVG icons
+
+    # ── Slider, scrollbar, etc. ──────────────────────────────────
+    slider_groove: str = "#333"
+    slider_groove_disabled: str = "#222"
+    scrollbar_handle: str = "#3a3a3c"
+    scrollbar_handle_hover: str = "#4a4a4c"
+    separator_color: str = "#333"  # horizontal rule color
+    splitter_handle: str = "#2c2c2c"
+    splitter_handle_hover: str = "#2c2c2c"
+
+    # ── Fonts ────────────────────────────────────────────────────
+    font_family: str = "Segoe UI"  # default UI font
+    font_size_sm: int = 12  # tile titles, small labels
+    font_size_mid: int = 16  # dialog info, etc.
+    font_size_base: int = 18  # default UI text size
+    font_size_lg: int = 24  # filter bar, section titles
+
+    # ── Spacing & radii (shared by many widgets) ─────────────────
+    radius_sm: int = 4
+    radius_md: int = 6
+    radius_lg: int = 8
+    radius_xl: int = 12
+    spacing_sm: int = 4
+    spacing_md: int = 8
+    spacing_lg: int = 12
+
+    # ── Shadows (currently unused, kept for completeness) ────────
+    shadow_color: Tuple[int, int, int, int] = (0, 0, 0, 120)
+
+
+# ---------------------------------------------------------------------------
+#  Layout groups – each a frozen dataclass for one UI piece
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class TileLayout:
+    """Geometry, animation, shadow, and title style for window tiles."""
+
+    width: int = 340  # tile width in pixels
+    height: int = 260  # tile height in pixels
+    radius: int = 12  # corner radius
+    aspect_ratio: float = 4 / 3  # used for placeholder calculations
+    spacing: int = 12  # space between tiles
+    spacing_ratio: float = 0.075  # spacing as fraction of tile width (alternative)
+    margin: int = 20  # grid margin from window edges
+    columns: int = 3  # number of columns in the grid
+    min_columns: int = 1  # minimum columns when window is narrow
+    scroll_margin: int = 20  # margin that triggers scroll during drag
+    pop_scale: float = 1.05  # scale factor on hover
+    pop_duration: int = 200  # animation duration in ms
+
+    # ── Selection & hover borders ────────────────────────────
+    selection_border_width: int = 3
+    hover_border_width: int = 2
+
+    # ── Drop shadow ─────────────────────────────────────────
+    shadow_blur_radius: int = 20
+    shadow_offset: Tuple[int, int] = (0, 4)
+    shadow_hover_blur_radius: int = 30
+
+    # ── Title label ─────────────────────────────────────────
+    title_font_size: int = 12  # Font size used by default
+    title_font_bold: bool = True  # whether the title is bold
+
+
+@dataclass(frozen=True)
+class FilterLayout:
+    """Sizes and spacing of the filter bar."""
+
+    height: int = 80
+    font_size: int = 16  # filter input font size
+    padding_h: int = 16  # horizontal padding inside the filter field
+    padding_v: int = 16  # vertical padding
+    border_radius: int = 12
+    icon_size: int = 24  # search / filter icon size
+    icon_gap: int = -8  # space between icon and text (negative = overlap)
+    horizontal_margin: int = 18  # margin left/right of the filter bar
+    vertical_margin: int = 6  # margin above/below the filter bar@dataclass(frozen=True)
+
+
+@dataclass(frozen=True)
+class SidebarLayout:
+    """Common dimensions for left and right sidebars."""
+
+    width: int = 400  # default sidebar width
+    tab_font_size: int = 18  # font size for tab labels and row labels
+    tab_icon_size: int = 20  # icon size inside tabs
+    tab_indicator_width: int = 3  # thickness of the active tab indicator
+    section_title_size: int = 18  # font size of section headings ("Overlay", ...)
+    row_height: int = 32  # minimum height of a settings row
+    icon_columns: int = 7  # columns in the icon picker grid
+    icon_size: int = 28  # icon size inside the icon picker
+    row_spacing: int = 6  # spacing between consecutive rows
+
+
+@dataclass(frozen=True)
+class CheckBoxLayout:
+    """Dimensions for checkboxes in settings rows."""
+
+    indicator_size: int = 18
+    indicator_radius: int = 4
+    spacing: int = 8  # space between checkbox box and its label
+    padding_v: int = 4  # vertical padding around the checkbox row
+
+
+@dataclass(frozen=True)
+class ComboBoxLayout:
+    """Dimensions for combo boxes."""
+
+    padding_h: int = 8
+    padding_v: int = 4
+    border_radius: int = 6
+    dropdown_width: int = 20  # width of the drop‑down arrow area (hidden via CSS)
+
+
+@dataclass(frozen=True)
+class SliderLayout:
+    """Dimensions for sliders."""
+
+    value_edit_width: int = 72  # width of the spinbox next to the slider
+
+
+@dataclass(frozen=True)
+class EditFieldLayout:
+    """Dimensions for editable text fields."""
+
+    border_radius: int = 6
+    padding_h: int = 8
+    padding_v: int = 4
+
+
+@dataclass(frozen=True)
+class ColorSwatchLayout:
+    """Dimensions for the color swatch button."""
+
+    swatch_width: int = 36
+    swatch_height: int = 24
+    browse_button_width: int = 32  # width of the "browse" button next to a path field
+
+
+@dataclass(frozen=True)
+class SplitterLayout:
+    """Splitter handle width (colors live in the palette)."""
+
+    handle_width: int = 3
+
+
+@dataclass(frozen=True)
+class FooterLayout:
+    """Dimensions of the Save / Reset buttons at the bottom of the settings sidebar."""
+
+    button_height: int = 42
+    button_padding_h: int = 18
+    button_padding_v: int = 6
+    button_radius: int = 8
+
+
+@dataclass(frozen=True)
+class ProfileLayout:
+    """Appearance of the profile list in the left sidebar."""
+
+    title_font_size: int = 18
+    title_font_weight: str = "bold"
+    title_left_padding: int = 2
+    item_height: int = 40
+    item_icon_size: int = 32
+    item_border_radius: int = 6
+    item_spacing: int = 4
+    toolbar_button_size: int = 36
+    toolbar_button_icon_size: int = 24
+    toolbar_button_border_radius: int = 8
+    capture_icon_size: int = 128
+    indicator_width: int = 3
+
+
+@dataclass(frozen=True)
+class DialogLayout:
+    """Sizes and padding strings for dialogs."""
+
+    combo_min_width: int = 120
+    label_font_size: int = 18
+    match_label_font_size: int = 18
+    icon_button_size: int = 32
+    icon_button_icon_size: int = 24
+    button_border_radius: int = 8
+    input_padding: str = "4px 8px"
+    button_padding: str = "4px 12px"
+    list_item_padding: str = "4px 8px"
+    list_item_border_radius: int = 4
+    input_border_radius: int = 4  # for QLineEdit / QComboBox in dialogs
+    groupbox_border_radius: int = 6  # for QGroupBox
+    list_border_radius: int = 6  # for QListWidget
+
+
+# ---------------------------------------------------------------------------
+#  GUIConfig – the top-level configuration
+# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class GUIConfig:
+    """Central GUI configuration.
+
+    All layout constants are grouped into frozen sub‑configurations.
+    colors, fonts, and shared spacing live exclusively in :attr:`palette`.
+
+    Attributes:
+        palette: The active theme (semantic color tokens).
+        tile: Tile geometry, shadows, title style.
+        filter: Filter bar dimensions.
+        sidebar: Sidebar common layout.
+        checkbox: Checkbox indicator dimensions.
+        combo: Combo box padding and radius.
+        slider: Slider‑related numbers.
+        edit_field: Text field dimensions.
+        swatch: Color swatch button sizes.
+        splitter: Splitter handle width.
+        footer: Footer button sizes.
+        profile: Profile sidebar item sizes.
+        dialog: Dialog dimensions and padding strings.
+        auto_refresh_ms: Window list refresh interval (ms).
+        tile_preview_interval_ms: Tile thumbnail update interval (ms).
+        empty_text: Placeholder text when no windows match the filter.
+        empty_text_size: Font size for the empty‑grid placeholder.
+        highlight_background_enabled: Whether highlighted rows get a background color.
     """
-    Centralised GUI style and layout constants.
-    All visual parameters live here; colors and fonts are delegated to
-    :class:`GuiPalette` to make theme editing trivial.
-    """
 
-    # ── Theme token bag ────────────────────────────────────────
-    palette: GuiPalette = DARK
+    palette: GuiPalette = field(default_factory=lambda: GuiPalette())
 
-    # ── Tile geometry ──────────────────────────────────────────
-    tile_width: int = 340
-    tile_height: int = 260
-    tile_radius: int = 12
-    tile_aspect_ratio: float = 4 / 3
-    tile_spacing: int = 12
-    tile_spacing_ratio: float = 0.075
-    grid_margin: int = 20
-    grid_columns: int = 3
-    pop_scale: float = 1.05
-    pop_duration: int = 200
+    tile: TileLayout = field(default_factory=TileLayout)
+    filter: FilterLayout = field(default_factory=FilterLayout)
+    sidebar: SidebarLayout = field(default_factory=SidebarLayout)
+    checkbox: CheckBoxLayout = field(default_factory=CheckBoxLayout)
+    combo: ComboBoxLayout = field(default_factory=ComboBoxLayout)
+    slider: SliderLayout = field(default_factory=SliderLayout)
+    edit_field: EditFieldLayout = field(default_factory=EditFieldLayout)
+    swatch: ColorSwatchLayout = field(default_factory=ColorSwatchLayout)
+    splitter: SplitterLayout = field(default_factory=SplitterLayout)
+    footer: FooterLayout = field(default_factory=FooterLayout)
+    profile: ProfileLayout = field(default_factory=ProfileLayout)
+    dialog: DialogLayout = field(default_factory=DialogLayout)
 
-    # ── Tile-specific colors (delegated to palette) ────────────
-    tile_background: str = palette.bg_surface
-    tile_hover_border: str = palette.accent_cyan
-    tile_selected_border: str = palette.accent_blue
-    tile_overlay_start: str = palette.tile_overlay_start
-    tile_overlay_mid: str = palette.tile_overlay_mid
-    tile_overlay_end: str = palette.tile_overlay_end
-    tile_title_bg: str = palette.tile_title_bg
-    tile_title_text: str = palette.tile_title_text
-
-    # ── Drop shadow ────────────────────────────────────────────
-    shadow_blur_radius: int = 20
-    shadow_offset: Tuple[int, int] = (0, 4)
-    shadow_hover_color: Tuple[int, int, int, int] = (0, 0, 0, 180)
-    shadow_hover_blur_radius: int = 30
-
-    # ── Title font ─────────────────────────────────────────────
-    title_font_family: str = palette.font_family
-    title_font_size: int = palette.font_size_sm
-    title_font_bold: bool = True
-    title_text_color: str = palette.text_primary
-
-    # ── Filter bar ─────────────────────────────────────────────
-    filter_background = palette.bg_filter
-    filter_hover_background = palette.bg_filter_hover
-    filter_border_color = palette.border_subtle
-    filter_border_focus_color = palette.accent_cyan
-    filter_text_color = palette.text_filter
-    filter_placeholder_color: str = palette.text_placeholder
-    filter_icon_color: str = palette.accent_icon
-    filter_font_size: int = 16
-    filter_padding_h: int = 16
-    filter_padding_v: int = 16
-    filter_border_radius: int = 12
-    filter_height: int = 80
-    filter_icon_size: int = 24
-    filter_icon_gap: int = -8
-    filter_horizontal_margin: int = 18
-    filter_vertical_margin: int = 6
-
-    # ── Selection / focus ──────────────────────────────────────
-    selection_border_width: int = 3
-    hover_border_width: int = 2
-
-    # ── Empty-grid placeholder ─────────────────────────────────
-    empty_text: str = "No windows found"
-    empty_text_color: str = palette.text_placeholder
-    empty_text_size: int = 18
-
-    # ── Timing ─────────────────────────────────────────────────
     auto_refresh_ms: int = 2000
     tile_preview_interval_ms: int = 60
-    min_columns: int = 1
-    scroll_margin: int = 20
 
-    # ── Sidebar common ─────────────────────────────────────────
-    sidebar_width: int = 400
-    sidebar_background: str = palette.bg_panel
-    sidebar_tab_background: str = palette.bg_surface
-    sidebar_tab_background_active: str = palette.bg_surface_hover
-    sidebar_tab_text_color: str = palette.text_secondary
-    sidebar_tab_text_color_active: str = palette.text_primary
-    sidebar_tab_font_size: int = 18
-    sidebar_tab_icon_size: int = 20
-    sidebar_tab_indicator_color: str = palette.accent_blue
-    sidebar_tab_indicator_width: int = 3
-    sidebar_section_title_color: str = palette.text_dim
-    sidebar_section_title_size: int = 18
-    sidebar_row_height: int = 32
-    sidebar_checkbox_color: str = palette.accent_blue
-    sidebar_slider_color: str = palette.accent_blue
-    sidebar_combo_border_color: str = palette.border_subtle
-    sidebar_combo_border_focus: str = palette.accent_blue
-    sidebar_icon_columns: int = 7
-    sidebar_icon_size: int = 28
-    sidebar_row_spacing: int = 6
-
-    # ── Scrollbar ──────────────────────────────────────────────
-    scrollbar_handle_color: str = palette.scrollbar_handle
-    scrollbar_handle_hover_color: str = palette.scrollbar_handle_hover
-
-    # ── Preview widget ─────────────────────────────────────────
-    preview_background: str = palette.bg_preview
-
-    # ── Profile dialog icon border ─────────────────────────────
-    icon_preview_border_color: str = palette.border_icon_preview
-
-    # ── Controls: disabled state ───────────────────────────────
-    control_disabled_text: str = palette.text_disabled
-    control_disabled_bg: str = palette.bg_surface
-    control_disabled_border: str = palette.border_subtle
-
-    # ── CheckBox ───────────────────────────────────────────────
-    checkbox_indicator_size: int = 18
-    checkbox_indicator_radius: int = 4
-    checkbox_spacing: int = 8
-    checkbox_padding_v: int = 4
-    checkbox_disabled_color: str = palette.text_disabled
-
-    # ── ComboBox ───────────────────────────────────────────────
-    combo_background: str = palette.bg_input
-    combo_background_disabled: str = palette.bg_input_disabled
-    combo_text_color: str = palette.text_secondary
-    combo_text_color_disabled: str = palette.text_disabled
-    combo_border_color: str = palette.border_subtle
-    combo_border_color_disabled: str = palette.border_subtle
-    combo_border_hover_color: str = palette.border_hover
-    combo_border_focus_color: str = palette.accent_blue
-    combo_padding_h: int = 8
-    combo_padding_v: int = 4
-    combo_border_radius: int = 6
-    combo_dropdown_width: int = 20
-    combo_popup_background: str = palette.bg_input
-    combo_popup_selection_background: str = palette.accent_blue
-    combo_popup_text_color: str = palette.text_secondary
-
-    # ── Slider ─────────────────────────────────────────────────
-    slider_groove_bg: str = palette.slider_groove
-    slider_groove_bg_disabled: str = palette.slider_groove_disabled
-    slider_handle_color: str = palette.accent_blue
-    slider_handle_color_disabled: str = palette.text_disabled
-    slider_handle_hover_color: str = palette.accent_blue_light
-    slider_handle_hover_color_disabled: str = palette.text_disabled
-    slider_sub_page_color_disabled: str = palette.border_subtle
-    slider_value_edit_width: int = 72
-
-    # ── Editable text fields ───────────────────────────────────
-    edit_background: str = palette.bg_input
-    edit_background_disabled: str = palette.bg_input_disabled
-    edit_text_color: str = palette.text_secondary
-    edit_text_color_disabled: str = palette.text_disabled
-    edit_border_radius: int = 6
-    edit_padding_h: int = 8
-    edit_padding_v: int = 4
-    edit_border_color: str = palette.border_subtle
-    edit_border_focus_color: str = palette.accent_blue
-    edit_border_hover_color: str = palette.border_hover
-    edit_selection_background: str = palette.accent_blue
-
-    # ── Color swatch button ────────────────────────────────────
-    color_swatch_width: int = 36
-    color_swatch_height: int = 24
-    color_swatch_border: str = palette.border_hover
-    color_swatch_disabled_bg: str = palette.text_disabled
-    path_browse_button_width: int = 32
-
-    # ── Splitter handle ────────────────────────────────────────
-    splitter_handle_width: int = 3
-    splitter_handle_color: str = palette.bg_surface_hover
-    splitter_handle_hover_color: str = palette.bg_surface_hover
-
-    # ── Visual hints (highlight indicators) ────────────────────
+    empty_text: str = "No windows found"
+    empty_text_size: int = 18
     highlight_border_width: int = 4
-    highlight_border_color: str = palette.accent_blue
-    highlight_label_color: str = palette.accent_blue
-    background_color: str = palette.bg_deep
-    separator_line_color: str = palette.separator_color
-    dialog_button_hover_border_color: str = palette.border_hover
-    highlight_background_color: str = palette.accent_blue_bg
-    dialog_button_pressed_background: str = palette.bg_button_pressed
-    highlight_background_enabled: bool = True
     highlight_indicator_gap: int = 8
-
-    # ── Footer buttons ─────────────────────────────────────────
-    footer_button_height: int = 42
-    footer_button_padding_h: int = 18
-    footer_button_padding_v: int = 6
-    footer_button_radius: int = 8
-    footer_save_bg: str = palette.bg_surface
-    footer_save_text: str = palette.text_primary
-    footer_save_border: str = palette.accent_blue
-    footer_save_hover_bg: str = palette.bg_surface_hover
-    footer_save_hover_border: str = palette.accent_blue
-    footer_save_disabled_bg: str = palette.bg_surface
-    footer_save_disabled_text: str = palette.text_disabled
-    footer_save_disabled_border: str = palette.border_subtle
-    footer_reset_bg: str = palette.bg_surface
-    footer_reset_text: str = palette.text_secondary
-    footer_reset_border: str = palette.border_red
-    footer_reset_hover_bg: str = palette.bg_surface_hover
-    footer_reset_hover_border: str = palette.border_red_hover
-    footer_reset_disabled_bg: str = palette.bg_surface
-    footer_reset_disabled_text: str = palette.text_disabled
-    footer_reset_disabled_border: str = palette.border_subtle
-    footer_reset_split_border: str = palette.border_red
-    footer_menu_bg: str = palette.bg_input
-    footer_menu_border: str = palette.border_subtle
-    footer_menu_text: str = palette.text_secondary
-    footer_menu_selection_bg: str = palette.accent_blue
-    footer_menu_selection_text: str = palette.text_primary
-
-    # ── Profile sidebar ────────────────────────────────────────
-    profile_title_font_size: int = sidebar_section_title_size
-    profile_title_font_weight: str = "bold"
-    profile_title_color: str = palette.text_dim
-    profile_title_left_padding: int = 2
-    profile_item_height: int = 40
-    profile_item_icon_size: int = 32
-    profile_item_text_color: str = palette.text_secondary
-    profile_item_text_color_active: str = palette.text_primary
-    profile_item_background: str = "transparent"
-    profile_item_background_hover: str = palette.bg_surface_hover
-    profile_item_background_active: str = palette.bg_surface_hover
-    profile_item_border_radius: int = 6
-    profile_item_spacing: int = 4
-    profile_toolbar_button_size: int = 36
-    profile_toolbar_button_icon_size: int = 24
-    profile_toolbar_button_background_hover: str = palette.bg_surface_hover
-    profile_toolbar_button_border_radius: int = 8
-    profile_capture_icon_size: int = 128
-    profile_toolbar_separator: str = palette.border_profile_sep
-    profile_item_indicator_color: str = palette.accent_blue
-    profile_item_indicator_width: int = 3
-
-    # ── Icon tab bar (right sidebar) ───────────────────────────
-    icon_tab_bar_background: str = palette.bg_icon_tab_bar
-
-    # ── Dialog style constants ─────────────────────────────────
-    dialog_background: str = palette.bg_surface
-    dialog_text_color: str = palette.text_secondary
-    dialog_label_color: str = palette.text_secondary
-    dialog_label_font_size: int = palette.font_size_base
-    dialog_input_background: str = palette.bg_input
-    dialog_input_border: str = palette.border_subtle
-    dialog_input_focus_border: str = palette.accent_blue
-    dialog_input_border_radius: int = 4
-    dialog_input_padding: str = "4px 8px"
-    dialog_combo_min_width: int = 120
-    dialog_button_background: str = palette.bg_surface_hover
-    dialog_button_hover_background: str = palette.bg_input
-    dialog_button_border: str = palette.border_subtle
-    dialog_button_border_radius: int = palette.radius_sm
-    dialog_button_padding: str = "4px 12px"
-    dialog_button_disabled_color: str = palette.text_disabled
-    dialog_groupbox_title_color: str = palette.text_dim
-    dialog_groupbox_border: str = palette.border_profile_sep
-    dialog_groupbox_border_radius: int = 6
-    dialog_list_background: str = palette.bg_surface
-    dialog_list_border: str = palette.border_profile_sep
-    dialog_list_border_radius: int = 6
-    dialog_list_item_padding: str = "4px 8px"
-    dialog_list_item_border_radius: int = 4
-    dialog_list_item_hover_background: str = palette.bg_surface_hover
-    dialog_list_item_selected_background: str = palette.bg_input
-    icon_color: str = palette.accent_icon
-    dialog_match_label_font_size: int = 18
-    dialog_icon_button_size: int = 32
-    dialog_icon_button_icon_size: int = 24
+    highlight_background_enabled: bool = True

@@ -55,8 +55,8 @@ class WindowPickerDialog(QDialog):
         self._list = QListWidget()
         self._list.setIconSize(
             QSize(
-                gui_config.profile_item_icon_size,
-                gui_config.profile_item_icon_size,
+                gui_config.profile.item_icon_size,
+                gui_config.profile.item_icon_size,
             )
         )
         self._list.itemDoubleClicked.connect(self._accept)
@@ -73,9 +73,9 @@ class WindowPickerDialog(QDialog):
         # Pre-load the fallback icon (generic window)
         pix = load_pixmap(
             "tabs/window",
-            gui_config.profile_item_icon_size,
-            gui_config.profile_item_icon_size,
-            color=self._cfg.icon_color,
+            gui_config.profile.item_icon_size,
+            gui_config.profile.item_icon_size,
+            color=self._cfg.palette.accent_icon,
         )
         self._fallback_icon = QIcon(pix)
 
@@ -111,23 +111,23 @@ class WindowPickerDialog(QDialog):
             # Try to fetch window icon; use fallback if not available
             try:
                 img = get_window_icon(
-                    win.handle, size=self._cfg.profile_capture_icon_size
+                    win.handle, size=self._cfg.profile.capture_icon_size
                 )
                 if img and not img.isNull():
                     pix = QPixmap.fromImage(img)
                 else:
                     pix = load_pixmap(
                         "tabs/window",
-                        self._cfg.profile_item_icon_size,
-                        self._cfg.profile_item_icon_size,
-                        color=self._cfg.icon_color,
+                        self._cfg.profile.item_icon_size,
+                        self._cfg.profile.item_icon_size,
+                        color=self._cfg.palette.accent_icon,
                     )
             except Exception:
                 pix = load_pixmap(
                     "tabs/window",
-                    self._cfg.profile_item_icon_size,
-                    self._cfg.profile_item_icon_size,
-                    color=self._cfg.icon_color,
+                    self._cfg.profile.item_icon_size,
+                    self._cfg.profile.item_icon_size,
+                    color=self._cfg.palette.accent_icon,
                 )
 
             item.setIcon(QIcon(pix))

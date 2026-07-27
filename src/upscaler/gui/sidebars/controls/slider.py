@@ -43,7 +43,7 @@ class SliderRow(BaseRow):
         self._slider = QSlider(Qt.Horizontal)
         self._slider.setRange(min_val, max_val)
         self._slider.setValue(value)
-        self._slider.setFixedHeight(gui_config.sidebar_row_height)
+        self._slider.setFixedHeight(gui_config.sidebar.row_height)
         self._slider.setCursor(Qt.PointingHandCursor)
         self._slider.valueChanged.connect(self._on_value_changed)
         self._content_layout.addWidget(self._slider, stretch=1)
@@ -60,14 +60,14 @@ class SliderRow(BaseRow):
                 # Show real value initially
                 initial_text = self._format(value)
                 self._value_edit = QLineEdit(initial_text)
-                self._value_edit.setFixedWidth(self._cfg.slider_value_edit_width)
-                self._value_edit.setFixedHeight(gui_config.sidebar_row_height)
+                self._value_edit.setFixedWidth(self._cfg.slider.value_edit_width)
+                self._value_edit.setFixedHeight(gui_config.sidebar.row_height)
                 self._value_edit.setAlignment(Qt.AlignCenter)
                 self._value_edit.editingFinished.connect(self._on_edit_finished)
                 self._content_layout.addWidget(self._value_edit)
             else:
                 self._value_label = QLabel(self._format(value))
-                self._value_label.setFixedHeight(gui_config.sidebar_row_height)
+                self._value_label.setFixedHeight(gui_config.sidebar.row_height)
                 self._content_layout.addWidget(self._value_label)
 
         self._apply_slider_style()

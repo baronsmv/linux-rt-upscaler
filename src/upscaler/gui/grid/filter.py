@@ -23,8 +23,8 @@ class FilterBar(QWidget):
         self._cfg = gui_config
         cfg = gui_config
 
-        # Fixed height from config; no separate "height" field needed for the line edit
-        self.setFixedHeight(cfg.filter_height)
+        # Fixed height from config
+        self.setFixedHeight(cfg.filter.height)
         self.setAttribute(Qt.WA_Hover, True)
 
         # ----- Line edit (fills the whole widget minus margins) -----
@@ -34,12 +34,12 @@ class FilterBar(QWidget):
         self._line_edit.installEventFilter(self)
 
         # Search icon: fixed size
-        icon_size = cfg.filter_icon_size
-        icon_gap = cfg.filter_icon_gap
+        icon_size = cfg.filter.icon_size
+        icon_gap = cfg.filter.icon_gap
 
         # Outer horizontal margin (replaces grid_margin for the bar)
-        outer_h_margin = cfg.filter_horizontal_margin
-        inner_h_pad = cfg.filter_padding_h  # space from bar edge to icon
+        outer_h_margin = cfg.filter.horizontal_margin
+        inner_h_pad = cfg.filter.padding_h  # space from bar edge to icon
         text_left_pad = outer_h_margin + inner_h_pad + icon_size + icon_gap
         text_right_pad = outer_h_margin + inner_h_pad + icon_size + icon_gap
         self._line_edit.setTextMargins(text_left_pad, 0, text_right_pad, 0)
@@ -49,7 +49,10 @@ class FilterBar(QWidget):
         self._search_icon.setFixedSize(icon_size, icon_size)
         self._search_icon.setPixmap(
             load_pixmap(
-                "actions/search", icon_size, icon_size, color=self._cfg.icon_color
+                "actions/search",
+                icon_size,
+                icon_size,
+                color=self._cfg.palette.accent_icon,
             )
         )
 
@@ -57,7 +60,12 @@ class FilterBar(QWidget):
         self._clear_button = QPushButton(self)
         self._clear_button.setFixedSize(icon_size, icon_size)
         self._clear_button.setIcon(
-            load_icon("actions/clear", icon_size, icon_size, color=self._cfg.icon_color)
+            load_icon(
+                "actions/clear",
+                icon_size,
+                icon_size,
+                color=self._cfg.palette.accent_icon,
+            )
         )
         self._clear_button.setFlat(True)
         self._clear_button.setCursor(Qt.PointingHandCursor)
@@ -80,10 +88,10 @@ class FilterBar(QWidget):
     def _position_elements(self) -> None:
         """Place the line edit and icons according to config margins/padding."""
         cfg = self._cfg
-        outer_margin = cfg.filter_horizontal_margin
-        inner_h_pad = cfg.filter_padding_h
-        vertical_pad = cfg.filter_padding_v
-        icon_size = cfg.filter_icon_size
+        outer_margin = cfg.filter.horizontal_margin
+        inner_h_pad = cfg.filter.padding_h
+        vertical_pad = cfg.filter.padding_v
+        icon_size = cfg.filter.icon_size
 
         # Line edit fills the bar, inset by margins
         lx = outer_margin
@@ -128,7 +136,7 @@ class FilterBar(QWidget):
         )
         pal = self._line_edit.palette()
         pal.setColor(
-            QPalette.PlaceholderText, QColor(self._cfg.filter_placeholder_color)
+            QPalette.PlaceholderText, QColor(self._cfg.palette.text_placeholder)
         )
         self._line_edit.setPalette(pal)
 

@@ -107,7 +107,9 @@ class ProfileDialog(QDialog):
 
         if not existing_icon_loaded:
             self._icon_preview.setPixmap(
-                load_pixmap("actions/profile", 32, 32, color=self._cfg.icon_color)
+                load_pixmap(
+                    "actions/profile", 32, 32, color=self._cfg.palette.accent_icon
+                )
             )
 
         icon_col.addWidget(self._icon_preview)
@@ -120,7 +122,7 @@ class ProfileDialog(QDialog):
 
         capture_win_btn = QPushButton("  Capture window")
         capture_win_btn.setIcon(
-            load_icon("actions/capture", 20, 20, color=self._cfg.icon_color)
+            load_icon("actions/capture", 20, 20, color=self._cfg.palette.accent_icon)
         )
         capture_win_btn.setToolTip("Fill name, icon, and match rules from a window")
         capture_win_btn.clicked.connect(self._capture_full)
@@ -128,8 +130,8 @@ class ProfileDialog(QDialog):
 
         actions_row.addStretch()
 
-        btn_size = gui_config.dialog_icon_button_size
-        ico_size = gui_config.dialog_icon_button_icon_size
+        btn_size = gui_config.dialog.icon_button_size
+        ico_size = gui_config.dialog.icon_button_icon_size
 
         self._capture_icon_btn = self._make_icon_button(
             "actions/camera",
@@ -244,7 +246,9 @@ class ProfileDialog(QDialog):
     ) -> QToolButton:
         btn = QToolButton()
         btn.setIcon(
-            load_icon(icon_name, icon_size, icon_size, color=self._cfg.icon_color)
+            load_icon(
+                icon_name, icon_size, icon_size, color=self._cfg.palette.accent_icon
+            )
         )
         btn.setToolTip(tooltip)
         btn.setFixedSize(size, size)
@@ -280,7 +284,7 @@ class ProfileDialog(QDialog):
 
     def _apply_icon_from_window(self, win_info):
         icon_img = get_window_icon(
-            win_info.handle, size=self._cfg.profile_capture_icon_size
+            win_info.handle, size=self._cfg.profile.capture_icon_size
         )
         if icon_img:
             self._captured_icon = icon_img
@@ -326,7 +330,7 @@ class ProfileDialog(QDialog):
         self._captured_icon = None
         self._icon_removed = True
         self._icon_preview.setPixmap(
-            load_pixmap("actions/profile", 32, 32, color=self._cfg.icon_color)
+            load_pixmap("actions/profile", 32, 32, color=self._cfg.palette.accent_icon)
         )
 
     def get_captured_icon(self) -> Optional[QImage]:

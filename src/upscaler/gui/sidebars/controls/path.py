@@ -46,7 +46,7 @@ class PathPickerRow(BaseRow):
 
         # Path field
         self._edit = QLineEdit(initial_path)
-        self._edit.setFixedHeight(self._cfg.sidebar_row_height)
+        self._edit.setFixedHeight(self._cfg.sidebar.row_height)
         self._edit.setReadOnly(True)
         self._edit.setPlaceholderText(f"Select directory{chr(8230)}")
         self._edit.textChanged.connect(self._on_text_changed)
@@ -55,7 +55,7 @@ class PathPickerRow(BaseRow):
         # Browse button
         self._browse_btn = QPushButton(chr(8230))
         self._browse_btn.setFixedSize(
-            self._cfg.path_browse_button_width, self._cfg.sidebar_row_height
+            self._cfg.swatch.browse_button_width, self._cfg.sidebar.row_height
         )
         self._browse_btn.setToolTip("Browse for directory")
         self._browse_btn.setCursor(Qt.PointingHandCursor)

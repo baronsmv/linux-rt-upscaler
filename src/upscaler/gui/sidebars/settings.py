@@ -165,7 +165,7 @@ class SettingsSidebar(IconSidebarBase):
         # ---- Save button ----
         self._save_btn = QPushButton("Save Profile" if self._profile_active else "Save")
         self._save_btn.setCursor(Qt.PointingHandCursor)
-        self._save_btn.setFixedHeight(cfg.footer_button_height)
+        self._save_btn.setFixedHeight(cfg.footer.button_height)
         self._save_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._save_btn.clicked.connect(self.save_settings.emit)
         self._save_btn.setStyleSheet(footer_save_button_style(cfg))
@@ -177,7 +177,7 @@ class SettingsSidebar(IconSidebarBase):
         self._reset_btn.setToolButtonStyle(Qt.ToolButtonTextOnly)
         self._reset_btn.setPopupMode(QToolButton.MenuButtonPopup)
         self._reset_btn.setCursor(Qt.PointingHandCursor)
-        self._reset_btn.setFixedHeight(cfg.footer_button_height)
+        self._reset_btn.setFixedHeight(cfg.footer.button_height)
         self._reset_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._reset_btn.clicked.connect(self.reset_settings.emit)
 

@@ -75,7 +75,7 @@ class ColorPickerRow(BaseRow):
 
         self._button = QPushButton()
         self._button.setFixedSize(
-            gui_config.color_swatch_width, gui_config.color_swatch_height
+            gui_config.swatch.swatch_width, gui_config.swatch.swatch_height
         )
         self._button.setCursor(Qt.PointingHandCursor)
         self._button.clicked.connect(self._pick_color)

@@ -35,7 +35,7 @@ class LineEditRow(BaseRow):
 
         # Line edit
         self._edit = QLineEdit(text)
-        self._edit.setFixedHeight(gui_config.sidebar_row_height)
+        self._edit.setFixedHeight(gui_config.sidebar.row_height)
         self._edit.textChanged.connect(self._on_text_changed)
         self._content_layout.addWidget(self._edit, stretch=1)
 

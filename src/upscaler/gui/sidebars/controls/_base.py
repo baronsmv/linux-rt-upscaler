@@ -60,7 +60,7 @@ class BaseRow(QWidget):
         self._content_container = QWidget()
         self._content_layout = QHBoxLayout(self._content_container)
         self._content_layout.setContentsMargins(0, 0, 0, 0)
-        self._content_layout.setSpacing(cfg.sidebar_row_spacing)
+        self._content_layout.setSpacing(cfg.sidebar.row_spacing)
         main_layout.addWidget(self._content_container)
 
         # ---- Label (created by subclass via _init_label) ----
@@ -73,7 +73,7 @@ class BaseRow(QWidget):
         """Create a standard row label and add it to the content layout."""
         self._label = QLabel(text)
         self._label.setStyleSheet(row_label_style(self._cfg))
-        self._label.setFixedHeight(self._cfg.sidebar_row_height)
+        self._label.setFixedHeight(self._cfg.sidebar.row_height)
         self._label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         self._content_layout.addWidget(self._label)
         return self._label
@@ -108,11 +108,11 @@ class BaseRow(QWidget):
         if self._label is None:
             return
         if not self.isEnabled():
-            color = self._cfg.control_disabled_text
+            color = self._cfg.palette.text_disabled
         elif highlighted:
-            color = self._cfg.highlight_label_color
+            color = self._cfg.palette.accent_blue
         else:
-            color = self._cfg.sidebar_tab_text_color
+            color = self._cfg.palette.text_secondary
 
         self._label.setStyleSheet(
             base_row_label_highlight_style(self._cfg, color=color)
