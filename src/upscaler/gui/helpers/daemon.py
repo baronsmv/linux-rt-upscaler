@@ -7,6 +7,7 @@ from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
+from ...config import apply_overrides, parse_config
 from ...pipeline import create_pipeline_session
 from ...window import WindowInfo
 
@@ -75,6 +76,11 @@ class DaemonController:
         self._active = True
         logger.info("Daemon: Waiting for a matching window...")
 
+        # Build a clean base config for future daemon window matches
+        clean_base = copy.deepcopy(self._config_manager.global_baseline)
+        apply_overrides(clean_base, self._config_manager.cli_overrides)
+        parse_config(clean_base)
+
         eff = copy.deepcopy(self._config_manager.effective_config)
         eff.daemon = True
 
@@ -82,7 +88,7 @@ class DaemonController:
         self._session = create_pipeline_session(
             eff,
             dummy,
-            base_config=eff,
+            base_config=clean_base,
             profiles=self._config_manager.profiles,
             on_exit=self.shutdown,
         )

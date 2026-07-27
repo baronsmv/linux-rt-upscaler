@@ -61,7 +61,7 @@ class ConfigManager(QObject):
         """
         super().__init__(parent)
         self._config_path = config_path
-        self._cli_overrides: Dict[str, Any] = dict(cli_overrides or {})
+        self.cli_overrides: Dict[str, Any] = dict(cli_overrides or {})
 
         # ---- Load frozen data from disk -----------------------------------
         self._general_opts: Dict[str, Any] = {}
@@ -338,7 +338,7 @@ class ConfigManager(QObject):
     def _compute_effective(self) -> Config:
         """Build the runtime config: persistent + CLI overrides."""
         cfg = copy.deepcopy(self.persistent_config)
-        apply_overrides(cfg, self._cli_overrides)
+        apply_overrides(cfg, self.cli_overrides)
         parse_config(cfg)
         return cfg
 

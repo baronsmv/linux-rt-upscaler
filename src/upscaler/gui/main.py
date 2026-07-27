@@ -25,7 +25,7 @@ from .icons import load_icon
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .styles import about_button_style, tooltip_style
 from .widgets import StyledSplitter
-from ..config import find_matching_profile, parse_config
+from ..config import apply_overrides, find_matching_profile, parse_config
 from ..pipeline import create_pipeline_session
 from ..utils import system_color_scheme
 from ..window import activate_window
@@ -250,11 +250,16 @@ class MainWindow(QMainWindow):
         eff_cfg.daemon = False
         parse_config(eff_cfg)
 
+        # Build a clean base config for future follow-focus window matches
+        clean_base = copy.deepcopy(self._config_manager.global_baseline)
+        apply_overrides(clean_base, self._config_manager.cli_overrides)
+        parse_config(clean_base)
+
         try:
             self.manual_session = create_pipeline_session(
                 eff_cfg,
                 win_info,
-                base_config=copy.deepcopy(self._config_manager.persistent_config),
+                base_config=clean_base,
                 profiles=self._config_manager.profiles,
             )
             self.manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
@@ -311,7 +316,10 @@ class MainWindow(QMainWindow):
 
         # Update daemon base config so next match uses current GUI settings
         if self.daemon_ctrl.active:
-            self.daemon_ctrl.update_base_config(self._config_manager.effective_config)
+            merged_base = copy.deepcopy(self._config_manager.global_baseline)
+            apply_overrides(merged_base, self._config_manager.cli_overrides)
+            parse_config(merged_base)
+            self.daemon_ctrl.update_base_config(merged_base)
 
     # ------------------------------------------------------------------
     # Save / Reset / Restore
