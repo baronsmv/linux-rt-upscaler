@@ -331,7 +331,8 @@ class WindowTileItem(QGraphicsObject):
         # Title
         title = self._win_info.title
         font = QFont(
-            self._gui_config.font_family, self._gui_config.tile.title_font_size
+            self._gui_config.tile.title_font_family,
+            self._gui_config.tile.title_font_size,
         )
         font.setBold(self._gui_config.tile.title_font_bold)
         font.setHintingPreference(QFont.PreferFullHinting)

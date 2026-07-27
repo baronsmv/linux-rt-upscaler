@@ -47,7 +47,6 @@ LIGHT = GuiPalette(
     scrollbar_handle="#cccccc",
     scrollbar_handle_hover="#aaaaaa",
     separator_color="#cccccc",
-    shadow_color=(0, 0, 0, 40),
 )
 
 # ── Cyberpunk (neon contrast) ──────────────────────────────────────
@@ -87,7 +86,6 @@ CYBERPUNK = GuiPalette(
     scrollbar_handle="#3a3a5c",
     scrollbar_handle_hover="#5a5a7c",
     separator_color="#3a3a5c",
-    shadow_color=(0, 0, 0, 180),
 )
 
 # ── Solarized Dark (low-contrast, warm) ──────────────────────────────
@@ -127,7 +125,6 @@ SOLARIZED_DARK = GuiPalette(
     scrollbar_handle="#586e75",
     scrollbar_handle_hover="#93a1a1",
     separator_color="#586e75",
-    shadow_color=(0, 0, 0, 150),
 )
 
 # ── Solarized Light ──────────────────────────────────────────────────
@@ -172,7 +169,6 @@ SOLARIZED_LIGHT = GuiPalette(
     scrollbar_handle="#93a1a1",
     scrollbar_handle_hover="#586e75",
     separator_color="#93a1a1",
-    shadow_color=(0, 0, 0, 25),
 )
 
 # ── Nord (cool, arctic) ──────────────────────────────────────────
@@ -212,7 +208,6 @@ NORD = GuiPalette(
     scrollbar_handle="#4c566a",
     scrollbar_handle_hover="#81a1c1",
     separator_color="#4c566a",
-    shadow_color=(0, 0, 0, 150),
 )
 
 # ── Catppuccin Mocha (gentle pastel dark) ──────────────────────────
@@ -252,7 +247,6 @@ CATPUCCIN = GuiPalette(
     scrollbar_handle="#45475a",
     scrollbar_handle_hover="#585b70",
     separator_color="#45475a",
-    shadow_color=(0, 0, 0, 180),
 )
 
 # ── Monokai Pro (vibrant, classic) ──────────────────────────────────
@@ -292,7 +286,6 @@ MONOKAI = GuiPalette(
     scrollbar_handle="#727072",
     scrollbar_handle_hover="#939293",
     separator_color="#727072",
-    shadow_color=(0, 0, 0, 200),
 )
 
 # ── Registry ────────────────────────────────────────────────────────
