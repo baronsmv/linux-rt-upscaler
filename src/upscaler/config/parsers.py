@@ -136,6 +136,7 @@ def parse_interval(interval: Union[str, int, float]) -> Callable:
     Returns a function that checks if a number satisfies the interval string.
 
     Supported patterns:
+        "480"         ->  n == 400
         "<480"        ->  n < 480
         ">480"        ->  n > 480
         "<=480"       ->  n <= 480
