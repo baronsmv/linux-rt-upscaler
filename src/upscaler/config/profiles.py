@@ -65,14 +65,15 @@ def find_profile(profiles: Dict[str, Any], name: str) -> Optional[Dict[str, Any]
 
 def find_matching_profile(
     profiles: Dict[str, Any],
-    window_title: str,
-    window_class: Optional[str] = None,
+    window_info: WindowInfo,
 ) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
     """
     Find the first profile whose match criteria match the window.
     Currently uses only window_title. Later can use window_class.
     Match criteria are evaluated with OR logic: any match qualifies.
     """
+    window_title = window_info.title.lower()
+
     for profile_name, profile_data in profiles.items():
         match_criteria = profile_data.get("match", {})
         if not match_criteria:
@@ -80,8 +81,10 @@ def find_matching_profile(
 
         # Check each criterion; if any matches, return the profile
         for key, value in match_criteria.items():
+
+            # --- Title ---
             if key == "title":
-                if window_title.lower() == value.lower():
+                if window_title == value.lower():
                     return profile_name, profile_data
                 continue
             if key == "title_regex":
@@ -95,7 +98,7 @@ def find_matching_profile(
                     )
                 continue
             if key == "title_contains":
-                if value.lower() in window_title.lower():
+                if value.lower() in window_title:
                     return profile_name, profile_data
                 continue
             if key == "title_startswith":
@@ -107,7 +110,9 @@ def find_matching_profile(
                     return profile_name, profile_data
                 continue
 
-            # Future class-based matches (when window_class is available)
+            # --- Size ---
+
+            # --- Class (window_class currently not useful for most cases) ---
             """
             if window_class and key == "class":
                 if window_class.lower() == value.lower():
@@ -137,6 +142,7 @@ def find_matching_profile(
                 continue
             """
 
+            # --- Unknown match ---
             logger.debug(
                 f"Ignoring unknown match key '{key}' in profile '{profile_name}'"
             )
@@ -169,9 +175,7 @@ def apply_window_profile(
     bool
         ``True`` if a profile was applied, ``False`` otherwise.
     """
-    profile_name, profile_data = find_matching_profile(
-        profiles, win_info.title, window_class=None
-    )
+    profile_name, profile_data = find_matching_profile(profiles, win_info)
     if profile_data is None:
         return False
     apply_overrides(config, profile_data.get("options", {}))

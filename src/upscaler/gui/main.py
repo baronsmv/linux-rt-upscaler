@@ -215,9 +215,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _on_window_selected(self, win_info: WindowInfo) -> None:
         """Auto-apply a matching profile, then start a one-shot pipeline."""
-        profile_name, _ = find_matching_profile(
-            self._config_manager.profiles, win_info.title
-        )
+        profile_name, _ = find_matching_profile(self._config_manager.profiles, win_info)
         if profile_name and profile_name != self._config_manager.active_profile_name:
             if not self.profile_act.maybe_save_before_switch():
                 return

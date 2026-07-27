@@ -75,7 +75,7 @@ class DaemonMonitor(QObject):
                     for win in windows:
                         if not self._running:
                             break
-                        name, data = find_matching_profile(self._profiles, win.title)
+                        name, data = find_matching_profile(self._profiles, win)
                         if data is not None:
                             # Per-profile daemon exclusion (daemon_exclude=True)
                             if data.get("options", {}).get("daemon_exclude", False):

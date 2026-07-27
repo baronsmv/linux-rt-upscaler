@@ -305,9 +305,7 @@ class Pipeline(QObject):
             new_config = copy.deepcopy(self.base_config)
 
         # Try to match a profile
-        profile_name, profile_data = find_matching_profile(
-            self.profiles, win_info.title
-        )
+        profile_name, profile_data = find_matching_profile(self.profiles, win_info)
         if profile_data:
             apply_overrides(new_config, profile_data.get("options", {}))
             self.profile_name = profile_name
