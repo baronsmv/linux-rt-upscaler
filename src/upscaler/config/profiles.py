@@ -113,11 +113,21 @@ def find_matching_profile(
 
             # --- Size ---
             if key == "width":
-                if parse_interval(value)(window_info.width):
-                    return profile_name, profile_data
+                try:
+                    if parse_interval(value)(window_info.width):
+                        return profile_name, profile_data
+                except ValueError:
+                    logger.warning(
+                        f"Invalid width in profile '{profile_name}': {value}"
+                    )
             if key == "height":
-                if parse_interval(value)(window_info.height):
-                    return profile_name, profile_data
+                try:
+                    if parse_interval(value)(window_info.height):
+                        return profile_name, profile_data
+                except ValueError:
+                    logger.warning(
+                        f"Invalid height in profile '{profile_name}': {value}"
+                    )
 
             # --- Class (window_class currently not useful for most cases) ---
             """
