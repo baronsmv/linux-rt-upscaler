@@ -76,4 +76,6 @@ class ComboRow(BaseRow):
     #  Style helper
     # ------------------------------------------------------------------
     def _apply_style(self) -> None:
-        self._combo.setStyleSheet(combo_box_style(self._cfg, enabled=self.isEnabled()))
+        self._combo.setStyleSheet(
+            combo_box_style(self._gui_config, enabled=self.isEnabled())
+        )

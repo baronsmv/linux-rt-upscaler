@@ -60,7 +60,7 @@ class SliderRow(BaseRow):
                 # Show real value initially
                 initial_text = self._format(value)
                 self._value_edit = QLineEdit(initial_text)
-                self._value_edit.setFixedWidth(self._cfg.slider.value_edit_width)
+                self._value_edit.setFixedWidth(self._gui_config.slider.value_edit_width)
                 self._value_edit.setFixedHeight(gui_config.sidebar.row_height)
                 self._value_edit.setAlignment(Qt.AlignCenter)
                 self._value_edit.editingFinished.connect(self._on_edit_finished)
@@ -139,15 +139,19 @@ class SliderRow(BaseRow):
         self._value_edit.setText(self._format(clamped))
 
     def _apply_slider_style(self) -> None:
-        self._slider.setStyleSheet(slider_style(self._cfg, enabled=self.isEnabled()))
+        self._slider.setStyleSheet(
+            slider_style(self._gui_config, enabled=self.isEnabled())
+        )
 
     def _apply_edit_style(self) -> None:
         for w in (self._value_edit,):
             if w is not None:
-                w.setStyleSheet(line_edit_style(self._cfg, enabled=self.isEnabled()))
+                w.setStyleSheet(
+                    line_edit_style(self._gui_config, enabled=self.isEnabled())
+                )
 
     def _apply_label_style(self) -> None:
         if self._value_label:
             self._value_label.setStyleSheet(
-                slider_value_label_style(self._cfg, enabled=self.isEnabled()),
+                slider_value_label_style(self._gui_config, enabled=self.isEnabled()),
             )

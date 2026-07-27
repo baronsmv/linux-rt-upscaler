@@ -246,9 +246,9 @@ class MainWindow(QMainWindow):
         self.grid_mgr.stop()
         activate_window(win_info.handle)
         self.hide()
-        eff_cfg = copy.deepcopy(self._config_manager.effective_config)
-        eff_cfg.daemon = False
-        parse_config(eff_cfg)
+        eff_gui_config = copy.deepcopy(self._config_manager.effective_config)
+        eff_gui_config.daemon = False
+        parse_config(eff_gui_config)
 
         # Build a clean base config for future follow-focus window matches
         clean_base = copy.deepcopy(self._config_manager.global_baseline)
@@ -257,7 +257,7 @@ class MainWindow(QMainWindow):
 
         try:
             self.manual_session = create_pipeline_session(
-                eff_cfg,
+                eff_gui_config,
                 win_info,
                 base_config=clean_base,
                 profiles=self._config_manager.profiles,

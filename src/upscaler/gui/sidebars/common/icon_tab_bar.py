@@ -23,7 +23,7 @@ class IconTabBar(QWidget):
 
     def __init__(self, gui_config: GUIConfig, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self._cfg = gui_config
+        self._gui_config = gui_config
         self._columns = gui_config.sidebar.icon_columns
         self._icon_size = gui_config.sidebar.icon_size
 
@@ -71,7 +71,7 @@ class IconTabBar(QWidget):
         btn.setFlat(True)
         btn.setCursor(Qt.PointingHandCursor)
         btn.setFixedSize(self._icon_size + 12, self._icon_size + 12)
-        btn.setStyleSheet(icon_tab_button_style(self._cfg))
+        btn.setStyleSheet(icon_tab_button_style(self._gui_config))
 
         self._grid.addWidget(btn, row, col)
         self._button_group.addButton(btn, index)
@@ -83,5 +83,7 @@ class IconTabBar(QWidget):
         return btn
 
     def _load_icon(self, name: str, size: int) -> QIcon:
-        pixmap = load_pixmap(name, size, size, color=self._cfg.palette.accent_icon)
+        pixmap = load_pixmap(
+            name, size, size, color=self._gui_config.palette.accent_icon
+        )
         return QIcon(pixmap)

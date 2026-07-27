@@ -38,7 +38,7 @@ class WindowPickerDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Select Window")
         self.setMinimumSize(500, 400)
-        self._cfg = gui_config
+        self._gui_config = gui_config
         self._exclude_handle = exclude_handle
 
         self.setStyleSheet(dialog_style(gui_config))
@@ -75,7 +75,7 @@ class WindowPickerDialog(QDialog):
             "tabs/window",
             gui_config.profile.item_icon_size,
             gui_config.profile.item_icon_size,
-            color=self._cfg.palette.accent_icon,
+            color=self._gui_config.palette.accent_icon,
         )
         self._fallback_icon = QIcon(pix)
 
@@ -111,23 +111,23 @@ class WindowPickerDialog(QDialog):
             # Try to fetch window icon; use fallback if not available
             try:
                 img = get_window_icon(
-                    win.handle, size=self._cfg.profile.capture_icon_size
+                    win.handle, size=self._gui_config.profile.capture_icon_size
                 )
                 if img and not img.isNull():
                     pix = QPixmap.fromImage(img)
                 else:
                     pix = load_pixmap(
                         "tabs/window",
-                        self._cfg.profile.item_icon_size,
-                        self._cfg.profile.item_icon_size,
-                        color=self._cfg.palette.accent_icon,
+                        self._gui_config.profile.item_icon_size,
+                        self._gui_config.profile.item_icon_size,
+                        color=self._gui_config.palette.accent_icon,
                     )
             except Exception:
                 pix = load_pixmap(
                     "tabs/window",
-                    self._cfg.profile.item_icon_size,
-                    self._cfg.profile.item_icon_size,
-                    color=self._cfg.palette.accent_icon,
+                    self._gui_config.profile.item_icon_size,
+                    self._gui_config.profile.item_icon_size,
+                    color=self._gui_config.palette.accent_icon,
                 )
 
             item.setIcon(QIcon(pix))

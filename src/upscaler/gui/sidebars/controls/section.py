@@ -22,7 +22,7 @@ class SectionLabel(QWidget):
     ) -> None:
         super().__init__(parent)
         self._text = text
-        self._cfg = gui_config
+        self._gui_config = gui_config
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -34,7 +34,7 @@ class SectionLabel(QWidget):
         self._line = QFrame()
         self._line.setFrameShape(QFrame.HLine)
         self._line.setFrameShadow(QFrame.Sunken)
-        self._line.setStyleSheet(separator_line_style(self._cfg))
+        self._line.setStyleSheet(separator_line_style(self._gui_config))
 
         layout.addWidget(self._label)
         layout.addWidget(self._line)

@@ -86,6 +86,8 @@ class CheckBox(BaseRow):
     def _apply_style(self, highlighted: bool = False) -> None:
         self._checkbox.setStyleSheet(
             checkbox_style(
-                self._cfg, self.isEnabled(), highlighted or self._is_highlighted()
+                self._gui_config,
+                self.isEnabled(),
+                highlighted or self._is_highlighted(),
             )
         )

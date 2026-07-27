@@ -51,7 +51,7 @@ class WindowGridManager:
         filter_bar: FilterBar,
     ) -> None:
         self._main_window = main_window
-        self._cfg = gui_config
+        self._gui_config = gui_config
         self._scene = scene
         self._view = view
         self._filter_bar = filter_bar

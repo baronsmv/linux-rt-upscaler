@@ -36,7 +36,7 @@ class BaseRow(QWidget):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
-        self._cfg = cfg
+        self._gui_config = cfg
         self._baseline = baseline
 
         # Main layout: indicator | content container
@@ -47,7 +47,7 @@ class BaseRow(QWidget):
         # ---- Colored Bar ----
         self._indicator = QFrame()
         self._indicator.setFixedWidth(cfg.highlight_border_width)
-        self._indicator.setStyleSheet(base_row_indicator_style(self._cfg))
+        self._indicator.setStyleSheet(base_row_indicator_style(self._gui_config))
         self._indicator.hide()
         main_layout.addWidget(self._indicator)
 
@@ -72,8 +72,8 @@ class BaseRow(QWidget):
     def _init_label(self, text: str) -> QLabel:
         """Create a standard row label and add it to the content layout."""
         self._label = QLabel(text)
-        self._label.setStyleSheet(row_label_style(self._cfg))
-        self._label.setFixedHeight(self._cfg.sidebar.row_height)
+        self._label.setStyleSheet(row_label_style(self._gui_config))
+        self._label.setFixedHeight(self._gui_config.sidebar.row_height)
         self._label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         self._content_layout.addWidget(self._label)
         return self._label
@@ -91,12 +91,14 @@ class BaseRow(QWidget):
         highlighted = self._is_highlighted()
         if highlighted and self.isEnabled():
             self._indicator.show()
-            self._indicator_spacer.setFixedWidth(self._cfg.highlight_indicator_gap)
+            self._indicator_spacer.setFixedWidth(
+                self._gui_config.highlight_indicator_gap
+            )
         else:
             self._indicator.hide()
             self._indicator_spacer.setFixedWidth(0)
         self._content_container.setStyleSheet(
-            base_row_content_background_style(self._cfg, highlighted=highlighted)
+            base_row_content_background_style(self._gui_config, highlighted=highlighted)
         )
         self._apply_highlight_style(highlighted)
 
@@ -108,14 +110,14 @@ class BaseRow(QWidget):
         if self._label is None:
             return
         if not self.isEnabled():
-            color = self._cfg.palette.text_disabled
+            color = self._gui_config.palette.text_disabled
         elif highlighted:
-            color = self._cfg.palette.accent_blue
+            color = self._gui_config.palette.accent_blue
         else:
-            color = self._cfg.palette.text_secondary
+            color = self._gui_config.palette.text_secondary
 
         self._label.setStyleSheet(
-            base_row_label_highlight_style(self._cfg, color=color)
+            base_row_label_highlight_style(self._gui_config, color=color)
         )
 
     def set_baseline(self, baseline: Any) -> None:

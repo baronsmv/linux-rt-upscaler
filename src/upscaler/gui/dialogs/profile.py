@@ -48,13 +48,13 @@ class ProfileDialog(QDialog):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
-        self._cfg = gui_config
+        self._gui_config = gui_config
         self._original_name = profile_name
         self._profiles = profiles or {}
 
         self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
         self.setMinimumWidth(520)
-        self.setStyleSheet(dialog_style(self._cfg))
+        self.setStyleSheet(dialog_style(self._gui_config))
 
         # Exclude parent window from the picker
         self._exclude_handle = parent.winId() if parent else 0
@@ -73,7 +73,7 @@ class ProfileDialog(QDialog):
         # Name field
         name_col = QVBoxLayout()
         name_label = QLabel("Name")
-        name_label.setStyleSheet(dialog_header_label_style(self._cfg))
+        name_label.setStyleSheet(dialog_header_label_style(self._gui_config))
         name_col.addWidget(name_label)
         self._name_edit = QLineEdit(profile_name)
         self._name_edit.setPlaceholderText("Profile name")
@@ -84,12 +84,12 @@ class ProfileDialog(QDialog):
         # Icon
         icon_col = QVBoxLayout()
         icon_label = QLabel("Icon")
-        icon_label.setStyleSheet(dialog_header_label_style(self._cfg))
+        icon_label.setStyleSheet(dialog_header_label_style(self._gui_config))
         icon_col.addWidget(icon_label)
 
         self._icon_preview = QLabel()
         self._icon_preview.setFixedSize(32, 32)
-        self._icon_preview.setStyleSheet(icon_preview_style(self._cfg))
+        self._icon_preview.setStyleSheet(icon_preview_style(self._gui_config))
         self._icon_preview.setAlignment(Qt.AlignCenter)
 
         # Load existing icon
@@ -108,7 +108,10 @@ class ProfileDialog(QDialog):
         if not existing_icon_loaded:
             self._icon_preview.setPixmap(
                 load_pixmap(
-                    "actions/profile", 32, 32, color=self._cfg.palette.accent_icon
+                    "actions/profile",
+                    32,
+                    32,
+                    color=self._gui_config.palette.accent_icon,
                 )
             )
 
@@ -122,7 +125,9 @@ class ProfileDialog(QDialog):
 
         capture_win_btn = QPushButton("  Capture window")
         capture_win_btn.setIcon(
-            load_icon("actions/capture", 20, 20, color=self._cfg.palette.accent_icon)
+            load_icon(
+                "actions/capture", 20, 20, color=self._gui_config.palette.accent_icon
+            )
         )
         capture_win_btn.setToolTip("Fill name, icon, and match rules from a window")
         capture_win_btn.clicked.connect(self._capture_full)
@@ -169,7 +174,7 @@ class ProfileDialog(QDialog):
         # Title contains
         row1 = QHBoxLayout()
         lbl = QLabel("Title contains:")
-        lbl.setStyleSheet(dialog_match_label_style(self._cfg))
+        lbl.setStyleSheet(dialog_match_label_style(self._gui_config))
         row1.addWidget(lbl)
         self._match_title_contains = QLineEdit()
         self._match_title_contains.setPlaceholderText("e.g., VLC")
@@ -182,7 +187,7 @@ class ProfileDialog(QDialog):
         # Title regex
         row2 = QHBoxLayout()
         lbl2 = QLabel("Title regex:")
-        lbl2.setStyleSheet(dialog_match_label_style(self._cfg))
+        lbl2.setStyleSheet(dialog_match_label_style(self._gui_config))
         row2.addWidget(lbl2)
         self._match_title_regex = QLineEdit()
         self._match_title_regex.setPlaceholderText("e.g., (Yuzu|Ryujinx).*")
@@ -195,7 +200,7 @@ class ProfileDialog(QDialog):
         # Title exact
         row3 = QHBoxLayout()
         lbl3 = QLabel("Title exact:")
-        lbl3.setStyleSheet(dialog_match_label_style(self._cfg))
+        lbl3.setStyleSheet(dialog_match_label_style(self._gui_config))
         row3.addWidget(lbl3)
         self._match_title_exact = QLineEdit()
         self._match_title_exact.setPlaceholderText("e.g., Steam")
@@ -212,7 +217,7 @@ class ProfileDialog(QDialog):
             "Profiles are checked top-to-bottom; the first matching profile is applied."
         )
         info.setWordWrap(True)
-        info.setStyleSheet(dialog_info_label_style(self._cfg))
+        info.setStyleSheet(dialog_info_label_style(self._gui_config))
         match_layout.addWidget(info)
 
         # ── Pre-fill existing match criteria ─────────────────────────
@@ -247,7 +252,10 @@ class ProfileDialog(QDialog):
         btn = QToolButton()
         btn.setIcon(
             load_icon(
-                icon_name, icon_size, icon_size, color=self._cfg.palette.accent_icon
+                icon_name,
+                icon_size,
+                icon_size,
+                color=self._gui_config.palette.accent_icon,
             )
         )
         btn.setToolTip(tooltip)
@@ -264,7 +272,7 @@ class ProfileDialog(QDialog):
     # ------------------------------------------------------------------
     def _capture_full(self):
         picker = WindowPickerDialog(
-            self._cfg, self, exclude_handle=self._exclude_handle
+            self._gui_config, self, exclude_handle=self._exclude_handle
         )
         if picker.exec() == QDialog.Accepted:
             win_info = picker.selected_window()
@@ -284,7 +292,7 @@ class ProfileDialog(QDialog):
 
     def _apply_icon_from_window(self, win_info):
         icon_img = get_window_icon(
-            win_info.handle, size=self._cfg.profile.capture_icon_size
+            win_info.handle, size=self._gui_config.profile.capture_icon_size
         )
         if icon_img:
             self._captured_icon = icon_img
@@ -301,7 +309,7 @@ class ProfileDialog(QDialog):
     # ------------------------------------------------------------------
     def _capture_icon(self):
         picker = WindowPickerDialog(
-            self._cfg, self, exclude_handle=self._exclude_handle
+            self._gui_config, self, exclude_handle=self._exclude_handle
         )
         if picker.exec() == QDialog.Accepted:
             win_info = picker.selected_window()
@@ -330,7 +338,9 @@ class ProfileDialog(QDialog):
         self._captured_icon = None
         self._icon_removed = True
         self._icon_preview.setPixmap(
-            load_pixmap("actions/profile", 32, 32, color=self._cfg.palette.accent_icon)
+            load_pixmap(
+                "actions/profile", 32, 32, color=self._gui_config.palette.accent_icon
+            )
         )
 
     def get_captured_icon(self) -> Optional[QImage]:
@@ -360,7 +370,7 @@ class ProfileDialog(QDialog):
                     QMessageBox.Ok,
                     self,
                 )
-                msg.setStyleSheet(message_box_style(self._cfg))
+                msg.setStyleSheet(message_box_style(self._gui_config))
                 msg.exec()
                 self._name_edit.setFocus()
                 self._name_edit.selectAll()

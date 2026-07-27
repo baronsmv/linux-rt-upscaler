@@ -65,13 +65,13 @@ class ProfilesSidebar(QWidget):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
-        self._cfg = gui_config
+        self._gui_config = gui_config
         self._profiles = profiles
 
         # ---- Visual identity ----
         self.setObjectName("sidebar_container")
-        self.setStyleSheet(sidebar_container_style(self._cfg))
-        self.setFixedWidth(self._cfg.sidebar.width)
+        self.setStyleSheet(sidebar_container_style(self._gui_config))
+        self.setFixedWidth(self._gui_config.sidebar.width)
 
         # ---- Layout ----
         layout = QVBoxLayout(self)
@@ -80,14 +80,14 @@ class ProfilesSidebar(QWidget):
 
         # Title
         title = QLabel("Profiles")
-        title.setStyleSheet(sidebar_section_label_style(self._cfg))
+        title.setStyleSheet(sidebar_section_label_style(self._gui_config))
         layout.addWidget(title)
 
         # Header separator line
         layout.addSpacing(8)
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet(profile_toolbar_separator_style(self._cfg))
+        sep.setStyleSheet(profile_toolbar_separator_style(self._gui_config))
         sep.setFixedHeight(1)
         layout.addWidget(sep)
         layout.addSpacing(8)
@@ -97,7 +97,7 @@ class ProfilesSidebar(QWidget):
         self._list.setMouseTracking(True)
         self._list.viewport().installEventFilter(self)
         self._list.installEventFilter(self)
-        self._list.setStyleSheet(profile_list_style(self._cfg))
+        self._list.setStyleSheet(profile_list_style(self._gui_config))
         self._list.setIconSize(
             QSize(
                 gui_config.profile.item_icon_size,
@@ -123,7 +123,7 @@ class ProfilesSidebar(QWidget):
         toolbar = QHBoxLayout()
         toolbar.setSpacing(4)
 
-        btn_cfg = {
+        btn_gui_config = {
             "size": gui_config.profile.toolbar_button_size,
             "icon_size": gui_config.profile.toolbar_button_icon_size,
             "hover_bg": gui_config.palette.bg_surface_hover,
@@ -134,20 +134,20 @@ class ProfilesSidebar(QWidget):
             "actions/add",
             "Add profile (Ctrl+N)",
             self.add_profile_requested.emit,
-            btn_cfg,
+            btn_gui_config,
         )
         self._edit_btn = self._make_tool_button(
             "actions/edit",
             "Edit match criteria (Enter/F2)",
             self._emit_edit,
-            btn_cfg,
+            btn_gui_config,
             enabled=False,
         )
         self._delete_btn = self._make_tool_button(
             "actions/delete",
             "Delete profile (Del)",
             self._emit_delete,
-            btn_cfg,
+            btn_gui_config,
             enabled=False,
         )
 
@@ -155,14 +155,14 @@ class ProfilesSidebar(QWidget):
             "actions/up",
             "Move up (Ctrl+Shift+Up)",
             self._emit_move_up,
-            btn_cfg,
+            btn_gui_config,
             enabled=False,
         )
         self._down_btn = self._make_tool_button(
             "actions/down",
             "Move down (Ctrl+Shift+Down)",
             self._emit_move_down,
-            btn_cfg,
+            btn_gui_config,
             enabled=False,
         )
 
@@ -252,14 +252,14 @@ class ProfilesSidebar(QWidget):
         default_icon = QIcon(
             load_pixmap(
                 "actions/profile_global",
-                self._cfg.profile.item_icon_size,
-                self._cfg.profile.item_icon_size,
-                color=self._cfg.palette.accent_icon,
+                self._gui_config.profile.item_icon_size,
+                self._gui_config.profile.item_icon_size,
+                color=self._gui_config.palette.accent_icon,
             )
         )
         default_item = QListWidgetItem(default_icon, "  Global")
         default_item.setData(Qt.UserRole, "")
-        default_item.setSizeHint(QSize(0, self._cfg.profile.item_height))
+        default_item.setSizeHint(QSize(0, self._gui_config.profile.item_height))
         default_item.setToolTip(
             "When selected, the settings panel on the right edits the global configuration."
         )
@@ -271,8 +271,8 @@ class ProfilesSidebar(QWidget):
             icon_path = profile_data.get("icon", "")
             if icon_path and os.path.isfile(icon_path):
                 pix = QPixmap(icon_path).scaled(
-                    self._cfg.profile.item_icon_size,
-                    self._cfg.profile.item_icon_size,
+                    self._gui_config.profile.item_icon_size,
+                    self._gui_config.profile.item_icon_size,
                     Qt.KeepAspectRatio,
                     Qt.SmoothTransformation,
                 )
@@ -281,14 +281,14 @@ class ProfilesSidebar(QWidget):
                 icon = QIcon(
                     load_pixmap(
                         "actions/profile",
-                        self._cfg.profile.item_icon_size,
-                        self._cfg.profile.item_icon_size,
-                        color=self._cfg.palette.accent_icon,
+                        self._gui_config.profile.item_icon_size,
+                        self._gui_config.profile.item_icon_size,
+                        color=self._gui_config.palette.accent_icon,
                     )
                 )
             item = QListWidgetItem(icon, f"  {name}")
             item.setData(Qt.UserRole, name)
-            item.setSizeHint(QSize(0, self._cfg.profile.item_height))
+            item.setSizeHint(QSize(0, self._gui_config.profile.item_height))
             if name:
                 item.setToolTip(
                     "When selected, the settings panel on the right edits the "
@@ -349,7 +349,7 @@ class ProfilesSidebar(QWidget):
                 icon_name,
                 cfg["icon_size"],
                 cfg["icon_size"],
-                color=self._cfg.palette.accent_icon,
+                color=self._gui_config.palette.accent_icon,
             )
         )
         btn.setIconSize(QSize(cfg["icon_size"], cfg["icon_size"]))
@@ -359,7 +359,7 @@ class ProfilesSidebar(QWidget):
         btn.setFlat(True)
         btn.setEnabled(enabled)
         btn.clicked.connect(callback)
-        btn.setStyleSheet(profile_toolbar_button_style(self._cfg))
+        btn.setStyleSheet(profile_toolbar_button_style(self._gui_config))
         return btn
 
     # ------------------------------------------------------------------

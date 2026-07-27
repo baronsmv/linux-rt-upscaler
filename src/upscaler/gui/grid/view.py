@@ -30,7 +30,7 @@ class WindowGridView(QGraphicsView):
 
     def __init__(self, scene: WindowGridScene, gui_config, parent=None) -> None:
         super().__init__(scene, parent)
-        self._cfg = gui_config
+        self._gui_config = gui_config
         self._scene = scene
 
         # Rendering quality
@@ -47,7 +47,7 @@ class WindowGridView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
         # Transparent background and no frame
-        self.setStyleSheet(graphics_view_style(self._cfg))
+        self.setStyleSheet(graphics_view_style(self._gui_config))
 
         # Accept focus (needed for keyboard navigation)
         self.setFocusPolicy(Qt.StrongFocus)

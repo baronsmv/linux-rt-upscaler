@@ -62,7 +62,7 @@ class WindowGridScene(QGraphicsScene):
             The view that will display this scene.
         """
         super().__init__(parent)
-        self._cfg = gui_config
+        self._gui_config = gui_config
 
         # --- Tile storage ----------------------------------------------------
         self._tiles: List[WindowTileItem] = []  # ordered grid order
@@ -113,7 +113,7 @@ class WindowGridScene(QGraphicsScene):
             if win.handle in self._tile_by_handle:
                 tile = self._tile_by_handle[win.handle]
             else:
-                tile = WindowTileItem(win, self._cfg)
+                tile = WindowTileItem(win, self._gui_config)
                 tile.clicked.connect(self._on_tile_clicked)
                 self.addItem(tile)
                 self._tile_by_handle[win.handle] = tile
@@ -176,7 +176,7 @@ class WindowGridScene(QGraphicsScene):
             self.setSceneRect(QRectF())
             return
 
-        cfg = self._cfg
+        cfg = self._gui_config
 
         # Viewport width (fallback for headless testing)
         view = self.views()[0] if self.views() else None

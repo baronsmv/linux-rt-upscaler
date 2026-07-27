@@ -93,7 +93,7 @@ class ColorPickerRow(BaseRow):
             self._apply_color()
         else:
             self._button.setStyleSheet(
-                color_swatch_style(self._cfg, enabled=False, current_color="")
+                color_swatch_style(self._gui_config, enabled=False, current_color="")
             )
 
     def _is_highlighted(self) -> bool:
@@ -127,7 +127,7 @@ class ColorPickerRow(BaseRow):
         css_color = self._current_color.name(QColor.HexArgb)
         self._button.setStyleSheet(
             color_swatch_style(
-                self._cfg,
+                self._gui_config,
                 enabled=True,
                 current_color=css_color,
             )

@@ -20,7 +20,7 @@ class FilterBar(QWidget):
 
     def __init__(self, gui_config, parent=None):
         super().__init__(parent)
-        self._cfg = gui_config
+        self._gui_config = gui_config
         cfg = gui_config
 
         # Fixed height from config
@@ -52,7 +52,7 @@ class FilterBar(QWidget):
                 "actions/search",
                 icon_size,
                 icon_size,
-                color=self._cfg.palette.accent_icon,
+                color=self._gui_config.palette.accent_icon,
             )
         )
 
@@ -64,7 +64,7 @@ class FilterBar(QWidget):
                 "actions/clear",
                 icon_size,
                 icon_size,
-                color=self._cfg.palette.accent_icon,
+                color=self._gui_config.palette.accent_icon,
             )
         )
         self._clear_button.setFlat(True)
@@ -87,7 +87,7 @@ class FilterBar(QWidget):
 
     def _position_elements(self) -> None:
         """Place the line edit and icons according to config margins/padding."""
-        cfg = self._cfg
+        cfg = self._gui_config
         outer_margin = cfg.filter.horizontal_margin
         inner_h_pad = cfg.filter.padding_h
         vertical_pad = cfg.filter.padding_v
@@ -132,11 +132,11 @@ class FilterBar(QWidget):
     # ------------------------------------------------------------------
     def _update_bar_style(self, hover: bool) -> None:
         self._line_edit.setStyleSheet(
-            filter_bar_line_edit_style(self._cfg, hover=hover)
+            filter_bar_line_edit_style(self._gui_config, hover=hover)
         )
         pal = self._line_edit.palette()
         pal.setColor(
-            QPalette.PlaceholderText, QColor(self._cfg.palette.text_placeholder)
+            QPalette.PlaceholderText, QColor(self._gui_config.palette.text_placeholder)
         )
         self._line_edit.setPalette(pal)
 

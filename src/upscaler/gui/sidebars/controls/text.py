@@ -71,4 +71,6 @@ class LineEditRow(BaseRow):
     #  Style helpers
     # ------------------------------------------------------------------
     def _apply_style(self) -> None:
-        self._edit.setStyleSheet(line_edit_style(self._cfg, enabled=self.isEnabled()))
+        self._edit.setStyleSheet(
+            line_edit_style(self._gui_config, enabled=self.isEnabled())
+        )

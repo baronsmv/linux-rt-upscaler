@@ -66,7 +66,7 @@ class WindowTileItem(QGraphicsObject):
     ) -> None:
         super().__init__(parent)
         self._win_info = win_info
-        self._cfg = gui_config
+        self._gui_config = gui_config
 
         # --- Geometry -------------------------------------------------------
         self._half_w = gui_config.tile.width / 2.0
@@ -112,7 +112,7 @@ class WindowTileItem(QGraphicsObject):
 
     def _compute_max_bounding_rect(self) -> QRectF:
         base = self._resting_rect()
-        s = self._cfg.tile.pop_scale
+        s = self._gui_config.tile.pop_scale
         shadow = 4.0 * s
         w = base.width() * s + 2.0 * shadow
         h = base.height() * s + 2.0 * shadow
@@ -163,7 +163,7 @@ class WindowTileItem(QGraphicsObject):
         Re-evaluate the desired scale and smoothly animate toward it.
         Called whenever :attr:`_hover` or :attr:`_selected` changes.
         """
-        target = self._cfg.tile.pop_scale if self._should_pop() else 1.0
+        target = self._gui_config.tile.pop_scale if self._should_pop() else 1.0
         if target == self._target_scale:
             return
         self._target_scale = target
@@ -297,7 +297,7 @@ class WindowTileItem(QGraphicsObject):
 
         base = self._resting_rect()
         w, h = base.width(), base.height()
-        radius = self._cfg.tile.radius
+        radius = self._gui_config.tile.radius
 
         # Shadow
         shadow_rect = base
@@ -310,7 +310,7 @@ class WindowTileItem(QGraphicsObject):
         # Background
         bg_path = QPainterPath()
         bg_path.addRoundedRect(base, radius, radius)
-        painter.fillPath(bg_path, QColor(self._cfg.palette.bg_surface))
+        painter.fillPath(bg_path, QColor(self._gui_config.palette.bg_surface))
 
         # Preview image
         if self._scaled_pixmap and not self._scaled_pixmap.isNull():
@@ -323,15 +323,17 @@ class WindowTileItem(QGraphicsObject):
 
         # Gradient overlay
         grad = QLinearGradient(0, h / 2 - 40, 0, h / 2)
-        grad.setColorAt(0, QColor(self._cfg.palette.tile_overlay_start))
-        grad.setColorAt(0.7, QColor(self._cfg.palette.tile_overlay_mid))
-        grad.setColorAt(1.0, QColor(self._cfg.palette.tile_overlay_end))
+        grad.setColorAt(0, QColor(self._gui_config.palette.tile_overlay_start))
+        grad.setColorAt(0.7, QColor(self._gui_config.palette.tile_overlay_mid))
+        grad.setColorAt(1.0, QColor(self._gui_config.palette.tile_overlay_end))
         painter.fillRect(QRectF(-w / 2, h / 2 - 40, w, 40), grad)
 
         # Title
         title = self._win_info.title
-        font = QFont(self._cfg.palette.font_family, self._cfg.tile.title_font_size)
-        font.setBold(self._cfg.tile.title_font_bold)
+        font = QFont(
+            self._gui_config.palette.font_family, self._gui_config.tile.title_font_size
+        )
+        font.setBold(self._gui_config.tile.title_font_bold)
         font.setHintingPreference(QFont.PreferFullHinting)
         painter.setFont(font)
         painter.setRenderHint(QPainter.TextAntialiasing, True)
@@ -351,12 +353,12 @@ class WindowTileItem(QGraphicsObject):
 
         # Draw pill background
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(self._cfg.palette.tile_title_bg))
+        painter.setBrush(QColor(self._gui_config.palette.tile_title_bg))
         painter.drawRoundedRect(pill_rect, pill_radius, pill_radius)
 
         # Draw text centered in pill
         text_rect = pill_rect.adjusted(8, 0, -8, 0)
-        painter.setPen(QColor(self._cfg.palette.tile_title_text))
+        painter.setPen(QColor(self._gui_config.palette.tile_title_text))
         painter.drawText(text_rect, Qt.AlignCenter, title)
 
         painter.restore()
@@ -364,13 +366,13 @@ class WindowTileItem(QGraphicsObject):
         # Border
         if self._selected:
             pen = QPen(
-                QColor(self._cfg.palette.accent_blue),
-                self._cfg.tile.selection_border_width,
+                QColor(self._gui_config.palette.accent_blue),
+                self._gui_config.tile.selection_border_width,
             )
         elif self._hover:
             pen = QPen(
-                QColor(self._cfg.palette.accent_cyan),
-                self._cfg.tile.hover_border_width,
+                QColor(self._gui_config.palette.accent_cyan),
+                self._gui_config.tile.hover_border_width,
             )
         else:
             pen = QPen(Qt.NoPen)

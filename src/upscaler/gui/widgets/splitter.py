@@ -15,16 +15,16 @@ class StyledSplitterHandle(QSplitterHandle):
 
     def __init__(self, orientation: Qt.Orientation, splitter: QSplitter) -> None:
         super().__init__(orientation, splitter)
-        self._cfg: Optional[GUIConfig] = None
+        self._gui_config: Optional[GUIConfig] = None
 
     def set_config(self, cfg: GUIConfig) -> None:
-        self._cfg = cfg
+        self._gui_config = cfg
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        cfg = self._cfg
+        cfg = self._gui_config
         handle_color = QColor(cfg.palette.splitter_handle)
         hover_color = QColor(cfg.palette.splitter_handle_hover)
         handle_width = cfg.splitter.handle_width
@@ -76,7 +76,7 @@ class StyledSplitter(QSplitter):
 
     def __init__(self, orientation: Qt.Orientation, gui_config: GUIConfig, parent=None):
         super().__init__(orientation, parent)
-        self._cfg = gui_config
+        self._gui_config = gui_config
         self.setHandleWidth(
             gui_config.splitter.handle_width + 10
         )  # enough for grip dots
@@ -84,5 +84,5 @@ class StyledSplitter(QSplitter):
 
     def createHandle(self) -> QSplitterHandle:
         handle = StyledSplitterHandle(self.orientation(), self)
-        handle.set_config(self._cfg)
+        handle.set_config(self._gui_config)
         return handle
