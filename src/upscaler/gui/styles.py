@@ -18,7 +18,7 @@ def tooltip_style(cfg: GUIConfig) -> str:
         border: 1px solid {cfg.palette.border_subtle};
         padding: 4px;
         border-radius: 4px;
-        font-size: {cfg.palette.font_size_base}px;
+        font-size: {cfg.dialog.label_font_size}px;
     }}
     """
 
@@ -481,7 +481,7 @@ def dialog_info_label_style(cfg: GUIConfig) -> str:
     """Style for info label in Profile Editor dialog."""
     return (
         f"color: {cfg.palette.text_dim}; "
-        f"font-size: {cfg.palette.font_size_mid}px; "
+        f"font-size: {cfg.dialog.info_font_size}px; "
         "padding-top: 6px;"
     )
 

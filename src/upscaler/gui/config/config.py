@@ -65,30 +65,6 @@ class GuiPalette:
     splitter_handle: str = "#2c2c2c"
     splitter_handle_hover: str = "#2c2c2c"
 
-    # ── Fonts ────────────────────────────────────────────────────
-    font_family: str = "Segoe UI"  # default UI font
-    font_size_sm: int = 12  # tile titles, small labels
-    font_size_mid: int = 16  # dialog info, etc.
-    font_size_base: int = 18  # default UI text size
-    font_size_lg: int = 24  # filter bar, section titles
-
-    # ── Spacing & radii (shared by many widgets) ─────────────────
-    radius_sm: int = 4
-    radius_md: int = 6
-    radius_lg: int = 8
-    radius_xl: int = 12
-    spacing_sm: int = 4
-    spacing_md: int = 8
-    spacing_lg: int = 12
-
-    # ── Shadows (currently unused, kept for completeness) ────────
-    shadow_color: Tuple[int, int, int, int] = (0, 0, 0, 120)
-
-
-# ---------------------------------------------------------------------------
-#  Layout groups – each a frozen dataclass for one UI piece
-# ---------------------------------------------------------------------------
-
 
 @dataclass(frozen=True)
 class TileLayout:
@@ -238,6 +214,7 @@ class DialogLayout:
     combo_min_width: int = 120
     label_font_size: int = 18
     match_label_font_size: int = 18
+    info_font_size: int = 16
     icon_button_size: int = 32
     icon_button_icon_size: int = 24
     button_border_radius: int = 8
@@ -278,8 +255,6 @@ class GUIConfig:
         dialog: Dialog dimensions and padding strings.
         auto_refresh_ms: Window list refresh interval (ms).
         tile_preview_interval_ms: Tile thumbnail update interval (ms).
-        empty_text: Placeholder text when no windows match the filter.
-        empty_text_size: Font size for the empty‑grid placeholder.
         highlight_background_enabled: Whether highlighted rows get a background color.
     """
 
@@ -298,11 +273,11 @@ class GUIConfig:
     profile: ProfileLayout = field(default_factory=ProfileLayout)
     dialog: DialogLayout = field(default_factory=DialogLayout)
 
+    font_family: str = "Segoe UI"  # default UI font
+
     auto_refresh_ms: int = 2000
     tile_preview_interval_ms: int = 60
 
-    empty_text: str = "No windows found"
-    empty_text_size: int = 18
     highlight_border_width: int = 4
     highlight_indicator_gap: int = 8
     highlight_background_enabled: bool = True
