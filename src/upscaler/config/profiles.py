@@ -6,6 +6,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from .args import apply_overrides
+from .parsers import parse_interval
 from .yaml import load_yaml_config, save_yaml_config
 
 if TYPE_CHECKING:
@@ -69,7 +70,7 @@ def find_matching_profile(
 ) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
     """
     Find the first profile whose match criteria match the window.
-    Currently uses only window_title. Later can use window_class.
+    Currently uses only window_title and size (width and height).
     Match criteria are evaluated with OR logic: any match qualifies.
     """
     window_title = window_info.title.lower()
@@ -111,6 +112,12 @@ def find_matching_profile(
                 continue
 
             # --- Size ---
+            if key == "width":
+                if parse_interval(value)(window_info.width):
+                    return profile_name, profile_data
+            if key == "height":
+                if parse_interval(value)(window_info.height):
+                    return profile_name, profile_data
 
             # --- Class (window_class currently not useful for most cases) ---
             """
