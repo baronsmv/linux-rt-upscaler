@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, List, Optional
+from typing import Any, List
 
 from PySide6.QtCore import QEvent, Qt, QTimer, Signal, Slot, QSettings, QRect, QPoint
 from PySide6.QtGui import QCloseEvent
@@ -37,8 +37,11 @@ class OverlayWindow(QMainWindow):
     """
 
     closed = Signal()
-    requestShow = Signal()
-    requestHide = Signal()
+    request_show = Signal()
+    request_hide = Signal()
+    config_updated = Signal(Config)
+    geometry_update_requested = Signal(WindowInfo)
+    scale_mode_changed = Signal(str)
 
     def __init__(self, config: Config, win_info: WindowInfo) -> None:
         """
@@ -50,13 +53,18 @@ class OverlayWindow(QMainWindow):
         """
         super().__init__()
         self._config = config
-        self.requestShow.connect(self._on_request_show)
-        self.requestHide.connect(self.hide)
         start_time = time.perf_counter()
         logger.debug(
             f"Initializing OverlayWindow: mode={config.overlay_mode}, "
             f"target_handle={win_info.handle:#x}, scale_mode={config.output_geometry}"
         )
+
+        # Connect signals
+        self.request_show.connect(self.show)
+        self.request_hide.connect(self.hide)
+        self.config_updated.connect(self._on_config_updated)
+        self.geometry_update_requested.connect(self._apply_geometry_update)
+        self.scale_mode_changed.connect(self._apply_scale_mode)
 
         # Daemon mode handler
         if win_info.width <= 0 or win_info.height <= 0:
@@ -317,56 +325,6 @@ class OverlayWindow(QMainWindow):
             self._forwarder.target_handle, width, height
         )
 
-    def update_config(self, config: Config) -> None:
-        """Apply a new runtime configuration, restarting cursor hiding if needed."""
-        self._config = config
-        hc = config.hide_cursor
-        if hc is not None and hc > 0:
-            self._cursor_hide_timer.stop()
-            self.setCursor(Qt.ArrowCursor)
-            self._cursor_hidden = False
-            self._cursor_hide_timer.start(hc)
-        elif hc == 0:
-            self._cursor_hide_timer.stop()
-            self.setCursor(Qt.BlankCursor)
-            self._cursor_hidden = True
-        else:  # None
-            self._cursor_hide_timer.stop()
-            self.setCursor(Qt.ArrowCursor)
-            self._cursor_hidden = False
-
-    def update_geometry(self, win_info: Optional[WindowInfo]) -> None:
-        """
-        Recompute overlay geometry after a window or monitor change.
-
-        Args:
-            win_info: Updated target window information.
-        """
-        self._win_info = win_info
-        self._geometry = compute_overlay_geometry(self._config, win_info)
-        self.physical_width = self._geometry.physical_overlay_width
-        self.physical_height = self._geometry.physical_overlay_height
-        self.scale_mode = self._geometry.scale_mode
-        self._update_mapper()
-
-        # Apply new geometry to the overlay window
-        self.setGeometry(
-            self._geometry.overlay_x,
-            self._geometry.overlay_y,
-            self._geometry.overlay_width,
-            self._geometry.overlay_height,
-        )
-        if self._config.overlay_mode == OverlayMode.WINDOWED.value:
-            self.setFixedSize(
-                self._geometry.overlay_width, self._geometry.overlay_height
-            )
-        elif self._config.overlay_mode == OverlayMode.FULLSCREEN.value:
-            self.showFullScreen()
-
-        logger.debug(
-            f"Overlay geometry updated: {self._geometry.overlay_width}x{self._geometry.overlay_height}"
-        )
-
     def update_opacity(self) -> None:
         """Update the window opacity based on mouse position relative to target."""
         self._opacity_controller.update()
@@ -439,19 +397,56 @@ class OverlayWindow(QMainWindow):
         event.ignore()
 
     @Slot(str)
-    def set_scale_mode(self, mode: str) -> None:
-        """
-        Set the scaling mode (fit, stretch, cover) dynamically.
-
-        Args:
-            mode: New scaling mode string.
-        """
+    def _apply_scale_mode(self, mode: str) -> None:
+        """Set the scaling mode (fit, stretch, cover) dynamically."""
         self.scale_mode = mode
 
-    @Slot()
-    def _on_request_show(self):
-        """Show the overlay and start the cursor-hide timer (GUI thread)."""
-        self.show()
+    @Slot(WindowInfo)
+    def _apply_geometry_update(self, win_info: WindowInfo) -> None:
+        """Recompute overlay geometry after a window or monitor change."""
+        self._win_info = win_info
+        self._geometry = compute_overlay_geometry(self._config, win_info)
+        self.physical_width = self._geometry.physical_overlay_width
+        self.physical_height = self._geometry.physical_overlay_height
+        self.scale_mode = self._geometry.scale_mode
+        self._update_mapper()
+
+        # Apply new geometry to the overlay window
+        self.setGeometry(
+            self._geometry.overlay_x,
+            self._geometry.overlay_y,
+            self._geometry.overlay_width,
+            self._geometry.overlay_height,
+        )
+        if self._config.overlay_mode == OverlayMode.WINDOWED.value:
+            self.setFixedSize(
+                self._geometry.overlay_width, self._geometry.overlay_height
+            )
+        elif self._config.overlay_mode == OverlayMode.FULLSCREEN.value:
+            self.showFullScreen()
+
+        logger.debug(
+            f"Overlay geometry updated: {self._geometry.overlay_width}x{self._geometry.overlay_height}"
+        )
+
+    @Slot(Config)
+    def _on_config_updated(self, config: Config):
+        """Apply a new runtime configuration, restarting cursor hiding if needed."""
+        self._config = config
+        hc = config.hide_cursor
+        if hc is not None and hc > 0:
+            self._cursor_hide_timer.stop()
+            self.setCursor(Qt.ArrowCursor)
+            self._cursor_hidden = False
+            self._cursor_hide_timer.start(hc)
+        elif hc == 0:
+            self._cursor_hide_timer.stop()
+            self.setCursor(Qt.BlankCursor)
+            self._cursor_hidden = True
+        else:  # None
+            self._cursor_hide_timer.stop()
+            self.setCursor(Qt.ArrowCursor)
+            self._cursor_hidden = False
 
     # ----------------------------------------------------------------------
     # Mouse event forwarding
@@ -556,11 +551,3 @@ class OverlayWindow(QMainWindow):
         """Set the cursor to blank, hiding it."""
         self.setCursor(Qt.BlankCursor)
         self._cursor_hidden = True
-
-    def _start_cursor_hide_timer(self):
-        self._cursor_hide_timer.start(self._config.hide_cursor)
-
-    def start_cursor_hiding(self):
-        """Start the inactivity cursor-hide timer (called after overlay is shown)."""
-        if self._config.hide_cursor > 0:
-            self._cursor_hide_timer.start(self._config.hide_cursor)

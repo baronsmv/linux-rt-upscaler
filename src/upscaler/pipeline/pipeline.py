@@ -284,9 +284,9 @@ class Pipeline(QObject):
         old = self._pause_reason
         self._pause_reason = reason
         if old == PauseReason.NONE and reason != PauseReason.NONE:
-            self.overlay.requestHide.emit()
+            self.overlay.request_hide.emit()
         elif old != PauseReason.NONE and reason == PauseReason.NONE:
-            self.overlay.requestShow.emit()
+            self.overlay.request_show.emit()
             time.sleep(0.1)
             self._presenter_params_stale = True
             self._next_frame_time = time.perf_counter()
@@ -326,8 +326,8 @@ class Pipeline(QObject):
         self._crop_right = new_config.crop_right
         self._crop_bottom = new_config.crop_bottom
         self.presenter.reconfigure_effects(new_config)
-        self.overlay.set_scale_mode(new_config.output_geometry)
-        self.overlay.update_config(new_config)
+        self.overlay.scale_mode_changed.emit(new_config.output_geometry)
+        self.overlay.config_updated.emit(new_config)
 
     # ----------------------------------------------------------------------
     # Core frame processing
@@ -463,7 +463,7 @@ class Pipeline(QObject):
         self.win_info.width = self._window_tracker.width
         self.win_info.height = self._window_tracker.height
 
-        self.overlay.update_geometry(self.win_info)
+        self.overlay.geometry_update_requested.emit(self.win_info)
         self.overlay.set_target_handle(self.win_info.handle)
         self.overlay.set_target_size(self.win_info.width, self.win_info.height)
 
@@ -561,7 +561,7 @@ class Pipeline(QObject):
         # Show the overlay first so the swapchain is created on a visible surface
         if self._pause_reason == PauseReason.DAEMON_WAITING:
             self._pause_reason = PauseReason.NONE
-            self.overlay.requestShow.emit()
+            self.overlay.request_show.emit()
             self.daemon_target_acquired.emit()
 
         # Handle the geometry change
