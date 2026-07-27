@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict, Tuple
+from typing import Callable, Dict, Tuple
 
 from PySide6.QtGui import QColor
 
@@ -129,3 +129,70 @@ def parse_profile_colors(profiles: Dict) -> Dict:
                 options["background_color"] = color_tuple_to_string(bg)
         cleaned[name] = profile_copy
     return cleaned
+
+
+def parse_interval(interval: str) -> Callable:
+    """
+    Returns a function that checks if a number satisfies the interval string.
+
+    Supported patterns:
+        "<480"        ->  n < 480
+        ">480"        ->  n > 480
+        "<=480"       ->  n <= 480
+        ">=480"       ->  n >= 480
+        "480<"        ->  480 < n  (same as n > 480)
+        "480>"        ->  480 > n  (same as n < 480)
+        "720-1080"    ->  720 <= n <= 1080
+        "720..1080"   ->  720 <= n <= 1080
+        "720,1080"    ->  720 <= n <= 1080
+        "  < 480  "   ->  n < 480   (spaces ignored)
+        "480 < = "    ->  ValueError (malformed)
+    """
+    # Normalize: remove all whitespace
+    s = re.sub(r"\s+", "", interval)
+
+    # Pattern for a range: number - number  (or .. or ,)
+    range_match = re.fullmatch(r"([+-]?\d*\.?\d+)\s*[-.,]\s*([+-]?\d*\.?\d+)", s)
+    if range_match:
+        low = float(range_match.group(1))
+        high = float(range_match.group(2))
+        if low > high:
+            low, high = high, low
+        return lambda n: low <= n <= high
+
+    # Pattern for an operator followed by a number (normal order: op num)
+    op_num = re.fullmatch(r"(<=?|>=?)([+-]?\d*\.?\d+)", s)
+    if op_num:
+        op = op_num.group(1)
+        num = float(op_num.group(2))
+        if op == "<":
+            return lambda n: n < num
+        elif op == "<=":
+            return lambda n: n <= num
+        elif op == ">":
+            return lambda n: n > num
+        elif op == ">=":
+            return lambda n: n >= num
+
+    # Pattern for a number followed by an operator (reversed order: num op)
+    num_op = re.fullmatch(r"([+-]?\d*\.?\d+)(<=?|>=?)", s)
+    if num_op:
+        num = float(num_op.group(1))
+        op = num_op.group(2)
+        # "480<" means 480 < n  =>  n > 480
+        if op == "<":
+            return lambda n: n > num
+        elif op == "<=":
+            return lambda n: n >= num
+        elif op == ">":
+            return lambda n: n < num
+        elif op == ">=":
+            return lambda n: n <= num
+
+    # Pure number: exact equality
+    num_match = re.fullmatch(r"([+-]?\d*\.?\d+)", s)
+    if num_match:
+        num = float(num_match.group(1))
+        return lambda n: n == num
+
+    raise ValueError(f"Unrecognised interval format: {interval}")
