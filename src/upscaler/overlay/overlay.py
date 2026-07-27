@@ -10,10 +10,9 @@ from PySide6.QtWidgets import QMainWindow, QApplication
 
 from .coordinates import CoordinateMapper
 from .events import X11EventForwarder
-from .geometry import compute_overlay_geometry, OverlayGeometry
 from .opacity import OpacityController
 from ..config import OverlayMode, Config
-from ..utils import get_base_geometry
+from ..utils import OverlayGeometry, compute_overlay_geometry, get_base_geometry
 from ..window import WindowInfo
 
 logger = logging.getLogger(__name__)
@@ -39,9 +38,12 @@ class OverlayWindow(QMainWindow):
     closed = Signal()
     request_show = Signal()
     request_hide = Signal()
-    config_updated = Signal(Config)
-    geometry_update_requested = Signal(WindowInfo)
-    scale_mode_changed = Signal(str)
+
+    update_config = Signal(Config)
+    update_geometry = Signal(WindowInfo)
+    update_opacity = Signal()
+    update_scaling_rect = Signal(int, int, int, int)
+    update_scale_mode = Signal(str)
 
     def __init__(self, config: Config, win_info: WindowInfo) -> None:
         """
@@ -62,9 +64,11 @@ class OverlayWindow(QMainWindow):
         # Connect signals
         self.request_show.connect(self.show)
         self.request_hide.connect(self.hide)
-        self.config_updated.connect(self._on_config_updated)
-        self.geometry_update_requested.connect(self._apply_geometry_update)
-        self.scale_mode_changed.connect(self._apply_scale_mode)
+        self.update_config.connect(self._update_config)
+        self.update_geometry.connect(self._update_geometry)
+        self.update_opacity.connect(self._update_opacity)
+        self.update_scaling_rect.connect(self._update_scaling_rect)
+        self.update_scale_mode.connect(self._update_scale_mode)
 
         # Daemon mode handler
         if win_info.width <= 0 or win_info.height <= 0:
@@ -277,59 +281,6 @@ class OverlayWindow(QMainWindow):
         )
 
     # ----------------------------------------------------------------------
-    # Public update methods (called from pipeline or focus monitor)
-    # ----------------------------------------------------------------------
-
-    def set_crop(self, left: int, top: int, width: int, height: int) -> None:
-        """
-        Update the crop region of the target window.
-
-        Args:
-            left, top: Offset from target window origin.
-            width, height: Size of the cropped region.
-        """
-        self._mapper.set_crop(left, top, width, height)
-
-    def set_content_dimensions(self, width: int, height: int) -> None:
-        """
-        Update the logical content dimensions.
-
-        Args:
-            width: New content width.
-            height: New content height.
-        """
-        self._mapper.set_content_dimensions(width, height)
-
-    def set_target_handle(self, handle: int) -> None:
-        """
-        Update the X11 window ID of the target window.
-
-        Args:
-            handle: New target window XID.
-        """
-        self._forwarder.target_handle = handle
-        self._opacity_controller.update_target_info(
-            handle, self._mapper.client_width, self._mapper.client_height
-        )
-
-    def set_target_size(self, width: int, height: int) -> None:
-        """
-        Update the actual target window dimensions.
-
-        Args:
-            width: New target width.
-            height: New target height.
-        """
-        self._mapper.set_target_size(width, height)
-        self._opacity_controller.update_target_info(
-            self._forwarder.target_handle, width, height
-        )
-
-    def update_opacity(self) -> None:
-        """Update the window opacity based on mouse position relative to target."""
-        self._opacity_controller.update()
-
-    # ----------------------------------------------------------------------
     # Qt event handlers
     # ----------------------------------------------------------------------
 
@@ -350,18 +301,18 @@ class OverlayWindow(QMainWindow):
                 self._forwarder.enabled = True
         super().changeEvent(event)
 
-    def moveEvent(self, event):
+    def moveEvent(self, event) -> None:
         super().moveEvent(event)
         if self._config.overlay_mode == OverlayMode.WINDOWED.value:
             self._settings.setValue("overlay/windowed_position", self.pos())
 
-    def hideEvent(self, event):
+    def hideEvent(self, event) -> None:
         """Stop cursor hiding when the overlay is hidden."""
         self._cursor_hide_timer.stop()
         self._cursor_hidden = False
         super().hideEvent(event)
 
-    def showEvent(self, event):
+    def showEvent(self, event) -> None:
         """Restart cursor hiding when the overlay becomes visible."""
         if self._should_forward:
             hc = self._config.hide_cursor
@@ -396,13 +347,27 @@ class OverlayWindow(QMainWindow):
         self.closed.emit()
         event.ignore()
 
-    @Slot(str)
-    def _apply_scale_mode(self, mode: str) -> None:
-        """Set the scaling mode (fit, stretch, cover) dynamically."""
-        self.scale_mode = mode
+    @Slot(Config)
+    def _update_config(self, config: Config) -> None:
+        """Apply a new runtime configuration, restarting cursor hiding if needed."""
+        self._config = config
+        hc = config.hide_cursor
+        if hc is not None and hc > 0:
+            self._cursor_hide_timer.stop()
+            self.setCursor(Qt.ArrowCursor)
+            self._cursor_hidden = False
+            self._cursor_hide_timer.start(hc)
+        elif hc == 0:
+            self._cursor_hide_timer.stop()
+            self.setCursor(Qt.BlankCursor)
+            self._cursor_hidden = True
+        else:  # None
+            self._cursor_hide_timer.stop()
+            self.setCursor(Qt.ArrowCursor)
+            self._cursor_hidden = False
 
     @Slot(WindowInfo)
-    def _apply_geometry_update(self, win_info: WindowInfo) -> None:
+    def _update_geometry(self, win_info: WindowInfo) -> None:
         """Recompute overlay geometry after a window or monitor change."""
         self._win_info = win_info
         self._geometry = compute_overlay_geometry(self._config, win_info)
@@ -411,7 +376,15 @@ class OverlayWindow(QMainWindow):
         self.scale_mode = self._geometry.scale_mode
         self._update_mapper()
 
-        # Apply new geometry to the overlay window
+        # Update forwarding target
+        self._forwarder.target_handle = win_info.handle
+        self._opacity_controller.update_target_info(
+            win_info.handle,
+            self._mapper.client_width,
+            self._mapper.client_height,
+        )
+
+        # Apply Qt geometry
         self.setGeometry(
             self._geometry.overlay_x,
             self._geometry.overlay_y,
@@ -429,24 +402,20 @@ class OverlayWindow(QMainWindow):
             f"Overlay geometry updated: {self._geometry.overlay_width}x{self._geometry.overlay_height}"
         )
 
-    @Slot(Config)
-    def _on_config_updated(self, config: Config):
-        """Apply a new runtime configuration, restarting cursor hiding if needed."""
-        self._config = config
-        hc = config.hide_cursor
-        if hc is not None and hc > 0:
-            self._cursor_hide_timer.stop()
-            self.setCursor(Qt.ArrowCursor)
-            self._cursor_hidden = False
-            self._cursor_hide_timer.start(hc)
-        elif hc == 0:
-            self._cursor_hide_timer.stop()
-            self.setCursor(Qt.BlankCursor)
-            self._cursor_hidden = True
-        else:  # None
-            self._cursor_hide_timer.stop()
-            self.setCursor(Qt.ArrowCursor)
-            self._cursor_hidden = False
+    @Slot()
+    def _update_opacity(self) -> None:
+        """Update the window opacity based on mouse position relative to target."""
+        self._opacity_controller.update()
+
+    @Slot(int, int, int, int)
+    def _update_scaling_rect(self, x: int, y: int, w: int, h: int) -> None:
+        """Set the scaling rect (x, y, w, h) dynamically."""
+        self._mapper.set_scaling_rect([x, y, w, h])
+
+    @Slot(str)
+    def _update_scale_mode(self, mode: str) -> None:
+        """Set the scaling mode (fit, stretch, cover) dynamically."""
+        self.scale_mode = mode
 
     # ----------------------------------------------------------------------
     # Mouse event forwarding

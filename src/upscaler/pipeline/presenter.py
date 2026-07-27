@@ -269,9 +269,13 @@ class Presenter:
         """Re-present the current screen texture without any processing."""
         self.swapchain.present(self.screen_tex_8bit, wait_for_fence=False)
 
-    def reconfigure_effects(self, config: Config) -> None:
+    def update_config(self, config: Config) -> None:
         """Update post-processing passes to match a new configuration."""
         self.config = config
+        self.scale_mode = config.output_geometry
+        self.offset_x = config.offset_x
+        self.offset_y = config.offset_y
+        self.background_color = config.background_color
 
         # ---- Samplers ----
         for sampler in (self._copy, self._upsampler, self._downsampler):

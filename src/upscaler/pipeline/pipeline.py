@@ -27,7 +27,7 @@ from ..config import (
 )
 from ..overlay import OverlayWindow
 from ..tiles import collect_dirty_tile_coords, extract_expanded_tiles
-from ..utils import get_base_geometry, parse_output_geometry
+from ..utils import compute_overlay_geometry, get_base_geometry, parse_output_geometry
 from ..vulkan import SwapchainError, configure_device, select_device
 from ..window import WindowInfo, WindowTracker
 
@@ -325,9 +325,9 @@ class Pipeline(QObject):
         self._crop_top = new_config.crop_top
         self._crop_right = new_config.crop_right
         self._crop_bottom = new_config.crop_bottom
-        self.presenter.reconfigure_effects(new_config)
-        self.overlay.scale_mode_changed.emit(new_config.output_geometry)
-        self.overlay.config_updated.emit(new_config)
+        self.overlay.update_scale_mode.emit(new_config.output_geometry)
+        self.overlay.update_config.emit(new_config)
+        self.presenter.update_config(new_config)
 
     # ----------------------------------------------------------------------
     # Core frame processing
@@ -368,7 +368,7 @@ class Pipeline(QObject):
         if not shiboken6.isValid(self.overlay):
             self._running = False
             return
-        self.overlay.update_opacity()
+        self.overlay.update_opacity.emit()
 
         # --- 3. Idle frame detection ---------------------------------------
         current_hash = self._compute_present_state_hash()
@@ -383,9 +383,8 @@ class Pipeline(QObject):
                 logger.debug("Swapchain needs recreation, skipping idle present")
                 return
             self.presenter.present_unchanged()
-            self.overlay.scaling_rect = self.presenter.get_scaling_rect(
-                self._scale_factor
-            )
+            rect = self.presenter.get_scaling_rect(self._scale_factor)
+            self.overlay.update_scaling_rect.emit(*rect)
             return
 
         # Full render path, mark the state as clean for the next frame
@@ -445,7 +444,8 @@ class Pipeline(QObject):
         self.presenter.present()
 
         # --- 6. Update mouse mapping for event forwarding -------------------
-        self.overlay.scaling_rect = self.presenter.get_scaling_rect(self._scale_factor)
+        rect = self.presenter.get_scaling_rect(self._scale_factor)
+        self.overlay.update_scaling_rect.emit(*rect)
 
         # --- 7. Handle swapchain recreation (overlay resize) ----------------
         if self._swapchain_manager.needs_recreation():
@@ -463,18 +463,15 @@ class Pipeline(QObject):
         self.win_info.width = self._window_tracker.width
         self.win_info.height = self._window_tracker.height
 
-        self.overlay.geometry_update_requested.emit(self.win_info)
-        self.overlay.set_target_handle(self.win_info.handle)
-        self.overlay.set_target_size(self.win_info.width, self.win_info.height)
+        # Compute geometry locally so we have the new physical size now
+        new_geom = compute_overlay_geometry(self.config, self.win_info)
+        self._screen_width = new_geom.physical_overlay_width
+        self._screen_height = new_geom.physical_overlay_height
+        self.overlay.update_geometry.emit(self.win_info)
 
-        self._screen_width = self.overlay.physical_width
-        self._screen_height = self.overlay.physical_height
-
+        # Crop dimensions
         self.crop_width = self.win_info.width - self._crop_left - self._crop_right
         self.crop_height = self.win_info.height - self._crop_top - self._crop_bottom
-        self.overlay.set_crop(
-            self._crop_left, self._crop_top, self.crop_width, self.crop_height
-        )
 
         self.update_content_dimensions()
         self.recreate_upscaler()
@@ -491,12 +488,8 @@ class Pipeline(QObject):
             self._screen_width,
             self._screen_height,
         )
-        logical_cw = int(round(new_cw / self._scale_factor))
-        logical_ch = int(round(new_ch / self._scale_factor))
-
         self.presenter.content_width = new_cw
         self.presenter.content_height = new_ch
-        self.overlay.set_content_dimensions(logical_cw, logical_ch)
 
     def _recreate_swapchain(self) -> None:
         """Recreate the swapchain and dependent resources (overlay resize)."""
