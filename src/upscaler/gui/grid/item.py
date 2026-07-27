@@ -367,12 +367,12 @@ class WindowTileItem(QGraphicsObject):
         # Border
         if self._selected:
             pen = QPen(
-                QColor(self._gui_config.palette.accent_blue),
+                QColor(self._gui_config.palette.accent_primary),
                 self._gui_config.tile.selection_border_width,
             )
         elif self._hover:
             pen = QPen(
-                QColor(self._gui_config.palette.accent_cyan),
+                QColor(self._gui_config.palette.accent_secondary),
                 self._gui_config.tile.hover_border_width,
             )
         else:

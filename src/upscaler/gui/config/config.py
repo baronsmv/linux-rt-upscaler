@@ -4,11 +4,11 @@ from typing import Tuple
 
 @dataclass
 class GuiPalette:
-    """Semantic colors, fonts, and shared spacing tokens for the entire GUI.
+    """Semantic colour tokens for the entire GUI.
 
-    Every color used by a style sheet **must** be a palette field.
-    This allows themes to be swapped by simply providing a different
-    :class:`GuiPalette` instance, with no other configuration changes.
+    Every colour used by a style sheet must be a palette field.
+    Themes are swapped by replacing this instance – no other config changes.
+    All names describe the *role* of the colour, never its hue.
     """
 
     # ── Backgrounds ──────────────────────────────────────────────
@@ -26,12 +26,12 @@ class GuiPalette:
 
     # ── Borders & separators ─────────────────────────────────────
     border_subtle: str = "#444"  # subtle borders (tabs, panels)
-    border_focus: str = "#4a9eff"  # focus ring on inputs
+    border_focus: str = "#4a9eff"  # focus ring on inputs (may coincide with accent)
     border_hover: str = "#555555"  # hover border on controls
-    border_red: str = "#914343"  # red border (reset button, errors)
-    border_red_hover: str = "#b55a5a"
-    border_red_dim: str = "#6b2e2e"
-    border_profile_sep: str = "#333"  # separators in the profile sidebar
+    border_danger: str = "#914343"  # red border (reset button, destructive actions)
+    border_danger_hover: str = "#b55a5a"
+    border_danger_dim: str = "#6b2e2e"
+    border_profile_separator: str = "#333"  # separators in the profile sidebar
     border_icon_preview: str = "#444"  # border around icon previews
 
     # ── Tile overlay (gradient stops) ────────────────────────────
@@ -49,12 +49,14 @@ class GuiPalette:
     text_placeholder: str = "#666"  # placeholder in filter bar
     text_filter: str = "#eee"  # text inside the filter bar
 
-    # ── Accent colors ───────────────────────────────────────────
-    accent_blue: str = "#4a9eff"  # primary accent: focus, selections, sliders
-    accent_blue_light: str = "#6aade5"  # lighter version for hover states
-    accent_blue_bg: str = "#1a2b3c"  # highlighted row background
-    accent_cyan: str = "#2b5b84"  # tile hover border, filter focus
-    accent_icon: str = "#7A9EB1"  # color of monochrome SVG icons
+    # ── Accent / interactive colors ─────────────────────────────
+    accent_primary: str = "#4a9eff"  # primary action color (focus, selection, sliders)
+    accent_primary_light: str = "#6aade5"  # lighter variant for hover states
+    accent_primary_bg: str = "#1a2b3c"  # background for highlighted rows
+    accent_secondary: str = (
+        "#2b5b84"  # secondary accent (tile hover border, filter focus)
+    )
+    accent_icon: str = "#7A9EB1"  # colour of monochrome SVG icons
 
     # ── Slider, scrollbar, etc. ──────────────────────────────────
     slider_groove: str = "#333"
