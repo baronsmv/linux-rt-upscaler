@@ -118,9 +118,14 @@ def row_label_style(cfg: GUIConfig) -> str:
     return f"color: {cfg.palette.text}; font-size: {cfg.sidebar.tab_font_size}px;"
 
 
-def separator_line_style(cfg: GUIConfig) -> str:
+def header_line_style(cfg: GUIConfig) -> str:
     """Thin horizontal line used under section headers."""
-    return f"color: {cfg.palette.border};"
+    return f"""
+    background-color: {cfg.palette.text_subtle};
+    min-height: 1px;
+    max-height: 1px;
+    border: none;
+    """
 
 
 def scrollbar_style(cfg: GUIConfig) -> str:
@@ -489,12 +494,12 @@ def dialog_icon_button_style(cfg: GUIConfig) -> str:
     """Style for icon button in Profile Editor dialog."""
     return f"""
     QToolButton {{
-        background: transparent;
-        border: none;
+        background: {cfg.palette.button};
+        border-color: {cfg.palette.border};
     }}
     QToolButton:hover {{
         background: {cfg.palette.button_hover};
-        border-radius: 4px;
+        border-color: {cfg.palette.border_hover};
     }}
     """
 
@@ -578,8 +583,8 @@ def profile_toolbar_button_style(cfg: GUIConfig) -> str:
     """
 
 
-def profile_toolbar_separator_style(cfg: GUIConfig) -> str:
-    """Style for the profile toolbar separators."""
+def separator_style(cfg: GUIConfig) -> str:
+    """Style for the separators."""
     return f"color: {cfg.palette.border};"
 
 
@@ -741,7 +746,7 @@ def about_dialog_close_button_style(cfg: GUIConfig) -> str:
     """Style for the 'Close' button in the About dialog."""
     return f"""
     QPushButton {{
-        background: {cfg.palette.button_hover};
+        background: {cfg.palette.button};
         border: 1px solid {cfg.palette.border};
         border-radius: 8px;
         padding: 6px 18px;
@@ -749,7 +754,7 @@ def about_dialog_close_button_style(cfg: GUIConfig) -> str:
         font-size: 14px;
     }}
     QPushButton:hover {{
-        background: {cfg.palette.input};
+        background: {cfg.palette.button_hover};
         border-color: {cfg.palette.border_hover};
     }}
     """

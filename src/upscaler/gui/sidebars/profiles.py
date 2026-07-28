@@ -19,11 +19,11 @@ from PySide6.QtWidgets import (
 from ..config import GUIConfig
 from ..icons import load_icon, load_pixmap
 from ..styles import (
-    scrollbar_style,
-    sidebar_container_style,
     profile_list_style,
     profile_toolbar_button_style,
-    profile_toolbar_separator_style,
+    scrollbar_style,
+    separator_style,
+    sidebar_container_style,
     sidebar_section_label_style,
 )
 
@@ -87,7 +87,7 @@ class ProfilesSidebar(QWidget):
         layout.addSpacing(8)
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet(profile_toolbar_separator_style(self._gui_config))
+        sep.setStyleSheet(separator_style(self._gui_config))
         sep.setFixedHeight(1)
         layout.addWidget(sep)
         layout.addSpacing(8)
@@ -115,8 +115,8 @@ class ProfilesSidebar(QWidget):
         # Toolbar separator
         toolbar_sep = QFrame()
         toolbar_sep.setFrameShape(QFrame.HLine)
-        toolbar_sep.setStyleSheet(profile_toolbar_separator_style(gui_config))
-        toolbar_sep.setFixedHeight(1)
+        toolbar_sep.setStyleSheet(separator_style(gui_config))
+        toolbar_sep.setFixedHeight(16)
         layout.addWidget(toolbar_sep)
 
         # Toolbar

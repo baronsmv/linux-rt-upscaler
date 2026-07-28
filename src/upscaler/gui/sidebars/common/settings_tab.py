@@ -22,10 +22,10 @@ from ..controls import (
     SliderRow,
 )
 from ...styles import (
+    header_line_style,
     row_label_style,
     scroll_area_style,
     scrollbar_style,
-    separator_line_style,
     sidebar_section_label_style,
 )
 from ....config import DEFAULT_CONFIG
@@ -104,9 +104,8 @@ class SettingsTab(QWidget):
         label.setStyleSheet(sidebar_section_label_style(self._gui_config))
 
         line = QFrame()
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
-        line.setStyleSheet(separator_line_style(self._gui_config))
+        line.setFrameShape(QFrame.NoFrame)
+        line.setStyleSheet(header_line_style(self._gui_config))
 
         self.content_layout.addWidget(label)
         self.content_layout.addWidget(line)
