@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Callable, Dict, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QImage, QPixmap
@@ -52,6 +52,7 @@ class ProfileDialog(QDialog):
         self._gui_config = gui_config
         self._original_name = profile_name
         self._profiles = profiles or {}
+        self._match = match
 
         self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
         self.setMinimumWidth(520)
@@ -121,45 +122,38 @@ class ProfileDialog(QDialog):
         layout.addLayout(header)
 
         # ── Capture / Icon buttons ────────────────────────────────────
-        actions_row = QHBoxLayout()
-        actions_row.setSpacing(6)
+        self._actions_row = QHBoxLayout()
+        self._actions_row.setSpacing(6)
 
+        # Capture window
         capture_win_btn = QPushButton("  Capture window")
         capture_win_btn.setIcon(
             load_icon("actions/capture", 20, 20, color=self._gui_config.palette.icon)
         )
         capture_win_btn.setToolTip("Fill name, icon, and match rules from a window")
         capture_win_btn.clicked.connect(self._capture_full)
-        actions_row.addWidget(capture_win_btn)
+        self._actions_row.addWidget(capture_win_btn)
+        self._actions_row.addStretch()
 
-        actions_row.addStretch()
-
-        btn_size = gui_config.dialog.icon_button_size
-        ico_size = gui_config.dialog.icon_button_icon_size
-
-        self._capture_icon_btn = self._make_icon_button(
+        # Capture icon
+        self._add_icon_button(
             "actions/camera",
             "Capture icon from window",
             self._capture_icon,
-            btn_size,
-            ico_size,
         )
-        self._file_btn = self._make_icon_button(
+        # Load icon
+        self._add_icon_button(
             "actions/folder",
             "Load icon from file",
             self._select_icon_file,
-            btn_size,
-            ico_size,
         )
-        self._remove_icon_btn = self._make_icon_button(
-            "actions/delete", "Remove icon", self._remove_icon, btn_size, ico_size
+        # Remove icon
+        self._add_icon_button(
+            "actions/delete",
+            "Remove icon",
+            self._remove_icon,
         )
-
-        actions_row.addWidget(self._capture_icon_btn)
-        actions_row.addWidget(self._file_btn)
-        actions_row.addWidget(self._remove_icon_btn)
-
-        layout.addLayout(actions_row)
+        layout.addLayout(self._actions_row)
 
         # ── Match rules group ────────────────────────────────────────
         match_group = QGroupBox("Match rules")
@@ -167,47 +161,34 @@ class ProfileDialog(QDialog):
             "Profiles are checked in the order they appear in the left panel. "
             "The first profile whose match criteria fit the window will be applied."
         )
-        match_layout = QVBoxLayout(match_group)
-        match_layout.setSpacing(8)
+        self._match_layout = QVBoxLayout(match_group)
+        self._match_layout.setSpacing(8)
+        self._match_rows: Dict[str, QLineEdit] = {}
 
         # Title contains
-        row1 = QHBoxLayout()
-        lbl = QLabel("Title contains:")
-        lbl.setStyleSheet(dialog_match_label_style(self._gui_config))
-        row1.addWidget(lbl)
-        self._match_title_contains = QLineEdit()
-        self._match_title_contains.setPlaceholderText("e.g., VLC")
-        self._match_title_contains.setToolTip(
-            "Match if the window title contains this text (case-insensitive)."
+        self._match_title_contains = self._add_match_row(
+            rule="title_contains",
+            label="Title contains:",
+            placeholder="e.g., VLC",
+            tooltip="Match if the window title contains this text "
+            "(case-insensitive).",
         )
-        row1.addWidget(self._match_title_contains)
-        match_layout.addLayout(row1)
-
         # Title regex
-        row2 = QHBoxLayout()
-        lbl2 = QLabel("Title regex:")
-        lbl2.setStyleSheet(dialog_match_label_style(self._gui_config))
-        row2.addWidget(lbl2)
-        self._match_title_regex = QLineEdit()
-        self._match_title_regex.setPlaceholderText("e.g., (Yuzu|Ryujinx).*")
-        self._match_title_regex.setToolTip(
-            "Match if the window title matches this regular expression (case-insensitive)."
+        self._match_title_regex = self._add_match_row(
+            rule="title_regex",
+            label="Title regex:",
+            placeholder="e.g., (Yuzu|Ryujinx).*",
+            tooltip="Match if the window title matches this regular expression "
+            "(case-insensitive).",
         )
-        row2.addWidget(self._match_title_regex)
-        match_layout.addLayout(row2)
-
         # Title exact
-        row3 = QHBoxLayout()
-        lbl3 = QLabel("Title exact:")
-        lbl3.setStyleSheet(dialog_match_label_style(self._gui_config))
-        row3.addWidget(lbl3)
-        self._match_title_exact = QLineEdit()
-        self._match_title_exact.setPlaceholderText("e.g., Steam")
-        self._match_title_exact.setToolTip(
-            "Match if the window title exactly equals this text (case-insensitive)."
+        self._match_title_exact = self._add_match_row(
+            rule="title_exact",
+            label="Title exact:",
+            placeholder="e.g., Steam",
+            tooltip="Match if the window title exactly equals this text "
+            "(case-insensitive).",
         )
-        row3.addWidget(self._match_title_exact)
-        match_layout.addLayout(row3)
 
         layout.addWidget(match_group)
 
@@ -217,13 +198,7 @@ class ProfileDialog(QDialog):
         )
         info.setWordWrap(True)
         info.setStyleSheet(dialog_info_label_style(self._gui_config))
-        match_layout.addWidget(info)
-
-        # ── Pre-fill existing match criteria ─────────────────────────
-        if match:
-            self._match_title_contains.setText(match.get("title_contains", ""))
-            self._match_title_regex.setText(match.get("title_regex", ""))
-            self._match_title_exact.setText(match.get("title_exact", ""))
+        self._match_layout.addWidget(info)
 
         # ── Dialog buttons ───────────────────────────────────────────
         btn_row = QHBoxLayout()
@@ -239,33 +214,50 @@ class ProfileDialog(QDialog):
     # ------------------------------------------------------------------
     #  Helpers
     # ------------------------------------------------------------------
-    def _make_icon_button(
+    def _add_match_row(
+        self, rule: str, label: str, placeholder: str, tooltip: str
+    ) -> QLineEdit:
+        """Add a row to the match rules list."""
+        match_label = QLabel(label)
+        match_label.setStyleSheet(dialog_match_label_style(self._gui_config))
+        line_edit = QLineEdit()
+        line_edit.setPlaceholderText(placeholder)
+        line_edit.setToolTip(tooltip)
+        box_layout = QHBoxLayout()
+        box_layout.addWidget(match_label)
+        box_layout.addWidget(line_edit)
+        self._match_layout.addLayout(box_layout)
+
+        if self._match:
+            line_edit.setText(self._match.get(rule, ""))
+
+        self._match_rows[rule] = line_edit
+
+        return line_edit
+
+    def _add_icon_button(
         self,
         icon_name: str,
         tooltip: str,
-        callback,
-        size: int,
-        icon_size: int,
+        callback: Callable,
         enabled: bool = True,
     ) -> QToolButton:
-        btn = QToolButton()
-        btn.setIcon(
-            load_icon(
-                icon_name,
-                icon_size,
-                icon_size,
-                color=self._gui_config.palette.icon,
-            )
-        )
-        btn.setStyleSheet(dialog_icon_button_style(self._gui_config))
-        btn.setToolTip(tooltip)
-        btn.setFixedSize(size, size)
-        btn.setIconSize(QSize(icon_size, icon_size))
-        btn.setCursor(Qt.PointingHandCursor)
-        btn.setAutoRaise(True)
-        btn.setEnabled(enabled)
-        btn.clicked.connect(callback)
-        return btn
+        """Add an icon button to the profile toolbar."""
+        button_size = self._gui_config.dialog.icon_button_size
+        icon_size = self._gui_config.dialog.icon_button_icon_size
+        icon_color = self._gui_config.palette.icon
+        button = QToolButton()
+        button.setIcon(load_icon(icon_name, icon_size, icon_size, color=icon_color))
+        button.setStyleSheet(dialog_icon_button_style(self._gui_config))
+        button.setToolTip(tooltip)
+        button.setFixedSize(button_size, button_size)
+        button.setIconSize(QSize(icon_size, icon_size))
+        button.setCursor(Qt.PointingHandCursor)
+        button.setAutoRaise(True)
+        button.setEnabled(enabled)
+        button.clicked.connect(callback)
+        self._actions_row.addWidget(button)
+        return button
 
     # ------------------------------------------------------------------
     #  Match rule auto-fill
@@ -305,9 +297,9 @@ class ProfileDialog(QDialog):
             QMessageBox.information(self, "No icon", "The selected window has no icon.")
 
     # ------------------------------------------------------------------
-    #  Icon actions
+    #  Icon button actions
     # ------------------------------------------------------------------
-    def _capture_icon(self):
+    def _capture_icon(self) -> None:
         picker = WindowPickerDialog(
             self._gui_config, self, exclude_handle=self._exclude_handle
         )
@@ -316,7 +308,7 @@ class ProfileDialog(QDialog):
             if win_info:
                 self._apply_icon_from_window(win_info)
 
-    def _select_icon_file(self):
+    def _select_icon_file(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Select Icon", "", "Images (*.png *.jpg *.jpeg *.bmp)"
         )
@@ -334,7 +326,7 @@ class ProfileDialog(QDialog):
             )
             self._icon_preview.setPixmap(pix)
 
-    def _remove_icon(self):
+    def _remove_icon(self) -> None:
         self._captured_icon = None
         self._icon_removed = True
         self._icon_preview.setPixmap(
@@ -344,10 +336,6 @@ class ProfileDialog(QDialog):
     def get_captured_icon(self) -> Optional[QImage]:
         """Return the QImage of the newly selected/captured icon, or None."""
         return self._captured_icon
-
-    def is_icon_removed(self) -> bool:
-        """Return True if the user explicitly removed the icon."""
-        return self._icon_removed
 
     # ------------------------------------------------------------------
     #  Validation & results
@@ -375,20 +363,11 @@ class ProfileDialog(QDialog):
                 return
 
         self._profile_name = name
-        self._match_dict = {}
-
-        t1 = self._match_title_contains.text().strip()
-        if t1:
-            self._match_dict["title_contains"] = t1
-
-        t2 = self._match_title_regex.text().strip()
-        if t2:
-            self._match_dict["title_regex"] = t2
-
-        t3 = self._match_title_exact.text().strip()
-        if t3:
-            self._match_dict["title_exact"] = t3
-
+        self._match_dict = {
+            rule: text
+            for rule, box_layout in self._match_rows.items()
+            if (text := box_layout.text().strip())
+        }
         self.accept()
 
     def profile_name(self) -> str:
