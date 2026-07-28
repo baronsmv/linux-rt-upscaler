@@ -4,12 +4,7 @@ from typing import Tuple
 
 @dataclass
 class GUIPalette:
-    """Semantic color tokens for the entire GUI.
-
-    Every color used by a style sheet must be a palette field.
-    Themes are swapped by replacing this instance – no other config changes.
-    All names describe the *role* of the color, never its hue.
-    """
+    """Semantic color tokens for the entire GUI."""
 
     # Background
     background: str

@@ -14,7 +14,7 @@ def tooltip_style(cfg: GUIConfig) -> str:
     return f"""
     QToolTip {{
         color: {cfg.palette.text_hover};
-        background-color: {cfg.palette.button};
+        background-color: {cfg.palette.background};
         border: 1px solid {cfg.palette.border};
         padding: 4px;
         border-radius: 4px;
@@ -205,6 +205,7 @@ def line_edit_style(cfg: GUIConfig, *, enabled: bool = True) -> str:
     QLineEdit:focus {{
         border-color: {focus};
     }}
+    {tooltip_style(cfg)}
     """
 
 
@@ -256,6 +257,7 @@ def combo_box_style(cfg: GUIConfig, *, enabled: bool = True) -> str:
         color: {popup_text};
         outline: none;
     }}
+    {tooltip_style(cfg)}
     """
 
 
@@ -319,6 +321,7 @@ def color_swatch_style(
     QPushButton:hover {{
         border-color: {cfg.palette.control};
     }}
+    {tooltip_style(cfg)}
     """
 
 

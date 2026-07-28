@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QSlider, QLineEdit, QLabel, QWidget
 
 from ._base import BaseRow
-from ...styles import line_edit_style, slider_style, slider_value_label_style
+from ...styles import line_edit_style, slider_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -66,9 +66,10 @@ class SliderRow(BaseRow):
                 self._value_edit.editingFinished.connect(self._on_edit_finished)
                 self._content_layout.addWidget(self._value_edit)
             else:
-                self._value_label = QLabel(self._format(value))
+                self._value_label = QLabel()
                 self._value_label.setFixedHeight(gui_config.sidebar.row_height)
                 self._content_layout.addWidget(self._value_label)
+                self._apply_label_style()
 
         self._apply_slider_style()
         self._apply_edit_style()
@@ -116,7 +117,7 @@ class SliderRow(BaseRow):
 
     def _on_value_changed(self, val: int) -> None:
         if self._value_label:
-            self._value_label.setText(self._format(val))
+            self._apply_label_style()
         if self._value_edit:
             self._value_edit.blockSignals(True)
             self._value_edit.setText(self._format(val))
@@ -152,6 +153,17 @@ class SliderRow(BaseRow):
 
     def _apply_label_style(self) -> None:
         if self._value_label:
+            color = (
+                self._gui_config.palette.text
+                if self.isEnabled()
+                else self._gui_config.palette.text_disabled
+            )
+            self._value_label.setTextFormat(Qt.RichText)
+            current_value = self._slider.value()
+            formatted = self._format(current_value)
+            self._value_label.setText(
+                f'<span style="color: {color};">{formatted}</span>'
+            )
             self._value_label.setStyleSheet(
-                slider_value_label_style(self._gui_config, enabled=self.isEnabled()),
+                f"font-size: {self._gui_config.sidebar.tab_font_size}px;"
             )
