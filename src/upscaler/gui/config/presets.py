@@ -55,6 +55,29 @@ DARK = GUIPalette(
 AUTO = copy(LIGHT if scheme_is_light() else DARK)
 AUTO.background = None
 
+AYU_LIGHT = GUIPalette(
+    background="#fafafa",
+    text="#5c6166",
+    text_hover="#1a1a1a",
+    text_subtle="#8a8e94",
+    text_pillbox="#99fafafa",
+    icon="#5c6166",
+    border="#d9d9d9",
+    border_hover="#fa8d3e",
+    input="#ffffff",
+    input_hover="#f2f2f2",
+    input_disabled="#e8e8e8",
+    control="#fa8d3e",
+    control_hover="#ffa85c",
+    control_disabled="#ffe5d0",
+    control_subtle="#e8e8e8",
+    control_subtle_hover="#d9d9d9",
+    button="#ffffff",
+    button_hover="#f2f2f2",
+    button_revert="#f07171",
+    button_revert_hover="#f58c8c",
+)
+
 AYU_MIRAGE = GUIPalette(
     background="#1f2430",
     text="#8a9199",
@@ -99,6 +122,29 @@ CATPUCCIN = GUIPalette(
     button_hover="#45475a",
     button_revert="#f38ba8",
     button_revert_hover="#f5c2e7",
+)
+
+COBALT2 = GUIPalette(
+    background="#193549",
+    text="#c0c0c0",
+    text_hover="#ffffff",
+    text_subtle="#7a7a8a",
+    text_pillbox="#99193549",
+    icon="#ffc600",
+    border="#2a4a5a",
+    border_hover="#ffc600",
+    input="#1e3a4a",
+    input_hover="#2a4a5a",
+    input_disabled="#14242e",
+    control="#ffc600",
+    control_hover="#ffd94a",
+    control_disabled="#1e3a4a",
+    control_subtle="#1e3a4a",
+    control_subtle_hover="#2a4a5a",
+    button="#1e3a4a",
+    button_hover="#2a4a5a",
+    button_revert="#ff628c",
+    button_revert_hover="#ff88aa",
 )
 
 CYBERPUNK = GUIPalette(
@@ -216,6 +262,29 @@ GRUVBOX_DARK = GUIPalette(
     button_revert_hover="#fc7a6e",
 )
 
+GRUVBOX_LIGHT = GUIPalette(
+    background="#fbf1c7",
+    text="#3c3836",
+    text_hover="#1d2021",
+    text_subtle="#7c6f64",
+    text_pillbox="#99fbf1c7",
+    icon="#3c3836",
+    border="#d5c4a1",
+    border_hover="#83a598",
+    input="#f2e5bc",
+    input_hover="#ebdbb2",
+    input_disabled="#fbf1c7",
+    control="#83a598",
+    control_hover="#8ec07c",
+    control_disabled="#f2e5bc",
+    control_subtle="#f2e5bc",
+    control_subtle_hover="#ebdbb2",
+    button="#f2e5bc",
+    button_hover="#ebdbb2",
+    button_revert="#cc241d",
+    button_revert_hover="#fb4934",
+)
+
 HIGH_CONTRAST = GUIPalette(
     background="#000000",
     text="#ffffff",
@@ -237,6 +306,52 @@ HIGH_CONTRAST = GUIPalette(
     button_hover="#333333",
     button_revert="#ff0000",
     button_revert_hover="#ff4444",
+)
+
+KANAGAWA = GUIPalette(
+    background="#1f1f28",
+    text="#dcd7ba",
+    text_hover="#f4f0e8",
+    text_subtle="#7a7a8a",
+    text_pillbox="#991f1f28",
+    icon="#dcd7ba",
+    border="#363646",
+    border_hover="#7fb4ca",
+    input="#2a2a36",
+    input_hover="#363646",
+    input_disabled="#16161c",
+    control="#7fb4ca",
+    control_hover="#a3d4e0",
+    control_disabled="#2a2a36",
+    control_subtle="#2a2a36",
+    control_subtle_hover="#363646",
+    button="#2a2a36",
+    button_hover="#363646",
+    button_revert="#e46876",
+    button_revert_hover="#ea8a94",
+)
+
+MATERIAL_PALENIGHT = GUIPalette(
+    background="#292d3e",
+    text="#b3afc2",
+    text_hover="#d5d0e0",
+    text_subtle="#7a7a9a",
+    text_pillbox="#99292d3e",
+    icon="#c792ea",
+    border="#444267",
+    border_hover="#c792ea",
+    input="#32364a",
+    input_hover="#3d4055",
+    input_disabled="#1e2230",
+    control="#c792ea",
+    control_hover="#dab3f0",
+    control_disabled="#32364a",
+    control_subtle="#32364a",
+    control_subtle_hover="#444267",
+    button="#32364a",
+    button_hover="#3d4055",
+    button_revert="#f07178",
+    button_revert_hover="#f59a9f",
 )
 
 MONOKAI = GUIPalette(
@@ -308,6 +423,29 @@ ONE_DARK = GUIPalette(
     button_revert_hover="#f09098",
 )
 
+ONE_LIGHT = GUIPalette(
+    background="#fafafa",
+    text="#383a42",
+    text_hover="#000000",
+    text_subtle="#a0a1a7",
+    text_pillbox="#99fafafa",
+    icon="#383a42",
+    border="#d9d9d9",
+    border_hover="#0184bc",
+    input="#ffffff",
+    input_hover="#f2f2f2",
+    input_disabled="#e8e8e8",
+    control="#0184bc",
+    control_hover="#56b6c2",
+    control_disabled="#d9e6f2",
+    control_subtle="#e8e8e8",
+    control_subtle_hover="#d9d9d9",
+    button="#ffffff",
+    button_hover="#f2f2f2",
+    button_revert="#e06c75",
+    button_revert_hover="#ea828a",
+)
+
 ROSE_PINE = GUIPalette(
     background="#191724",
     text="#908caa",
@@ -377,6 +515,29 @@ SOLARIZED_LIGHT = GUIPalette(
     button_revert_hover="#f55a58",
 )
 
+SYNTHWAVE_84 = GUIPalette(
+    background="#241b30",
+    text="#d0c0d0",
+    text_hover="#f4eee8",
+    text_subtle="#7a668a",
+    text_pillbox="#99241b30",
+    icon="#ff7edb",
+    border="#483b5c",
+    border_hover="#ff7edb",
+    input="#36214a",
+    input_hover="#483b5c",
+    input_disabled="#1a121f",
+    control="#ff7edb",
+    control_hover="#ffa3e6",
+    control_disabled="#36214a",
+    control_subtle="#36214a",
+    control_subtle_hover="#483b5c",
+    button="#36214a",
+    button_hover="#483b5c",
+    button_revert="#ff3366",
+    button_revert_hover="#ff6688",
+)
+
 TOKYO_NIGHT = GUIPalette(
     background="#1a1b26",
     text="#9aa5ce",
@@ -406,19 +567,26 @@ PRESETS: Dict[str, GUIPalette] = {
     "Light": LIGHT,
     "Dark": DARK,
     "Ayu Mirage": AYU_MIRAGE,
+    "Ayu Light": AYU_LIGHT,
     "Catppuccin": CATPUCCIN,
+    "Cobalt2": COBALT2,
     "Cyberpunk": CYBERPUNK,
     "Dracula": DRACULA,
     "Everforest Dark": EVERFOREST_DARK,
     "GitHub Dark": GITHUB_DARK,
     "Gruvbox Dark": GRUVBOX_DARK,
+    "Gruvbox Light": GRUVBOX_LIGHT,
     "High Contrast": HIGH_CONTRAST,
+    "Kanagawa": KANAGAWA,
+    "Material Palenight": MATERIAL_PALENIGHT,
     "Monokai": MONOKAI,
     "Nord": NORD,
     "One Dark": ONE_DARK,
+    "One Light": ONE_LIGHT,
     "Rose Pine": ROSE_PINE,
     "Solarized Dark": SOLARIZED_DARK,
     "Solarized Light": SOLARIZED_LIGHT,
+    "Synthwave 84": SYNTHWAVE_84,
     "Tokyo Night": TOKYO_NIGHT,
 }
 # PRESETS["Random"] = random.choice(tuple[GUIPalette](PRESETS.values()))
