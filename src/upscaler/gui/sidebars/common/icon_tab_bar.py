@@ -7,7 +7,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QWidget, QGridLayout, QPushButton, QButtonGroup
 
 from ...icons import load_pixmap
-from ...styles import icon_tab_bar_style, icon_tab_button_style
+from ...styles import icon_tab_button_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -26,8 +26,6 @@ class IconTabBar(QWidget):
         self._gui_config = gui_config
         self._columns = gui_config.sidebar.icon_columns
         self._icon_size = gui_config.sidebar.icon_size
-
-        self.setStyleSheet(icon_tab_bar_style(gui_config))
 
         layout = QGridLayout(self)
         layout.setContentsMargins(4, 8, 4, 8)

@@ -16,7 +16,6 @@ from PySide6.QtGui import (
     QPainter,
     QPixmap,
     QImage,
-    QLinearGradient,
     QColor,
     QFont,
     QPen,
@@ -321,13 +320,6 @@ class WindowTileItem(QGraphicsObject):
         painter.save()
         painter.setClipPath(bg_path)
 
-        # Gradient overlay
-        grad = QLinearGradient(0, h / 2 - 40, 0, h / 2)
-        grad.setColorAt(0, QColor(self._gui_config.palette.tile_overlay_start))
-        grad.setColorAt(0.7, QColor(self._gui_config.palette.tile_overlay_mid))
-        grad.setColorAt(1.0, QColor(self._gui_config.palette.tile_overlay_end))
-        painter.fillRect(QRectF(-w / 2, h / 2 - 40, w, 40), grad)
-
         # Title
         title = self._win_info.title
         font = QFont(
@@ -354,12 +346,12 @@ class WindowTileItem(QGraphicsObject):
 
         # Draw pill background
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(self._gui_config.palette.tile_title_bg))
+        painter.setBrush(QColor(self._gui_config.palette.text_pillbox_bg))
         painter.drawRoundedRect(pill_rect, pill_radius, pill_radius)
 
         # Draw text centered in pill
         text_rect = pill_rect.adjusted(8, 0, -8, 0)
-        painter.setPen(QColor(self._gui_config.palette.tile_title_text))
+        painter.setPen(QColor(self._gui_config.palette.text_hover))
         painter.drawText(text_rect, Qt.AlignCenter, title)
 
         painter.restore()

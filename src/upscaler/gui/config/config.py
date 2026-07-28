@@ -13,50 +13,33 @@ class GuiPalette:
 
     # ── Backgrounds ──────────────────────────────────────────────
     bg_deep: str = "#121212"  # main background behind the window grid
-    bg_panel: str = "#161616"  # sidebars, footer area
     bg_surface: str = "#1e1e1e"  # tiles, tab backgrounds, disabled elements
     bg_surface_hover: str = "#2c2c2c"  # hovered tiles, active tab, list items
     bg_input: str = "#2a2a2c"  # combo boxes, line edits
     bg_input_disabled: str = "#1e1e1e"
     bg_filter: str = "#2a2a2a"  # filter bar normal background
     bg_filter_hover: str = "#353535"  # filter bar hover background
-    bg_preview: str = "#2d2d2d"  # icon previews, etc.
-    bg_icon_tab_bar: str = "#1a1a1a"  # the icon‑only tab bar on the right
     bg_button_pressed: str = "#222"  # dialog buttons when pressed
 
     # ── Borders & separators ─────────────────────────────────────
-    border_subtle: str = "#444"  # subtle borders (tabs, panels)
-    border_focus: str = "#4a9eff"  # focus ring on inputs (may coincide with accent)
-    border_hover: str = "#555555"  # hover border on controls
-    border_danger: str = "#914343"  # red border (reset button, destructive actions)
-    border_danger_hover: str = "#b55a5a"
-    border_danger_dim: str = "#6b2e2e"
-    border_profile_separator: str = "#333"  # separators in the profile sidebar
-    border_icon_preview: str = "#444"  # border around icon previews
-
-    # ── Tile overlay (gradient stops) ────────────────────────────
-    tile_overlay_start: str = "#00000000"
-    tile_overlay_mid: str = "#88000000"
-    tile_overlay_end: str = "#dd000000"
-    tile_title_bg: str = "#99000000"  # background behind the tile title
-    tile_title_text: str = "#ffffff"  # color of the tile title text
+    border_main: str = "#444"  # borders (tabs, panels)
+    border_main_hover: str = "#555555"
+    border_cancel: str = "#914343"  # red border (reset button, destructive actions)
+    border_cancel_hover: str = "#b55a5a"
 
     # ── Text ─────────────────────────────────────────────────────
-    text_primary: str = "#ffffff"  # main text on dark backgrounds
-    text_secondary: str = "#cccccc"  # secondary labels
-    text_dim: str = "#888888"  # dimmed hints, section titles
+    text: str = "#cccccc"  # secondary labels
+    text_hover: str = "#ffffff"  # main text on dark backgrounds
+    text_subtle: str = "#888888"  # dimmed hints, section titles
     text_disabled: str = "#555"  # disabled control text
-    text_placeholder: str = "#666"  # placeholder in filter bar
-    text_filter: str = "#eee"  # text inside the filter bar
+    text_pillbox_bg: str = "#99000000"  # background behind the tile title
 
     # ── Accent / interactive colors ─────────────────────────────
-    accent_primary: str = "#4a9eff"  # primary action color (focus, selection, sliders)
-    accent_primary_light: str = "#6aade5"  # lighter variant for hover states
-    accent_primary_bg: str = "#1a2b3c"  # background for highlighted rows
-    accent_secondary: str = (
-        "#2b5b84"  # secondary accent (tile hover border, filter focus)
-    )
-    accent_icon: str = "#7A9EB1"  # color of monochrome SVG icons
+    accent_primary: str = "#4a9eff"  # focus, selection, sliders
+    accent_primary_hover: str = "#6aade5"  # lighter variant for hover states
+    accent_primary_highlight: str = "#1a2b3c"  # background for highlighted rows
+    accent_secondary: str = "#2b5b84"  # tile hover border, filter focus
+    accent_icon: str = "#7a9eb1"  # color of monochrome SVG icons
 
     # ── Slider, scrollbar, etc. ──────────────────────────────────
     slider_groove: str = "#333"

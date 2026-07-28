@@ -114,7 +114,7 @@ class BaseRow(QWidget):
         elif highlighted:
             color = self._gui_config.palette.accent_primary
         else:
-            color = self._gui_config.palette.text_secondary
+            color = self._gui_config.palette.text
 
         self._label.setStyleSheet(
             base_row_label_highlight_style(self._gui_config, color=color)

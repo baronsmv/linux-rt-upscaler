@@ -57,9 +57,10 @@ class MainWindow(QMainWindow):
         self.manual_session: Optional[PipelineSession] = None
 
         # Visual configuration
+        system_bg = True
         scheme = system_color_scheme()
         self.gui_config = GUIConfig(
-            palette=presets.DARK if scheme == "dark" else presets.LIGHT
+            palette=presets.DRACULA if scheme == "dark" else presets.LIGHT
         )
         QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))
 
@@ -79,6 +80,10 @@ class MainWindow(QMainWindow):
         # Central layout
         # ------------------------------------------------------------------
         central = QWidget()
+        if not system_bg:
+            central.setStyleSheet(
+                f"background-color: {self.gui_config.palette.bg_deep};"
+            )
         self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -114,7 +119,9 @@ class MainWindow(QMainWindow):
         # About button
         self.about_btn = QToolButton()
         self.about_btn.setIcon(
-            load_icon("actions/about", 20, 20, color=self.gui_config.palette.text_dim)
+            load_icon(
+                "actions/about", 20, 20, color=self.gui_config.palette.accent_icon
+            )
         )
         self.about_btn.setIconSize(QSize(20, 20))
         self.about_btn.setFixedSize(32, 32)

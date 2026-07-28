@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt, Signal, QEvent
-from PySide6.QtGui import QPalette, QColor, QPixmap, QPainter, QIcon
+from PySide6.QtGui import QPixmap, QPainter, QIcon
 from PySide6.QtWidgets import QWidget, QLineEdit, QPushButton, QLabel
 
 from ..icons import load_icon, load_pixmap
@@ -135,9 +135,6 @@ class FilterBar(QWidget):
             filter_bar_line_edit_style(self._gui_config, hover=hover)
         )
         pal = self._line_edit.palette()
-        pal.setColor(
-            QPalette.PlaceholderText, QColor(self._gui_config.palette.text_placeholder)
-        )
         self._line_edit.setPalette(pal)
 
     # ------------------------------------------------------------------
