@@ -292,7 +292,7 @@ class ProfileDialog(QDialog):
 
     def _apply_icon_from_window(self, win_info):
         icon_img = get_window_icon(
-            win_info.handle, size=self._gui_config.profile.capture_icon_size
+            win_info.handle, size=self._gui_config.profile.saved_icon_size
         )
         if icon_img:
             self._captured_icon = icon_img

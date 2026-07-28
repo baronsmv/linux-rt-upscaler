@@ -7,10 +7,9 @@ from PySide6.QtCore import Qt, QEvent
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from ...styles import (
-    base_row_indicator_style,
-    row_label_style,
-    base_row_content_background_style,
-    base_row_label_highlight_style,
+    setting_highlight_background_style,
+    setting_highlight_bar_style,
+    setting_highlight_label_style,
 )
 
 if TYPE_CHECKING:
@@ -47,7 +46,7 @@ class BaseRow(QWidget):
         # ---- Colored Bar ----
         self._indicator = QFrame()
         self._indicator.setFixedWidth(cfg.highlight_border_width)
-        self._indicator.setStyleSheet(base_row_indicator_style(self._gui_config))
+        self._indicator.setStyleSheet(setting_highlight_bar_style(self._gui_config))
         self._indicator.hide()
         main_layout.addWidget(self._indicator)
 
@@ -72,7 +71,6 @@ class BaseRow(QWidget):
     def _init_label(self, text: str) -> QLabel:
         """Create a standard row label and add it to the content layout."""
         self._label = QLabel(text)
-        self._label.setStyleSheet(row_label_style(self._gui_config))
         self._label.setFixedHeight(self._gui_config.sidebar.row_height)
         self._label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         self._content_layout.addWidget(self._label)
@@ -98,7 +96,9 @@ class BaseRow(QWidget):
             self._indicator.hide()
             self._indicator_spacer.setFixedWidth(0)
         self._content_container.setStyleSheet(
-            base_row_content_background_style(self._gui_config, highlighted=highlighted)
+            setting_highlight_background_style(
+                self._gui_config, highlighted=highlighted
+            )
         )
         self._apply_highlight_style(highlighted)
 
@@ -117,7 +117,7 @@ class BaseRow(QWidget):
             color = self._gui_config.palette.text
 
         self._label.setStyleSheet(
-            base_row_label_highlight_style(self._gui_config, color=color)
+            setting_highlight_label_style(self._gui_config, color=color)
         )
 
     def set_baseline(self, baseline: Any) -> None:

@@ -55,8 +55,8 @@ class WindowPickerDialog(QDialog):
         self._list = QListWidget()
         self._list.setIconSize(
             QSize(
-                gui_config.profile.item_icon_size,
-                gui_config.profile.item_icon_size,
+                gui_config.profile.profile_icon_size,
+                gui_config.profile.profile_icon_size,
             )
         )
         self._list.itemDoubleClicked.connect(self._accept)
@@ -73,8 +73,8 @@ class WindowPickerDialog(QDialog):
         # Pre-load the fallback icon (generic window)
         pix = load_pixmap(
             "tabs/window",
-            gui_config.profile.item_icon_size,
-            gui_config.profile.item_icon_size,
+            gui_config.profile.profile_icon_size,
+            gui_config.profile.profile_icon_size,
             color=self._gui_config.palette.icon,
         )
         self._fallback_icon = QIcon(pix)
@@ -111,22 +111,22 @@ class WindowPickerDialog(QDialog):
             # Try to fetch window icon; use fallback if not available
             try:
                 img = get_window_icon(
-                    win.handle, size=self._gui_config.profile.capture_icon_size
+                    win.handle, size=self._gui_config.profile.saved_icon_size
                 )
                 if img and not img.isNull():
                     pix = QPixmap.fromImage(img)
                 else:
                     pix = load_pixmap(
                         "tabs/window",
-                        self._gui_config.profile.item_icon_size,
-                        self._gui_config.profile.item_icon_size,
+                        self._gui_config.profile.profile_icon_size,
+                        self._gui_config.profile.profile_icon_size,
                         color=self._gui_config.palette.icon,
                     )
             except Exception:
                 pix = load_pixmap(
                     "tabs/window",
-                    self._gui_config.profile.item_icon_size,
-                    self._gui_config.profile.item_icon_size,
+                    self._gui_config.profile.profile_icon_size,
+                    self._gui_config.profile.profile_icon_size,
                     color=self._gui_config.palette.icon,
                 )
 

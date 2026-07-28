@@ -25,11 +25,7 @@ from .tabs import (
     PresentationTab,
     ScalingTab,
 )
-from ..styles import (
-    footer_menu_style,
-    footer_reset_button_style,
-    footer_save_button_style,
-)
+from ..styles import reset_button_style, reset_submenu_style, save_button_style
 from ...config import Config, parse_config
 
 if TYPE_CHECKING:
@@ -130,11 +126,7 @@ class SettingsSidebar(IconSidebarBase):
 
         # Apply the reset button's stylesheet (dynamic colors based on state)
         self._reset_btn.setStyleSheet(
-            footer_reset_button_style(
-                self.gui_config,
-                main_active=self._dirty_yaml,
-                enabled=self._reset_btn.isEnabled(),
-            )
+            reset_button_style(self.gui_config, active=self._dirty_yaml)
         )
 
     def _has_changes(self, baseline: Config) -> bool:
@@ -168,7 +160,7 @@ class SettingsSidebar(IconSidebarBase):
         self._save_btn.setFixedHeight(cfg.footer.button_height)
         self._save_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._save_btn.clicked.connect(self.save_settings.emit)
-        self._save_btn.setStyleSheet(footer_save_button_style(cfg))
+        self._save_btn.setStyleSheet(save_button_style(cfg))
         button_layout.addWidget(self._save_btn, 1)
 
         # ---- Reset split-button ----
@@ -192,7 +184,7 @@ class SettingsSidebar(IconSidebarBase):
         self._restore_action.triggered.connect(self.restore_defaults.emit)
         self._reset_btn.setMenu(menu)
 
-        menu.setStyleSheet(footer_menu_style(cfg))
+        menu.setStyleSheet(reset_submenu_style(cfg))
 
         button_layout.addWidget(self._reset_btn, 1)
         outer_layout.addWidget(button_widget)
@@ -200,8 +192,6 @@ class SettingsSidebar(IconSidebarBase):
         # Initial state: buttons disabled, Reset style set accordingly
         self._save_btn.setEnabled(False)
         self._reset_btn.setEnabled(False)
-        self._reset_btn.setStyleSheet(
-            footer_reset_button_style(cfg, main_active=False, enabled=False)
-        )
+        self._reset_btn.setStyleSheet(reset_button_style(cfg, active=False))
 
         return outer

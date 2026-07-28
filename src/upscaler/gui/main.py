@@ -24,7 +24,7 @@ from .grid import FilterBar, WindowGridScene, WindowGridView
 from .helpers import DaemonController, ProfileActions, WindowGridManager
 from .icons import load_icon
 from .sidebars import ProfilesSidebar, SettingsSidebar
-from .styles import about_button_style, tooltip_style
+from .styles import circular_button_style, tooltip_style
 from .widgets import StyledSplitter
 from ..config import apply_overrides, find_matching_profile, parse_config
 from ..pipeline import create_pipeline_session
@@ -78,10 +78,9 @@ class MainWindow(QMainWindow):
         # Central layout
         # ------------------------------------------------------------------
         central = QWidget()
-        if preset.background is not None:
-            central.setStyleSheet(
-                f"background-color: {self.gui_config.palette.background};"
-            )
+        central.setStyleSheet(
+            f"background-color: {self.gui_config.palette.background};"
+        )
         self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -124,7 +123,9 @@ class MainWindow(QMainWindow):
         self.about_btn.setCursor(Qt.PointingHandCursor)
         self.about_btn.setToolTip("About Real-Time Upscaler")
         self.about_btn.setAutoRaise(True)
-        self.about_btn.setStyleSheet(about_button_style(self.gui_config))
+        self.about_btn.setStyleSheet(
+            circular_button_style(self.gui_config, icon_size=32)
+        )
         self.about_btn.clicked.connect(self._show_about_dialog)
         filter_row.addWidget(self.about_btn)
         filter_row.addSpacing(self.gui_config.filter.horizontal_margin)

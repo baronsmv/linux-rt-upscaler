@@ -4,7 +4,7 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QWidget, QLineEdit, QPushButton, QLabel
 
 from ..icons import load_icon, load_pixmap
-from ..styles import filter_bar_line_edit_style
+from ..styles import filter_bar_style
 
 
 class FilterBar(QWidget):
@@ -131,9 +131,7 @@ class FilterBar(QWidget):
     #  Style (hover / normal)
     # ------------------------------------------------------------------
     def _update_bar_style(self, hover: bool) -> None:
-        self._line_edit.setStyleSheet(
-            filter_bar_line_edit_style(self._gui_config, hover=hover)
-        )
+        self._line_edit.setStyleSheet(filter_bar_style(self._gui_config, hover=hover))
         pal = self._line_edit.palette()
         self._line_edit.setPalette(pal)
 

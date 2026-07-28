@@ -5,11 +5,11 @@ from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QVBoxLayout
 
 from ..icons import load_icon
 from ..styles import (
-    about_dialog_close_button_style,
+    close_dialog_button_style,
     about_dialog_description_style,
     about_dialog_link_style,
     about_dialog_name_style,
-    about_dialog_style,
+    dialog_style,
     about_dialog_version_style,
 )
 from ...config import get_version
@@ -22,7 +22,7 @@ class AboutDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("About")
         self.setFixedSize(480, 400)
-        self.setStyleSheet(about_dialog_style(gui_config))
+        self.setStyleSheet(dialog_style(gui_config))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 28, 32, 24)
@@ -80,7 +80,7 @@ class AboutDialog(QDialog):
         close_btn.setFixedSize(120, 36)
         close_btn.setCursor(Qt.PointingHandCursor)
         close_btn.clicked.connect(self.accept)
-        close_btn.setStyleSheet(about_dialog_close_button_style(gui_config))
+        close_btn.setStyleSheet(close_dialog_button_style(gui_config))
 
         btn_layout = QVBoxLayout()
         btn_layout.addWidget(close_btn, alignment=Qt.AlignCenter)

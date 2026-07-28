@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
 
 
 @dataclass
@@ -7,7 +6,7 @@ class GUIPalette:
     """Semantic color tokens for the entire GUI."""
 
     # Background
-    background: Optional[str]
+    background: str
 
     # Text
     text: str
@@ -30,7 +29,6 @@ class GUIPalette:
     # Controls
     control: str
     control_hover: str
-    control_disabled: str
     control_subtle: str
     control_subtle_hover: str
 
@@ -54,15 +52,10 @@ class TileLayout:
         spacing_ratio: Spacing as a fraction of tile width (overrides fixed spacing if > 0).
         margin: Distance from the window edges to the grid.
         columns: Desired number of tile columns (may be reduced when there are fewer tiles).
-        min_columns: Minimum number of columns when the window is narrow.
-        scroll_margin: Extra margin that triggers automatic scrolling during drag.
         pop_scale: Scale factor applied on hover/selection (1.0 = no scale).
         pop_duration: Duration of the pop animation in milliseconds.
         selection_border_width: Border width (px) when the tile is selected.
         hover_border_width: Border width (px) when the tile is hovered.
-        shadow_blur_radius: Blur radius of the default shadow.
-        shadow_offset: (x, y) offset of the default shadow.
-        shadow_hover_blur_radius: Blur radius of the shadow when hovered.
         title_font_family: Font family used for the title.
         title_font_size: Font size for the tile title.
         title_font_bold: Whether the title is rendered in bold.
@@ -76,15 +69,10 @@ class TileLayout:
     spacing_ratio: float = 0.075
     margin: int = 20
     columns: int = 3
-    min_columns: int = 1
-    scroll_margin: int = 20
     pop_scale: float = 1.05
     pop_duration: int = 200
     selection_border_width: int = 3
     hover_border_width: int = 2
-    shadow_blur_radius: int = 20
-    shadow_offset: Tuple[int, int] = (0, 4)
-    shadow_hover_blur_radius: int = 30
     title_font_family: str = "Segoe UI"
     title_font_size: int = 12
     title_font_bold: bool = True
@@ -124,8 +112,6 @@ class SidebarLayout:
     Attributes:
         width: Default sidebar width in pixels.
         tab_font_size: Font size for tab labels and row labels.
-        tab_icon_size: Icon size inside tabs.
-        tab_indicator_width: Thickness of the active tab indicator bar.
         section_title_size: Font size of section headings (e.g. "Overlay").
         row_height: Minimum height of a settings row.
         icon_columns: Number of columns in the icon picker grid.
@@ -135,8 +121,6 @@ class SidebarLayout:
 
     width: int = 400
     tab_font_size: int = 18
-    tab_icon_size: int = 20
-    tab_indicator_width: int = 3
     section_title_size: int = 18
     row_height: int = 32
     icon_columns: int = 7
@@ -169,13 +153,11 @@ class ComboBoxLayout:
         padding_h: Horizontal padding inside the combo box.
         padding_v: Vertical padding inside the combo box.
         border_radius: Corner radius of the combo box.
-        dropdown_width: Width of the drop‑down arrow area (hidden via CSS).
     """
 
     padding_h: int = 8
     padding_v: int = 4
     border_radius: int = 6
-    dropdown_width: int = 20
 
 
 @dataclass(frozen=True)
@@ -253,31 +235,27 @@ class ProfileLayout:
 
     Attributes:
         title_font_size: Font size for the "PROFILES" section title.
-        title_font_weight: Font weight of the section title (e.g. "bold").
-        title_left_padding: Left padding for the title label.
-        item_height: Height of each profile item in the list.
-        item_icon_size: Icon size for profile icons.
-        item_border_radius: Corner radius of profile items.
-        item_spacing: Vertical spacing between profile items.
+        profile_height: Height of each profile item in the list.
+        profile_icon_size: Icon size for profile icons.
+        profile_border_left: Left border width of the active profile item.
+        profile_border_radius: Corner radius of profile items.
+        profile_spacing: Vertical spacing between profile items.
         toolbar_button_size: Fixed size of the toolbar buttons (Add, Edit, etc.).
         toolbar_button_icon_size: Icon size inside the toolbar buttons.
         toolbar_button_border_radius: Corner radius of the toolbar buttons.
-        capture_icon_size: Size used when capturing an icon from a window.
-        indicator_width: Left border width of the active profile item.
+        saved_icon_size: Size used when capturing an icon from a window.
     """
 
     title_font_size: int = 18
-    title_font_weight: str = "bold"
-    title_left_padding: int = 2
-    item_height: int = 40
-    item_icon_size: int = 32
-    item_border_radius: int = 6
-    item_spacing: int = 4
+    profile_height: int = 40
+    profile_icon_size: int = 32
+    profile_border_left: int = 3
+    profile_border_radius: int = 6
+    profile_spacing: int = 4
     toolbar_button_size: int = 36
     toolbar_button_icon_size: int = 24
     toolbar_button_border_radius: int = 8
-    capture_icon_size: int = 128
-    indicator_width: int = 3
+    saved_icon_size: int = 128
 
 
 @dataclass(frozen=True)
@@ -287,7 +265,7 @@ class DialogLayout:
     Attributes:
         combo_min_width: Minimum width of combo boxes inside dialogs.
         label_font_size: Default font size for dialog labels.
-        match_label_font_size: Font size for match‑criteria labels.
+        input_font_size: Font size for match‑criteria labels.
         info_font_size: Font size for informational text.
         icon_button_size: Fixed size of icon buttons in the dialog.
         icon_button_icon_size: Icon size inside those buttons.
@@ -303,13 +281,13 @@ class DialogLayout:
 
     combo_min_width: int = 120
     label_font_size: int = 18
-    match_label_font_size: int = 18
+    input_font_size: int = 18
     info_font_size: int = 16
     icon_button_size: int = 32
     icon_button_icon_size: int = 24
     button_border_radius: int = 8
     input_padding: str = "4px 8px"
-    button_padding: str = "4px 12px"
+    button_padding: str = "4px 8px"
     list_item_padding: str = "4px 8px"
     list_item_border_radius: int = 4
     input_border_radius: int = 4
@@ -347,7 +325,6 @@ class GUIConfig:
         tile_preview_interval_ms: Tile thumbnail update interval (ms).
         highlight_border_width: Width of the highlight indicator bar in settings rows.
         highlight_indicator_gap: Gap between the indicator bar and the row content.
-        highlight_background_enabled: Whether highlighted rows get a background color.
     """
 
     palette: GUIPalette
@@ -370,4 +347,3 @@ class GUIConfig:
 
     highlight_border_width: int = 4
     highlight_indicator_gap: int = 8
-    highlight_background_enabled: bool = True

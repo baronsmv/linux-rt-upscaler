@@ -11,8 +11,6 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 
-from ...styles import sidebar_container_style, sidebar_tab_widget_style
-
 if TYPE_CHECKING:
     from ...config import GUIConfig
 
@@ -34,9 +32,6 @@ class SidebarBase(QWidget):
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
         # ---- Visual identity ------------------------------------------------
-        self.setObjectName("sidebar_container")
-        self.setStyleSheet(sidebar_container_style(gui_config))
-
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(20)
         shadow.setColor(Qt.gray)
@@ -49,7 +44,6 @@ class SidebarBase(QWidget):
         layout.setSpacing(0)
 
         self.tab_widget = QTabWidget()
-        self.tab_widget.setStyleSheet(sidebar_tab_widget_style(gui_config))
         layout.addWidget(self.tab_widget)
 
     # ------------------------------------------------------------------

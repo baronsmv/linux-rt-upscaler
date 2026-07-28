@@ -21,13 +21,7 @@ from ..controls import (
     SectionLabel,
     SliderRow,
 )
-from ...styles import (
-    header_line_style,
-    row_label_style,
-    scroll_area_style,
-    scrollbar_style,
-    sidebar_section_label_style,
-)
+from ...styles import scrollbar_style, section_title_style, section_underline_style
 from ....config import DEFAULT_CONFIG
 
 if TYPE_CHECKING:
@@ -74,7 +68,6 @@ class SettingsTab(QWidget):
         scroll.setWidgetResizable(True)
         scroll.verticalScrollBar().setStyleSheet(scrollbar_style(gui_config))
         scroll.setFrameShape(QScrollArea.NoFrame)
-        scroll.setStyleSheet(scroll_area_style(self._gui_config))
 
         # ---- Inner content widget and its layout ----------------------------
         content = QWidget()
@@ -101,11 +94,11 @@ class SettingsTab(QWidget):
     def _add_section_label(self, text: str) -> None:
         """Add an uppercase section header with a thin separator line below."""
         label = QLabel(text.upper())
-        label.setStyleSheet(sidebar_section_label_style(self._gui_config))
+        label.setStyleSheet(section_title_style(self._gui_config))
 
         line = QFrame()
         line.setFrameShape(QFrame.NoFrame)
-        line.setStyleSheet(header_line_style(self._gui_config))
+        line.setStyleSheet(section_underline_style(self._gui_config))
 
         self.content_layout.addWidget(label)
         self.content_layout.addWidget(line)
@@ -116,7 +109,6 @@ class SettingsTab(QWidget):
         row.setContentsMargins(0, 0, 0, 0)
 
         lbl = QLabel(label_text)
-        lbl.setStyleSheet(row_label_style(self._gui_config))
         lbl.setFixedHeight(self._gui_config.sidebar.row_height)
         lbl.setAlignment(Qt.AlignVCenter)
         row.addWidget(lbl)

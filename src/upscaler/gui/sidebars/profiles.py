@@ -20,11 +20,10 @@ from ..config import GUIConfig
 from ..icons import load_icon, load_pixmap
 from ..styles import (
     profile_list_style,
-    profile_toolbar_button_style,
     scrollbar_style,
+    section_title_style,
     separator_style,
-    sidebar_container_style,
-    sidebar_section_label_style,
+    toolbar_button_style,
 )
 
 
@@ -69,8 +68,6 @@ class ProfilesSidebar(QWidget):
         self._profiles = profiles
 
         # ---- Visual identity ----
-        self.setObjectName("sidebar_container")
-        self.setStyleSheet(sidebar_container_style(self._gui_config))
         self.setFixedWidth(self._gui_config.sidebar.width)
 
         # ---- Layout ----
@@ -80,7 +77,7 @@ class ProfilesSidebar(QWidget):
 
         # Title
         title = QLabel("Profiles")
-        title.setStyleSheet(sidebar_section_label_style(self._gui_config))
+        title.setStyleSheet(section_title_style(self._gui_config))
         layout.addWidget(title)
 
         # Header separator line
@@ -100,11 +97,11 @@ class ProfilesSidebar(QWidget):
         self._list.setStyleSheet(profile_list_style(self._gui_config))
         self._list.setIconSize(
             QSize(
-                gui_config.profile.item_icon_size,
-                gui_config.profile.item_icon_size,
+                gui_config.profile.profile_icon_size,
+                gui_config.profile.profile_icon_size,
             )
         )
-        self._list.setSpacing(gui_config.profile.item_spacing)
+        self._list.setSpacing(gui_config.profile.profile_spacing)
         self._list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._list.verticalScrollBar().setStyleSheet(scrollbar_style(gui_config))
         self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -252,14 +249,14 @@ class ProfilesSidebar(QWidget):
         default_icon = QIcon(
             load_pixmap(
                 "actions/profile_global",
-                self._gui_config.profile.item_icon_size,
-                self._gui_config.profile.item_icon_size,
+                self._gui_config.profile.profile_icon_size,
+                self._gui_config.profile.profile_icon_size,
                 color=self._gui_config.palette.icon,
             )
         )
         default_item = QListWidgetItem(default_icon, "  Global")
         default_item.setData(Qt.UserRole, "")
-        default_item.setSizeHint(QSize(0, self._gui_config.profile.item_height))
+        default_item.setSizeHint(QSize(0, self._gui_config.profile.profile_height))
         default_item.setToolTip(
             "When selected, the settings panel on the right edits the global configuration."
         )
@@ -271,8 +268,8 @@ class ProfilesSidebar(QWidget):
             icon_path = profile_data.get("icon", "")
             if icon_path and os.path.isfile(icon_path):
                 pix = QPixmap(icon_path).scaled(
-                    self._gui_config.profile.item_icon_size,
-                    self._gui_config.profile.item_icon_size,
+                    self._gui_config.profile.profile_icon_size,
+                    self._gui_config.profile.profile_icon_size,
                     Qt.KeepAspectRatio,
                     Qt.SmoothTransformation,
                 )
@@ -281,14 +278,14 @@ class ProfilesSidebar(QWidget):
                 icon = QIcon(
                     load_pixmap(
                         "actions/profile",
-                        self._gui_config.profile.item_icon_size,
-                        self._gui_config.profile.item_icon_size,
+                        self._gui_config.profile.profile_icon_size,
+                        self._gui_config.profile.profile_icon_size,
                         color=self._gui_config.palette.icon,
                     )
                 )
             item = QListWidgetItem(icon, f"  {name}")
             item.setData(Qt.UserRole, name)
-            item.setSizeHint(QSize(0, self._gui_config.profile.item_height))
+            item.setSizeHint(QSize(0, self._gui_config.profile.profile_height))
             if name:
                 item.setToolTip(
                     "When selected, the settings panel on the right edits the "
@@ -359,7 +356,7 @@ class ProfilesSidebar(QWidget):
         btn.setFlat(True)
         btn.setEnabled(enabled)
         btn.clicked.connect(callback)
-        btn.setStyleSheet(profile_toolbar_button_style(self._gui_config))
+        btn.setStyleSheet(toolbar_button_style(self._gui_config))
         return btn
 
     # ------------------------------------------------------------------

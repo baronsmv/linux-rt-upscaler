@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
 )
 
 from .icon_tab_bar import IconTabBar
-from ...styles import sidebar_container_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -30,10 +29,6 @@ class IconSidebarBase(QWidget):
         self.gui_config = gui_config
         self.setFixedWidth(gui_config.sidebar.width)
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-
-        # ---- Styling ----
-        self.setObjectName("sidebar_container")
-        self.setStyleSheet(sidebar_container_style(gui_config))
 
         # ---- Layout ----
         layout = QVBoxLayout(self)
