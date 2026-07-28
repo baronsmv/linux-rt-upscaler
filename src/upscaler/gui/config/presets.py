@@ -4,7 +4,7 @@ from copy import copy
 from typing import Dict
 
 from .config import GUIPalette
-from ...utils import system_color_scheme
+from ...utils import scheme_is_light
 
 LIGHT = GUIPalette(
     background="#f5f5f5",
@@ -52,7 +52,7 @@ DARK = GUIPalette(
     button_revert_hover="#b55a5a",
 )
 
-AUTO = copy(DARK if system_color_scheme() == "dark" else LIGHT)
+AUTO = copy(LIGHT if scheme_is_light() else DARK)
 AUTO.background = None
 
 AYU_MIRAGE = GUIPalette(

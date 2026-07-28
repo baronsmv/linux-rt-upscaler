@@ -2,14 +2,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 
 
-def system_color_scheme() -> str:
+def scheme_is_light() -> bool:
     """Return 'dark' or 'light' based on the OS/desktop color scheme."""
     # Qt 6.5+
     if hasattr(Qt, "ColorScheme"):
         scheme = QGuiApplication.styleHints().colorScheme()
         if scheme == Qt.ColorScheme.Dark:
-            return "dark"
-        return "light"
+            return False
+        return True
 
     # Fallback for older Qt 6 or Qt 5, try to read the XDG portal/GTK setting
     import subprocess, os
@@ -22,7 +22,7 @@ def system_color_scheme() -> str:
             timeout=2,
         )
         if "dark" in result.stdout.lower():
-            return "dark"
+            return False
     except Exception:
         pass
 
@@ -30,6 +30,6 @@ def system_color_scheme() -> str:
     for var in ("GTK_THEME", "QT_STYLE_OVERRIDE", "DESKTOP_SESSION"):
         val = os.environ.get(var, "").lower()
         if "dark" in val:
-            return "dark"
+            return False
 
-    return "light"
+    return True

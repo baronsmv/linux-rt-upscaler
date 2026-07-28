@@ -16,7 +16,6 @@ from .icons import load_icon
 from .main import MainWindow
 from .styles import message_box_style
 from ..config import parse_args, setup_logging, validate_overrides
-from ..utils import system_color_scheme
 
 
 def main() -> None:
@@ -29,10 +28,7 @@ def main() -> None:
 
         # Dialog
         tmp_app = QApplication(sys.argv)
-        scheme = system_color_scheme()
-        gui_config = GUIConfig(
-            palette=presets.DARK if scheme == "dark" else presets.LIGHT
-        )
+        gui_config = GUIConfig(palette=presets.AUTO)
         tmp_app.setStyleSheet(message_box_style(gui_config))
         tmp_app.setWindowIcon(load_icon("app/app", 256, 256))
         tmp_app.setApplicationName("upscale-gui")
