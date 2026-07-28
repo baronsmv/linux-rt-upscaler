@@ -28,7 +28,6 @@ from .styles import about_button_style, tooltip_style
 from .widgets import StyledSplitter
 from ..config import apply_overrides, find_matching_profile, parse_config
 from ..pipeline import create_pipeline_session
-from ..utils import system_color_scheme
 from ..window import activate_window
 
 logger = logging.getLogger(__name__)
@@ -57,14 +56,10 @@ class MainWindow(QMainWindow):
         self._config_manager = config_manager
         self.manual_session: Optional[PipelineSession] = None
 
-        # Visual configuration
-        system_bg = False
-        scheme = system_color_scheme()
         # TESTING ALL RANDOMLY
-        preset = choice(tuple(v for v in PRESETS.values()))
-        self.gui_config = GUIConfig(
-            palette=preset if scheme == "dark" else PRESETS["Light"]
-        )
+        name_preset, preset = choice(tuple(v for v in PRESETS.items()))
+        print(name_preset)
+        self.gui_config = GUIConfig(palette=preset)
         QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))
 
         # Icon directory
@@ -83,7 +78,7 @@ class MainWindow(QMainWindow):
         # Central layout
         # ------------------------------------------------------------------
         central = QWidget()
-        if not system_bg:
+        if preset.background is not None:
             central.setStyleSheet(
                 f"background-color: {self.gui_config.palette.background};"
             )

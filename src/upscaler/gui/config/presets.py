@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Dict
 
 from .config import GUIPalette
+from ...utils import system_color_scheme
 
 LIGHT = GUIPalette(
     background="#f5f5f5",
@@ -51,6 +52,9 @@ DARK = GUIPalette(
     button_revert="#914343",
     button_revert_hover="#b55a5a",
 )
+
+AUTO = DARK if system_color_scheme() == "dark" else LIGHT
+AUTO.background = None
 
 AYU_MIRAGE = GUIPalette(
     background="#1f2430",
@@ -129,7 +133,7 @@ DRACULA = GUIPalette(
     text="#bcc2cd",
     text_hover="#f8f8f2",
     text_subtle="#6272a4",
-    text_disabled="#44475a",
+    text_disabled="#8b8baa",
     text_pillbox="#99282a36",
     icon="#bd93f9",
     border="#6272a4",
@@ -273,7 +277,7 @@ NORD = GUIPalette(
     text="#d8dee9",
     text_hover="#eceff4",
     text_subtle="#81a1c1",
-    text_disabled="#4c566a",
+    text_disabled="#6a7a8e",
     text_pillbox="#992e3440",
     icon="#88c0d0",
     border="#4c566a",
@@ -413,7 +417,8 @@ TOKYO_NIGHT = GUIPalette(
 )
 
 # ── Registry ────────────────────────────────────────────────────────
-PRESETS: Dict = {
+PRESETS: Dict[str, GUIPalette] = {
+    "Auto": AUTO,
     "Light": LIGHT,
     "Dark": DARK,
     "Ayu Mirage": AYU_MIRAGE,
@@ -432,3 +437,4 @@ PRESETS: Dict = {
     "Solarized Light": SOLARIZED_LIGHT,
     "Tokyo Night": TOKYO_NIGHT,
 }
+# PRESETS["Random"] = random.choice(tuple[GUIPalette](PRESETS.values()))

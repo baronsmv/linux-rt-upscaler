@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 @dataclass
@@ -7,7 +7,7 @@ class GUIPalette:
     """Semantic color tokens for the entire GUI."""
 
     # Background
-    background: str
+    background: Optional[str]
 
     # Text
     text: str
