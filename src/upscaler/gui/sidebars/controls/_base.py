@@ -110,7 +110,7 @@ class BaseRow(QWidget):
         if self._label is None:
             return
         if not self.isEnabled():
-            color = self._gui_config.palette.text_disabled
+            color = self._gui_config.palette.text_subtle
         elif highlighted:
             color = self._gui_config.palette.control
         else:

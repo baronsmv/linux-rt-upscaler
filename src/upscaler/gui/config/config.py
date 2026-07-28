@@ -13,7 +13,6 @@ class GUIPalette:
     text: str
     text_hover: str
     text_subtle: str
-    text_disabled: str
     text_pillbox: str
 
     # Icons

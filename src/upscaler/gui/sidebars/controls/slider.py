@@ -156,7 +156,7 @@ class SliderRow(BaseRow):
             color = (
                 self._gui_config.palette.text
                 if self.isEnabled()
-                else self._gui_config.palette.text_disabled
+                else self._gui_config.palette.text_subtle
             )
             self._value_label.setTextFormat(Qt.RichText)
             current_value = self._slider.value()

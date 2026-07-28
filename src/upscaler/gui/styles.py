@@ -83,7 +83,7 @@ def sidebar_tab_widget_style(cfg: GUIConfig) -> str:
         color: {cfg.palette.text_hover};
     }}
     QTabBar::tab:disabled {{
-        color: {cfg.palette.text_disabled};
+        color: {cfg.palette.text_subtle};
     }}
     """
 
@@ -177,7 +177,7 @@ def base_row_label_highlight_style(cfg: GUIConfig, *, color: str) -> str:
 def base_row_label_color(cfg: GUIConfig, *, highlighted: bool, enabled: bool) -> str:
     """Return the appropriate text color for a row label."""
     if not enabled:
-        return cfg.palette.text_disabled
+        return cfg.palette.text_subtle
     if highlighted:
         return cfg.palette.control
     return cfg.palette.text
@@ -189,7 +189,7 @@ def base_row_label_color(cfg: GUIConfig, *, highlighted: bool, enabled: bool) ->
 def line_edit_style(cfg: GUIConfig, *, enabled: bool = True) -> str:
     """Base style for QLineEdit used inside settings rows."""
     bg = cfg.palette.input if enabled else cfg.palette.input_disabled
-    text_color = cfg.palette.text if enabled else cfg.palette.text_disabled
+    text_color = cfg.palette.text if enabled else cfg.palette.text_subtle
     border = cfg.palette.border if enabled else cfg.palette.border
     focus = cfg.palette.control if enabled else cfg.palette.border
     hover = cfg.palette.border_hover if enabled else cfg.palette.border
@@ -220,7 +220,7 @@ def line_edit_style(cfg: GUIConfig, *, enabled: bool = True) -> str:
 def combo_box_style(cfg: GUIConfig, *, enabled: bool = True) -> str:
     """Style for QComboBox used inside settings rows."""
     bg = cfg.palette.input if enabled else cfg.palette.input_disabled
-    text_color = cfg.palette.text if enabled else cfg.palette.text_disabled
+    text_color = cfg.palette.text if enabled else cfg.palette.text_subtle
     border = cfg.palette.border if enabled else cfg.palette.border
     focus = cfg.palette.control if enabled else cfg.palette.border
     hover = cfg.palette.border_hover if enabled else cfg.palette.border
@@ -274,8 +274,8 @@ def checkbox_style(
 ) -> str:
     """Style for a QCheckBox inside a settings row."""
     if not enabled:
-        text_color = cfg.palette.text_disabled
-        indicator_color = cfg.palette.text_disabled
+        text_color = cfg.palette.text_subtle
+        indicator_color = cfg.palette.text_subtle
     else:
         text_color = cfg.palette.control if highlighted else cfg.palette.text
         indicator_color = cfg.palette.control if highlighted else cfg.palette.control
@@ -312,7 +312,7 @@ def color_swatch_style(
     if not enabled:
         return f"""
         QPushButton {{
-            background-color: {cfg.palette.text_disabled};
+            background-color: {cfg.palette.text_subtle};
             border: 1px solid {cfg.palette.border};
             border-radius: 4px;
         }}
@@ -336,9 +336,9 @@ def color_swatch_style(
 def slider_style(cfg: GUIConfig, enabled: bool = True) -> str:
     """Style for a horizontal QSlider."""
     groove = cfg.palette.control_subtle if enabled else cfg.palette.control_disabled
-    handle_color = cfg.palette.control if enabled else cfg.palette.text_disabled
+    handle_color = cfg.palette.control if enabled else cfg.palette.text_subtle
     sub_page = cfg.palette.control if enabled else cfg.palette.border
-    hover = cfg.palette.control_hover if enabled else cfg.palette.text_disabled
+    hover = cfg.palette.control_hover if enabled else cfg.palette.text_subtle
 
     return f"""
     QSlider::groove:horizontal {{
@@ -367,7 +367,7 @@ def slider_style(cfg: GUIConfig, enabled: bool = True) -> str:
 
 def slider_value_label_style(cfg: GUIConfig, enabled: bool = True) -> str:
     """Style for the QLabel that shows the slider value."""
-    color = cfg.palette.text if enabled else cfg.palette.text_disabled
+    color = cfg.palette.text if enabled else cfg.palette.text_subtle
     return f"color: {color}; font-size: {cfg.sidebar.tab_font_size}px;"
 
 
@@ -428,7 +428,7 @@ def dialog_style(cfg: GUIConfig) -> str:
         background: {cfg.palette.button_hover};
     }}
     QPushButton:disabled {{
-        color: {cfg.palette.text_disabled};
+        color: {cfg.palette.text_subtle};
     }}
     QGroupBox {{
         font-size: {cfg.dialog.label_font_size}px;
@@ -614,7 +614,7 @@ def footer_save_button_style(cfg: GUIConfig) -> str:
     }}
     QPushButton:disabled {{
         background: {cfg.palette.button};
-        color: {cfg.palette.text_disabled};
+        color: {cfg.palette.text_subtle};
         border-color: {cfg.palette.border};
     }}
     """
@@ -625,7 +625,7 @@ def footer_reset_button_style(
 ) -> str:
     """Style for the 'Reset' split-button with dynamic split-line color."""
     bg = cfg.palette.button if main_active else cfg.palette.button
-    text = cfg.palette.text if main_active else cfg.palette.text_disabled
+    text = cfg.palette.text if main_active else cfg.palette.text_subtle
     border = cfg.palette.button_revert if main_active else cfg.palette.border
     hover_bg = cfg.palette.button_hover if main_active else cfg.palette.button
     hover_border = (
@@ -635,7 +635,7 @@ def footer_reset_button_style(
 
     if not enabled:
         bg = cfg.palette.button
-        text = cfg.palette.text_disabled
+        text = cfg.palette.text_subtle
         border = cfg.palette.border
         hover_bg = cfg.palette.button
         hover_border = cfg.palette.border
