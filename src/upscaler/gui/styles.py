@@ -406,14 +406,14 @@ def dialog_style(cfg: GUIConfig) -> str:
         selection-background-color: {cfg.palette.control};
     }}
     QPushButton {{
-        background: {cfg.palette.button_hover};
+        background: {cfg.palette.button};
         border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.button_border_radius}px;
         padding: {cfg.dialog.button_padding};
         color: {cfg.palette.text};
     }}
     QPushButton:hover {{
-        background: {cfg.palette.input};
+        background: {cfg.palette.button_hover};
         border-color: {cfg.palette.border_hover};
     }}
     QPushButton:pressed {{
@@ -452,7 +452,7 @@ def dialog_style(cfg: GUIConfig) -> str:
         color: {cfg.palette.text_hover};
     }}
     QListWidget::item:selected {{
-        background: {cfg.palette.input};
+        background: {cfg.palette.control};
         color: {cfg.palette.text_hover};
     }}
     """
@@ -498,7 +498,7 @@ def message_box_style(cfg: GUIConfig) -> str:
         font-size: {cfg.dialog.label_font_size}px;
     }}
     QMessageBox QPushButton {{
-        background: {cfg.palette.button_hover};
+        background: {cfg.palette.button};
         border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.button_border_radius}px;
         padding: {cfg.dialog.button_padding};
@@ -506,7 +506,7 @@ def message_box_style(cfg: GUIConfig) -> str:
         min-width: 60px;
     }}
     QMessageBox QPushButton:hover {{
-        background: {cfg.palette.input};
+        background: {cfg.palette.button_hover};
     }}
     QMessageBox QPushButton:pressed {{
         background: {cfg.palette.button_hover};
@@ -604,12 +604,12 @@ def footer_reset_button_style(
     """Style for the 'Reset' split-button with dynamic split-line color."""
     bg = cfg.palette.button if main_active else cfg.palette.button
     text = cfg.palette.text if main_active else cfg.palette.text_disabled
-    border = cfg.palette.revert_button if main_active else cfg.palette.border
+    border = cfg.palette.button_revert if main_active else cfg.palette.border
     hover_bg = cfg.palette.button_hover if main_active else cfg.palette.button
     hover_border = (
-        cfg.palette.revert_button_hover if main_active else cfg.palette.border
+        cfg.palette.button_revert_hover if main_active else cfg.palette.border
     )
-    split_color = cfg.palette.revert_button if main_active else cfg.palette.border
+    split_color = cfg.palette.button_revert if main_active else cfg.palette.border
 
     if not enabled:
         bg = cfg.palette.button

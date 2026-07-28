@@ -3,7 +3,7 @@ from typing import Tuple
 
 
 @dataclass
-class GuiPalette:
+class GUIPalette:
     """Semantic color tokens for the entire GUI.
 
     Every color used by a style sheet must be a palette field.
@@ -12,39 +12,39 @@ class GuiPalette:
     """
 
     # Background
-    background: str = "#121212"
+    background: str
 
     # Text
-    text: str = "#cccccc"
-    text_hover: str = "#ffffff"
-    text_subtle: str = "#888888"
-    text_disabled: str = "#555"
-    text_pillbox: str = "#99000000"
+    text: str
+    text_hover: str
+    text_subtle: str
+    text_disabled: str
+    text_pillbox: str
 
     # Icons
-    icon: str = "#7a9eb1"
+    icon: str
 
     # Borders
-    border: str = "#444"
-    border_hover: str = "#555555"
+    border: str
+    border_hover: str
 
     # Input
-    input: str = "#2a2a2c"
-    input_hover: str = "#353535"
-    input_disabled: str = "#1e1e1e"
+    input: str
+    input_hover: str
+    input_disabled: str
 
     # Controls
-    control: str = "#4a9eff"
-    control_hover: str = "#6aade5"
-    control_disabled: str = "#1a2b3c"
-    control_subtle: str = "#3a3a3c"
-    control_subtle_hover: str = "#4a4a4c"
+    control: str
+    control_hover: str
+    control_disabled: str
+    control_subtle: str
+    control_subtle_hover: str
 
     # Buttons
-    button: str = "#1e1e1e"
-    button_hover: str = "#2c2c2c"
-    revert_button: str = "#914343"
-    revert_button_hover: str = "#b55a5a"
+    button: str
+    button_hover: str
+    button_revert: str
+    button_revert_hover: str
 
 
 @dataclass(frozen=True)
@@ -356,7 +356,7 @@ class GUIConfig:
         highlight_background_enabled: Whether highlighted rows get a background color.
     """
 
-    palette: GuiPalette = field(default_factory=lambda: GuiPalette())
+    palette: GUIPalette
 
     tile: TileLayout = field(default_factory=TileLayout)
     filter: FilterLayout = field(default_factory=FilterLayout)
