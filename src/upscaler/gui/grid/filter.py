@@ -46,6 +46,7 @@ class FilterBar(QWidget):
 
         # ----- Search icon (QLabel) -----
         self._search_icon = QLabel(self)
+        self._search_icon.setStyleSheet("background: transparent;")
         self._search_icon.setFixedSize(icon_size, icon_size)
         self._search_icon.setPixmap(
             load_pixmap(
