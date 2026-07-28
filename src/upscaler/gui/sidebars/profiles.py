@@ -126,7 +126,7 @@ class ProfilesSidebar(QWidget):
         btn_gui_config = {
             "size": gui_config.profile.toolbar_button_size,
             "icon_size": gui_config.profile.toolbar_button_icon_size,
-            "hover_bg": gui_config.palette.bg_surface_hover,
+            "hover_bg": gui_config.palette.button_hover,
             "radius": gui_config.profile.toolbar_button_border_radius,
         }
 
@@ -254,7 +254,7 @@ class ProfilesSidebar(QWidget):
                 "actions/profile_global",
                 self._gui_config.profile.item_icon_size,
                 self._gui_config.profile.item_icon_size,
-                color=self._gui_config.palette.accent_icon,
+                color=self._gui_config.palette.icon,
             )
         )
         default_item = QListWidgetItem(default_icon, "  Global")
@@ -283,7 +283,7 @@ class ProfilesSidebar(QWidget):
                         "actions/profile",
                         self._gui_config.profile.item_icon_size,
                         self._gui_config.profile.item_icon_size,
-                        color=self._gui_config.palette.accent_icon,
+                        color=self._gui_config.palette.icon,
                     )
                 )
             item = QListWidgetItem(icon, f"  {name}")
@@ -349,7 +349,7 @@ class ProfilesSidebar(QWidget):
                 icon_name,
                 cfg["icon_size"],
                 cfg["icon_size"],
-                color=self._gui_config.palette.accent_icon,
+                color=self._gui_config.palette.icon,
             )
         )
         btn.setIconSize(QSize(cfg["icon_size"], cfg["icon_size"]))

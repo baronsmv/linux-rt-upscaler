@@ -30,9 +30,9 @@ class AboutDialog(QDialog):
 
         # App icon
         icon = QLabel()
-        pixmap = load_icon(
-            "app/app", 96, 96, color=gui_config.palette.accent_primary
-        ).pixmap(96, 96)
+        pixmap = load_icon("app/app", 96, 96, color=gui_config.palette.control).pixmap(
+            96, 96
+        )
         icon.setPixmap(pixmap)
         icon.setFixedSize(96, 96)
 

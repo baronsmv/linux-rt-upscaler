@@ -111,7 +111,7 @@ class ProfileDialog(QDialog):
                     "actions/profile",
                     32,
                     32,
-                    color=self._gui_config.palette.accent_icon,
+                    color=self._gui_config.palette.icon,
                 )
             )
 
@@ -125,9 +125,7 @@ class ProfileDialog(QDialog):
 
         capture_win_btn = QPushButton("  Capture window")
         capture_win_btn.setIcon(
-            load_icon(
-                "actions/capture", 20, 20, color=self._gui_config.palette.accent_icon
-            )
+            load_icon("actions/capture", 20, 20, color=self._gui_config.palette.icon)
         )
         capture_win_btn.setToolTip("Fill name, icon, and match rules from a window")
         capture_win_btn.clicked.connect(self._capture_full)
@@ -255,7 +253,7 @@ class ProfileDialog(QDialog):
                 icon_name,
                 icon_size,
                 icon_size,
-                color=self._gui_config.palette.accent_icon,
+                color=self._gui_config.palette.icon,
             )
         )
         btn.setToolTip(tooltip)
@@ -292,7 +290,7 @@ class ProfileDialog(QDialog):
 
     def _apply_icon_from_window(self, win_info):
         icon_img = get_window_icon(
-            win_info.handle, size=self._gui_config.profile.capture_icon_size
+            win_info.control_subtle, size=self._gui_config.profile.capture_icon_size
         )
         if icon_img:
             self._captured_icon = icon_img
@@ -338,9 +336,7 @@ class ProfileDialog(QDialog):
         self._captured_icon = None
         self._icon_removed = True
         self._icon_preview.setPixmap(
-            load_pixmap(
-                "actions/profile", 32, 32, color=self._gui_config.palette.accent_icon
-            )
+            load_pixmap("actions/profile", 32, 32, color=self._gui_config.palette.icon)
         )
 
     def get_captured_icon(self) -> Optional[QImage]:

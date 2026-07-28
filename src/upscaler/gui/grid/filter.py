@@ -52,7 +52,7 @@ class FilterBar(QWidget):
                 "actions/search",
                 icon_size,
                 icon_size,
-                color=self._gui_config.palette.accent_icon,
+                color=self._gui_config.palette.icon,
             )
         )
 
@@ -64,7 +64,7 @@ class FilterBar(QWidget):
                 "actions/clear",
                 icon_size,
                 icon_size,
-                color=self._gui_config.palette.accent_icon,
+                color=self._gui_config.palette.icon,
             )
         )
         self._clear_button.setFlat(True)

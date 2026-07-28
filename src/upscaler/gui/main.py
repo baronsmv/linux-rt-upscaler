@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import logging
 import os
+from random import choice
 from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QTimer, QSettings, QSize, QStandardPaths
@@ -17,7 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .config import ConfigManager, GUIConfig, presets
+from .config import ConfigManager, GUIConfig, PRESETS
 from .dialogs import AboutDialog
 from .grid import FilterBar, WindowGridScene, WindowGridView
 from .helpers import DaemonController, ProfileActions, WindowGridManager
@@ -57,10 +58,12 @@ class MainWindow(QMainWindow):
         self.manual_session: Optional[PipelineSession] = None
 
         # Visual configuration
-        system_bg = True
+        system_bg = False
         scheme = system_color_scheme()
+        # TESTING ALL RANDOMLY
+        preset = choice(tuple(v for v in PRESETS.values()))
         self.gui_config = GUIConfig(
-            palette=presets.DRACULA if scheme == "dark" else presets.LIGHT
+            palette=preset if scheme == "dark" else PRESETS["Light"]
         )
         QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))
 
@@ -82,7 +85,7 @@ class MainWindow(QMainWindow):
         central = QWidget()
         if not system_bg:
             central.setStyleSheet(
-                f"background-color: {self.gui_config.palette.bg_deep};"
+                f"background-color: {self.gui_config.palette.background};"
             )
         self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
@@ -119,9 +122,7 @@ class MainWindow(QMainWindow):
         # About button
         self.about_btn = QToolButton()
         self.about_btn.setIcon(
-            load_icon(
-                "actions/about", 20, 20, color=self.gui_config.palette.accent_icon
-            )
+            load_icon("actions/about", 20, 20, color=self.gui_config.palette.icon)
         )
         self.about_btn.setIconSize(QSize(20, 20))
         self.about_btn.setFixedSize(32, 32)

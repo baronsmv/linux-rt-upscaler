@@ -11,44 +11,40 @@ class GuiPalette:
     All names describe the *role* of the color, never its hue.
     """
 
-    # ── Backgrounds ──────────────────────────────────────────────
-    bg_deep: str = "#121212"  # main background behind the window grid
-    bg_surface: str = "#1e1e1e"  # tiles, tab backgrounds, disabled elements
-    bg_surface_hover: str = "#2c2c2c"  # hovered tiles, active tab, list items
-    bg_input: str = "#2a2a2c"  # combo boxes, line edits
-    bg_input_disabled: str = "#1e1e1e"
-    bg_filter: str = "#2a2a2a"  # filter bar normal background
-    bg_filter_hover: str = "#353535"  # filter bar hover background
-    bg_button_pressed: str = "#222"  # dialog buttons when pressed
+    # Background
+    background: str = "#121212"
 
-    # ── Borders & separators ─────────────────────────────────────
-    border_main: str = "#444"  # borders (tabs, panels)
-    border_main_hover: str = "#555555"
-    border_cancel: str = "#914343"  # red border (reset button, destructive actions)
-    border_cancel_hover: str = "#b55a5a"
+    # Text
+    text: str = "#cccccc"
+    text_hover: str = "#ffffff"
+    text_subtle: str = "#888888"
+    text_disabled: str = "#555"
+    text_pillbox: str = "#99000000"
 
-    # ── Text ─────────────────────────────────────────────────────
-    text: str = "#cccccc"  # secondary labels
-    text_hover: str = "#ffffff"  # main text on dark backgrounds
-    text_subtle: str = "#888888"  # dimmed hints, section titles
-    text_disabled: str = "#555"  # disabled control text
-    text_pillbox_bg: str = "#99000000"  # background behind the tile title
+    # Icons
+    icon: str = "#7a9eb1"
 
-    # ── Accent / interactive colors ─────────────────────────────
-    accent_primary: str = "#4a9eff"  # focus, selection, sliders
-    accent_primary_hover: str = "#6aade5"  # lighter variant for hover states
-    accent_primary_highlight: str = "#1a2b3c"  # background for highlighted rows
-    accent_secondary: str = "#2b5b84"  # tile hover border, filter focus
-    accent_icon: str = "#7a9eb1"  # color of monochrome SVG icons
+    # Borders
+    border: str = "#444"
+    border_hover: str = "#555555"
 
-    # ── Slider, scrollbar, etc. ──────────────────────────────────
-    slider_groove: str = "#333"
-    slider_groove_disabled: str = "#222"
-    scrollbar_handle: str = "#3a3a3c"
-    scrollbar_handle_hover: str = "#4a4a4c"
-    separator_color: str = "#333"  # horizontal rule color
-    splitter_handle: str = "#2c2c2c"
-    splitter_handle_hover: str = "#2c2c2c"
+    # Input
+    input: str = "#2a2a2c"
+    input_hover: str = "#353535"
+    input_disabled: str = "#1e1e1e"
+
+    # Controls
+    control: str = "#4a9eff"
+    control_hover: str = "#6aade5"
+    control_disabled: str = "#1a2b3c"
+    control_subtle: str = "#3a3a3c"
+    control_subtle_hover: str = "#4a4a4c"
+
+    # Buttons
+    button: str = "#1e1e1e"
+    button_hover: str = "#2c2c2c"
+    revert_button: str = "#914343"
+    revert_button_hover: str = "#b55a5a"
 
 
 @dataclass(frozen=True)

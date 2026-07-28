@@ -309,7 +309,7 @@ class WindowTileItem(QGraphicsObject):
         # Background
         bg_path = QPainterPath()
         bg_path.addRoundedRect(base, radius, radius)
-        painter.fillPath(bg_path, QColor(self._gui_config.palette.bg_surface))
+        painter.fillPath(bg_path, QColor(self._gui_config.palette.button))
 
         # Preview image
         if self._scaled_pixmap and not self._scaled_pixmap.isNull():
@@ -346,7 +346,7 @@ class WindowTileItem(QGraphicsObject):
 
         # Draw pill background
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(self._gui_config.palette.text_pillbox_bg))
+        painter.setBrush(QColor(self._gui_config.palette.text_pillbox))
         painter.drawRoundedRect(pill_rect, pill_radius, pill_radius)
 
         # Draw text centered in pill
@@ -359,12 +359,12 @@ class WindowTileItem(QGraphicsObject):
         # Border
         if self._selected:
             pen = QPen(
-                QColor(self._gui_config.palette.accent_primary),
+                QColor(self._gui_config.palette.control),
                 self._gui_config.tile.selection_border_width,
             )
         elif self._hover:
             pen = QPen(
-                QColor(self._gui_config.palette.accent_secondary),
+                QColor(self._gui_config.palette.control_hover),
                 self._gui_config.tile.hover_border_width,
             )
         else:

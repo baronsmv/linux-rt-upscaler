@@ -14,8 +14,8 @@ def tooltip_style(cfg: GUIConfig) -> str:
     return f"""
     QToolTip {{
         color: {cfg.palette.text_hover};
-        background-color: {cfg.palette.bg_surface};
-        border: 1px solid {cfg.palette.border_main};
+        background-color: {cfg.palette.button};
+        border: 1px solid {cfg.palette.border};
         padding: 4px;
         border-radius: 4px;
         font-size: {cfg.dialog.label_font_size}px;
@@ -28,19 +28,19 @@ def tooltip_style(cfg: GUIConfig) -> str:
 # ---------------------------------------------------------------------------
 def filter_bar_line_edit_style(cfg: GUIConfig, *, hover: bool = False) -> str:
     """Style for the filter bar QLineEdit, with optional hover state."""
-    bg = cfg.palette.bg_filter_hover if hover else cfg.palette.bg_filter
+    bg = cfg.palette.input_hover if hover else cfg.palette.input
     return f"""
     QLineEdit {{
-        border: 1px solid {cfg.palette.border_main};
+        border: 1px solid {cfg.palette.border};
         border-radius: {cfg.filter.border_radius}px;
         background: {bg};
         color: {cfg.palette.text_hover};
         font-size: {cfg.filter.font_size}px;
         padding: 0px;
-        selection-background-color: {cfg.palette.accent_secondary};
+        selection-background-color: {cfg.palette.control_hover};
     }}
     QLineEdit:focus {{
-        border-color: {cfg.palette.accent_secondary};
+        border-color: {cfg.palette.control_hover};
     }}
     """
 
@@ -77,7 +77,7 @@ def sidebar_tab_widget_style(cfg: GUIConfig) -> str:
     }}
     QTabBar::tab:selected {{
         color: {cfg.palette.text_hover};
-        border-bottom: 2px solid {cfg.palette.accent_primary};
+        border-bottom: 2px solid {cfg.palette.control};
     }}
     QTabBar::tab:hover {{
         color: {cfg.palette.text_hover};
@@ -120,7 +120,7 @@ def row_label_style(cfg: GUIConfig) -> str:
 
 def separator_line_style(cfg: GUIConfig) -> str:
     """Thin horizontal line used under section headers."""
-    return f"color: {cfg.palette.separator_color};"
+    return f"color: {cfg.palette.border};"
 
 
 def scrollbar_style(cfg: GUIConfig) -> str:
@@ -131,12 +131,12 @@ def scrollbar_style(cfg: GUIConfig) -> str:
         margin: 0;
     }}
     QScrollBar::handle:vertical {{
-        background: {cfg.palette.scrollbar_handle};
+        background: {cfg.palette.control_subtle};
         border-radius: 4px;
         min-height: 30px;
     }}
     QScrollBar::handle:vertical:hover {{
-        background: {cfg.palette.scrollbar_handle_hover};
+        background: {cfg.palette.control_subtle_hover};
     }}
     QScrollBar::add-line:vertical,
     QScrollBar::sub-line:vertical {{
@@ -154,15 +154,13 @@ def scrollbar_style(cfg: GUIConfig) -> str:
 # ---------------------------------------------------------------------------
 def base_row_indicator_style(cfg: GUIConfig) -> str:
     """Style for the colored indicator bar (left side of a highlighted row)."""
-    return f"background: {cfg.palette.accent_primary}; border: none;"
+    return f"background: {cfg.palette.control}; border: none;"
 
 
 def base_row_content_background_style(cfg: GUIConfig, *, highlighted: bool) -> str:
     """Background style for the content container of a BaseRow."""
     if highlighted and cfg.highlight_background_enabled:
-        return (
-            f"background: {cfg.palette.accent_primary_highlight}; border-radius: 4px;"
-        )
+        return f"background: {cfg.palette.control_disabled}; border-radius: 4px;"
     return "background: transparent;"
 
 
@@ -176,7 +174,7 @@ def base_row_label_color(cfg: GUIConfig, *, highlighted: bool, enabled: bool) ->
     if not enabled:
         return cfg.palette.text_disabled
     if highlighted:
-        return cfg.palette.accent_primary
+        return cfg.palette.control
     return cfg.palette.text
 
 
@@ -185,12 +183,12 @@ def base_row_label_color(cfg: GUIConfig, *, highlighted: bool, enabled: bool) ->
 # ---------------------------------------------------------------------------
 def line_edit_style(cfg: GUIConfig, *, enabled: bool = True) -> str:
     """Base style for QLineEdit used inside settings rows."""
-    bg = cfg.palette.bg_input if enabled else cfg.palette.bg_input_disabled
+    bg = cfg.palette.input if enabled else cfg.palette.input_disabled
     text_color = cfg.palette.text if enabled else cfg.palette.text_disabled
-    border = cfg.palette.border_main if enabled else cfg.palette.border_main
-    focus = cfg.palette.accent_primary if enabled else cfg.palette.border_main
-    hover = cfg.palette.border_main_hover if enabled else cfg.palette.border_main
-    selection = cfg.palette.accent_primary
+    border = cfg.palette.border if enabled else cfg.palette.border
+    focus = cfg.palette.control if enabled else cfg.palette.border
+    hover = cfg.palette.border_hover if enabled else cfg.palette.border
+    selection = cfg.palette.control
     return f"""
     QLineEdit {{
         background: {bg};
@@ -215,13 +213,13 @@ def line_edit_style(cfg: GUIConfig, *, enabled: bool = True) -> str:
 # ---------------------------------------------------------------------------
 def combo_box_style(cfg: GUIConfig, *, enabled: bool = True) -> str:
     """Style for QComboBox used inside settings rows."""
-    bg = cfg.palette.bg_input if enabled else cfg.palette.bg_input_disabled
+    bg = cfg.palette.input if enabled else cfg.palette.input_disabled
     text_color = cfg.palette.text if enabled else cfg.palette.text_disabled
-    border = cfg.palette.border_main if enabled else cfg.palette.border_main
-    focus = cfg.palette.accent_primary if enabled else cfg.palette.border_main
-    hover = cfg.palette.border_main_hover if enabled else cfg.palette.border_main
-    popup_bg = cfg.palette.bg_input
-    popup_selection = cfg.palette.accent_primary
+    border = cfg.palette.border if enabled else cfg.palette.border
+    focus = cfg.palette.control if enabled else cfg.palette.border
+    hover = cfg.palette.border_hover if enabled else cfg.palette.border
+    popup_bg = cfg.palette.input
+    popup_selection = cfg.palette.control
     popup_text = cfg.palette.text
 
     return f"""
@@ -272,10 +270,8 @@ def checkbox_style(
         text_color = cfg.palette.text_disabled
         indicator_color = cfg.palette.text_disabled
     else:
-        text_color = cfg.palette.accent_primary if highlighted else cfg.palette.text
-        indicator_color = (
-            cfg.palette.accent_primary if highlighted else cfg.palette.accent_primary
-        )
+        text_color = cfg.palette.control if highlighted else cfg.palette.text
+        indicator_color = cfg.palette.control if highlighted else cfg.palette.control
 
     return f"""
     QCheckBox {{
@@ -310,18 +306,18 @@ def color_swatch_style(
         return f"""
         QPushButton {{
             background-color: {cfg.palette.text_disabled};
-            border: 1px solid {cfg.palette.border_main};
+            border: 1px solid {cfg.palette.border};
             border-radius: 4px;
         }}
         """
     return f"""
     QPushButton {{
         background-color: {current_color};
-        border: 1px solid {cfg.palette.border_main_hover};
+        border: 1px solid {cfg.palette.border_hover};
         border-radius: 4px;
     }}
     QPushButton:hover {{
-        border-color: {cfg.palette.accent_primary};
+        border-color: {cfg.palette.control};
     }}
     """
 
@@ -331,12 +327,10 @@ def color_swatch_style(
 # ---------------------------------------------------------------------------
 def slider_style(cfg: GUIConfig, enabled: bool = True) -> str:
     """Style for a horizontal QSlider."""
-    groove = (
-        cfg.palette.slider_groove if enabled else cfg.palette.slider_groove_disabled
-    )
-    handle_color = cfg.palette.accent_primary if enabled else cfg.palette.text_disabled
-    sub_page = cfg.palette.accent_primary if enabled else cfg.palette.border_main
-    hover = cfg.palette.accent_primary_hover if enabled else cfg.palette.text_disabled
+    groove = cfg.palette.control_subtle if enabled else cfg.palette.control_disabled
+    handle_color = cfg.palette.control if enabled else cfg.palette.text_disabled
+    sub_page = cfg.palette.control if enabled else cfg.palette.border
+    hover = cfg.palette.control_hover if enabled else cfg.palette.text_disabled
 
     return f"""
     QSlider::groove:horizontal {{
@@ -376,7 +370,7 @@ def dialog_style(cfg: GUIConfig) -> str:
     """Full stylesheet for QDialog used by ProfileDialog and WindowPickerDialog."""
     return f"""
     QDialog {{
-        background-color: {cfg.palette.bg_deep};
+        background-color: {cfg.palette.background};
         color: {cfg.palette.text};
     }}
     QLabel {{
@@ -384,18 +378,18 @@ def dialog_style(cfg: GUIConfig) -> str:
         font-size: {cfg.dialog.label_font_size}px;
     }}
     QLineEdit {{
-        background: {cfg.palette.bg_input};
-        border: 1px solid {cfg.palette.border_main};
+        background: {cfg.palette.input};
+        border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.input_border_radius}px;
         padding: {cfg.dialog.input_padding};
         color: {cfg.palette.text};
     }}
     QLineEdit:focus {{
-        border-color: {cfg.palette.accent_primary};
+        border-color: {cfg.palette.control};
     }}
     QComboBox {{
-        background: {cfg.palette.bg_input};
-        border: 1px solid {cfg.palette.border_main};
+        background: {cfg.palette.input};
+        border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.input_border_radius}px;
         padding: {cfg.dialog.input_padding};
         color: {cfg.palette.text};
@@ -406,24 +400,24 @@ def dialog_style(cfg: GUIConfig) -> str:
         width: 0px;
     }}
     QComboBox QAbstractItemView {{
-        background: {cfg.palette.bg_input};
+        background: {cfg.palette.input};
         border: none;
         color: {cfg.palette.text};
-        selection-background-color: {cfg.palette.accent_primary};
+        selection-background-color: {cfg.palette.control};
     }}
     QPushButton {{
-        background: {cfg.palette.bg_surface_hover};
-        border: 1px solid {cfg.palette.border_main};
+        background: {cfg.palette.button_hover};
+        border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.button_border_radius}px;
         padding: {cfg.dialog.button_padding};
         color: {cfg.palette.text};
     }}
     QPushButton:hover {{
-        background: {cfg.palette.bg_input};
-        border-color: {cfg.palette.border_main_hover};
+        background: {cfg.palette.input};
+        border-color: {cfg.palette.border_hover};
     }}
     QPushButton:pressed {{
-        background: {cfg.palette.bg_button_pressed};
+        background: {cfg.palette.button_hover};
     }}
     QPushButton:disabled {{
         color: {cfg.palette.text_disabled};
@@ -432,7 +426,7 @@ def dialog_style(cfg: GUIConfig) -> str:
         font-size: {cfg.dialog.label_font_size}px;
         font-weight: bold;
         color: {cfg.palette.text_subtle};
-        border: 1px solid {cfg.palette.border_main};
+        border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.groupbox_border_radius}px;
         margin-top: 8px;
         padding-top: 16px;
@@ -443,8 +437,8 @@ def dialog_style(cfg: GUIConfig) -> str:
         padding: 0 6px;
     }}
     QListWidget {{
-        background: {cfg.palette.bg_surface};
-        border: 1px solid {cfg.palette.border_main};
+        background: {cfg.palette.button};
+        border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.list_border_radius}px;
         outline: none;
         color: {cfg.palette.text};
@@ -454,11 +448,11 @@ def dialog_style(cfg: GUIConfig) -> str:
         border-radius: {cfg.dialog.list_item_border_radius}px;
     }}
     QListWidget::item:hover {{
-        background: {cfg.palette.bg_surface_hover};
+        background: {cfg.palette.button_hover};
         color: {cfg.palette.text_hover};
     }}
     QListWidget::item:selected {{
-        background: {cfg.palette.bg_input};
+        background: {cfg.palette.input};
         color: {cfg.palette.text_hover};
     }}
     """
@@ -471,7 +465,7 @@ def dialog_header_label_style(cfg: GUIConfig) -> str:
 
 def icon_preview_style(cfg: GUIConfig) -> str:
     """Style for icon preview in Profile Editor dialog."""
-    return f"border: 1px solid {cfg.palette.border_main}; border-radius: 4px;"
+    return f"border: 1px solid {cfg.palette.border}; border-radius: 4px;"
 
 
 def dialog_info_label_style(cfg: GUIConfig) -> str:
@@ -495,7 +489,7 @@ def message_box_style(cfg: GUIConfig) -> str:
     """Style for the QMessageBox that displays messages."""
     return f"""
     QMessageBox {{
-        background-color: {cfg.palette.bg_surface};
+        background-color: {cfg.palette.button};
         color: {cfg.palette.text};
         font-size: {cfg.dialog.label_font_size}px;
     }}
@@ -504,18 +498,18 @@ def message_box_style(cfg: GUIConfig) -> str:
         font-size: {cfg.dialog.label_font_size}px;
     }}
     QMessageBox QPushButton {{
-        background: {cfg.palette.bg_surface_hover};
-        border: 1px solid {cfg.palette.border_main};
+        background: {cfg.palette.button_hover};
+        border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.button_border_radius}px;
         padding: {cfg.dialog.button_padding};
         color: {cfg.palette.text};
         min-width: 60px;
     }}
     QMessageBox QPushButton:hover {{
-        background: {cfg.palette.bg_input};
+        background: {cfg.palette.input};
     }}
     QMessageBox QPushButton:pressed {{
-        background: {cfg.palette.bg_button_pressed};
+        background: {cfg.palette.button_hover};
     }}
     """
 
@@ -539,13 +533,13 @@ def profile_list_style(cfg: GUIConfig) -> str:
         border-left: {cfg.profile.indicator_width}px solid transparent;
     }}
     QListWidget::item:hover {{
-        background: {cfg.palette.bg_surface_hover};
+        background: {cfg.palette.button_hover};
         color: {cfg.palette.text_hover};
     }}
     QListWidget::item:selected {{
-        background: {cfg.palette.bg_surface_hover};
+        background: {cfg.palette.button_hover};
         color: {cfg.palette.text_hover};
-        border-left: {cfg.profile.indicator_width}px solid {cfg.palette.accent_primary};
+        border-left: {cfg.profile.indicator_width}px solid {cfg.palette.control};
     }}
     """
 
@@ -559,7 +553,7 @@ def profile_toolbar_button_style(cfg: GUIConfig) -> str:
         border-radius: {cfg.profile.toolbar_button_border_radius}px;
     }}
     QPushButton:hover {{
-        background: {cfg.palette.bg_surface_hover};
+        background: {cfg.palette.button_hover};
     }}
     QPushButton:disabled {{
         opacity: 0.4;
@@ -569,7 +563,7 @@ def profile_toolbar_button_style(cfg: GUIConfig) -> str:
 
 def profile_toolbar_separator_style(cfg: GUIConfig) -> str:
     """Style for the profile toolbar separators."""
-    return f"color: {cfg.palette.border_main};"
+    return f"color: {cfg.palette.border};"
 
 
 # ---------------------------------------------------------------------------
@@ -579,9 +573,9 @@ def footer_save_button_style(cfg: GUIConfig) -> str:
     """Style for the 'Save' button in the settings footer."""
     return f"""
     QPushButton {{
-        background: {cfg.palette.bg_surface};
+        background: {cfg.palette.button};
         color: {cfg.palette.text_hover};
-        border: 2px solid {cfg.palette.accent_primary};
+        border: 2px solid {cfg.palette.control};
         border-radius: {cfg.footer.button_radius}px;
         padding: {cfg.footer.button_padding_v}px {cfg.footer.button_padding_h}px;
         font-size: {cfg.sidebar.tab_font_size}px;
@@ -589,17 +583,17 @@ def footer_save_button_style(cfg: GUIConfig) -> str:
         height: {cfg.footer.button_height}px;
     }}
     QPushButton:hover {{
-        background: {cfg.palette.bg_surface_hover};
-        border-color: {cfg.palette.accent_primary};
+        background: {cfg.palette.button_hover};
+        border-color: {cfg.palette.control};
     }}
     QPushButton:pressed {{
-        background: {cfg.palette.bg_surface_hover};
-        border-color: {cfg.palette.accent_primary};
+        background: {cfg.palette.button_hover};
+        border-color: {cfg.palette.control};
     }}
     QPushButton:disabled {{
-        background: {cfg.palette.bg_surface};
+        background: {cfg.palette.button};
         color: {cfg.palette.text_disabled};
-        border-color: {cfg.palette.border_main};
+        border-color: {cfg.palette.border};
     }}
     """
 
@@ -608,22 +602,22 @@ def footer_reset_button_style(
     cfg: GUIConfig, *, main_active: bool, enabled: bool
 ) -> str:
     """Style for the 'Reset' split-button with dynamic split-line color."""
-    bg = cfg.palette.bg_surface if main_active else cfg.palette.bg_surface
+    bg = cfg.palette.button if main_active else cfg.palette.button
     text = cfg.palette.text if main_active else cfg.palette.text_disabled
-    border = cfg.palette.border_cancel if main_active else cfg.palette.border_main
-    hover_bg = cfg.palette.bg_surface_hover if main_active else cfg.palette.bg_surface
+    border = cfg.palette.revert_button if main_active else cfg.palette.border
+    hover_bg = cfg.palette.button_hover if main_active else cfg.palette.button
     hover_border = (
-        cfg.palette.border_cancel_hover if main_active else cfg.palette.border_main
+        cfg.palette.revert_button_hover if main_active else cfg.palette.border
     )
-    split_color = cfg.palette.border_cancel if main_active else cfg.palette.border_main
+    split_color = cfg.palette.revert_button if main_active else cfg.palette.border
 
     if not enabled:
-        bg = cfg.palette.bg_surface
+        bg = cfg.palette.button
         text = cfg.palette.text_disabled
-        border = cfg.palette.border_main
-        hover_bg = cfg.palette.bg_surface
-        hover_border = cfg.palette.border_main
-        split_color = cfg.palette.border_main
+        border = cfg.palette.border
+        hover_bg = cfg.palette.button
+        hover_border = cfg.palette.border
+        split_color = cfg.palette.border
 
     return f"""
     QToolButton {{
@@ -661,8 +655,8 @@ def footer_menu_style(cfg: GUIConfig) -> str:
     """Style for the dropdown menu of the Reset button."""
     return f"""
     QMenu {{
-        background: {cfg.palette.bg_input};
-        border: 1px solid {cfg.palette.border_main};
+        background: {cfg.palette.input};
+        border: 1px solid {cfg.palette.border};
         border-radius: 4px;
         padding: 4px;
     }}
@@ -672,7 +666,7 @@ def footer_menu_style(cfg: GUIConfig) -> str:
         font-size: {cfg.sidebar.tab_font_size}px;
     }}
     QMenu::item:selected {{
-        background: {cfg.palette.accent_primary};
+        background: {cfg.palette.control};
         color: {cfg.palette.text_hover};
     }}
     """
@@ -690,7 +684,7 @@ def about_button_style(cfg: GUIConfig) -> str:
         background: transparent;
     }}
     QToolButton:hover {{
-        background: {cfg.palette.bg_surface_hover};
+        background: {cfg.palette.button_hover};
     }}
     """
 
@@ -699,8 +693,8 @@ def about_dialog_style(cfg: GUIConfig) -> str:
     """Style for the About dialog itself (background, border, rounded corners)."""
     return f"""
     QDialog {{
-        background-color: {cfg.palette.bg_surface};
-        border: 1px solid {cfg.palette.border_main};
+        background-color: {cfg.palette.background};
+        border: 1px solid {cfg.palette.border};
         border-radius: 12px;
     }}
     """
@@ -730,16 +724,16 @@ def about_dialog_close_button_style(cfg: GUIConfig) -> str:
     """Style for the 'Close' button in the About dialog."""
     return f"""
     QPushButton {{
-        background: {cfg.palette.bg_surface_hover};
-        border: 1px solid {cfg.palette.border_main};
+        background: {cfg.palette.button_hover};
+        border: 1px solid {cfg.palette.border};
         border-radius: 8px;
         padding: 6px 18px;
         color: {cfg.palette.text};
         font-size: 14px;
     }}
     QPushButton:hover {{
-        background: {cfg.palette.bg_input};
-        border-color: {cfg.palette.border_main_hover};
+        background: {cfg.palette.input};
+        border-color: {cfg.palette.border_hover};
     }}
     """
 
@@ -756,12 +750,12 @@ def icon_tab_button_style(cfg: GUIConfig) -> str:
         border-radius: 8px;
     }}
     QPushButton:hover {{
-        background: {cfg.palette.bg_surface_hover};
-        border-color: {cfg.palette.accent_primary};
+        background: {cfg.palette.button_hover};
+        border-color: {cfg.palette.control};
     }}
     QPushButton:checked {{
-        background: {cfg.palette.bg_surface_hover};
-        border-color: {cfg.palette.accent_primary};
+        background: {cfg.palette.button_hover};
+        border-color: {cfg.palette.control};
     }}
     """
 
