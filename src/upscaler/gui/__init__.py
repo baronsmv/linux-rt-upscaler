@@ -11,7 +11,7 @@ import sys
 from PySide6.QtCore import QSharedMemory
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from .config import ConfigManager, GUIConfig, presets
+from .config import ConfigManager, GUIConfig, PRESETS
 from .icons import load_icon
 from .main import MainWindow
 from .styles import message_box_style
@@ -28,7 +28,7 @@ def main() -> None:
 
         # Dialog
         tmp_app = QApplication(sys.argv)
-        gui_config = GUIConfig(palette=presets.AUTO)
+        gui_config = GUIConfig(palette=PRESETS["Auto"])
         tmp_app.setStyleSheet(message_box_style(gui_config))
         tmp_app.setWindowIcon(load_icon("app/app", 256, 256))
         tmp_app.setApplicationName("upscale-gui")
