@@ -24,6 +24,7 @@ from .window import WindowPickerDialog
 from ..icons import load_icon, load_pixmap
 from ..styles import (
     dialog_header_label_style,
+    dialog_icon_button_style,
     dialog_info_label_style,
     dialog_match_label_style,
     dialog_style,
@@ -256,6 +257,7 @@ class ProfileDialog(QDialog):
                 color=self._gui_config.palette.icon,
             )
         )
+        btn.setStyleSheet(dialog_icon_button_style(self._gui_config))
         btn.setToolTip(tooltip)
         btn.setFixedSize(size, size)
         btn.setIconSize(QSize(icon_size, icon_size))
@@ -290,7 +292,7 @@ class ProfileDialog(QDialog):
 
     def _apply_icon_from_window(self, win_info):
         icon_img = get_window_icon(
-            win_info.control_subtle, size=self._gui_config.profile.capture_icon_size
+            win_info.handle, size=self._gui_config.profile.capture_icon_size
         )
         if icon_img:
             self._captured_icon = icon_img

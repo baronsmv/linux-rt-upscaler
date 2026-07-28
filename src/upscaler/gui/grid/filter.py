@@ -1,5 +1,6 @@
-from PySide6.QtCore import Qt, Signal, QEvent
-from PySide6.QtGui import QPixmap, QPainter, QIcon
+from PySide6.QtCore import QByteArray, QEvent, Qt, Signal
+from PySide6.QtGui import QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QWidget, QLineEdit, QPushButton, QLabel
 
 from ..icons import load_icon, load_pixmap
@@ -113,10 +114,8 @@ class FilterBar(QWidget):
     # ------------------------------------------------------------------
     #  SVG rendering helpers
     # ------------------------------------------------------------------
-    def _render_svg(self, svg: str, w: int, h: int) -> QPixmap:
-        from PySide6.QtSvg import QSvgRenderer
-        from PySide6.QtCore import QByteArray
-
+    @staticmethod
+    def _render_svg(svg: str, w: int, h: int) -> QPixmap:
         renderer = QSvgRenderer(QByteArray(svg.encode()))
         pixmap = QPixmap(w, h)
         pixmap.fill(Qt.transparent)

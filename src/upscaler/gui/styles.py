@@ -48,7 +48,7 @@ def filter_bar_line_edit_style(cfg: GUIConfig, *, hover: bool = False) -> str:
 # ---------------------------------------------------------------------------
 #  Sidebar containers / tabs / scroll
 # ---------------------------------------------------------------------------
-def sidebar_container_style(cfg: GUIConfig) -> str:
+def sidebar_container_style(_: GUIConfig) -> str:
     """Outer rounded container for sidebars."""
     return f"""
     QWidget#sidebar_container {{
@@ -88,7 +88,7 @@ def sidebar_tab_widget_style(cfg: GUIConfig) -> str:
     """
 
 
-def scroll_area_style(cfg: GUIConfig) -> str:
+def scroll_area_style(_: GUIConfig) -> str:
     """Transparent scroll area that blends into the sidebar background."""
     return """
     QScrollArea {
@@ -458,7 +458,7 @@ def dialog_style(cfg: GUIConfig) -> str:
     """
 
 
-def dialog_header_label_style(cfg: GUIConfig) -> str:
+def dialog_header_label_style(_: GUIConfig) -> str:
     """Style for the header label in Profile Editor dialog."""
     return "font-weight: bold;"
 
@@ -480,6 +480,20 @@ def dialog_info_label_style(cfg: GUIConfig) -> str:
 def dialog_match_label_style(cfg: GUIConfig) -> str:
     """Style for match label in Profile Editor dialog."""
     return f"font-size: {cfg.dialog.match_label_font_size}px; font-weight: bold;"
+
+
+def dialog_icon_button_style(cfg: GUIConfig) -> str:
+    """Style for icon button in Profile Editor dialog."""
+    return f"""
+    QToolButton {{
+        background: transparent;
+        border: none;
+    }}
+    QToolButton:hover {{
+        background: {cfg.palette.button_hover};
+        border-radius: 4px;
+    }}
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -715,7 +729,7 @@ def about_dialog_description_style(cfg: GUIConfig) -> str:
     return f"color: {cfg.palette.text_subtle}; font-size: 18px; margin-top: 18px; padding: 0 24px;"
 
 
-def about_dialog_link_style(cfg: GUIConfig) -> str:
+def about_dialog_link_style(_: GUIConfig) -> str:
     """Style for the GitHub link in the About dialog."""
     return f"font-size: 18px; margin-top: 10px;"
 
@@ -763,6 +777,6 @@ def icon_tab_button_style(cfg: GUIConfig) -> str:
 # ---------------------------------------------------------------------------
 #  Window grid
 # ---------------------------------------------------------------------------
-def graphics_view_style(cfg: GUIConfig) -> str:
+def graphics_view_style(_: GUIConfig) -> str:
     """Transparent, borderless QGraphicsView."""
     return "background: transparent; border: none;"
