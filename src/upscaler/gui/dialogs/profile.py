@@ -212,7 +212,7 @@ class ProfileDialog(QDialog):
                 "Match if the window width satisfies this condition:\n"
                 f"{chr(8226)} Exact: 1920\n"
                 f"{chr(8226)} Comparison: <800, >1024, <=1366, >=1920\n"
-                f"{chr(8226)} Range: 1280‑1920, 720..1080, 1024,1366"
+                f"{chr(8226)} Range: 1280-1920, 720..1080, 1024,1366"
             ),
         )
         # Height
@@ -224,7 +224,7 @@ class ProfileDialog(QDialog):
                 "Match if the window height satisfies this condition:\n"
                 f"{chr(8226)} Exact: 1080\n"
                 f"{chr(8226)} Comparison: <600, >900, <=768, >=1440\n"
-                f"{chr(8226)} Range: 480‑1080, 600..900, 720,1024"
+                f"{chr(8226)} Range: 480-1080, 600..900, 720,1024"
             ),
         )
 

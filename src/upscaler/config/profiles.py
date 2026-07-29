@@ -106,7 +106,7 @@ def find_matching_profile(
 ) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
     """
     Find the first profile whose match criteria match the window.
-    If *require_all* is True, every non‑empty criterion must match (AND).
+    If *require_all* is True, every non-empty criterion must match (AND).
     If False, any single criterion matching is enough (OR).
     """
     window_title = window_info.title.lower()

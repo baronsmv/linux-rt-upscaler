@@ -162,7 +162,7 @@ class ComboBoxLayout:
 
 @dataclass(frozen=True)
 class SliderLayout:
-    """Slider‑related numbers.
+    """Slider-related numbers.
 
     Attributes:
         value_edit_width: Width of the editable value field next to the slider.
@@ -265,7 +265,7 @@ class DialogLayout:
     Attributes:
         combo_min_width: Minimum width of combo boxes inside dialogs.
         label_font_size: Default font size for dialog labels.
-        input_font_size: Font size for match‑criteria labels.
+        input_font_size: Font size for match-criteria labels.
         info_font_size: Font size for informational text.
         icon_button_size: Fixed size of icon buttons in the dialog.
         icon_button_icon_size: Icon size inside those buttons.
@@ -296,7 +296,7 @@ class DialogLayout:
 
 
 # ---------------------------------------------------------------------------
-#  GUIConfig – the top-level configuration
+#  GUIConfig, the top-level configuration
 # ---------------------------------------------------------------------------
 
 
@@ -304,7 +304,7 @@ class DialogLayout:
 class GUIConfig:
     """Central GUI configuration.
 
-    All layout constants are grouped into frozen sub‑configurations.
+    All layout constants are grouped into frozen sub-configurations.
     Colors, fonts, and shared spacing live exclusively in :attr:`palette`.
 
     Attributes:
@@ -314,7 +314,7 @@ class GUIConfig:
         sidebar: Sidebar common layout.
         checkbox: Checkbox indicator dimensions.
         combo: Combo box padding and radius.
-        slider: Slider‑related numbers.
+        slider: Slider-related numbers.
         edit_field: Text field dimensions.
         swatch: Color swatch button sizes.
         splitter: Splitter handle width.

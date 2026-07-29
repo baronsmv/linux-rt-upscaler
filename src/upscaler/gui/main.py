@@ -353,7 +353,7 @@ class MainWindow(QMainWindow):
         if old_central:
             old_central.deleteLater()
 
-        # Re‑initialize the whole UI
+        # Re-initialize the whole UI
         self._setup_ui()
 
         # Restore state

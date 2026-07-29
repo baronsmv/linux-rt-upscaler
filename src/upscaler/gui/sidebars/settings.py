@@ -166,8 +166,8 @@ class SettingsSidebar(IconSidebarBase):
         behavior seamlessly when the Style tab is active without
         disconnecting/reconnecting signals.
 
-        - _on_footer_save  – dispatches to StyleTab._apply_clicked() or save_settings
-        - _on_footer_reset – dispatches to StyleTab._reset_style()   or reset_settings
+        - _on_footer_save: dispatches to StyleTab._apply_clicked() or save_settings
+        - _on_footer_reset: dispatches to StyleTab._reset_style()   or reset_settings
         """
         cfg = self.gui_config
 
