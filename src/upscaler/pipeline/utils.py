@@ -1,13 +1,32 @@
 from __future__ import annotations
 
-from typing import List, Optional, Set, Tuple, Union
+from typing import List, Optional, Set, Tuple, Union, TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from ..srcnn import ModelConfig
+
+# ------------------------------------------------------------------------------
+#  Dirty Rects Types
+# ------------------------------------------------------------------------------
 DamageRects = List[Tuple[int, int, int, int, int]]
 ExpandedRects = List[Tuple[int, int, int, int]]
 
 DirtyTilesRects = List[Tuple[int, int, Optional[bytes], int, int]]
 DirtyTilesCoords = List[Tuple[int, int]]
 DirtyTiles = Union[DirtyTilesRects, DirtyTilesCoords]
+
+
+# ------------------------------------------------------------------------------
+#  Intermediate names Collection
+# ------------------------------------------------------------------------------
+def collect_uav_names(model_cfg: ModelConfig) -> set:
+    """Return a set of all UAV names used by the model, excluding 'output'."""
+    return {
+        name
+        for srv_list, uav_list in model_cfg.srv_uav
+        for name in uav_list
+        if name != "output"
+    }
 
 
 # ------------------------------------------------------------------------------
@@ -225,6 +244,30 @@ def extract_expanded_tiles(
     return result
 
 
+def _copy_region(
+    dst: bytearray,
+    src: memoryview,
+    src_stride: int,
+    src_x: int,
+    src_y: int,
+    copy_w: int,
+    copy_h: int,
+    dst_x: int,
+    dst_y: int,
+    dst_stride: int,
+) -> None:
+    """Copy a rectangular region from src to dst, row by row."""
+    for row in range(copy_h):
+        src_start = (src_y + row) * src_stride + src_x * 4
+        dst_start = ((dst_y + row) * dst_stride + dst_x) * 4
+        dst[dst_start : dst_start + copy_w * 4] = src[
+            src_start : src_start + copy_w * 4
+        ]
+
+
+# ------------------------------------------------------------------------------
+#  Tile Collection
+# ------------------------------------------------------------------------------
 def collect_dirty_tile_coords(
     rects: DamageRects,
     crop_width: int,
@@ -247,30 +290,6 @@ def collect_dirty_tile_coords(
             for tx in range(tx0, min(tx1, tiles_x)):
                 dirty.add((tx, ty))
     return list(dirty)
-
-
-# ------------------------------------------------------------------------------
-#  Internal helpers
-# ------------------------------------------------------------------------------
-def _copy_region(
-    dst: bytearray,
-    src: memoryview,
-    src_stride: int,
-    src_x: int,
-    src_y: int,
-    copy_w: int,
-    copy_h: int,
-    dst_x: int,
-    dst_y: int,
-    dst_stride: int,
-) -> None:
-    """Copy a rectangular region from src to dst, row by row."""
-    for row in range(copy_h):
-        src_start = (src_y + row) * src_stride + src_x * 4
-        dst_start = ((dst_y + row) * dst_stride + dst_x) * 4
-        dst[dst_start : dst_start + copy_w * 4] = src[
-            src_start : src_start + copy_w * 4
-        ]
 
 
 def _pad_top(

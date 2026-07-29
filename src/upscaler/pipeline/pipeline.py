@@ -16,6 +16,7 @@ from .osd import OSDManager
 from .presenter import Presenter
 from .swapchain import SwapchainManager
 from .upscale import UpscalerManager
+from .utils import collect_dirty_tile_coords, extract_expanded_tiles
 from ..capture import FrameGrabber
 from ..config import (
     Config,
@@ -26,7 +27,6 @@ from ..config import (
     validate_config,
 )
 from ..overlay import OverlayWindow
-from ..tiles import collect_dirty_tile_coords, extract_expanded_tiles
 from ..utils import compute_overlay_geometry, get_base_geometry, parse_output_geometry
 from ..vulkan import SwapchainError, configure_device, select_device
 from ..window import WindowInfo, WindowTracker

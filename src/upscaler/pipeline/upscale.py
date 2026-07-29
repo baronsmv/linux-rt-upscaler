@@ -1,57 +1,15 @@
 from __future__ import annotations
 
 import logging
-import struct
 from typing import Dict, List, Optional, Tuple
 
+from .tile import TileProcessor
+from .utils import DamageRects, DirtyTiles, collect_uav_names, expand_damage_rects
 from ..config import Config
-from ..srcnn import (
-    ModelConfig,
-    PipelineFactory,
-    SRCNN,
-    dispatch_groups,
-    load_model,
-)
-from ..tiles import (
-    DamageRects,
-    DirtyTiles,
-    TileProcessor,
-    expand_damage_rects,
-)
+from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_model
 from ..vulkan import Buffer, Texture2D, HEAP_UPLOAD
 
 logger = logging.getLogger(__name__)
-
-
-# ----------------------------------------------------------------------
-#  Constant buffer packing helper
-# ----------------------------------------------------------------------
-def _pack_cb(in_w: int, in_h: int, out_w: int, out_h: int) -> bytes:
-    """Pack constant buffer data for SRCNN shaders."""
-    return struct.pack(
-        "IIIIffff",
-        in_w,
-        in_h,
-        out_w,
-        out_h,
-        1.0 / in_w,
-        1.0 / in_h,
-        1.0 / out_w,
-        1.0 / out_h,
-    )
-
-
-# ----------------------------------------------------------------------
-#  Helper to collect all UAV names used by a model (excluding "output")
-# ----------------------------------------------------------------------
-def _collect_intermediate_names(model_cfg: ModelConfig) -> set:
-    """Return a set of all UAV names used by the model, excluding 'output'."""
-    return {
-        name
-        for srv_list, uav_list in model_cfg.srv_uav
-        for name in uav_list
-        if name != "output"
-    }
 
 
 # ======================================================================
@@ -155,7 +113,7 @@ class UpscalerManager:
         """
         fmt = self.model_cfg.intermediate_format
         factory = PipelineFactory(self.model_cfg)
-        intermediate_names = _collect_intermediate_names(self.model_cfg)
+        intermediate_names = collect_uav_names(self.model_cfg)
 
         # ------------------------------------------------------------------
         # Determine total scale and output size

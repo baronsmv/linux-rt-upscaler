@@ -3,14 +3,12 @@ from __future__ import annotations
 import logging
 import struct
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple
 
+from .utils import DirtyTiles, DirtyTilesCoords, DirtyTilesRects, collect_uav_names
 from ..config import Config
 from ..srcnn import PipelineFactory, SRCNN, dispatch_groups, load_model
 from ..vulkan import Buffer, Compute, Texture2D
-
-if TYPE_CHECKING:
-    from .utils import DirtyTiles, DirtyTilesCoords, DirtyTilesRects
 
 logger = logging.getLogger(__name__)
 
@@ -57,16 +55,6 @@ class TileSpec:
         extent_h = min(tile_size * scale, full_out_h - dst_out_y)
 
         return cls(tx, ty, dst_out_x, dst_out_y, extent_w, extent_h)
-
-
-def _collect_intermediate_names(model_config):
-    """Return a set of all UAV names used by the model, excluding 'output'."""
-    return {
-        name
-        for srv_list, uav_list in model_config.srv_uav
-        for name in uav_list
-        if name != "output"
-    }
 
 
 class TileProcessor:
@@ -130,7 +118,7 @@ class TileProcessor:
         self.factory = PipelineFactory(model_config)
 
         # All UAV names used by the model (except "output")
-        self.intermediate_names = _collect_intermediate_names(model_config)
+        self.intermediate_names = collect_uav_names(model_config)
 
         # ------------------------------------------------------------------
         # Residual textures
