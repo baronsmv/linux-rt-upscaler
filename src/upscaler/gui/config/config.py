@@ -123,7 +123,7 @@ class SidebarLayout:
     tab_font_size: int = 18
     section_title_size: int = 18
     row_height: int = 32
-    icon_columns: int = 7
+    icon_columns: int = 8
     icon_size: int = 28
     row_spacing: int = 6
 

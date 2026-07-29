@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import logging
 import os
-from random import choice
+from dataclasses import fields
 from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QTimer, QSettings, QSize, QStandardPaths
@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .config import ConfigManager, GUIConfig, PRESETS
+from .config import ConfigManager, GUIConfig, GUIPalette, PRESETS
 from .dialogs import AboutDialog
 from .grid import FilterBar, WindowGridScene, WindowGridView
 from .helpers import DaemonController, ProfileActions, WindowGridManager
@@ -26,7 +26,13 @@ from .icons import load_icon
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .styles import circular_button_style, tooltip_style
 from .widgets import StyledSplitter
-from ..config import apply_overrides, find_matching_profile, parse_config
+from ..config import (
+    apply_overrides,
+    find_matching_profile,
+    load_gui_style,
+    parse_config,
+    save_gui_style,
+)
 from ..pipeline import create_pipeline_session
 from ..window import activate_window
 
@@ -54,12 +60,13 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__(parent)
         self._config_manager = config_manager
+        self._profile_name = profile_name
         self.manual_session: Optional[PipelineSession] = None
 
-        # TESTING ALL RANDOMLY
-        name_preset, preset = choice(tuple(v for v in PRESETS.items()))
-        print(name_preset)
-        self.gui_config = GUIConfig(palette=preset)
+        # GUI Palette
+        saved = load_gui_style()
+        palette = GUIPalette(**saved) if saved else PRESETS["Auto"]
+        self.gui_config = GUIConfig(palette=palette)
         QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))
 
         # Icon directory
@@ -74,6 +81,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Real-Time Upscaler")
         self.setMinimumSize(1200, 600)
 
+        # Setup UI
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Create the entire UI from scratch, using self.gui_config."""
         # ------------------------------------------------------------------
         # Central layout
         # ------------------------------------------------------------------
@@ -156,6 +168,7 @@ class MainWindow(QMainWindow):
         self.right_sidebar.save_settings.connect(self._on_save_settings)
         self.right_sidebar.reset_settings.connect(self._on_reset_settings)
         self.right_sidebar.restore_defaults.connect(self._on_restore_defaults)
+        self.right_sidebar.style_applied.connect(self._on_style_applied)
 
         # Splitter
         self.splitter = StyledSplitter(Qt.Horizontal, self.gui_config)
@@ -206,9 +219,9 @@ class MainWindow(QMainWindow):
             self.showMaximized()
 
         # Activate initial profile if given on command line
-        if profile_name and profile_name in self._config_manager.profiles:
-            self._config_manager.set_active_profile(profile_name)
-            self.left_sidebar.set_active_item(profile_name)
+        if self._profile_name and self._profile_name in self._config_manager.profiles:
+            self._config_manager.set_active_profile(self._profile_name)
+            self.left_sidebar.set_active_item(self._profile_name)
 
         # If daemon is enabled in saved config, start it after the event loop runs
         if self._config_manager.effective_config.daemon:
@@ -324,6 +337,47 @@ class MainWindow(QMainWindow):
             apply_overrides(merged_base, self._config_manager.cli_overrides)
             parse_config(merged_base)
             self.daemon_ctrl.update_base_config(merged_base)
+
+    def _rebuild_ui(self) -> None:
+        # Save state
+        active_profile = self._config_manager.active_profile_name
+        filter_text = self.filter_bar.text()
+        daemon_was_active = self.daemon_ctrl.active
+
+        # Stop background tasks
+        self.grid_mgr.stop()
+        self.daemon_ctrl.stop()
+
+        # Remove old central widget
+        old_central = self.centralWidget()
+        if old_central:
+            old_central.deleteLater()
+
+        # Re‑initialize the whole UI
+        self._setup_ui()
+
+        # Restore state
+        self.filter_bar.set_text(filter_text)
+        if active_profile:
+            self._config_manager.set_active_profile(active_profile)
+            self.left_sidebar.set_active_item(active_profile)
+        if daemon_was_active:
+            QTimer.singleShot(0, self.daemon_ctrl.start)
+
+    def _on_style_applied(self, new_palette: GUIPalette) -> None:
+        """Save the new palette to disk and rebuild the GUI with it."""
+        palette_dict = {
+            field.name: getattr(new_palette, field.name) for field in fields(GUIPalette)
+        }
+        save_gui_style(palette_dict)
+
+        # Build a completely new GUIConfig (same layout constants, new palette)
+        new_gui_config = GUIConfig(palette=new_palette)
+        self.gui_config = new_gui_config
+        QApplication.instance().setStyleSheet(tooltip_style(new_gui_config))
+
+        # Rebuild the entire central area, keeping the active profile / daemon state
+        self._rebuild_ui()
 
     # ------------------------------------------------------------------
     # Save / Reset / Restore

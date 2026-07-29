@@ -84,6 +84,19 @@ class ColorPickerRow(BaseRow):
         self._update_highlight()
         self._apply_color()
 
+    def set_color(self, color_str: str) -> None:
+        """
+        Set the swatch to *color_str* without emitting ``colorChanged``.
+
+        Useful for initializing or resetting the picker from saved data.
+        Accepts any valid CSS string (named, hex, ``#RRGGBBAA``, etc.).
+        """
+        qcolor = rgba_hex_to_qcolor(color_str)
+        if qcolor.isValid():
+            self._current_color = qcolor
+            self._apply_color()
+            self._update_highlight()
+
     # ------------------------------------------------------------------
     #  BaseRow overrides
     # ------------------------------------------------------------------

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import fields
 from typing import Callable, Dict, Optional, TYPE_CHECKING
 
-from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QWidget
 
 from ..common import SettingsTab
 from ..controls import normalize_to_hex
@@ -17,6 +20,8 @@ if TYPE_CHECKING:
 class StyleTab(SettingsTab):
     """Tab to customize the GUI color palette, stored in a separate YAML file."""
 
+    style_dirty_changed = Signal(bool)
+
     def __init__(
         self,
         gui_config: GUIConfig,
@@ -24,9 +29,10 @@ class StyleTab(SettingsTab):
         on_apply: Callable[[GUIPalette], None],
         parent: Optional[QWidget] = None,
     ) -> None:
-        self._palette = initial_palette
+        self._palette = copy.deepcopy(initial_palette)
+        self._saved_palette = copy.deepcopy(initial_palette)
         self._on_apply = on_apply
-        self._updating_from_preset = False  # guard against recursion
+        self._updating_from_preset = False
         super().__init__(
             gui_config,
             title="Style",
@@ -47,6 +53,12 @@ class StyleTab(SettingsTab):
             "this automatically switches to 'Custom'.",
         )
 
+        # Block signals to prevent _on_preset_changed from running prematurely
+        self._preset_combo.blockSignals(True)
+        initial_preset = self._find_matching_preset()
+        self._preset_combo.setCurrentText(initial_preset)
+        self._preset_combo.blockSignals(False)
+
         # Determine initial preset (match the palette to a known preset)
         initial_preset = self._find_matching_preset()
         self._preset_combo.setCurrentText(initial_preset)
@@ -55,7 +67,7 @@ class StyleTab(SettingsTab):
         for field in fields(GUIPalette):
             name = field.name
             label = name.replace("_", " ").title()
-            value = normalize_to_hex(getattr(self._palette, name))
+            value = normalize_to_hex(getattr(self._saved_palette, name))
             picker = self._add_color_picker(
                 label,
                 value,
@@ -63,14 +75,6 @@ class StyleTab(SettingsTab):
                 help=f"Set the {label.lower()} color.",
             )
             self._picker_widgets[name] = picker
-
-        # ── Apply button (at the bottom of the tab) ───────────────
-        apply_layout = QHBoxLayout()
-        apply_layout.addStretch()
-        self._apply_btn = QPushButton("Apply Style")
-        self._apply_btn.clicked.connect(self._apply_clicked)
-        apply_layout.addWidget(self._apply_btn)
-        self.content_layout.addLayout(apply_layout)
 
     # ------------------------------------------------------------------
     #  Slots
@@ -81,22 +85,21 @@ class StyleTab(SettingsTab):
         preset_name = text if text != "Auto" else "Auto"
         preset = PRESETS.get(preset_name, PRESETS["Auto"])
         self._updating_from_preset = True
+        self._palette = copy.deepcopy(preset)
         for field in fields(GUIPalette):
-            color = getattr(preset, field.name)
-            hex_color = normalize_to_hex(color)
-            self._picker_widgets[field.name].setText(hex_color)  # update the UI
-            setattr(self._palette, field.name, color)  # update internal
+            hex_color = normalize_to_hex(getattr(preset, field.name))
+            self._picker_widgets[field.name].set_color(hex_color)
         self._updating_from_preset = False
+        self._notify_dirty()
 
     def _make_color_slot(self, field_name: str):
         """Return a slot that records manual color changes and updates 'Custom'."""
 
         def slot(value: str) -> None:
-            # Update internal palette
             setattr(self._palette, field_name, value)
-            # Switch preset to Custom (unless we're already in a preset load)
             if not self._updating_from_preset:
                 self._preset_combo.setCurrentText("Custom")
+            self._notify_dirty()
 
         return slot
 
@@ -114,6 +117,64 @@ class StyleTab(SettingsTab):
                 return preset_name
         return "Custom"
 
+    def is_dirty(self) -> bool:
+        """Return True if the current palette differs from the last applied one."""
+        for field in fields(GUIPalette):
+            if getattr(self._palette, field.name) != getattr(
+                self._saved_palette, field.name
+            ):
+                return True
+        return False
+
     def _apply_clicked(self) -> None:
-        """Save the palette to disk and trigger the main window to rebuild its UI."""
-        self._on_apply(self._palette)
+        """Persist the palette and trigger the main window to rebuild its UI."""
+        stylesheet_palette = GUIPalette(
+            **{
+                field.name: self._to_stylesheet_color(
+                    getattr(self._palette, field.name)
+                )
+                for field in fields(GUIPalette)
+            }
+        )
+        self._saved_palette = copy.deepcopy(self._palette)
+        self._on_apply(stylesheet_palette)
+        self.style_apply.emit()
+        self._notify_dirty()
+
+    def _reset_style(self) -> None:
+        """Revert all fields to the last applied palette."""
+        self._palette = copy.deepcopy(self._saved_palette)
+        self._updating_from_preset = True
+        for field in fields(GUIPalette):
+            hex_color = normalize_to_hex(getattr(self._palette, field.name))
+            self._picker_widgets[field.name].set_color(hex_color)
+        self._updating_from_preset = False
+        self._preset_combo.setCurrentText(self._find_matching_preset())
+        self._notify_dirty()
+
+    def _restore_auto_preset(self) -> None:
+        """Load the Auto preset (but do NOT apply it automatically)."""
+        preset = PRESETS["Auto"]
+        self._palette = copy.deepcopy(preset)
+        self._updating_from_preset = True
+        for field in fields(GUIPalette):
+            hex_color = normalize_to_hex(getattr(self._palette, field.name))
+            self._picker_widgets[field.name].set_color(hex_color)
+        self._updating_from_preset = False
+        self._preset_combo.setCurrentText("Auto")
+        self._notify_dirty()
+
+    def _notify_dirty(self) -> None:
+        """Emit the current dirty state (call after any change)."""
+        self.style_dirty_changed.emit(self.is_dirty())
+
+    @staticmethod
+    def _to_stylesheet_color(any_color: str) -> str:
+        """Convert a color (e.g., #RRGGBBAA) to a Qt‑stylesheet‑compatible format."""
+        qc = QColor(any_color)
+        if not qc.isValid():
+            return "#000000"
+        if qc.alpha() == 255:
+            return qc.name(QColor.HexRgb)  # "#RRGGBB"
+        else:
+            return qc.name(QColor.HexArgb)  # "#AARRGGBB"

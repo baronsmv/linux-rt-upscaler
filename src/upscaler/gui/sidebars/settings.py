@@ -24,12 +24,13 @@ from .tabs import (
     GeneralTab,
     PresentationTab,
     ScalingTab,
+    StyleTab,
 )
 from ..styles import reset_button_style, reset_submenu_style, save_button_style
 from ...config import Config, parse_config
 
 if TYPE_CHECKING:
-    from ..config import GUIConfig
+    from ..config import GUIConfig, GUIPalette
 
 
 class SettingsSidebar(IconSidebarBase):
@@ -39,6 +40,7 @@ class SettingsSidebar(IconSidebarBase):
     reset_settings = Signal()
     restore_defaults = Signal()
     daemon_toggled = Signal(bool)
+    style_applied = Signal(object)
 
     def __init__(
         self,
@@ -63,8 +65,11 @@ class SettingsSidebar(IconSidebarBase):
         self._dirty = False
 
         tab_args = gui_config, config, self._bc
+        style_tab_args = gui_config, gui_config.palette, self._on_style_apply
+
         general_tab = GeneralTab(*tab_args, profile_active=profile_active)
         general_tab.daemon_toggled.connect(self.daemon_toggled)
+        self._style_tab: Optional[StyleTab] = None
 
         tabs = [
             (general_tab, "general", "General"),
@@ -74,11 +79,19 @@ class SettingsSidebar(IconSidebarBase):
             (EffectsTab(*tab_args), "effects", "Effects"),
             (AdvancedTab(*tab_args), "advanced", "Advanced"),
             (ExtrasTab(*tab_args), "extras", "Extras"),
+            (StyleTab(*style_tab_args), "style", "Style"),
         ]
 
         for tab, icon, tooltip in tabs:
             self.add_tab(tab, f"tabs/{icon}", tooltip)
-            tab.config_changed.connect(self._on_config_changed)
+            if isinstance(tab, StyleTab):
+                self._style_tab = tab
+                tab.style_dirty_changed.connect(self._on_style_dirty_changed)
+            else:
+                tab.config_changed.connect(self._on_config_changed)
+
+        # Listen to tab changes
+        self._tab_bar.currentChanged.connect(self._on_tab_changed)
 
         # ---- Footer with Save & Reset buttons ----
         footer = self._create_footer()
@@ -92,6 +105,9 @@ class SettingsSidebar(IconSidebarBase):
     def _on_config_changed(self) -> None:
         """Any setting was modified; re-evaluate dirty state."""
         self._check_dirty()
+
+    def _on_style_apply(self, new_palette: GUIPalette) -> None:
+        self.style_applied.emit(new_palette)
 
     # ------------------------------------------------------------------
     #  Dirty-state logic
@@ -142,6 +158,17 @@ class SettingsSidebar(IconSidebarBase):
     #  Footer
     # ------------------------------------------------------------------
     def _create_footer(self) -> QWidget:
+        """
+        Creates the footer bar with Save/Reset buttons.
+
+        The buttons are connected to internal delegating methods instead
+        of directly emitting signals. This allows the footer to switch
+        behavior seamlessly when the Style tab is active without
+        disconnecting/reconnecting signals.
+
+        - _on_footer_save  – dispatches to StyleTab._apply_clicked() or save_settings
+        - _on_footer_reset – dispatches to StyleTab._reset_style()   or reset_settings
+        """
         cfg = self.gui_config
 
         outer = QWidget()
@@ -159,7 +186,7 @@ class SettingsSidebar(IconSidebarBase):
         self._save_btn.setCursor(Qt.PointingHandCursor)
         self._save_btn.setFixedHeight(cfg.footer.button_height)
         self._save_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._save_btn.clicked.connect(self.save_settings.emit)
+        self._save_btn.clicked.connect(self._on_footer_save)
         self._save_btn.setStyleSheet(save_button_style(cfg))
         button_layout.addWidget(self._save_btn, 1)
 
@@ -171,21 +198,29 @@ class SettingsSidebar(IconSidebarBase):
         self._reset_btn.setCursor(Qt.PointingHandCursor)
         self._reset_btn.setFixedHeight(cfg.footer.button_height)
         self._reset_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._reset_btn.clicked.connect(self.reset_settings.emit)
+        self._reset_btn.clicked.connect(self._on_footer_reset)
 
         # Drop-down menu
-        menu = QMenu(self._reset_btn)
+        self._config_reset_menu = QMenu(self._reset_btn)
         restore_text = (
             "Clear profile overrides"
             if self._profile_active
             else "Restore system defaults"
         )
-        self._restore_action = menu.addAction(restore_text)
+        self._restore_action = self._config_reset_menu.addAction(restore_text)
         self._restore_action.triggered.connect(self.restore_defaults.emit)
-        self._reset_btn.setMenu(menu)
+        self._config_reset_menu.setStyleSheet(reset_submenu_style(cfg))
 
-        menu.setStyleSheet(reset_submenu_style(cfg))
+        self._style_reset_menu = QMenu(self._reset_btn)
+        self._style_reset_last_action = self._style_reset_menu.addAction(
+            "Reset to last applied"
+        )
+        self._style_reset_auto_action = self._style_reset_menu.addAction(
+            "Restore Auto preset"
+        )
+        self._style_reset_menu.setStyleSheet(reset_submenu_style(cfg))
 
+        self._reset_btn.setMenu(self._config_reset_menu)
         button_layout.addWidget(self._reset_btn, 1)
         outer_layout.addWidget(button_widget)
 
@@ -195,3 +230,75 @@ class SettingsSidebar(IconSidebarBase):
         self._reset_btn.setStyleSheet(reset_button_style(cfg, active=False))
 
         return outer
+
+    def _on_footer_save(self):
+        """If the Style tab is active, apply style; otherwise save config."""
+        if self._is_style_tab_active():
+            self._style_tab._apply_clicked()
+        else:
+            self.save_settings.emit()
+
+    def _on_footer_reset(self):
+        """If the Style tab is active, reset to last applied; otherwise reset config."""
+        if self._is_style_tab_active():
+            self._style_tab._reset_style()
+        else:
+            self.reset_settings.emit()
+
+    def _is_style_tab_active(self) -> bool:
+        return (
+            self._style_tab is not None
+            and self._stack.currentWidget() is self._style_tab
+        )
+
+    def _on_tab_changed(self, index: int):
+        """
+        When the user clicks a tab icon, adjust the footer buttons.
+
+        If the new tab is the Style tab:
+          - Change labels to "Apply Style" / "Reset Style"
+          - Replace the Reset button's dropdown with style-specific actions
+          - Update enabled states based on the style's dirty flag
+        Otherwise:
+          - Restore the normal labels and config reset menu
+          - Refresh the normal dirty-state tracking
+        """
+        if self._is_style_tab_active():
+            # === Style tab active ===
+            self._save_btn.setText("Apply Style")
+            self._reset_btn.setText("Reset Style")
+            # Swap menu
+            self._reset_btn.setMenu(self._style_reset_menu)
+            # Connect style menu actions (only once effectively, but safe to reconnect after checking)
+            try:
+                self._style_reset_last_action.triggered.disconnect()
+                self._style_reset_auto_action.triggered.disconnect()
+            except Exception:
+                pass
+            self._style_reset_last_action.triggered.connect(
+                self._style_tab._reset_style
+            )
+            self._style_reset_auto_action.triggered.connect(
+                self._style_tab._restore_auto_preset
+            )
+
+            # Update enabled state from style dirty flag
+            self._update_style_footer_state()
+        else:
+            # === Normal config tab ===
+            self._save_btn.setText("Save Profile" if self._profile_active else "Save")
+            self._reset_btn.setText("Reset")
+            self._reset_btn.setMenu(self._config_reset_menu)
+            # Restore normal config dirty-state logic
+            self._check_dirty()  # existing method already sets enabled states
+
+    def _on_style_dirty_changed(self, dirty: bool):
+        """Called whenever the Style tab's dirty state changes."""
+        if self._is_style_tab_active():
+            self._update_style_footer_state()
+
+    def _update_style_footer_state(self):
+        """Enable Apply / Reset buttons based solely on style dirty state."""
+        dirty = self._style_tab.is_dirty()
+        self._save_btn.setEnabled(dirty)
+        self._reset_btn.setEnabled(True)  # reset is always available (or could check)
