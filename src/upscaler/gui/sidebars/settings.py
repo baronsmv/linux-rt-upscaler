@@ -91,7 +91,7 @@ class SettingsSidebar(IconSidebarBase):
                 tab.config_changed.connect(self._on_config_changed)
 
         # Listen to tab changes
-        self._tab_bar.currentChanged.connect(self._on_tab_changed)
+        self._tab_bar.currentChanged.connect(self.on_tab_changed)
 
         # ---- Footer with Save & Reset buttons ----
         footer = self._create_footer()
@@ -251,7 +251,7 @@ class SettingsSidebar(IconSidebarBase):
             and self._stack.currentWidget() is self._style_tab
         )
 
-    def _on_tab_changed(self, index: int):
+    def on_tab_changed(self, index: int):
         """
         When the user clicks a tab icon, adjust the footer buttons.
 

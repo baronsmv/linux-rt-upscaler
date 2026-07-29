@@ -368,6 +368,7 @@ class MainWindow(QMainWindow):
 
     def _rebuild_ui(self) -> None:
         # Save state
+        tab_index = self.right_sidebar.current_tab_index
         active_profile = self._config_manager.active_profile_name
         filter_text = self.filter_bar.text()
         daemon_was_active = self.daemon_ctrl.active
@@ -385,6 +386,8 @@ class MainWindow(QMainWindow):
         self._setup_ui()
 
         # Restore state
+        self.right_sidebar.current_tab_index = tab_index
+        self.right_sidebar.on_tab_changed(tab_index)
         self.filter_bar.set_text(filter_text)
         if active_profile:
             self._config_manager.set_active_profile(active_profile)
