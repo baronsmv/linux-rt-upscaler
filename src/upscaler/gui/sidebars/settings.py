@@ -304,7 +304,7 @@ class SettingsSidebar(IconSidebarBase):
 
         # Apply button is enabled only when there are unsaved changes
         self._save_btn.setEnabled(dirty)
-        self._reset_btn.setEnabled(not is_default)
+        self._reset_btn.setEnabled(dirty or not is_default)
         self._reset_btn.setStyleSheet(reset_button_style(self.gui_config, active=dirty))
 
         # Dropdown actions
