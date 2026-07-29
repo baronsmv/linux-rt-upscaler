@@ -357,6 +357,7 @@ class MainWindow(QMainWindow):
         else:
             self.splitter.addWidget(new_sidebar)
         new_sidebar.current_tab_index = tab_index
+        new_sidebar.on_tab_changed(tab_index)
         self.right_sidebar = new_sidebar
 
         # Update daemon base config so next match uses current GUI settings
