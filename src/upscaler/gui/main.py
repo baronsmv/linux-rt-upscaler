@@ -59,6 +59,7 @@ class MainWindow(QMainWindow):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
+        self._settings = QSettings("linux-rt-upscaler")
         self._config_manager = config_manager
         self._profile_name = profile_name
         self.manual_session: Optional[PipelineSession] = None
@@ -178,6 +179,9 @@ class MainWindow(QMainWindow):
         self.splitter.setSizes(
             [self.gui_config.sidebar.width, 400, self.gui_config.sidebar.width]
         )
+        self.splitter.setCollapsible(0, True)  # left sidebar can collapse
+        self.splitter.setCollapsible(2, True)  # right sidebar can collapse
+        self.splitter.splitterMoved.connect(self._on_splitter_moved)
         main_layout.addWidget(self.splitter)
 
         # Ctrl+F shortcut
@@ -211,7 +215,6 @@ class MainWindow(QMainWindow):
         # Background tasks
         # ------------------------------------------------------------------
         QTimer.singleShot(0, self.grid_mgr.start)
-        self._settings = QSettings("linux-rt-upscaler")
         geometry = self._settings.value("mainwindow/geometry")
         if geometry is not None:
             self.restoreGeometry(geometry)
@@ -226,6 +229,21 @@ class MainWindow(QMainWindow):
         # If daemon is enabled in saved config, start it after the event loop runs
         if self._config_manager.effective_config.daemon:
             QTimer.singleShot(0, self.daemon_ctrl.start)
+
+        # Restore sidebar visibility from previous session
+        left_hidden = self._settings.value("gui/left_sidebar_hidden", False)
+        right_hidden = self._settings.value("gui/right_sidebar_hidden", False)
+        if isinstance(left_hidden, str):
+            left_hidden = left_hidden.lower() == "true"
+        if isinstance(right_hidden, str):
+            right_hidden = right_hidden.lower() == "true"
+        if left_hidden or right_hidden:
+            sizes = self.splitter.sizes()
+            if left_hidden:
+                sizes[0] = 0
+            if right_hidden:
+                sizes[2] = 0
+            self.splitter.setSizes(sizes)
 
     # ------------------------------------------------------------------
     # Pipeline launch
@@ -249,6 +267,15 @@ class MainWindow(QMainWindow):
             return
 
         QTimer.singleShot(0, lambda: self._start_pipeline(win_info))
+
+    def _on_splitter_moved(self, pos: int, index: int) -> None:
+        """Save sidebar visibility based on current splitter sizes."""
+        sizes = self.splitter.sizes()
+        # If a sidebar's width is less than 10 pixels, consider it hidden.
+        left_hidden = sizes[0] < 10
+        right_hidden = sizes[2] < 10
+        self._settings.setValue("gui/left_sidebar_hidden", left_hidden)
+        self._settings.setValue("gui/right_sidebar_hidden", right_hidden)
 
     def _on_manual_overlay_closed(self) -> None:
         """Called when the overlay of a manual session is closed."""
