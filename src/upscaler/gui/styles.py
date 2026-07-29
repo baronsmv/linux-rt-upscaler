@@ -108,6 +108,19 @@ def scrollbar_style(cfg: GUIConfig) -> str:
     """
 
 
+def scroll_area_style(_: GUIConfig) -> str:
+    """Transparent scroll area that blends into the sidebar background."""
+    return """
+    QScrollArea {
+        background: transparent;
+        border: none;
+    }
+    QScrollArea > QWidget > QWidget {
+        background: transparent;
+    }
+    """
+
+
 # ---------------------------------------------------------------------------
 #  Separator
 # ---------------------------------------------------------------------------
@@ -156,7 +169,7 @@ def section_title_style(cfg: GUIConfig) -> str:
 def section_underline_style(cfg: GUIConfig) -> str:
     """Thin horizontal line used under section headers."""
     return f"""
-    background-color: {cfg.palette.text_subtle};
+    background-color: {cfg.palette.border};
     min-height: 1px;
     max-height: 1px;
     border: none;

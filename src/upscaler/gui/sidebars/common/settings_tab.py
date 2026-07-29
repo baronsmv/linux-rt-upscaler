@@ -21,7 +21,12 @@ from ..controls import (
     SectionLabel,
     SliderRow,
 )
-from ...styles import scrollbar_style, section_title_style, section_underline_style
+from ...styles import (
+    scroll_area_style,
+    scrollbar_style,
+    section_title_style,
+    section_underline_style,
+)
 from ....config import DEFAULT_CONFIG
 
 if TYPE_CHECKING:
@@ -68,6 +73,7 @@ class SettingsTab(QWidget):
         scroll.setWidgetResizable(True)
         scroll.verticalScrollBar().setStyleSheet(scrollbar_style(gui_config))
         scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setStyleSheet(scroll_area_style(self._gui_config))
 
         # ---- Inner content widget and its layout ----------------------------
         content = QWidget()
