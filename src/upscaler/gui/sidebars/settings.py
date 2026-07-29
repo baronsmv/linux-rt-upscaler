@@ -79,7 +79,7 @@ class SettingsSidebar(IconSidebarBase):
             (EffectsTab(*tab_args), "effects", "Effects"),
             (AdvancedTab(*tab_args), "advanced", "Advanced"),
             (ExtrasTab(*tab_args), "extras", "Extras"),
-            (StyleTab(*style_tab_args), "style", "Style"),
+            (StyleTab(*style_tab_args), "style", "GUI Style"),
         ]
 
         for tab, icon, tooltip in tabs:

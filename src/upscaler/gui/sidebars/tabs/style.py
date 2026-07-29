@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import fields
-from typing import Callable, Dict, Optional, TYPE_CHECKING
+from typing import Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QColor
@@ -22,6 +22,129 @@ class StyleTab(SettingsTab):
 
     style_dirty_changed = Signal(bool)
 
+    # ------------------------------------------------------------------
+    #  Declarative color layout
+    # ------------------------------------------------------------------
+    # Each category is a section heading + a list of (field_name, label, tooltip).
+    # All field names must match GUIPalette attributes exactly.
+    COLOR_CATEGORIES: List[Dict[str, Union[str, List[Tuple[str, str, str]]]]] = [
+        {
+            "title": "Background & Surfaces",
+            "fields": [
+                (
+                    "background",
+                    "Window Background",
+                    "Main background of the application window and dialogs.",
+                ),
+                (
+                    "input",
+                    "Input Background",
+                    "Background of text fields, combo boxes, and editable areas.",
+                ),
+                (
+                    "input_hover",
+                    "Input Background (hover)",
+                    "Background when the mouse hovers over an input field.",
+                ),
+                (
+                    "input_disabled",
+                    "Input Background (disabled)",
+                    "Background for disabled (greyed-out) input fields.",
+                ),
+                (
+                    "button",
+                    "Button Background",
+                    "Default background of push buttons.",
+                ),
+                (
+                    "button_hover",
+                    "Button Background (hover)",
+                    "Background of a button when the mouse hovers over it.",
+                ),
+                (
+                    "text_pillbox",
+                    "Tile Caption Background",
+                    "Semi-transparent overlay text (used in tile captions).",
+                ),
+            ],
+        },
+        {
+            "title": "Text & Icons",
+            "fields": [
+                (
+                    "text",
+                    "Primary Text",
+                    "Color of body text and control labels.",
+                ),
+                (
+                    "text_hover",
+                    "Primary Text (hover)",
+                    "Text color when the mouse hovers over clickable items.",
+                ),
+                (
+                    "text_subtle",
+                    "Secondary Text",
+                    "Used for secondary information, captions, and section headers.",
+                ),
+                (
+                    "icon",
+                    "Icon Fill",
+                    "Color of sidebar icons, toolbar icons, and glyphs.",
+                ),
+            ],
+        },
+        {
+            "title": "Borders & Separators",
+            "fields": [
+                (
+                    "border",
+                    "Border",
+                    "Default border color for input fields, buttons, and panels.",
+                ),
+                (
+                    "border_hover",
+                    "Border (hover)",
+                    "Border color when hovering over interactive elements.",
+                ),
+            ],
+        },
+        {
+            "title": "Controls & Highlights",
+            "fields": [
+                (
+                    "control",
+                    "Accent",
+                    "Primary accent for checkboxes, selected items, sliders, and focused borders.",
+                ),
+                (
+                    "control_hover",
+                    "Accent (hover)",
+                    "Accent color when the mouse hovers over an interactive control.",
+                ),
+                (
+                    "button_revert",
+                    "Revert Button",
+                    "Background of the 'Revert' button when changes are present.",
+                ),
+                (
+                    "button_revert_hover",
+                    "Revert Button (hover)",
+                    "Revert button background on hover.",
+                ),
+                (
+                    "control_subtle",
+                    "Handle",
+                    "Background of scrollbar handles and subtle interactive areas.",
+                ),
+                (
+                    "control_subtle_hover",
+                    "Handle (hover)",
+                    "Subtle control background on hover.",
+                ),
+            ],
+        },
+    ]
+
     def __init__(
         self,
         gui_config: GUIConfig,
@@ -35,7 +158,7 @@ class StyleTab(SettingsTab):
         self._updating_from_preset = False
         super().__init__(
             gui_config,
-            title="Style",
+            title="GUI Style",
             baseline_config=None,
             parent=parent,
         )
@@ -44,13 +167,13 @@ class StyleTab(SettingsTab):
         self._picker_widgets: Dict[str, ColorPickerRow] = {}
 
         # ── Preset selector ───────────────────────────────────────
+        self._add_section("Palette Preset")
         self._preset_combo = self._add_combo(
             "Preset",
             ["Custom"] + list(PRESETS.keys()),
             "Auto",
             self._on_preset_changed,
-            help="Select a pre-built color scheme. When you edit a color, "
-            "this automatically switches to 'Custom'.",
+            help="Select a pre-built color scheme for the GUI.",
         )
 
         # Block signals to avoid premature _on_preset_changed
@@ -59,18 +182,18 @@ class StyleTab(SettingsTab):
         self._preset_combo.setCurrentText(initial_preset)
         self._preset_combo.blockSignals(False)
 
-        # ── Color pickers for every palette field ────────────────
-        for field in fields(GUIPalette):
-            name = field.name
-            label = name.replace("_", " ").title()
-            value = normalize_to_hex(getattr(self._palette, name))
-            picker = self._add_color_picker(
-                label,
-                value,
-                self._make_color_slot(name),
-                help=f"Set the {label.lower()} color.",
-            )
-            self._picker_widgets[name] = picker
+        # ── Grouped color pickers ─────────────────────────────────
+        for category in self.COLOR_CATEGORIES:
+            self._add_section(str(category["title"]))
+            for field_name, label, tooltip in category["fields"]:
+                hex_color = normalize_to_hex(getattr(self._palette, field_name))
+                picker = self._add_color_picker(
+                    label,
+                    hex_color,
+                    self._make_color_slot(field_name),
+                    help=tooltip,
+                )
+                self._picker_widgets[field_name] = picker
 
     # ------------------------------------------------------------------
     #  Slots
