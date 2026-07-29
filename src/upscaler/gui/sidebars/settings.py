@@ -269,7 +269,7 @@ class SettingsSidebar(IconSidebarBase):
             self._reset_btn.setText("Reset Style")
             # Swap menu
             self._reset_btn.setMenu(self._style_reset_menu)
-            # Connect style menu actions (only once effectively, but safe to reconnect after checking)
+            # Connect style menu actions
             try:
                 self._style_reset_last_action.triggered.disconnect()
                 self._style_reset_auto_action.triggered.disconnect()
@@ -298,7 +298,15 @@ class SettingsSidebar(IconSidebarBase):
             self._update_style_footer_state()
 
     def _update_style_footer_state(self):
-        """Enable Apply / Reset buttons based solely on style dirty state."""
+        """Enable Apply / Reset buttons based solely on style default/dirty state."""
         dirty = self._style_tab.is_dirty()
+        is_default = self._style_tab.is_default()
+
+        # Apply button is enabled only when there are unsaved changes
         self._save_btn.setEnabled(dirty)
-        self._reset_btn.setEnabled(True)  # reset is always available (or could check)
+        self._reset_btn.setEnabled(not is_default)
+        self._reset_btn.setStyleSheet(reset_button_style(self.gui_config, active=dirty))
+
+        # Dropdown actions
+        self._style_reset_last_action.setEnabled(dirty)
+        self._style_reset_auto_action.setEnabled(not is_default)

@@ -257,6 +257,10 @@ class StyleTab(SettingsTab):
                 return True
         return False
 
+    def is_default(self) -> bool:
+        """Return True if the current palette matches the Auto preset."""
+        return self._find_matching_preset() == "Auto"
+
     def _apply_clicked(self) -> None:
         """Persist the palette and rebuild the GUI."""
         stylesheet_palette = self._palette_to_stylesheet(self._palette)
