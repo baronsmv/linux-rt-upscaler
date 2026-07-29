@@ -90,7 +90,11 @@ class GeneralTab(SettingsTab):
                 self._config.daemon,
                 self._on_daemon_changed,
                 baseline=self.baseline_config.daemon,
-                help="Automatically upscale any window matching a profile.",
+                help=(
+                    "When enabled, a daemon process runs in the background and "
+                    "automatically upscales any window that matches a profile.\n"
+                    "Disable this to manually pick a window from the grid."
+                ),
             )
 
     def _on_model_changed(self, text: str) -> None:
