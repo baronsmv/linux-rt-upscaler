@@ -317,6 +317,42 @@ def color_swatch_style(
     """
 
 
+def color_dialog_style(cfg: GUIConfig) -> str:
+    """Style the QColorDialog."""
+    return f"""
+    QColorDialog {{
+        background-color: {cfg.palette.background};
+        color: {cfg.palette.text};
+    }}
+    QColorDialog QLabel {{
+        color: {cfg.palette.text};
+    }}
+    QColorDialog QLineEdit {{
+        background-color: {cfg.palette.input};
+        border: 1px solid {cfg.palette.border};
+        border-radius: 4px;
+        padding: 2px 4px;
+        color: {cfg.palette.text};
+    }}
+    QColorDialog QPushButton {{
+        background-color: {cfg.palette.button};
+        border: 1px solid {cfg.palette.border};
+        border-radius: 4px;
+        padding: 4px 12px;
+        color: {cfg.palette.text};
+    }}
+    QColorDialog QPushButton:hover {{
+        background-color: {cfg.palette.button_hover};
+        border-color: {cfg.palette.border_hover};
+    }}
+    QColorDialog QSpinBox {{
+        background-color: {cfg.palette.input};
+        border: 1px solid {cfg.palette.border};
+        color: {cfg.palette.text};
+    }}
+    """
+
+
 # ---------------------------------------------------------------------------
 #  Control: Slider
 # ---------------------------------------------------------------------------

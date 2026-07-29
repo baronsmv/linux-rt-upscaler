@@ -7,7 +7,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QColorDialog, QPushButton, QWidget
 
 from ._base import BaseRow
-from ...styles import color_swatch_style
+from ...styles import color_dialog_style, color_swatch_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -123,13 +123,12 @@ class ColorPickerRow(BaseRow):
     #  Color picking
     # ------------------------------------------------------------------
     def _pick_color(self) -> None:
-        color = QColorDialog.getColor(
-            initial=self._current_color,
-            parent=self,
-            title="Choose Background Color",
-            options=QColorDialog.DontUseNativeDialog | QColorDialog.ShowAlphaChannel,
-        )
-        if color.isValid():
+        dlg = QColorDialog(self._current_color, self)
+        dlg.setWindowTitle("Choose Background Color")
+        dlg.setOptions(QColorDialog.DontUseNativeDialog | QColorDialog.ShowAlphaChannel)
+        dlg.setStyleSheet(color_dialog_style(self._gui_config))
+        if dlg.exec() == QColorDialog.Accepted:
+            color = dlg.currentColor()
             self._current_color = color
             self._apply_color()
             self.colorChanged.emit(qcolor_to_rgba_hex(color))
