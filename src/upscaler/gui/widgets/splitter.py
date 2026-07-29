@@ -25,8 +25,8 @@ class StyledSplitterHandle(QSplitterHandle):
         painter.setRenderHint(QPainter.Antialiasing)
 
         cfg = self._gui_config
-        handle_color = QColor(cfg.palette.control_subtle)
-        hover_color = QColor(cfg.palette.control_subtle_hover)
+        handle_color = QColor(cfg.palette.handle)
+        hover_color = QColor(cfg.palette.handle_hover)
         handle_width = cfg.splitter.handle_width
 
         # Determine if mouse is hovering (simplistic: use underMouse)

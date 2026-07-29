@@ -21,50 +21,44 @@ class StyleTab(SettingsTab):
     """Tab to customize the GUI color palette, stored in a separate YAML file."""
 
     style_dirty_changed = Signal(bool)
-
-    # ------------------------------------------------------------------
-    #  Declarative color layout
-    # ------------------------------------------------------------------
-    # Each category is a section heading + a list of (field_name, label, tooltip).
-    # All field names must match GUIPalette attributes exactly.
     COLOR_CATEGORIES: List[Dict[str, Union[str, List[Tuple[str, str, str]]]]] = [
         {
             "title": "Background & Surfaces",
             "fields": [
                 (
                     "background",
-                    "Window Background",
-                    "Main background of the application window and dialogs.",
+                    "Primary Background",
+                    "Main background color of the application window and dialogs.",
                 ),
                 (
                     "input",
                     "Input Background",
-                    "Background of text fields, combo boxes, and editable areas.",
+                    "Background color of text fields, combo boxes, and editable areas.",
                 ),
                 (
                     "input_hover",
                     "Input Background (hover)",
-                    "Background when the mouse hovers over an input field.",
+                    "Background color when the mouse hovers over an input field.",
                 ),
                 (
                     "input_disabled",
                     "Input Background (disabled)",
-                    "Background for disabled (greyed-out) input fields.",
+                    "Background color for disabled (greyed-out) input fields.",
                 ),
                 (
                     "button",
                     "Button Background",
-                    "Default background of push buttons.",
+                    "Background color of buttons.",
                 ),
                 (
                     "button_hover",
                     "Button Background (hover)",
-                    "Background of a button when the mouse hovers over it.",
+                    "Background color of a button when the mouse hovers over it.",
                 ),
                 (
-                    "text_pillbox",
-                    "Tile Caption Background",
-                    "Semi-transparent overlay text (used in tile captions).",
+                    "caption_background",
+                    "Caption Background",
+                    "Semi-transparent background color of each window titles.",
                 ),
             ],
         },
@@ -74,7 +68,7 @@ class StyleTab(SettingsTab):
                 (
                     "text",
                     "Primary Text",
-                    "Color of body text and control labels.",
+                    "Text color of body text and labels.",
                 ),
                 (
                     "text_hover",
@@ -84,12 +78,12 @@ class StyleTab(SettingsTab):
                 (
                     "text_subtle",
                     "Secondary Text",
-                    "Used for secondary information, captions, and section headers.",
+                    "Text color for secondary information, captions, and section headers.",
                 ),
                 (
                     "icon",
                     "Icon Fill",
-                    "Color of sidebar icons, toolbar icons, and glyphs.",
+                    "Fill color of sidebar and toolbar icons.",
                 ),
             ],
         },
@@ -99,7 +93,7 @@ class StyleTab(SettingsTab):
                 (
                     "border",
                     "Border",
-                    "Default border color for input fields, buttons, and panels.",
+                    "Border color for input fields, buttons, and panels.",
                 ),
                 (
                     "border_hover",
@@ -114,7 +108,7 @@ class StyleTab(SettingsTab):
                 (
                     "control",
                     "Accent",
-                    "Primary accent for checkboxes, selected items, sliders, and focused borders.",
+                    "Primary accent color for checkboxes, sliders and other interactive controls.",
                 ),
                 (
                     "control_hover",
@@ -122,24 +116,24 @@ class StyleTab(SettingsTab):
                     "Accent color when the mouse hovers over an interactive control.",
                 ),
                 (
-                    "button_revert",
+                    "reset",
                     "Revert Button",
-                    "Background of the 'Revert' button when changes are present.",
+                    "Background color of the 'Reset' button.",
                 ),
                 (
-                    "button_revert_hover",
+                    "reset_hover",
                     "Revert Button (hover)",
-                    "Revert button background on hover.",
+                    "'Reset' button background color on hover.",
                 ),
                 (
-                    "control_subtle",
+                    "handle",
                     "Handle",
-                    "Background of scrollbar handles and subtle interactive areas.",
+                    "Fill color of scrollbar handles and subtle interactive areas.",
                 ),
                 (
-                    "control_subtle_hover",
+                    "handle_hover",
                     "Handle (hover)",
-                    "Subtle control background on hover.",
+                    "Handle control fill color on hover.",
                 ),
             ],
         },

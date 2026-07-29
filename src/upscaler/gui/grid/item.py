@@ -346,7 +346,7 @@ class WindowTileItem(QGraphicsObject):
 
         # Draw pill background
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(self._gui_config.palette.text_pillbox))
+        painter.setBrush(QColor(self._gui_config.palette.caption_background))
         painter.drawRoundedRect(pill_rect, pill_radius, pill_radius)
 
         # Draw text centered in pill

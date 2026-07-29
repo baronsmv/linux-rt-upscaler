@@ -7,12 +7,12 @@ class GUIPalette:
 
     # Background
     background: str
+    caption_background: str
 
     # Text
     text: str
     text_hover: str
     text_subtle: str
-    text_pillbox: str
 
     # Icons
     icon: str
@@ -29,14 +29,14 @@ class GUIPalette:
     # Controls
     control: str
     control_hover: str
-    control_subtle: str
-    control_subtle_hover: str
+    handle: str
+    handle_hover: str
 
     # Buttons
     button: str
     button_hover: str
-    button_revert: str
-    button_revert_hover: str
+    reset: str
+    reset_hover: str
 
 
 @dataclass(frozen=True)

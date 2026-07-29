@@ -90,12 +90,12 @@ def scrollbar_style(cfg: GUIConfig) -> str:
         margin: 0;
     }}
     QScrollBar::handle:vertical {{
-        background-color: {cfg.palette.control_subtle};
+        background-color: {cfg.palette.handle};
         border-radius: 4px;
         min-height: 30px;
     }}
     QScrollBar::handle:vertical:hover {{
-        background-color: {cfg.palette.control_subtle_hover};
+        background-color: {cfg.palette.handle_hover};
     }}
     QScrollBar::add-line:vertical,
     QScrollBar::sub-line:vertical {{
@@ -716,9 +716,9 @@ def reset_button_style(cfg: GUIConfig, active: bool) -> str:
     if active:
         text = cfg.palette.text_hover
         bg_hover = cfg.palette.button_hover
-        border = cfg.palette.button_revert
-        border_hover = cfg.palette.button_revert_hover
-        split_color = cfg.palette.button_revert
+        border = cfg.palette.reset
+        border_hover = cfg.palette.reset_hover
+        split_color = cfg.palette.reset
     else:
         text = cfg.palette.text_subtle
         bg_hover = cfg.palette.button
