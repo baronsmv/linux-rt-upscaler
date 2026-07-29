@@ -11,8 +11,8 @@
 #      matches the target window title automatically)
 #   4. Command-line overrides (e.g., --model 4x24)
 #
-# Any option can be overridden inside a profile (see `profiles` section at the
-# bottom of this file). Hotkeys cannot be changed per profile.
+# Any option can be overridden for specific windows/setups inside a profile
+# (see `profiles` section at the bottom of this file).
 
 
 # ------------------------------------------------------------------------------
@@ -586,53 +586,79 @@ hotkeys:
 # Profiles
 # ------------------------------------------------------------------------------
 # Profiles allow you to define window-specific settings. They are applied:
-#   - Manually via the `-p` / `--profile` CLI argument, or
-#   - Automatically when the target window title matches a match rule.
+#   - Manually via the `-p` / `--profile` CLI argument,
+#   - Manually selecting the GUI profile before upscaling, or
+#   - Automatically when the target window matches all the rules defined in the
+#     `match` section (AND logic).
 #
-# Inside each profile you can override any of the options listed above (except
-# hotkeys). Nested dictionaries (e.g., hotkeys) are merged with the top-level
-# ones, so you can add or override individual keys.
+# Inside each profile you can override any of the options listed above.
+#
+# Available match keys (all are case-insensitive):
+#   title             - exact title match
+#   title_contains    - substring match in the title
+#   title_startswith  - title begins with this string
+#   title_endswith    - title ends with this string
+#   title_regex       - regular expression
+#   width             - window width interval
+#   height            - window height interval
+#
+# Width/height intervals support any of these formats:
+#   Exact:       1920
+#   Comparison:  <1280, >1024, <=1366, >=1920, 800<  (same as >800)
+#   Range:       1280‑1920, 720..1080, 1024,1366
 
+# Examples of profiles:
 profiles:
 
-  # Example of a manually selected profile (use `-p fata_morgana`)
-  fata_morgana:
-    # Match rules (optional - if omitted, the profile is manual only).
-    match:
-      # Exact title match (case-insensitive)
-      title: "The House in Fata Morgana"
-      # Substring match
-      title_contains: "Fata Morgana"
-      # Title starts with this prefix
-      title_startswith: "The House"
-      # Title ends with this suffix
-      title_endswith: "Morgana"
-      # Regular expression (case-insensitive)
-      title_regex: "The House in Fata.*"
+  # ------------------------------------------------------------------
+  # Manual‑only profile (no match rules), requires -p to activate
+  # ------------------------------------------------------------------
+  manual:
     options:
       model: 4x24
-      crop_top: 21
-      crop_bottom: 2
-      crop_left: 2
-      crop_right: 2
       output_geometry: cover
-      # A profile can be excluded from automatic daemon matching:
-      daemon_exclude: true
 
-  # Profile for a lightweight / fast game
-  retro_game:
+  # ------------------------------------------------------------------
+  # Profile that matches a specific window by exact title
+  # ------------------------------------------------------------------
+  vlc_player:
     match:
-      title_contains: "OpenTTD"
+      title: "VLC media player"
     options:
-      model: veryfast
-      crop_top: 15
-      crop_bottom: 20
+      model: fast
+      crop_top: 2
+      crop_bottom: 2
 
-  # Profile that uses a regular expression to match any emulator window
+  # ------------------------------------------------------------------
+  # Profile combining title and size (both must match, AND logic)
+  # ------------------------------------------------------------------
+  wide_firefox:
+    match:
+      # Only Firefox windows wider than 1280 px:
+      title_contains: "Firefox"
+      width: ">1280"
+    options:
+      model: 4x12
+      double_upscale: true
+
+  # ------------------------------------------------------------------
+  # Profile using a regular expression to match any emulator window
+  # ------------------------------------------------------------------
   emulators:
     match:
       title_regex: "(PCSX2|Dolphin|RPCS3|Yuzu|Ryujinx).*"
     options:
       model: 4x12
-      double_upscale: false
+      hide_cursor: 2000
       output_geometry: stretch
+
+  # ------------------------------------------------------------------
+  # Profile for any 720p window, excluded from auto-start match
+  # ------------------------------------------------------------------
+  720p:
+    match:
+      height: "720"
+    options:
+      model: 8x32
+      double_upscale: true
+      daemon_exclude: true  # profile excluded from daemon matching

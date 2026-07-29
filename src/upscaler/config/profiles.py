@@ -64,105 +64,63 @@ def find_profile(profiles: Dict[str, Any], name: str) -> Optional[Dict[str, Any]
     return None
 
 
+def _criterion_matches(
+    key: str, value: Any, win_info: WindowInfo, window_title: str
+) -> bool:
+    """Return True if the single match criterion (key, value) fits the window."""
+    if key == "title":
+        return window_title == str(value).lower()
+    if key == "title_regex":
+        try:
+            return bool(re.search(str(value), window_title, re.IGNORECASE))
+        except re.error:
+            logger.warning(f"Invalid regex in criterion: {value}")
+            return False
+    if key == "title_contains":
+        return str(value).lower() in window_title
+    if key == "title_startswith":
+        return window_title.startswith(str(value).lower())
+    if key == "title_endswith":
+        return window_title.endswith(str(value).lower())
+    if key == "width":
+        try:
+            return parse_interval(value)(win_info.width)
+        except ValueError:
+            logger.warning(f"Invalid width interval: {value}")
+            return False
+    if key == "height":
+        try:
+            return parse_interval(value)(win_info.height)
+        except ValueError:
+            logger.warning(f"Invalid height interval: {value}")
+            return False
+
+    logger.debug(f"Ignoring unknown match key '{key}'")
+    return False
+
+
 def find_matching_profile(
     profiles: Dict[str, Any],
     window_info: WindowInfo,
+    require_all: bool = True,
 ) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
     """
     Find the first profile whose match criteria match the window.
-    Currently, uses only window_title and size (width and height).
-    Match criteria are evaluated with OR logic: any match qualifies.
+    If *require_all* is True, every non‑empty criterion must match (AND).
+    If False, any single criterion matching is enough (OR).
     """
     window_title = window_info.title.lower()
+    condition = all if require_all else any
 
     for profile_name, profile_data in profiles.items():
         match_criteria = profile_data.get("match", {})
         if not match_criteria:
             continue
-
-        # Check each criterion; if any matches, return the profile
-        for key, value in match_criteria.items():
-
-            # --- Title ---
-            if key == "title":
-                if window_title == value.lower():
-                    return profile_name, profile_data
-                continue
-            if key == "title_regex":
-                try:
-                    pattern = re.compile(value, re.IGNORECASE)
-                    if pattern.search(window_title):
-                        return profile_name, profile_data
-                except re.error:
-                    logger.warning(
-                        f"Invalid regex in profile '{profile_name}': {value}"
-                    )
-                continue
-            if key == "title_contains":
-                if value.lower() in window_title:
-                    return profile_name, profile_data
-                continue
-            if key == "title_startswith":
-                if window_title.lower().startswith(value.lower()):
-                    return profile_name, profile_data
-                continue
-            if key == "title_endswith":
-                if window_title.lower().endswith(value.lower()):
-                    return profile_name, profile_data
-                continue
-
-            # --- Size ---
-            if key == "width":
-                try:
-                    if parse_interval(value)(window_info.width):
-                        return profile_name, profile_data
-                except ValueError:
-                    logger.warning(
-                        f"Invalid width in profile '{profile_name}': {value}"
-                    )
-            if key == "height":
-                try:
-                    if parse_interval(value)(window_info.height):
-                        return profile_name, profile_data
-                except ValueError:
-                    logger.warning(
-                        f"Invalid height in profile '{profile_name}': {value}"
-                    )
-
-            # --- Class (window_class currently not useful for most cases) ---
-            """
-            if window_class and key == "class":
-                if window_class.lower() == value.lower():
-                    return profile_name, profile_data
-                continue
-            if window_class and key == "class_regex":
-                try:
-                    pattern = re.compile(value, re.IGNORECASE)
-                    if pattern.search(window_class):
-                        return profile_name, profile_data
-                except re.error:
-                    logger.warning(
-                        f"Invalid regex in profile '{profile_name}': {value}"
-                    )
-                continue
-            if window_class and key == "class_contains":
-                if value.lower() in window_class.lower():
-                    return profile_name, profile_data
-                continue
-            if window_class and key == "class_startswith":
-                if window_class.lower().startswith(value.lower()):
-                    return profile_name, profile_data
-                continue
-            if window_class and key == "class_endswith":
-                if window_class.lower().endswith(value.lower()):
-                    return profile_name, profile_data
-                continue
-            """
-
-            # --- Unknown match ---
-            logger.debug(
-                f"Ignoring unknown match key '{key}' in profile '{profile_name}'"
-            )
+        if condition(
+            _criterion_matches(key, value, window_info, window_title)
+            for key, value in match_criteria.items()
+        ):
+            return profile_name, profile_data
 
     return None, None
 

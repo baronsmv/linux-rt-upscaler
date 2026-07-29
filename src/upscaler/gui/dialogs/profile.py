@@ -158,47 +158,89 @@ class ProfileDialog(QDialog):
         # ── Match rules group ────────────────────────────────────────
         match_group = QGroupBox("Match rules")
         match_group.setToolTip(
-            "Profiles are checked in the order they appear in the left panel. "
-            "The first profile whose match criteria fit the window will be applied."
+            "All filled rules must match for the profile to apply (AND logic).\n"
+            "Examples:\n"
+            f"{chr(8226)} Match any Firefox windows wider than 1280px:"
+            f"    {chr(8226)} Title (exact): Firefox\n"
+            f"    {chr(8226)} Width: >1280\n"
+            f"{chr(8226)} Match any VLC window (regardless of its size):\n"
+            f"    {chr(8226)} Title contains: VLC\n"
+            f"{chr(8226)} Match emulator windows between 720px and 1080px tall:\n"
+            f"    {chr(8226)} Regex: (Yuzu|Ryujinx).*\n"
+            f"    {chr(8226)} Height: 720-1080"
         )
         self._match_layout = QVBoxLayout(match_group)
         self._match_layout.setSpacing(8)
         self._match_rows: Dict[str, QLineEdit] = {}
 
+        # Title exact
+        self._match_title_exact = self._add_match_row(
+            rule="title_exact",
+            label="Title (exact):",
+            placeholder="e.g., Steam",
+            tooltip=(
+                "Match if the window title exactly equals this text "
+                "(case-insensitive)."
+            ),
+        )
         # Title contains
         self._match_title_contains = self._add_match_row(
             rule="title_contains",
             label="Title contains:",
             placeholder="e.g., VLC",
-            tooltip="Match if the window title contains this text "
-            "(case-insensitive).",
+            tooltip=(
+                "Match if the window title contains this text (case-insensitive)."
+            ),
         )
         # Title regex
         self._match_title_regex = self._add_match_row(
             rule="title_regex",
-            label="Title regex:",
+            label="Title (regex):",
             placeholder="e.g., (Yuzu|Ryujinx).*",
-            tooltip="Match if the window title matches this regular expression "
-            "(case-insensitive).",
-        )
-        # Title exact
-        self._match_title_exact = self._add_match_row(
-            rule="title_exact",
-            label="Title exact:",
-            placeholder="e.g., Steam",
-            tooltip="Match if the window title exactly equals this text "
-            "(case-insensitive).",
+            tooltip=(
+                "Match if the window title matches this regular expression "
+                "(case-insensitive)."
+            ),
         )
 
-        layout.addWidget(match_group)
+        # Width
+        self._match_width = self._add_match_row(
+            rule="width",
+            label="Width:",
+            placeholder="e.g., >1280",
+            tooltip=(
+                "Match if the window width satisfies this condition:\n"
+                f"{chr(8226)} Exact: 1920\n"
+                f"{chr(8226)} Comparison: <800, >1024, <=1366, >=1920\n"
+                f"{chr(8226)} Range: 1280‑1920, 720..1080, 1024,1366"
+            ),
+        )
+        # Height
+        self._match_height = self._add_match_row(
+            rule="height",
+            label="Height:",
+            placeholder="e.g., >800",
+            tooltip=(
+                "Match if the window height satisfies this condition:\n"
+                f"{chr(8226)} Exact: 1080\n"
+                f"{chr(8226)} Comparison: <600, >900, <=768, >=1440\n"
+                f"{chr(8226)} Range: 480‑1080, 600..900, 720,1024"
+            ),
+        )
 
         # Info note
         info = QLabel(
-            "Profiles are checked top-to-bottom; the first matching profile is applied."
+            "Profiles let you override settings for specific windows and setups.\n"
+            "A profile is applied automatically when the upscaled window matches "
+            "all the rules defined below, or when manually selected before upscaling.\n"
+            "Leave a rule blank to ignore that property."
         )
         info.setWordWrap(True)
         info.setStyleSheet(dialog_info_label_style(self._gui_config))
         self._match_layout.addWidget(info)
+
+        # Add match group
+        layout.addWidget(match_group)
 
         # ── Dialog buttons ───────────────────────────────────────────
         btn_row = QHBoxLayout()
@@ -281,6 +323,10 @@ class ProfileDialog(QDialog):
             # Fill match rules (only if fields are empty)
             if not self._match_title_contains.text().strip():
                 self._match_title_contains.setText(win_info.title)
+            if not self._match_width.text().strip():
+                self._match_width.setText(str(win_info.width))
+            if not self._match_height.text().strip():
+                self._match_height.setText(str(win_info.height))
 
     def _apply_icon_from_window(self, win_info):
         icon_img = get_window_icon(
