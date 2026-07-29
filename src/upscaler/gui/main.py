@@ -323,6 +323,7 @@ class MainWindow(QMainWindow):
         new_sidebar.save_settings.connect(self._on_save_settings)
         new_sidebar.reset_settings.connect(self._on_reset_settings)
         new_sidebar.restore_defaults.connect(self._on_restore_defaults)
+        new_sidebar.style_applied.connect(self._on_style_applied)
         if idx != -1:
             self.splitter.replaceWidget(idx, new_sidebar)
             old.deleteLater()
