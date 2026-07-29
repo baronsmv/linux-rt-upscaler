@@ -270,7 +270,7 @@ class StyleTab(SettingsTab):
             baseline_hex = normalize_to_hex(getattr(self._saved_palette, name))
             self._picker_widgets[name].set_baseline(baseline_hex)
 
-    def _apply_clicked(self) -> None:
+    def apply_clicked(self) -> None:
         """Persist the palette and rebuild the GUI."""
         stylesheet_palette = self._palette_to_stylesheet(self._palette)
         self._saved_palette = copy.deepcopy(self._palette)
@@ -278,7 +278,7 @@ class StyleTab(SettingsTab):
         self._on_apply(stylesheet_palette)
         self._notify_dirty()
 
-    def _reset_style(self) -> None:
+    def reset_style(self) -> None:
         """Revert all fields to the last applied palette."""
         self._palette = copy.deepcopy(self._saved_palette)
         self._updating_from_preset = True
@@ -290,7 +290,7 @@ class StyleTab(SettingsTab):
         self._refresh_baselines()
         self._notify_dirty()
 
-    def _restore_auto_preset(self) -> None:
+    def restore_auto_preset(self) -> None:
         """Load the Auto preset without applying."""
         preset = PRESETS["Auto"]
         self._palette = self._palette_to_internal(preset)

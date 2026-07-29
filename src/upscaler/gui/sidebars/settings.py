@@ -234,14 +234,14 @@ class SettingsSidebar(IconSidebarBase):
     def _on_footer_save(self):
         """If the Style tab is active, apply style; otherwise save config."""
         if self._is_style_tab_active():
-            self._style_tab._apply_clicked()
+            self._style_tab.apply_clicked()
         else:
             self.save_settings.emit()
 
     def _on_footer_reset(self):
         """If the Style tab is active, reset to last applied; otherwise reset config."""
         if self._is_style_tab_active():
-            self._style_tab._reset_style()
+            self._style_tab.reset_style()
         else:
             self.reset_settings.emit()
 
@@ -275,11 +275,9 @@ class SettingsSidebar(IconSidebarBase):
                 self._style_reset_auto_action.triggered.disconnect()
             except Exception:
                 pass
-            self._style_reset_last_action.triggered.connect(
-                self._style_tab._reset_style
-            )
+            self._style_reset_last_action.triggered.connect(self._style_tab.reset_style)
             self._style_reset_auto_action.triggered.connect(
-                self._style_tab._restore_auto_preset
+                self._style_tab.restore_auto_preset
             )
 
             # Update enabled state from style dirty flag
