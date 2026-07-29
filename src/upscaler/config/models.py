@@ -5,6 +5,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from PySide6.QtCore import QStandardPaths
 
+from ..utils import color_string_to_float4, color_tuple_to_string
+
 UPSCALING_MODELS = (
     "veryfast",
     "faster",
@@ -199,8 +201,6 @@ class Config:
     # ----------------------------------------------------------------------------------
     def to_dict(self, diff_only: bool = True) -> Dict[str, Any]:
         """Convert config to a dict suitable for YAML dump."""
-        from .parsers import color_string_to_float4, color_tuple_to_string
-
         result = {}
         defaults = Config()
         defaults.background_color = color_string_to_float4(defaults.background_color)

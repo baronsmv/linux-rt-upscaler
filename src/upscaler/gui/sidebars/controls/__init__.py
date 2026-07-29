@@ -1,12 +1,7 @@
 """Control widgets for sidebars public module."""
 
 from .checkbox import CheckBox
-from .color import (
-    ColorPickerRow,
-    normalize_to_hex,
-    qcolor_to_rgba_hex,
-    rgba_hex_to_qcolor,
-)
+from .color import ColorPickerRow
 from .combo import ComboRow
 from .path import PathPickerRow
 from .section import SectionLabel
@@ -21,7 +16,4 @@ __all__ = [
     "SectionLabel",
     "SliderRow",
     "CheckBox",
-    "normalize_to_hex",
-    "qcolor_to_rgba_hex",
-    "rgba_hex_to_qcolor",
 ]

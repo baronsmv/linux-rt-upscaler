@@ -1,13 +1,19 @@
+from __future__ import annotations
+
 import logging
 import threading
 from typing import Dict, Optional, Any
 
 from PySide6.QtCore import QObject, Signal
 
-from .acquisition import activate_window, list_windows
-from .connection import open_xcb_connection, close_xcb_connection
-from .info import WindowInfo
 from ..config import find_matching_profile
+from ..window import (
+    WindowInfo,
+    activate_window,
+    close_xcb_connection,
+    list_windows,
+    open_xcb_connection,
+)
 
 logger = logging.getLogger(__name__)
 

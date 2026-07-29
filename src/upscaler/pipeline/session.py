@@ -6,10 +6,11 @@ from typing import Any, Callable, Dict, Optional
 from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
 
+from .daemon import DaemonMonitor
 from .pipeline import Pipeline
 from ..config import Config
 from ..overlay import OverlayWindow
-from ..window import DaemonMonitor, FocusMonitor, HotkeyManager, WindowInfo
+from ..window import FocusMonitor, HotkeyManager, WindowInfo
 
 logger = logging.getLogger(__name__)
 

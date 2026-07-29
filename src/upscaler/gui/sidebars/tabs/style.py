@@ -9,8 +9,8 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QWidget
 
 from ..common import SettingsTab
-from ..controls import normalize_to_hex, qcolor_to_rgba_hex, rgba_hex_to_qcolor
 from ...config import GUIPalette, PRESETS
+from ....utils import normalize_to_hex, qcolor_to_rgba_hex, rgba_hex_to_qcolor
 
 if TYPE_CHECKING:
     from ..controls import ColorPickerRow

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple, Optional
+from typing import Tuple, Optional, TYPE_CHECKING
 
 from .screen import get_base_geometry
-from ..config import Config, OverlayMode
-from ..window import WindowInfo
+
+if TYPE_CHECKING:
+    from ..config import Config
+    from ..window import WindowInfo
 
 
 @dataclass(frozen=True)
@@ -235,7 +237,7 @@ def compute_overlay_geometry(
     )
 
     # Adjust overlay position and size based on overlay mode
-    if config.overlay_mode == OverlayMode.WINDOWED.value:
+    if config.overlay_mode == "windowed":  # OverlayMode.WINDOWED.value
         # Windowed mode: center on the monitor, apply offsets, and use computed size
         win_x = base_x + (phys_base_w - overlay_w) // 2 + config.offset_x
         win_y = base_y + (phys_base_w - overlay_h) // 2 + config.offset_y

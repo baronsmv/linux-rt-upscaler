@@ -6,8 +6,6 @@ from PySide6.QtCore import QRect
 from PySide6.QtGui import QGuiApplication, QScreen
 from xcffib.randr import Connection as RandRConnection
 
-from ..window import open_xcb_connection, close_xcb_connection
-
 logger = logging.getLogger(__name__)
 
 
@@ -39,6 +37,9 @@ def list_monitors() -> List[str]:
     Return a sorted list of display names known to the system using XCB RandR.
     Prepends 'primary' and 'all'.
     """
+
+    from ..window import open_xcb_connection, close_xcb_connection
+
     conn = open_xcb_connection()
     if not conn:
         logger.warning("Cannot enumerate monitors: no XCB connection")

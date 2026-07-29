@@ -5,8 +5,8 @@ from typing import Optional, TYPE_CHECKING
 from PySide6.QtWidgets import QWidget
 
 from ..common import SettingsTab
-from ..controls import normalize_to_hex
 from ....config import OverlayMode
+from ....utils import normalize_to_hex
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
