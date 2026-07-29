@@ -51,8 +51,11 @@ class GeneralTab(SettingsTab):
             self._config.double_upscale,
             self._on_double_changed,
             baseline=self.baseline_config.double_upscale,
-            help="Perform two 2x passes (total 4x) for higher resolution screens (4k, 1440p) "
-            "or low-resolution sources. Uses more GPU resources.",
+            help=(
+                "Perform two consecutive 2x upscales for a 4x total (e.g., 720p to 2880p). "
+                "Useful for high-resolution screens (4K) and low-resolution sources. "
+                "Increases GPU usage."
+            ),
         )
 
         # ---- Focus Tracking ----
