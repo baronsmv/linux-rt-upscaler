@@ -601,6 +601,14 @@ def profile_list_style(cfg: GUIConfig) -> str:
     """
 
 
+def profile_hint_style(cfg: GUIConfig) -> str:
+    return f"""
+    color: {cfg.palette.text_subtle};
+    font-size: {cfg.profile.title_font_size}px;
+    padding: 4px;
+    """
+
+
 def toolbar_button_style(cfg: GUIConfig) -> str:
     """Style for the small flat buttons (Add, Edit, Delete, Up, Down)."""
     return f"""

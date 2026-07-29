@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from ..config import GUIConfig
 from ..icons import load_icon, load_pixmap
 from ..styles import (
+    profile_hint_style,
     profile_list_style,
     scrollbar_style,
     section_title_style,
@@ -261,6 +262,23 @@ class ProfilesSidebar(QWidget):
             "When selected, the settings panel on the right edits the global configuration."
         )
         self._list.addItem(default_item)
+
+        # If no profile, show a hint
+        if not self._profiles:
+            hint_label = QLabel(
+                "Global settings apply to all windows.\n\n"
+                "Create a profile to override settings\n"
+                "for a specific window, matched by its\n"
+                "name or size."
+            )
+            hint_label.setWordWrap(True)
+            hint_label.setContentsMargins(8, 16, 8, 4)
+            hint_label.setStyleSheet(profile_hint_style(self._gui_config))
+            hint_item = QListWidgetItem()
+            hint_item.setFlags(Qt.NoItemFlags)
+            hint_item.setSizeHint(hint_label.sizeHint())
+            self._list.addItem(hint_item)
+            self._list.setItemWidget(hint_item, hint_label)
 
         # Profile entries
         for name in self._profiles.keys():
