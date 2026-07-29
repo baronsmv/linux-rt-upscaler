@@ -84,6 +84,7 @@ class MainWindow(QMainWindow):
 
         # Setup UI
         self._setup_ui()
+        self._config_manager.config_changed.connect(self._on_config_changed)
 
     def _setup_ui(self):
         """Create the entire UI from scratch, using self.gui_config."""
@@ -209,7 +210,6 @@ class MainWindow(QMainWindow):
 
         # Daemon
         self.right_sidebar.daemon_toggled.connect(self.daemon_ctrl.toggle)
-        self._config_manager.config_changed.connect(self._on_config_changed)
 
         # ------------------------------------------------------------------
         # Background tasks
