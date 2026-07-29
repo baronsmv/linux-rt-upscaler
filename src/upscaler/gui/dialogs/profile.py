@@ -233,6 +233,7 @@ class ProfileDialog(QDialog):
             "Profiles let you override settings for specific windows and setups.\n"
             "A profile is applied automatically when the upscaled window matches "
             "all the rules defined here, or when manually selected before upscaling.\n"
+            "Profiles are checked top-to-bottom: the first match wins.\n"
             "Leave a rule blank to ignore that property."
         )
         info.setWordWrap(True)
