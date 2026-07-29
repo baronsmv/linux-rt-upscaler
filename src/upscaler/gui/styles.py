@@ -322,33 +322,47 @@ def color_dialog_style(cfg: GUIConfig) -> str:
     return f"""
     QColorDialog {{
         background-color: {cfg.palette.background};
-        color: {cfg.palette.text};
     }}
     QColorDialog QLabel {{
         color: {cfg.palette.text};
-    }}
-    QColorDialog QLineEdit {{
-        background-color: {cfg.palette.input};
-        border: 1px solid {cfg.palette.border};
-        border-radius: 4px;
-        padding: 2px 4px;
-        color: {cfg.palette.text};
+        font-size: {cfg.dialog.label_font_size}px;
     }}
     QColorDialog QPushButton {{
         background-color: {cfg.palette.button};
         border: 1px solid {cfg.palette.border};
-        border-radius: 4px;
-        padding: 4px 12px;
+        border-radius: {cfg.dialog.button_border_radius}px;
+        padding: {cfg.dialog.button_padding};
         color: {cfg.palette.text};
+        font-size: {cfg.dialog.label_font_size}px;
     }}
     QColorDialog QPushButton:hover {{
         background-color: {cfg.palette.button_hover};
         border-color: {cfg.palette.border_hover};
+        color: {cfg.palette.text_hover};
     }}
+    QColorDialog QPushButton:pressed {{
+        background-color: {cfg.palette.button_hover};
+    }}
+    QColorDialog QLineEdit,
     QColorDialog QSpinBox {{
         background-color: {cfg.palette.input};
         border: 1px solid {cfg.palette.border};
+        border-radius: 4px;
+        padding: 2px 6px;
         color: {cfg.palette.text};
+        font-size: {cfg.dialog.label_font_size}px;
+    }}
+    QColorDialog QLineEdit:focus,
+    QColorDialog QSpinBox:focus {{
+        border-color: {cfg.palette.control};
+    }}
+    QColorDialog QFrame#qt_colorscreen_frame {{
+        border: 1px solid {cfg.palette.border};
+        border-radius: 4px;
+    }}
+    QColorDialog QFrame#qt_colorscreen_frame > QWidget > QWidget {{
+        border: none;
+        border-radius: 3px;
     }}
     """
 
