@@ -102,12 +102,24 @@ class StyleTab(SettingsTab):
 
         return slot
 
+    @staticmethod
+    def _normalized_color(color: str) -> str:
+        """Convert any valid CSS color string to a normalized representation."""
+        qc = QColor(color)
+        if not qc.isValid():
+            return color.lower()
+        if qc.alpha() == 255:
+            return qc.name(QColor.HexRgb).lower()  # "#rrggbb"
+        else:
+            return qc.name(QColor.HexArgb).lower()  # "#aarrggbb"
+
     def _find_matching_preset(self) -> str:
         """Compare current palette (internal) against all presets."""
         sheet = self._palette_to_stylesheet(self._palette)
         for preset_name, preset_palette in PRESETS.items():
             if all(
-                getattr(preset_palette, f.name) == getattr(sheet, f.name)
+                self._normalized_color(getattr(preset_palette, f.name))
+                == self._normalized_color(getattr(sheet, f.name))
                 for f in fields(GUIPalette)
             ):
                 return preset_name
@@ -163,7 +175,7 @@ class StyleTab(SettingsTab):
         """Convert any valid CSS color to a Qt-stylesheet-compatible string."""
         qc = rgba_hex_to_qcolor(internal_color)
         if not qc.isValid():
-            return "#000000"
+            return ""
         if qc.alpha() == 255:
             return qc.name(QColor.HexRgb)  # "#RRGGBB"
         else:
@@ -178,7 +190,7 @@ class StyleTab(SettingsTab):
         """
         qc = QColor(stylesheet_color)
         if not qc.isValid():
-            return "#000000ff"
+            return ""
         return qcolor_to_rgba_hex(qc)
 
     @staticmethod
