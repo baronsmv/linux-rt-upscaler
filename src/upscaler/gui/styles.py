@@ -306,7 +306,7 @@ def color_swatch_style(
     palette = _control_palette(cfg=cfg, enabled=enabled)
     return f"""
     QPushButton {{
-        background-color: {palette.text};
+        background-color: {current_color};
         border: 1px solid {palette.border};
         border-radius: 4px;
     }}
