@@ -160,13 +160,13 @@ class ProfileDialog(QDialog):
         match_group.setToolTip(
             "All filled rules must match for the profile to apply (AND logic).\n"
             "Examples:\n"
-            f"{chr(8226)} Match any Firefox windows wider than 1280px:"
+            f"{chr(8226)} Match any Firefox windows wider than 1280px:\n"
             f"    {chr(8226)} Title (exact): Firefox\n"
             f"    {chr(8226)} Width: >1280\n"
             f"{chr(8226)} Match any VLC window (regardless of its size):\n"
             f"    {chr(8226)} Title contains: VLC\n"
             f"{chr(8226)} Match emulator windows between 720px and 1080px tall:\n"
-            f"    {chr(8226)} Regex: (Yuzu|Ryujinx).*\n"
+            f"    {chr(8226)} Title (regex): (Yuzu|Ryujinx).*\n"
             f"    {chr(8226)} Height: 720-1080"
         )
         self._match_layout = QVBoxLayout(match_group)
@@ -232,7 +232,7 @@ class ProfileDialog(QDialog):
         info = QLabel(
             "Profiles let you override settings for specific windows and setups.\n"
             "A profile is applied automatically when the upscaled window matches "
-            "all the rules defined below, or when manually selected before upscaling.\n"
+            "all the rules defined here, or when manually selected before upscaling.\n"
             "Leave a rule blank to ignore that property."
         )
         info.setWordWrap(True)
