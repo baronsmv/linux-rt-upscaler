@@ -174,7 +174,7 @@ def setting_highlight_bar_style(cfg: GUIConfig) -> str:
 def setting_highlight_background_style(cfg: GUIConfig, highlighted: bool) -> str:
     """Background style for the content container of a BaseRow."""
     if highlighted:
-        return f"background-color: {cfg.palette.control_subtle}; border-radius: 4px;"
+        return f"background-color: {cfg.palette.input}; border-radius: 4px;"
     return "background-color: transparent;"
 
 
@@ -605,7 +605,7 @@ def icon_tab_button_style(cfg: GUIConfig) -> str:
         border-color: {cfg.palette.control};
     }}
     QPushButton:checked {{
-        background-color: {cfg.palette.button};
+        background-color: {cfg.palette.button_hover};
         border-color: {cfg.palette.control};
     }}
     """
