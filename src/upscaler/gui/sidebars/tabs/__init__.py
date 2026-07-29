@@ -7,6 +7,7 @@ from .extras import ExtrasTab
 from .general import GeneralTab
 from .presentation import PresentationTab
 from .scaler import ScalingTab
+from .style import StyleTab
 
 __all__ = [
     "AdvancedTab",
@@ -16,4 +17,5 @@ __all__ = [
     "GeneralTab",
     "PresentationTab",
     "ScalingTab",
+    "StyleTab",
 ]
