@@ -186,11 +186,11 @@ class StyleTab(SettingsTab):
         for category in self.COLOR_CATEGORIES:
             self._add_section(str(category["title"]))
             for field_name, label, tooltip in category["fields"]:
-                hex_color = normalize_to_hex(getattr(self._palette, field_name))
                 picker = self._add_color_picker(
                     label,
-                    hex_color,
+                    normalize_to_hex(getattr(self._palette, field_name)),
                     self._make_color_slot(field_name),
+                    baseline=normalize_to_hex(getattr(self._saved_palette, field_name)),
                     help=tooltip,
                 )
                 self._picker_widgets[field_name] = picker
@@ -210,7 +210,9 @@ class StyleTab(SettingsTab):
 
         # Update all swatches with the internal color values
         for field in fields(GUIPalette):
-            self._picker_widgets[field.name].set_color(getattr(preset, field.name))
+            self._picker_widgets[field.name].set_color(
+                getattr(self._palette, field.name)
+            )
         self._updating_from_preset = False
         self._notify_dirty()
 
@@ -261,10 +263,18 @@ class StyleTab(SettingsTab):
         """Return True if the current palette matches the Auto preset."""
         return self._find_matching_preset() == "Auto"
 
+    def _refresh_baselines(self) -> None:
+        """Update every picker’s baseline to the current saved palette."""
+        for field in fields(GUIPalette):
+            name = field.name
+            baseline_hex = normalize_to_hex(getattr(self._saved_palette, name))
+            self._picker_widgets[name].set_baseline(baseline_hex)
+
     def _apply_clicked(self) -> None:
         """Persist the palette and rebuild the GUI."""
         stylesheet_palette = self._palette_to_stylesheet(self._palette)
         self._saved_palette = copy.deepcopy(self._palette)
+        self._refresh_baselines()
         self._on_apply(stylesheet_palette)
         self._notify_dirty()
 
@@ -277,6 +287,7 @@ class StyleTab(SettingsTab):
             self._picker_widgets[field.name].set_color(hex_color)
         self._updating_from_preset = False
         self._preset_combo.setCurrentText(self._find_matching_preset())
+        self._refresh_baselines()
         self._notify_dirty()
 
     def _restore_auto_preset(self) -> None:
@@ -285,7 +296,9 @@ class StyleTab(SettingsTab):
         self._palette = self._palette_to_internal(preset)
         self._updating_from_preset = True
         for field in fields(GUIPalette):
-            self._picker_widgets[field.name].set_color(getattr(preset, field.name))
+            self._picker_widgets[field.name].set_color(
+                getattr(self._palette, field.name)
+            )
         self._updating_from_preset = False
         self._preset_combo.setCurrentText("Auto")
         self._notify_dirty()
