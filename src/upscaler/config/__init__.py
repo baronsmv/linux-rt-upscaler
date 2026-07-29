@@ -23,7 +23,7 @@ from .profiles import (
 )
 from .setup import load_config, setup_config
 from .validators import validate_config, validate_overrides
-from .yaml import load_yaml_config, save_yaml_config
+from .yaml import load_gui_style, load_yaml_config, save_gui_style, save_yaml_config
 
 __all__ = [
     "BackgroundColor",
@@ -41,6 +41,7 @@ __all__ = [
     "find_profile",
     "get_version",
     "load_config",
+    "load_gui_style",
     "load_yaml_config",
     "move_profile_down",
     "move_profile_up",
@@ -48,6 +49,7 @@ __all__ = [
     "parse_config",
     "validate_config",
     "validate_overrides",
+    "save_gui_style",
     "save_yaml_config",
     "setup_config",
     "setup_logging",

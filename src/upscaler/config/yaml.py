@@ -12,13 +12,19 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_BACKUPS = 5
 
 
+def _default_config_path(filename: str = "config.yaml") -> str:
+    """Determine the target path."""
+    xdg_config = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+    return os.path.join(xdg_config, "linux-rt-upscaler", filename)
+
+
 def load_yaml_config(
-    custom_path: Optional[str] = None,
+    config_path: Optional[str] = None,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
     Load a single YAML config file and return (general_options, profiles).
 
-    If *custom_path* is None, the default XDG location is used.
+    If *config_path* is None, the default XDG location is used.
     All errors are caught and logged; on failure empty dicts are returned.
 
     Returns
@@ -27,51 +33,46 @@ def load_yaml_config(
         The first dict contains the top-level key/value pairs (excluding
         'profiles'), the second dict contains the named profiles.
     """
-    if custom_path:
-        path = custom_path
-    else:
-        xdg_config = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
-        path = os.path.join(xdg_config, "linux-rt-upscaler", "config.yaml")
-
+    config_path = config_path or _default_config_path()
     general_options: Dict[str, Any] = {}
     profiles: Dict[str, Any] = {}
 
-    if not os.path.isfile(path):
-        logger.debug("No config file found at '%s'", path)
+    if not os.path.isfile(config_path):
+        logger.debug("No config file found at '%s'", config_path)
         return general_options, profiles
 
     data = None
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
     except FileNotFoundError:
         # Race condition between isfile and open: just return empty
         return general_options, profiles
     except PermissionError as e:
-        logger.warning("Permission denied reading '%s': %s", path, e)
+        logger.warning("Permission denied reading '%s': %s", config_path, e)
         return general_options, profiles
     except yaml.YAMLError as e:
-        logger.warning("YAML syntax error in '%s': %s", path, e)
+        logger.warning("YAML syntax error in '%s': %s", config_path, e)
         return general_options, profiles
     except RecursionError:
         logger.warning(
             "YAML recursion depth exceeded in %s. "
             "The file may contain circular references or be overly deep, ignoring it",
-            path,
+            config_path,
         )
         return general_options, profiles
     except Exception as e:
-        logger.warning("Failed to load config '%s': %s", path, e)
+        logger.warning("Failed to load config '%s': %s", config_path, e)
         return general_options, profiles
 
     if data is None:
-        logger.debug("Config file %s was empty", path)
+        logger.debug("Config file %s was empty", config_path)
         return general_options, profiles
 
     if not isinstance(data, dict):
         logger.warning(
             "Config file %s is not a mapping (type %s), ignoring it",
-            path,
+            config_path,
             type(data).__name__,
         )
         return general_options, profiles
@@ -80,13 +81,13 @@ def load_yaml_config(
     profiles = data.pop("profiles", {})
     general_options = data
 
-    logger.debug("Loaded config from '%s'", path)
+    logger.debug("Loaded config from '%s'", config_path)
     return general_options, profiles
 
 
 def save_yaml_config(
-    general_options: dict,
-    profiles: Dict,
+    general_options: Dict,
+    profiles: Optional[Dict] = None,
     config_path: Optional[str] = None,
     max_backups: int = DEFAULT_MAX_BACKUPS,
 ) -> str:
@@ -97,7 +98,7 @@ def save_yaml_config(
     ----------
     general_options : dict
         Top-level configuration keys (excluding 'profiles').
-    profiles : dict
+    profiles : dict or None
         Profile definitions.
     config_path : str or None
         Target file path.  Uses the default XDG location if None.
@@ -122,9 +123,7 @@ def save_yaml_config(
         data["profiles"] = parse_profile_colors(profiles)
 
     # Determine the target path
-    if config_path is None:
-        xdg_config = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
-        config_path = os.path.join(xdg_config, "linux-rt-upscaler", "config.yaml")
+    config_path = config_path or _default_config_path()
 
     # Ensure the parent directory exists
     os.makedirs(os.path.dirname(config_path), exist_ok=True)
@@ -163,3 +162,25 @@ def save_yaml_config(
 
     logger.debug("Configuration saved to '%s'", config_path)
     return config_path
+
+
+def load_gui_style(config_path: Optional[str] = None) -> Optional[Dict[str, str]]:
+    """
+    Load the GUI palette from *config_path*.
+    Returns the palette dictionary, or None if the file doesn’t exist or is invalid.
+    """
+    config_path = config_path or _default_config_path("gui-config.yaml")
+    try:
+        general, _ = load_yaml_config(config_path=config_path)
+        return general.get("palette")
+    except Exception:
+        return None
+
+
+def save_gui_style(palette: Dict[str, str], config_path: Optional[str] = None) -> None:
+    """
+    Save *palette* to gui-style.yaml, overwriting the file.
+    Profiles are always empty.
+    """
+    config_path = config_path or _default_config_path("gui-config.yaml")
+    save_yaml_config({"palette": palette}, config_path=config_path)
