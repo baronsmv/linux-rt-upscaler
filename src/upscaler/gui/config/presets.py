@@ -51,7 +51,7 @@ DARK = GUIPalette(
 )
 
 AUTO = copy(LIGHT if scheme_is_light() else DARK)
-AUTO.background = ""  # Using transparent doesn't work for dialogs
+AUTO.background = "none"  # Using "transparent" doesn't work for dialogs
 
 AYU_LIGHT = GUIPalette(
     background="#fafafa",

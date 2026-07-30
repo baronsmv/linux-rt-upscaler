@@ -13,7 +13,7 @@ def load_gui_style(config_path: Optional[str] = None) -> Optional[GUIPalette]:
     try:
         general, _ = load_yaml_config(config_path=config_path)
         # Prefer a named preset
-        preset_name = general.get("preset")
+        preset_name = general.get("palette_preset")
         if preset_name and preset_name in PRESETS:
             return PRESETS[preset_name]
         # Fallback to the full palette
@@ -33,6 +33,6 @@ def save_gui_style(
     """Save the GUI style to YAML. If *preset* is given, also store its name."""
     data: Dict[str, Union[str, Dict[str, str]]] = {"palette": palette}
     if preset:
-        data["preset"] = preset
+        data["palette_preset"] = preset
     config_path = config_path or default_config_path("gui-config.yaml")
     save_yaml_config(data, config_path=config_path)
