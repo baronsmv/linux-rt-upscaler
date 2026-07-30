@@ -136,7 +136,7 @@ class MainWindow(QMainWindow):
         self.about_btn.setIconSize(QSize(20, 20))
         self.about_btn.setFixedSize(32, 32)
         self.about_btn.setCursor(Qt.PointingHandCursor)
-        self.about_btn.setToolTip("About Real-Time Upscaler")
+        self.about_btn.setToolTip("About Real-Time Upscaler.")
         self.about_btn.setAutoRaise(True)
         self.about_btn.setStyleSheet(
             circular_button_style(self.gui_config, icon_size=32)

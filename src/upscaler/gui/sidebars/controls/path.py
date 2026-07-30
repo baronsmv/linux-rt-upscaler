@@ -58,7 +58,7 @@ class PathPickerRow(BaseRow):
             self._gui_config.swatch.browse_button_width,
             self._gui_config.sidebar.row_height,
         )
-        self._browse_btn.setToolTip("Browse for directory")
+        self._browse_btn.setToolTip("Browse for directory.")
         self._browse_btn.setCursor(Qt.PointingHandCursor)
         self._browse_btn.clicked.connect(self._browse)
         self._content_layout.addWidget(self._browse_btn)

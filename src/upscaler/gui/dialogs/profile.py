@@ -130,7 +130,7 @@ class ProfileDialog(QDialog):
         capture_win_btn.setIcon(
             load_icon("actions/capture", 20, 20, color=self._gui_config.palette.icon)
         )
-        capture_win_btn.setToolTip("Fill name, icon, and match rules from a window")
+        capture_win_btn.setToolTip("Fill name, icon, and match rules from a window.")
         capture_win_btn.clicked.connect(self._capture_full)
         self._actions_row.addWidget(capture_win_btn)
         self._actions_row.addStretch()
