@@ -78,6 +78,7 @@ class Pipeline(QObject):
         overlay: OverlayWindow,
         base_config: Optional[Config] = None,
         profiles: Optional[Dict[str, Any]] = None,
+        profile_name: Optional[str] = None,
     ) -> None:
         """Initialize the pipeline. Resources are allocated later, on the pipeline thread."""
         QObject.__init__(self)
@@ -87,7 +88,7 @@ class Pipeline(QObject):
         self.overlay = overlay
         self.base_config = base_config or copy.deepcopy(config)
         self.profiles = profiles or {}
-        self.profile_name: Optional[str] = None
+        self.profile_name: Optional[str] = profile_name
 
         # Crop margins (fixed for the session)
         self._crop_left = config.crop_left

@@ -22,7 +22,7 @@ def main() -> None:
     overall_start = time.perf_counter()
 
     # Window acquisition and config setup
-    config, base_config, profiles, win_info, proc = setup_config()
+    config, base_config, profiles, profile_name, win_info, proc = setup_config()
     if config.daemon and win_info is None:
         win_info = WindowInfo(0, 0, 0, "daemon-pending")
 
@@ -33,7 +33,9 @@ def main() -> None:
     logger.debug("Qt application initialized")
 
     # Launch pipeline session
-    session = create_pipeline_session(config, win_info, base_config, profiles)
+    session = create_pipeline_session(
+        config, win_info, base_config, profiles, profile_name
+    )
     session.pipeline.finished.connect(QApplication.quit)
     session.overlay.closed.connect(QApplication.quit)
     logger.debug(

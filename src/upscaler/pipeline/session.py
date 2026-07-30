@@ -33,6 +33,7 @@ def create_pipeline_session(
     win_info: WindowInfo,
     base_config: Optional[Config] = None,
     profiles: Optional[Dict[str, Any]] = None,
+    profile_name: Optional[str] = None,
     on_exit: Optional[Callable] = None,
 ) -> PipelineSession:
     """
@@ -53,6 +54,8 @@ def create_pipeline_session(
         A copy of the base configuration before contextual overrides.
     profiles : Dict[str, Any], optional
         User profiles with match and options.
+    profile_name : str or None, optional
+        Name of the profile being used.
     on_exit : Callable, optional
         Custom function to be executed when the session exits.
 
@@ -91,6 +94,7 @@ def create_pipeline_session(
         overlay,
         base_config=base_config,
         profiles=profiles,
+        profile_name=profile_name,
     )
     pipeline.start()
 

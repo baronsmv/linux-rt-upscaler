@@ -91,7 +91,7 @@ def finalize_config(
     profiles: Optional[Dict[str, Any]] = None,
     profile_name: Optional[str] = None,
     extra_overrides: Optional[Dict[str, Any]] = None,
-) -> None:
+) -> Optional[str]:
     """
     Apply window-matching profile, extra overrides, and then finalize the
     config object (parse colors, set up logging, validate).
@@ -113,7 +113,7 @@ def finalize_config(
     """
     # Auto-profile if no manual profile was given
     if profiles and not profile_name and win_info is not None:
-        apply_window_profile(config, win_info, profiles)
+        profile_name = apply_window_profile(config, win_info, profiles)
 
     # Apply extra overrides (these win over everything)
     if extra_overrides:
@@ -128,10 +128,17 @@ def finalize_config(
     # Final validation
     validate_config(config)
 
+    return profile_name
 
-def setup_config() -> (
-    Tuple[Config, Config, Dict[str, Any], Optional[WindowInfo], Optional[Popen]]
-):
+
+def setup_config() -> Tuple[
+    Config,
+    Config,
+    Dict[str, Any],
+    Optional[str],
+    Optional[WindowInfo],
+    Optional[Popen],
+]:
     """
     Load configuration, acquire target window, apply automatic profile, and
     return:
@@ -169,7 +176,7 @@ def setup_config() -> (
         sys.exit(1)
 
     # Post-window merging and finalization (this applies the auto-profile)
-    finalize_config(
+    profile_name = finalize_config(
         config,
         win_info=win_info,
         profiles=profiles,
@@ -190,4 +197,4 @@ def setup_config() -> (
     else:
         logger.info("Daemon: Waiting for a matching window...")
 
-    return config, base_config, profiles, win_info, proc
+    return config, base_config, profiles, profile_name, win_info, proc

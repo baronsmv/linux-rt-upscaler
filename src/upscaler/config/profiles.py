@@ -129,7 +129,7 @@ def apply_window_profile(
     config: Config,
     win_info: WindowInfo,
     profiles: Dict[str, Any],
-) -> bool:
+) -> Optional[str]:
     """
     Apply the first profile whose ``match`` criteria fits *win_info*.
 
@@ -148,14 +148,14 @@ def apply_window_profile(
     Returns
     -------
     bool
-        ``True`` if a profile was applied, ``False`` otherwise.
+        The profile name if a profile was applied, None otherwise.
     """
     profile_name, profile_data = find_matching_profile(profiles, win_info)
     if profile_data is None:
-        return False
+        return None
     apply_overrides(config, profile_data.get("options", {}))
     logger.info("Auto-applied profile '%s'", profile_name)
-    return True
+    return profile_name
 
 
 def reorder_profiles(profiles: Dict[str, Any], order: List[str]) -> Dict[str, Any]:

@@ -306,6 +306,7 @@ class MainWindow(QMainWindow):
                 win_info,
                 base_config=clean_base,
                 profiles=self._config_manager.profiles,
+                profile_name=self._profile_name,
             )
             self.manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
         except Exception as e:
