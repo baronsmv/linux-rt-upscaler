@@ -63,7 +63,7 @@ class ProfileDialog(QDialog):
 
         # Icon state
         self._captured_icon: Optional[QImage] = None
-        self._icon_removed = False
+        self.icon_removed = False
 
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
@@ -335,7 +335,7 @@ class ProfileDialog(QDialog):
         )
         if icon_img:
             self._captured_icon = icon_img
-            self._icon_removed = False
+            self.icon_removed = False
             pix = QPixmap.fromImage(icon_img).scaled(
                 32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
@@ -367,7 +367,7 @@ class ProfileDialog(QDialog):
                 )
                 return
             self._captured_icon = img
-            self._icon_removed = False
+            self.icon_removed = False
             pix = QPixmap.fromImage(img).scaled(
                 32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
@@ -375,7 +375,7 @@ class ProfileDialog(QDialog):
 
     def _remove_icon(self) -> None:
         self._captured_icon = None
-        self._icon_removed = True
+        self.icon_removed = True
         self._icon_preview.setPixmap(
             load_pixmap("actions/profile", 32, 32, color=self._gui_config.palette.icon)
         )

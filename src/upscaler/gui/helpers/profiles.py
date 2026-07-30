@@ -90,9 +90,10 @@ class ProfileActions:
                 match = dlg.match_criteria()
                 self._config_manager.add_profile(name, match)
 
-                icon = dlg.get_captured_icon()
-                if icon:
-                    self._save_icon(name, icon)
+                if not dlg.icon_removed:
+                    icon = dlg.get_captured_icon()
+                    if icon:
+                        self._save_icon(name, icon)
 
                 self._config_manager.set_active_profile(name)
                 self._sidebar.update_profiles(self._config_manager.profiles)
@@ -130,9 +131,13 @@ class ProfileActions:
                 else:
                     self._config_manager.update_profile_match(name, new_match)
 
-                icon = dlg.get_captured_icon()
-                if icon:
-                    self._save_icon(new_name if new_name != name else name, icon)
+                target_name = new_name if new_name != name else name
+                if dlg.icon_removed:
+                    self._remove_icon_file(target_name)
+                else:
+                    icon = dlg.get_captured_icon()
+                    if icon:
+                        self._save_icon(target_name, icon)
 
                 if self._config_manager.active_profile_name == new_name:
                     self._sidebar.set_active_item(new_name)
