@@ -1,12 +1,6 @@
 """Utility modules."""
 
-from .color import (
-    color_string_to_float4,
-    color_tuple_to_string,
-    normalize_to_hex,
-    qcolor_to_rgba_hex,
-    rgba_hex_to_qcolor,
-)
+from .color import color_string_to_float4, color_tuple_to_string
 from .geometry import (
     OverlayGeometry,
     calculate_scaling_rect,
@@ -24,9 +18,6 @@ __all__ = [
     "compute_overlay_geometry",
     "get_base_geometry",
     "list_monitors",
-    "normalize_to_hex",
-    "qcolor_to_rgba_hex",
-    "rgba_hex_to_qcolor",
     "scheme_is_light",
     "parse_output_geometry",
 ]

@@ -18,21 +18,23 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .config import ConfigManager, GUIConfig, GUIPalette, PRESETS
+from .config import (
+    ConfigManager,
+    GUIConfig,
+    GUIPalette,
+    PRESETS,
+    load_gui_style,
+    save_gui_style,
+)
 from .dialogs import AboutDialog
 from .grid import FilterBar, WindowGridScene, WindowGridView
 from .helpers import DaemonController, ProfileActions, WindowGridManager
 from .icons import load_icon
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .styles import circular_button_style, tooltip_style
+from .utils import find_matching_preset
 from .widgets import StyledSplitter
-from ..config import (
-    apply_overrides,
-    find_matching_profile,
-    load_gui_style,
-    parse_config,
-    save_gui_style,
-)
+from ..config import apply_overrides, find_matching_profile, parse_config
 from ..pipeline import create_pipeline_session
 from ..window import activate_window
 
@@ -65,8 +67,7 @@ class MainWindow(QMainWindow):
         self.manual_session: Optional[PipelineSession] = None
 
         # GUI Palette
-        saved = load_gui_style()
-        palette = GUIPalette(**saved) if saved else PRESETS["Auto"]
+        palette = load_gui_style() or PRESETS["Auto"]
         self.gui_config = GUIConfig(palette=palette)
         QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))
 
@@ -401,7 +402,11 @@ class MainWindow(QMainWindow):
         palette_dict = {
             field.name: getattr(new_palette, field.name) for field in fields(GUIPalette)
         }
-        save_gui_style(palette_dict)
+        preset_name = find_matching_preset(new_palette)
+        if preset_name:
+            save_gui_style(palette_dict, preset=preset_name)
+        else:
+            save_gui_style(palette_dict)
 
         # Build a completely new GUIConfig (same layout constants, new palette)
         new_gui_config = GUIConfig(palette=new_palette)

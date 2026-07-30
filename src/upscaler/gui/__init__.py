@@ -11,11 +11,11 @@ import sys
 from PySide6.QtCore import QSharedMemory
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from .config import ConfigManager, GUIConfig, GUIPalette, PRESETS
+from .config import ConfigManager, GUIConfig, GUIPalette, PRESETS, load_gui_style
 from .icons import load_icon
 from .main import MainWindow
 from .styles import message_box_style
-from ..config import load_gui_style, parse_args, setup_logging, validate_overrides
+from ..config import parse_args, setup_logging, validate_overrides
 
 
 def main() -> None:
@@ -28,8 +28,7 @@ def main() -> None:
 
         # Dialog
         tmp_app = QApplication(sys.argv)
-        saved = load_gui_style()
-        palette = GUIPalette(**saved) if saved else PRESETS["Auto"]
+        palette = load_gui_style() or PRESETS["Auto"]
         gui_config = GUIConfig(palette=palette)
         tmp_app.setStyleSheet(message_box_style(gui_config))
         tmp_app.setWindowIcon(load_icon("app/app", 256, 256))

@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QColorDialog, QPushButton, QWidget
 
 from ._base import BaseRow
 from ...styles import color_dialog_style, color_swatch_style
-from ....utils import qcolor_to_rgba_hex, rgba_hex_to_qcolor
+from ...utils import qcolor_to_rgba_hex, rgba_hex_to_qcolor
 
 if TYPE_CHECKING:
     from ...config import GUIConfig

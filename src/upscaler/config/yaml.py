@@ -1,7 +1,7 @@
 import logging
 import os
 import shutil
-from typing import Optional, Tuple, Dict, Any
+from typing import Any, Dict, Optional, Tuple
 
 import yaml
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_BACKUPS = 5
 
 
-def _default_config_path(filename: str = "config.yaml") -> str:
+def default_config_path(filename: str = "config.yaml") -> str:
     """Determine the target path."""
     xdg_config = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
     return os.path.join(xdg_config, "linux-rt-upscaler", filename)
@@ -33,7 +33,7 @@ def load_yaml_config(
         The first dict contains the top-level key/value pairs (excluding
         'profiles'), the second dict contains the named profiles.
     """
-    config_path = config_path or _default_config_path()
+    config_path = config_path or default_config_path()
     general_options: Dict[str, Any] = {}
     profiles: Dict[str, Any] = {}
 
@@ -123,7 +123,7 @@ def save_yaml_config(
         data["profiles"] = parse_profile_colors(profiles)
 
     # Determine the target path
-    config_path = config_path or _default_config_path()
+    config_path = config_path or default_config_path()
 
     # Ensure the parent directory exists
     os.makedirs(os.path.dirname(config_path), exist_ok=True)
@@ -162,25 +162,3 @@ def save_yaml_config(
 
     logger.debug("Configuration saved to '%s'", config_path)
     return config_path
-
-
-def load_gui_style(config_path: Optional[str] = None) -> Optional[Dict[str, str]]:
-    """
-    Load the GUI palette from *config_path*.
-    Returns the palette dictionary, or None if the file doesn’t exist or is invalid.
-    """
-    config_path = config_path or _default_config_path("gui-config.yaml")
-    try:
-        general, _ = load_yaml_config(config_path=config_path)
-        return general.get("palette")
-    except Exception:
-        return None
-
-
-def save_gui_style(palette: Dict[str, str], config_path: Optional[str] = None) -> None:
-    """
-    Save *palette* to gui-style.yaml, overwriting the file.
-    Profiles are always empty.
-    """
-    config_path = config_path or _default_config_path("gui-config.yaml")
-    save_yaml_config({"palette": palette}, config_path=config_path)

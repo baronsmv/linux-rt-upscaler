@@ -5,12 +5,16 @@ from dataclasses import fields
 from typing import Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QWidget
 
 from ..common import SettingsTab
 from ...config import GUIPalette, PRESETS
-from ....utils import normalize_to_hex, qcolor_to_rgba_hex, rgba_hex_to_qcolor
+from ...utils import (
+    find_matching_preset,
+    normalize_to_hex,
+    palette_to_internal,
+    palette_to_stylesheet,
+)
 
 if TYPE_CHECKING:
     from ..controls import ColorPickerRow
@@ -146,7 +150,7 @@ class StyleTab(SettingsTab):
         on_apply: Callable[[GUIPalette], None],
         parent: Optional[QWidget] = None,
     ) -> None:
-        self._palette = self._palette_to_internal(initial_palette)
+        self._palette = palette_to_internal(initial_palette)
         self._saved_palette = copy.deepcopy(self._palette)
         self._on_apply = on_apply
         self._updating_from_preset = False
@@ -172,7 +176,7 @@ class StyleTab(SettingsTab):
 
         # Block signals to avoid premature _on_preset_changed
         self._preset_combo.blockSignals(True)
-        initial_preset = self._find_matching_preset()
+        initial_preset = find_matching_preset(palette_to_stylesheet(self._palette))
         self._preset_combo.setCurrentText(initial_preset)
         self._preset_combo.blockSignals(False)
 
@@ -198,9 +202,7 @@ class StyleTab(SettingsTab):
         preset_name = text if text != "Auto" else "Auto"
         preset = PRESETS.get(preset_name, PRESETS["Auto"])
         self._updating_from_preset = True
-
-        # Convert preset to internal format and store
-        self._palette = self._palette_to_internal(preset)
+        self._palette = palette_to_internal(preset)
 
         # Update all swatches with the internal color values
         for field in fields(GUIPalette):
@@ -221,29 +223,6 @@ class StyleTab(SettingsTab):
 
         return slot
 
-    @staticmethod
-    def _normalized_color(color: str) -> str:
-        """Convert any valid CSS color string to a normalized representation."""
-        qc = QColor(color)
-        if not qc.isValid():
-            return color.lower()
-        if qc.alpha() == 255:
-            return qc.name(QColor.HexRgb).lower()  # "#rrggbb"
-        else:
-            return qc.name(QColor.HexArgb).lower()  # "#aarrggbb"
-
-    def _find_matching_preset(self) -> str:
-        """Compare current palette (internal) against all presets."""
-        sheet = self._palette_to_stylesheet(self._palette)
-        for preset_name, preset_palette in PRESETS.items():
-            if all(
-                self._normalized_color(getattr(preset_palette, f.name))
-                == self._normalized_color(getattr(sheet, f.name))
-                for f in fields(GUIPalette)
-            ):
-                return preset_name
-        return "Custom"
-
     def is_dirty(self) -> bool:
         """Return True if the current palette differs from the last applied one."""
         for field in fields(GUIPalette):
@@ -255,7 +234,7 @@ class StyleTab(SettingsTab):
 
     def is_default(self) -> bool:
         """Return True if the current palette matches the Auto preset."""
-        return self._find_matching_preset() == "Auto"
+        return find_matching_preset(palette_to_stylesheet(self._palette)) == "Auto"
 
     def _refresh_baselines(self) -> None:
         """Update every picker’s baseline to the current saved palette."""
@@ -266,10 +245,9 @@ class StyleTab(SettingsTab):
 
     def apply_clicked(self) -> None:
         """Persist the palette and rebuild the GUI."""
-        stylesheet_palette = self._palette_to_stylesheet(self._palette)
         self._saved_palette = copy.deepcopy(self._palette)
         self._refresh_baselines()
-        self._on_apply(stylesheet_palette)
+        self._on_apply(palette_to_stylesheet(self._palette))
         self._notify_dirty()
 
     def reset_style(self) -> None:
@@ -280,14 +258,16 @@ class StyleTab(SettingsTab):
             hex_color = normalize_to_hex(getattr(self._palette, field.name))
             self._picker_widgets[field.name].set_color(hex_color)
         self._updating_from_preset = False
-        self._preset_combo.setCurrentText(self._find_matching_preset())
+        self._preset_combo.setCurrentText(
+            find_matching_preset(palette_to_stylesheet(self._palette))
+        )
         self._refresh_baselines()
         self._notify_dirty()
 
     def restore_auto_preset(self) -> None:
         """Load the Auto preset without applying."""
         preset = PRESETS["Auto"]
-        self._palette = self._palette_to_internal(preset)
+        self._palette = palette_to_internal(preset)
         self._updating_from_preset = True
         for field in fields(GUIPalette):
             self._picker_widgets[field.name].set_color(
@@ -300,49 +280,3 @@ class StyleTab(SettingsTab):
     def _notify_dirty(self) -> None:
         """Emit the current dirty state (call after any change)."""
         self.style_dirty_changed.emit(self.is_dirty())
-
-    # ------------------------------------------------------------------
-    #  Format conversion helpers
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _to_stylesheet_color(internal_color: str) -> str:
-        """Convert any valid CSS color to a Qt-stylesheet-compatible string."""
-        qc = rgba_hex_to_qcolor(internal_color)
-        if not qc.isValid():
-            return ""
-        if qc.alpha() == 255:
-            return qc.name(QColor.HexRgb)  # "#RRGGBB"
-        else:
-            return qc.name(QColor.HexArgb)  # "#AARRGGBB"
-
-    @staticmethod
-    def _preset_color_to_internal(stylesheet_color: str) -> str:
-        """
-        Convert a stylesheet color (preset or saved YAML) to internal #RRGGBBAA.
-        Presets use #RRGGBB, #AARRGGBB, or named colors – all correctly parsed
-        by QColor's constructor.
-        """
-        qc = QColor(stylesheet_color)
-        if not qc.isValid():
-            return ""
-        return qcolor_to_rgba_hex(qc)
-
-    @staticmethod
-    def _palette_to_internal(pal: GUIPalette) -> GUIPalette:
-        """Convert a whole stylesheet palette to internal format."""
-        return GUIPalette(
-            **{
-                f.name: StyleTab._preset_color_to_internal(getattr(pal, f.name))
-                for f in fields(GUIPalette)
-            }
-        )
-
-    @staticmethod
-    def _palette_to_stylesheet(pal: GUIPalette) -> GUIPalette:
-        """Convert a whole internal palette to stylesheet format."""
-        return GUIPalette(
-            **{
-                f.name: StyleTab._to_stylesheet_color(getattr(pal, f.name))
-                for f in fields(GUIPalette)
-            }
-        )
