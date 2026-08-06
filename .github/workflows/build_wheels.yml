@@ -16,10 +16,10 @@ jobs:
         os: [ ubuntu-latest ]
         pyver: [ '310', '311', '312', '313', '314' ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
@@ -46,7 +46,7 @@ jobs:
           CIBW_BEFORE_TEST: "pip install uv && uv pip install PySide6"
         run: python -m cibuildwheel --output-dir wheelhouse
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: wheels-${{ matrix.os }}-cp${{ matrix.pyver }}
           path: ./wheelhouse/*.whl
@@ -59,7 +59,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           pattern: wheels-*
           merge-multiple: true
