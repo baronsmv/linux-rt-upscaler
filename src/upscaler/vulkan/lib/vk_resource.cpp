@@ -247,7 +247,10 @@ PyObject *vk_Resource_upload_subresources(vk_Resource *self, PyObject *args) {
     vk_cmd_transition_for_compute(cmd, self->image, 0, self->slices);
   });
 
-  return ok ? Py_None : nullptr;
+  if (ok)
+    Py_RETURN_NONE;
+  else
+    return nullptr;
 }
 
 // =============================================================================
@@ -514,7 +517,10 @@ PyObject *vk_Resource_copy_to(vk_Resource *self, PyObject *args) {
     }
   });
 
-  return ok ? Py_None : nullptr;
+  if (ok)
+    Py_RETURN_NONE;
+  else
+    return nullptr;
 }
 
 /**
@@ -647,7 +653,10 @@ PyObject *vk_Resource_batch_copy_to_array(vk_Resource *self, PyObject *args) {
                      0, 1, 0, dst_slice_count);
   });
 
-  return ok ? Py_None : nullptr;
+  if (ok)
+    Py_RETURN_NONE;
+  else
+    return nullptr;
 }
 
 // =============================================================================
@@ -683,7 +692,10 @@ PyObject *vk_Resource_clear_color(vk_Resource *self, PyObject *args) {
     vk_cmd_transition_for_compute(cmd, self->image, 0, 1);
   });
 
-  return ok ? Py_None : nullptr;
+  if (ok)
+    Py_RETURN_NONE;
+  else
+    return nullptr;
 }
 
 // =============================================================================
