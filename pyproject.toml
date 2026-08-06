@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "linux-rt-upscaler"
-version = "1.1.1.post1"
+version = "1.1.1.post2"
 description = "A real-time SRCNN upscaler for any X-Window."
 readme = "README.md"
 authors = [
