@@ -5,6 +5,7 @@ from .exceptions import (
     ConfigError,
     EventLoopError,
     SessionAlreadyRunning,
+    SessionError,
     UpscalerError,
     WindowNotFound,
 )
@@ -22,6 +23,7 @@ __all__ = [
     "EventLoopError",
     "OverlayGeometry",
     "SessionAlreadyRunning",
+    "SessionError",
     "UpscalerError",
     "WindowNotFound",
     "calculate_scaling_rect",
