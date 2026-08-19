@@ -34,17 +34,20 @@ class UpscalerSession(QObject):
 
     **Qt modes**
 
-    - **Script mode (session owns the Qt event loop)**::
+    - **Script mode (session owns the Qt event loop)**:
 
+        ```py
         from upscaler import UpscalerSession
         from upscaler.acquisition import find_window_by_title
 
         win = find_window_by_title(contains="A Game")
         with UpscalerSession(window=win) as session:
             session.run()
+        ```
 
-    - **Embedded mode (host already has a Qt event loop)**::
+    - **Embedded mode (host already has a Qt event loop)**:
 
+        ```py
         from upscaler import UpscalerSession
         from upscaler.acquisition import find_window_by_title
 
@@ -54,10 +57,11 @@ class UpscalerSession(QObject):
 
         # later...
         session.wait(10.0)
+        ```
 
     **Errors**
 
-    All errors derive from :class:`~upscaler.exceptions.UpscalerError`:
+    All errors derive from [``UpscalerError``](../exceptions/#upscaler.exceptions.UpscalerError):
 
     - ``WindowNotFound``: target window could not be found/acquired.
     - ``ConfigError``: configuration loading/validation failed.
@@ -65,21 +69,23 @@ class UpscalerSession(QObject):
     - ``EventLoopError``: `run()` called from the wrong thread or while
       another Qt event loop is active.
 
-    Example with error handling::
+    Example with error handling:
 
-        from upscaler import UpscalerSession
-        from upscaler.window import find_window_by_title
-        from upscaler.exceptions import UpscalerError, WindowNotFound
+    ```py
+    from upscaler import UpscalerSession
+    from upscaler.window import find_window_by_title
+    from upscaler.exceptions import UpscalerError, WindowNotFound
 
-        try:
-            win = find_window_by_title(contains="A Game")
-            session = UpscalerSession(window=win)
-            session.start()
-            session.run()
-        except WindowNotFound:
-            print("Window not found")
-        except UpscalerError as exc:
-            print(f"Upscaler error: {exc}")
+    try:
+        win = find_window_by_title(contains="A Game")
+        session = UpscalerSession(window=win)
+        session.start()
+        session.run()
+    except WindowNotFound:
+        print("Window not found")
+    except UpscalerError as exc:
+        print(f"Upscaler error: {exc}")
+    ```
 
     **Signals**
 
@@ -329,7 +335,7 @@ class UpscalerSession(QObject):
 
         Returns:
             ``True`` if the session finished within the timeout, ``False``
-            if the timeout was reached.
+                if the timeout was reached.
         """
         if not self._started:
             raise UpscalerError("Session has not been started.")

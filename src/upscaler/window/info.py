@@ -15,12 +15,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class WindowInfo:
-    """Information about an X11 window."""
+    """Information about an X11 window.
 
-    handle: int  # X11 window ID (XID)
-    width: int  # Window width in pixels
-    height: int  # Window height in pixels
-    title: str  # Window title (UTF-8 or fallback)
+    Attributes:
+        handle: X11 window ID (XID).
+        width: Window width in pixels.
+        height: Window height in pixels.
+        title: Window title (UTF-8 or fallback).
+    """
+
+    handle: int
+    width: int
+    height: int
+    title: str
 
     @property
     def size(self) -> Tuple[int, int]:

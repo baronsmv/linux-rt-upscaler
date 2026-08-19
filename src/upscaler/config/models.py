@@ -64,7 +64,95 @@ BackgroundColor = Union[str, Tuple[float, float, float, float]]
 
 
 @dataclass
+@dataclass
 class Config:
+    """
+    Global configuration for the upscaler.
+
+    Most values can be set via the CLI, YAML configuration file, or
+    programmatically. The ``to_dict`` method can be used for YAML export.
+
+    Attributes:
+        program: Command and arguments to launch before starting to upscale.
+        select: If True, interactively select a window from a list.
+        daemon: If True, run in daemon mode and automatically match profiles.
+        daemon_exclude: If True, exclude the active window from daemon matching.
+        target_title: Substring to match when selecting a window by title.
+        target_title_regex: Regular expression to match a window title.
+        follow_focus: If True, follow the currently focused window.
+        pause_on_focus_loss: If True, hide overlay when the target loses focus.
+        focus_poll_interval: Seconds between focus checks.
+        daemon_poll_interval: Seconds between daemon window scans.
+        pipeline_poll_interval: Seconds between pipeline idle checks.
+        target_delay: Seconds to wait before capturing the active window.
+        pid_timeout: Seconds for PID‑based window detection.
+        class_timeout: Seconds for WM_CLASS‑based detection.
+        total_timeout: Maximum seconds to wait for a window.
+        starting_phase: Which detection phase to try first (1 or 2).
+        model: SRCNN model name.
+        double_upscale: If True, chain two 2x passes for 4x upscaling.
+        upsampler: Final upsampling filter (lanczos, fsr, nis).
+        downsampler: Final downsampling filter (catmull, lanczos).
+        blur: Kernel width for final resampling.
+        antiring_strength: Anti‑ringing strength.
+        tight_antiring: If True, use tight anti‑ringing.
+        kernel_radius: Override automatic Lanczos radius.
+        deband_enabled: If True, apply debanding before scaling.
+        deband_strength: Debanding intensity.
+        cas_enabled: If True, apply Contrast Adaptive Sharpening.
+        cas_strength: CAS intensity.
+        bloom_enabled: If True, apply bloom.
+        bloom_strength: Bloom intensity.
+        bloom_threshold: Brightness threshold for bloom.
+        bloom_radius: Blur radius for bloom in pixels.
+        vignette_enabled: If True, apply vignette.
+        vignette_strength: Vignette intensity.
+        vignette_radius: Distance from center where vignette starts.
+        vignette_falloff: Softness of vignette transition.
+        lut_enabled: If True, apply 3D color LUT.
+        lut_intensity: Blend between original and graded image.
+        lut_preset: Built‑in LUT preset name.
+        grain_enabled: If True, apply film grain.
+        grain_strength: Film grain intensity.
+        grain_size: Apparent particle size.
+        gpu: GPU selection identifier.
+        monitor: Monitor to cover ('primary', 'all', name, or index).
+        scale_factor: Manual scale factor override.
+        output_geometry: Output sizing mode (fit, stretch, cover, custom).
+        crop_top: Pixels to crop from top.
+        crop_bottom: Pixels to crop from bottom.
+        crop_left: Pixels to crop from left.
+        crop_right: Pixels to crop from right.
+        background_color: Color for letterbox bars.
+        offset_x: Horizontal content offset in pixels.
+        offset_y: Vertical content offset in pixels.
+        overlay_mode: Overlay window behavior.
+        hide_cursor: Milliseconds of inactivity before hiding cursor.
+        overlay_opacity_min: Minimum overlay opacity.
+        overlay_opacity_max: Maximum overlay opacity.
+        screenshot_dir: Directory for screenshots.
+        screenshot_filename: Filename template for screenshots.
+        show_osd: If True, show on‑screen display messages.
+        osd_duration: How long OSD messages stay visible.
+        max_fps: Maximum pipeline frames per second.
+        vulkan_present_mode: Vulkan presentation mode (fifo, mailbox, immediate).
+        vulkan_buffer_pool_size: Number of staging buffers.
+        frame_timeout: GPU frame fence timeout in nanoseconds.
+        use_tile_processing: If True, enable tile‑based processing.
+        use_damage_tracking: If True, transfer only damaged regions.
+        tile_size: Tile interior size in pixels.
+        tile_context_margin: Extra border pixels added to each tile.
+        max_tile_layers: Maximum tiles to process per frame.
+        area_threshold: Dirty area fraction that forces full‑frame fallback.
+        max_capture_failures: Consecutive capture failures before shutdown.
+        capture_failure_delay: Seconds to wait after a capture failure.
+        swapchain_debounce: Minimum seconds between swapchain recreations.
+        log_level: Logging verbosity (DEBUG, INFO, WARNING, ERROR).
+        log_file: Optional log file path.
+        config_file: Internal path of loaded config file.
+        hotkeys: Mapping of action names to hotkey strings.
+    """
+
     # Program
     program: Optional[List[str]] = None
 

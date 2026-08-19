@@ -2,7 +2,7 @@
 
 import sys
 
-from .api import Config, UpscalerSession, exceptions, acquisition
+from .api import Config, UpscalerSession, WindowInfo, exceptions, acquisition
 
 sys.modules.setdefault(__name__ + ".acquisition", acquisition)
 sys.modules.setdefault(__name__ + ".exceptions", exceptions)
@@ -10,6 +10,7 @@ sys.modules.setdefault(__name__ + ".exceptions", exceptions)
 __all__ = [
     "Config",
     "UpscalerSession",
+    "WindowInfo",
     "acquisition",
     "exceptions",
 ]
