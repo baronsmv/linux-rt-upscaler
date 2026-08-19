@@ -2,14 +2,14 @@
 
 import sys
 
-from .api import UpscalerSession, exceptions, windows
+from .api import UpscalerSession, exceptions, acquisition
 
+sys.modules.setdefault(__name__ + ".acquisition", acquisition)
 sys.modules.setdefault(__name__ + ".exceptions", exceptions)
-sys.modules.setdefault(__name__ + ".windows", windows)
 
 __all__ = [
     "UpscalerSession",
+    "acquisition",
     "exceptions",
-    "windows",
 ]
 __version__ = "1.1.1.post2"

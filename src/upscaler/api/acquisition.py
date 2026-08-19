@@ -1,3 +1,5 @@
+"""Public helpers for discovering and acquiring target windows."""
+
 from __future__ import annotations
 
 import logging

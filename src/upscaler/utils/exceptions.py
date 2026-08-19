@@ -1,3 +1,6 @@
+"""Exception classes used by the upscaler."""
+
+
 class UpscalerError(Exception):
     """Base class for all errors raised by the upscaler."""
 
