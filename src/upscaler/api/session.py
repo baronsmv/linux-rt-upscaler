@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 from PySide6.QtCore import QEventLoop, QObject, QThread, QTimer, Signal
 from PySide6.QtWidgets import QApplication
 
-from ..config import Config, load_config, finalize_config
+from ..config import Config, finalize_config, load_config, setup_logging
 from ..pipeline.session import PipelineSession, create_pipeline_session
 from ..utils import (
     ConfigError,
@@ -32,41 +32,56 @@ class UpscalerSession(QObject):
     The session handles configuration loading, target window acquisition,
     Qt event loop ownership, pipeline creation and cleanup.
 
-    ---
+    **Qt modes**
 
-    **Qt modes:**
+    - **Script mode (session owns the Qt event loop)**::
 
-    The session can be used in two modes:
+        from upscaler import UpscalerSession
+        from upscaler.window import find_window_by_title
 
-    1. **Script mode** in which the session owns the Qt event loop and blocks
-       in :meth:`run`.
+        win = find_window_by_title(contains="A Game")
+        with UpscalerSession(window=win) as session:
+            session.run()
 
-       Example:
+    - **Embedded mode (host already has a Qt event loop)**::
 
-       >>> from upscaler import UpscalerSession
-       >>> from upscaler.window import find_window_by_title
-       >>>
-       >>> win = find_window_by_title(contains="Window Name")
-       >>> with UpscalerSession(window=win) as session:
-       >>>     session.run()
+        from upscaler import UpscalerSession
+        from upscaler.window import find_window_by_title
 
-    2. **Embedded mode** in which the host application already has a Qt event
-       loop and the session integrates via signals and :meth:`wait`.
+        win = find_window_by_title(contains="A Game")
+        session = UpscalerSession(window=win, enable_hotkeys=False)
+        session.start()
 
-       Example:
+        # later...
+        session.wait(10.0)
 
-       >>> from upscaler import UpscalerSession, window
-       >>> from upscaler.window import find_window_by_title
-       >>>
-       >>> win = find_window_by_title(contains="Window Name")
-       >>> session = UpscalerSession(window=win, enable_hotkeys=False)
-       >>> session.start()
-       >>> # later...
-       >>> session.wait(10.0)
+    **Errors**
 
-    ---
+    All errors derive from :class:`~upscaler.exceptions.UpscalerError`:
 
-    **Signals:**
+    - ``WindowNotFound``: target window could not be found/acquired.
+    - ``ConfigError``: configuration loading/validation failed.
+    - ``SessionAlreadyRunning``: `start()` called twice.
+    - ``EventLoopError``: `run()` called from the wrong thread or while
+      another Qt event loop is active.
+
+    Example with error handling::
+
+        from upscaler import UpscalerSession
+        from upscaler.window import find_window_by_title
+        from upscaler.exceptions import UpscalerError, WindowNotFound
+
+        try:
+            win = find_window_by_title(contains="A Game")
+            session = UpscalerSession(window=win)
+            session.start()
+            session.run()
+        except WindowNotFound:
+            print("Window not found")
+        except UpscalerError as exc:
+            print(f"Upscaler error: {exc}")
+
+    **Signals**
 
     - ``finished``: emitted when the pipeline stops (normally or by error).
     - ``error(str)``: emitted when a fatal error occurs.
@@ -190,6 +205,8 @@ class UpscalerSession(QObject):
                     )
                 # Ensure the window is actually present (activation)
                 activate_window(window.handle)
+
+            setup_logging(self._config.log_level, self._config.log_file)
 
         except UpscalerError:
             raise
