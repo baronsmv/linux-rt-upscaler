@@ -6,7 +6,6 @@ import re
 import shutil
 import struct
 import subprocess
-import sys
 import time
 from typing import List, Optional, Tuple, Set, TYPE_CHECKING
 
@@ -25,6 +24,7 @@ from .info import (
     is_application_window,
     is_viewable,
 )
+from ..utils import WindowNotFound
 
 if TYPE_CHECKING:
     from ..config import Config
@@ -162,10 +162,10 @@ def _get_all_descendant_pids(pid: int) -> Set[int]:
 
 def _find_by_pid(
     pid: int,
-    pid_timeout: int = 5,
+    pid_timeout: float = 5,
     class_hint: Optional[str] = None,
-    class_timeout: int = 5,
-    total_timeout: Optional[int] = 60,
+    class_timeout: float = 5,
+    total_timeout: Optional[float] = 60,
     starting_phase: int = 1,
 ) -> WindowInfo:
     """
@@ -341,21 +341,22 @@ def _find_window_by_title(
     return None
 
 
-def _launch_and_find_window(
-    config: Config,
-) -> Tuple[Optional[WindowInfo], Optional[subprocess.Popen]]:
+def _launch_and_find_window(config: Config) -> Tuple[WindowInfo, subprocess.Popen]:
     """
-    Launch the program from config.program and use _find_by_pid to locate its window.
+    Launch the program from config.program and locate its window.
 
     Args:
         config: Configuration containing program list and timeout settings.
 
     Returns:
-        A tuple (WindowInfo, Popen) on success, or (None, None) on failure/timeout.
+        Tuple (WindowInfo, Popen) on success.
+
+    Raises:
+        WindowNotFound: If no program is specified, or if a window cannot be
+            found within the timeout.
     """
     if not config.program:
-        logger.error("No program specified in config")
-        return None, None
+        raise WindowNotFound("No program specified in config.")
 
     program_name = config.program[0]
     logger.info(f"Launching: {' '.join(config.program)}")
@@ -374,10 +375,13 @@ def _launch_and_find_window(
         logger.debug(f"Found window for PID {proc.pid}: {win_info.title}")
         return win_info, proc
     except TimeoutError as e:
-        logger.error(f"Timeout while waiting for window: {e}")
         proc.terminate()
         proc.wait()
-        return None, None
+        raise WindowNotFound(f"Timeout while waiting for window: {e}") from e
+    except Exception as e:
+        proc.terminate()
+        proc.wait()
+        raise WindowNotFound(f"Failed to find window for program: {e}") from e
 
 
 def _select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo]:
@@ -411,7 +415,7 @@ def _select_window_interactive(windows: List[WindowInfo]) -> Optional[WindowInfo
             logger.info("Invalid input. Please enter a number")
 
 
-def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
+def _get_active_window_after_delay(config: Config) -> WindowInfo:
     """
     Wait target_delay seconds and then return the currently active window.
 
@@ -419,7 +423,11 @@ def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
         config: Configuration containing target_delay and log level.
 
     Returns:
-        WindowInfo of the active window, or None on failure.
+        WindowInfo of the active window.
+
+    Raises:
+        WindowNotFound: If no active window is found, or if the user
+            interrupts the wait.
     """
     logger.info(
         f"No program specified. Will scale the currently active window "
@@ -427,20 +435,15 @@ def _get_active_window_after_delay(config: Config) -> Optional[WindowInfo]:
     )
     try:
         time.sleep(config.target_delay)
-    except KeyboardInterrupt:
-        sys.exit(0)
+    except KeyboardInterrupt as e:
+        raise WindowNotFound("Interrupted while waiting for active window.") from e
 
-    try:
-        win_info = get_active_window()
-        if not win_info:
-            logger.error("No visible windows found")
-            sys.exit(1)
-        logger.debug(f"Got active window: {win_info.title}")
-        return win_info
+    win_info = get_active_window()
+    if win_info is None:
+        raise WindowNotFound("No visible windows found.")
 
-    except RuntimeError as e:
-        logger.error(f"Failed to get active window: {e}")
-        return None
+    logger.debug(f"Got active window: {win_info.title}")
+    return win_info
 
 
 def activate_window(win_handle: int) -> None:
@@ -513,13 +516,14 @@ def acquire_target_window(
       - Otherwise: Wait `target_delay` seconds and take the currently active window.
 
     Args:
-        config: Configuration object (must have fields: select, program, target_delay,
-                pid_timeout, class_timeout, total_timeout, starting_phase, log_level).
+        config: Configuration object.
 
     Returns:
-        A tuple (WindowInfo, optional Popen process). If acquisition fails,
-        returns (None, None). The Popen object is only non-None when a program
-        was launched.
+        A tuple (WindowInfo, optional Popen). If daemon mode is enabled,
+        returns (None, None). Otherwise, always returns a valid WindowInfo.
+
+    Raises:
+        WindowNotFound: If no target window can be determined.
     """
     if config.daemon:
         logger.debug("Daemon: Skipping window acquisition")
@@ -534,8 +538,7 @@ def acquire_target_window(
             regex=config.target_title_regex,
         )
         if win_info is None:
-            logger.error("No window matching the title criteria found")
-            sys.exit(1)
+            raise WindowNotFound("No window matching the title criteria found.")
 
         activate_window(win_info.handle)
         logger.debug(
@@ -548,12 +551,11 @@ def acquire_target_window(
         logger.info("Enumerating open windows")
         windows = list_windows()
         if not windows:
-            logger.error("No visible windows found")
-            sys.exit(1)
+            raise WindowNotFound("No visible windows found.")
 
         win_info = _select_window_interactive(windows)
         if win_info is None:
-            return None, None
+            raise WindowNotFound("Window selection was cancelled.")
         logger.debug(
             f"Window acquired interactively in {time.perf_counter() - start_time:.2f}s"
         )

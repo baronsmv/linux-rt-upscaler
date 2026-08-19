@@ -21,7 +21,7 @@ from .profiles import (
     move_profile_down,
     move_profile_up,
 )
-from .setup import load_config, setup_config
+from .setup import finalize_config, load_config, setup_config
 from .validators import validate_config, validate_overrides
 from .yaml import default_config_path, load_yaml_config, save_yaml_config
 
@@ -38,6 +38,7 @@ __all__ = [
     "ZOOM_LEVELS",
     "apply_overrides",
     "default_config_path",
+    "finalize_config",
     "find_matching_profile",
     "find_profile",
     "get_version",

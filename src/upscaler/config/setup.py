@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import logging
-import sys
 from subprocess import Popen
 from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
@@ -13,6 +12,7 @@ from .parsers import parse_config
 from .profiles import find_profile, apply_window_profile
 from .validators import validate_config, validate_overrides
 from .yaml import load_yaml_config
+from ..window import acquire_target_window
 
 if TYPE_CHECKING:
     from ..window import WindowInfo
@@ -148,8 +148,6 @@ def setup_config() -> Tuple[
         - WindowInfo
         - optionally the launched process handle
     """
-    from ..window import acquire_target_window
-
     # Initial logging setup
     setup_logging()
 
@@ -169,11 +167,6 @@ def setup_config() -> Tuple[
 
     # Acquire the target window
     win_info, proc = acquire_target_window(config)
-    if win_info is None and not config.daemon:
-        if not config.select:
-            logger.debug("No window was found, exiting")
-            sys.exit(0)
-        sys.exit(1)
 
     # Post-window merging and finalization (this applies the auto-profile)
     profile_name = finalize_config(

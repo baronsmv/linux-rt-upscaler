@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication
 
 from .config import setup_config
 from .pipeline import create_pipeline_session
+from .utils import WindowNotFound
 from .window import WindowInfo
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,13 @@ def main() -> None:
     overall_start = time.perf_counter()
 
     # Window acquisition and config setup
-    config, base_config, profiles, profile_name, win_info, proc = setup_config()
+    try:
+        config, base_config, profiles, profile_name, win_info, proc = setup_config()
+    except WindowNotFound as e:
+        logger.error(str(e))
+        sys.exit(1)
+
+    # Daemon window
     if config.daemon and win_info is None:
         win_info = WindowInfo(0, 0, 0, "daemon-pending")
 
