@@ -1,5 +1,6 @@
 """Utility modules."""
 
+from . import exceptions
 from .color import color_string_to_float4, color_tuple_to_string
 from .exceptions import (
     ConfigError,
@@ -30,6 +31,7 @@ __all__ = [
     "color_string_to_float4",
     "color_tuple_to_string",
     "compute_overlay_geometry",
+    "exceptions",
     "get_base_geometry",
     "list_monitors",
     "scheme_is_light",

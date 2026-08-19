@@ -41,7 +41,7 @@ def normalize_to_hex(color_data: Union[str, Tuple, List]) -> str:
 
 
 def _to_stylesheet_color(internal_color: str) -> str:
-    """Convert an internal #RRGGBBAA color to a Qt‑stylesheet‑compatible string."""
+    """Convert an internal #RRGGBBAA color to a Qt-stylesheet-compatible string."""
     if internal_color.lower() in _NON_COLOR_KEYWORDS:
         return internal_color
     qc = rgba_hex_to_qcolor(internal_color)
