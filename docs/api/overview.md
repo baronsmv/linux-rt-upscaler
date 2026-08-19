@@ -35,7 +35,7 @@ Wanting to embed upscaling into your own Python applications, scripts and game l
 
 Ready? Let's go then!
 
-The simplest way to use the API is to find a window and run an upscaling session in a `with` block:
+The simplest way to use the API is to find a window and run an upscaling session (optionally in a `with` block):
 
 ```py
 from upscaler import UpscalerSession
@@ -46,7 +46,7 @@ with UpscalerSession(window=win) as session:
     session.run()
 ```
 
-This starts the pipeline and enters the Qt event loop. When the window closes or the session is stopped, the `with` block cleans up automatically, just like any other Python resource.
+This starts the pipeline and enters the Qt event loop. When the window closes or the session is stopped, the instance cleans up the subresources used automatically.
 
 ## Embedded mode
 
