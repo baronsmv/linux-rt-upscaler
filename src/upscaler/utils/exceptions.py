@@ -3,14 +3,18 @@ class UpscalerError(Exception):
 
 
 class WindowNotFound(UpscalerError):
-    """Raised when a requested window cannot be found or acquired."""
+    """Raised when a target window cannot be found or acquired."""
 
 
 class ConfigError(UpscalerError):
     """Raised when configuration loading, merging, or validation fails."""
 
 
-class SessionAlreadyRunning(UpscalerError):
+class SessionError(UpscalerError):
+    """Base class for session lifecycle errors."""
+
+
+class SessionAlreadyRunning(SessionError):
     """Raised when trying to start an already running session."""
 
 
