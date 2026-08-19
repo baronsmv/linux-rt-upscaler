@@ -5,15 +5,15 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: cyan
+      primary: deep purple
+      accent: teal
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
-      accent: cyan
+      primary: deep purple
+      accent: teal
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
@@ -23,12 +23,18 @@ plugins:
       handlers:
         python:
           paths: [ src ]
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
 nav:
   - Home: index.md
   - User Guide:
       - Installation: user/installation.md
-      - GUI: user/gui.md
-      - CLI: user/cli.md
+      - Graphical User Interface (GUI): user/gui.md
+      - Command-Line Interface (CLI): user/cli.md
       - Configuration: user/configuration.md
   - API Reference:
       - Session: api/session.md
