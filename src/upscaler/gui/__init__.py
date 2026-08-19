@@ -16,6 +16,7 @@ from .icons import load_icon
 from .main import MainWindow
 from .styles import message_box_style
 from ..config import parse_args, setup_logging, validate_overrides
+from ..utils import ConfigError
 
 
 def main() -> None:
@@ -43,8 +44,12 @@ def main() -> None:
         sys.exit(0)
 
     # Parse CLI arguments (the GUI accepts the same options as the non-GUI version)
-    overrides, profile_name, config_path = parse_args()
-    validate_overrides(overrides)
+    try:
+        overrides, profile_name, config_path = parse_args()
+        validate_overrides(overrides)
+    except ConfigError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(2)
 
     # Set up logging early
     log_level = overrides.get("log_level", "INFO")

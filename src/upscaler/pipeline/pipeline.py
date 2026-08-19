@@ -27,7 +27,12 @@ from ..config import (
     validate_config,
 )
 from ..overlay import OverlayWindow
-from ..utils import compute_overlay_geometry, get_base_geometry, parse_output_geometry
+from ..utils import (
+    ConfigError,
+    compute_overlay_geometry,
+    get_base_geometry,
+    parse_output_geometry,
+)
 from ..vulkan import SwapchainError, configure_device, select_device
 from ..window import WindowInfo, WindowTracker
 
@@ -317,8 +322,17 @@ class Pipeline(QObject):
                 "No matching profile for '%s', using base config",
                 win_info.title,
             )
-        parse_config(new_config)
-        validate_config(new_config)
+
+        try:
+            parse_config(new_config)
+            validate_config(new_config)
+        except ConfigError as e:
+            logger.error(
+                "Invalid configuration for window '%s': %s. Using previous config.",
+                win_info.title,
+                e,
+            )
+            return
 
         # Update and recreate
         self.config = new_config

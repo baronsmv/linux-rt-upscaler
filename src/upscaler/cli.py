@@ -13,13 +13,14 @@ from PySide6.QtWidgets import QApplication
 
 from .config import setup_config
 from .pipeline import create_pipeline_session
-from .utils import WindowNotFound
+from .utils import ConfigError, WindowNotFound
 from .window import WindowInfo
 
 logger = logging.getLogger(__name__)
 
 
 def main() -> None:
+    # Start time for init log
     overall_start = time.perf_counter()
 
     # Window acquisition and config setup
@@ -28,6 +29,12 @@ def main() -> None:
     except WindowNotFound as e:
         logger.error(str(e))
         sys.exit(1)
+    except ConfigError as e:
+        logger.error(str(e))
+        sys.exit(2)
+    except KeyboardInterrupt:
+        logger.info("Interrupted by user.")
+        sys.exit(130)
 
     # Daemon window
     if config.daemon and win_info is None:
@@ -40,11 +47,22 @@ def main() -> None:
     logger.debug("Qt application initialized")
 
     # Launch pipeline session
-    session = create_pipeline_session(
-        config, win_info, base_config, profiles, profile_name
-    )
+    try:
+        session = create_pipeline_session(
+            config, win_info, base_config, profiles, profile_name
+        )
+    except Exception as e:
+        logger.error(e)
+        if proc is not None:
+            proc.terminate()
+            proc.wait()
+        sys.exit(1)
+
+    # Pipeline and overlay exit connections
     session.pipeline.finished.connect(QApplication.quit)
     session.overlay.closed.connect(QApplication.quit)
+
+    # Log the init time
     logger.debug(
         f"Total initialization time: {time.perf_counter() - overall_start:.2f}s"
     )

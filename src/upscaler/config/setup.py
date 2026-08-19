@@ -48,7 +48,7 @@ def load_config(
 
     Raises
     ------
-    SystemExit
+    ConfigError
         If validation fails (via ``validators`` module).
     """
     # Start from the default configuration

@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import logging
 import re
-import sys
 from typing import Any, Dict, Optional, Tuple, Union
 
 from PySide6.QtGui import QColor
+
+from ..utils import ConfigError, list_monitors
+from ..vulkan import get_discovered_devices
 
 logger = logging.getLogger(__name__)
 
@@ -30,37 +34,33 @@ def validate_number(
                          If False, upper bound is exclusive (value < right_limit).
 
     Raises:
-        ValueError: If the value is outside the allowed range, with a detailed message.
+        ConfigError: If the value is outside the allowed range, with a detailed message.
     """
     # Determine if the value violates the lower bound
     if left_limit is not None:
         if left_inclusive:
             if value < left_limit:
-                logger.error(
+                raise ConfigError(
                     f"Invalid argument: {arg_name} must be >= {left_limit}, got {value}"
                 )
-                sys.exit(1)
         else:
             if value <= left_limit:
-                logger.error(
+                raise ConfigError(
                     f"Invalid argument: {arg_name} must be > {left_limit}, got {value}"
                 )
-                sys.exit(1)
 
     # Determine if the value violates the upper bound
     if right_limit is not None:
         if right_inclusive:
             if value > right_limit:
-                logger.error(
+                raise ConfigError(
                     f"Invalid argument: {arg_name} must be <= {right_limit}, got {value}"
                 )
-                sys.exit(1)
         else:
             if value >= right_limit:
-                logger.error(
+                raise ConfigError(
                     f"Invalid argument: {arg_name} must be < {right_limit}, got {value}"
                 )
-                sys.exit(1)
 
 
 def validate_geometry(geometry: str, _: str) -> None:
@@ -75,7 +75,7 @@ def validate_geometry(geometry: str, _: str) -> None:
     )
 
     if not pattern.match(geometry):
-        logger.error(
+        raise ConfigError(
             f"Invalid geometry string: {geometry!r}\n"
             "Allowed formats:\n"
             "  stretch, fit, cover\n"
@@ -84,7 +84,6 @@ def validate_geometry(geometry: str, _: str) -> None:
             "  x1080, x1080!\n"
             "  1920x1080, 1920x1080!, 1920x1080^"
         )
-        sys.exit(1)
 
 
 def validate_color(color: Union[Tuple, str], _: str) -> None:
@@ -95,8 +94,7 @@ def validate_color(color: Union[Tuple, str], _: str) -> None:
         if len(color) == 4 and all(isinstance(v, (float, int)) for v in color):
             return
         else:
-            logger.error(f"Invalid tuple for background_color: {color}")
-            sys.exit(1)
+            raise ConfigError(f"Invalid tuple for background_color: {color}")
 
     color_str = color.strip()
     hex_match = re.match(r"^#([0-9A-Fa-f]{3,8})$", color_str)
@@ -106,10 +104,9 @@ def validate_color(color: Union[Tuple, str], _: str) -> None:
         if len(hex_val) in (3, 4, 6, 8):
             return
         else:
-            logger.error(
+            raise ConfigError(
                 f"Invalid hex color string '{color_str}' (must be 3, 4, 6, or 8 hex digits)"
             )
-            sys.exit(1)
 
     # Check for rgb/rgba functional notation
     rgba_match = re.match(
@@ -127,23 +124,20 @@ def validate_color(color: Union[Tuple, str], _: str) -> None:
         if 0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255 and 0.0 <= a <= 1.0:
             return
         else:
-            logger.error(
-                f"Invalid rgb/rgba values in '{color_str}' (must be 0-255 for rgb, 0.0-1.0 for alpha)"
+            raise ConfigError(
+                f"Invalid rgb/rgba values in '{color_str}' "
+                "(must be 0-255 for rgb, 0.0-1.0 for alpha)"
             )
-            sys.exit(1)
 
     # Fallback to QColor for named colors and other formats
     if not QColor(color_str).isValid():
-        logger.error(f"Invalid color string '{color_str}'")
-        sys.exit(1)
+        raise ConfigError(f"Invalid color string '{color_str}'")
 
 
 def validate_gpu(identifier: Optional[str], _: str) -> None:
-    """If `identifier` does not match any Vulkan device, print an error and exit."""
+    """If `identifier` does not match any Vulkan device, raise ConfigError."""
     if identifier is None:
         return
-
-    from ..vulkan import get_discovered_devices
 
     devices = get_discovered_devices()
 
@@ -153,8 +147,9 @@ def validate_gpu(identifier: Optional[str], _: str) -> None:
         if 0 <= idx < len(devices):
             return
         else:
-            logger.error(f"GPU index {idx} is out of range (0 - {len(devices)-1}).")
-            sys.exit(1)
+            raise ConfigError(
+                f"GPU index {idx} is out of range (0 - {len(devices)-1})."
+            )
     except ValueError:
         pass
 
@@ -165,19 +160,16 @@ def validate_gpu(identifier: Optional[str], _: str) -> None:
             return
 
     # No match
-    logger.error(
+    raise ConfigError(
         f"No Vulkan device matches '{identifier}'. "
         "Use --list-gpus to see available devices."
     )
-    sys.exit(1)
 
 
 def validate_monitor(identifier: str, _: str) -> None:
     """Verify that the monitor spec matches a known display."""
     if identifier in ("primary", "all"):
         return
-
-    from ..utils import list_monitors
 
     available = list_monitors()
 
@@ -192,10 +184,9 @@ def validate_monitor(identifier: str, _: str) -> None:
         if 0 <= idx < len(physical):
             return
         else:
-            logger.error(
+            raise ConfigError(
                 f"Monitor index {idx} is out of range (0 - {len(physical)-1})."
             )
-            sys.exit(1)
     except ValueError:
         pass
 
@@ -206,11 +197,10 @@ def validate_monitor(identifier: str, _: str) -> None:
             return
 
     # No match
-    logger.error(
+    raise ConfigError(
         f"No monitor matches '{identifier}'. "
         "Use --list-monitors to see available monitors."
     )
-    sys.exit(1)
 
 
 _VALIDATORS: Dict[str, Tuple] = {
@@ -275,7 +265,12 @@ _VALIDATORS: Dict[str, Tuple] = {
 
 
 def validate_config(config: Any) -> None:
-    """Validate a full Config instance (or any object with the required attributes)."""
+    """
+    Validate a full Config instance (or any object with the required attributes).
+
+    Raises:
+        ConfigError: If any field fails validation.
+    """
     for field_name, (validator, *args) in _VALIDATORS.items():
         value = getattr(config, field_name, None)
         if value is not None:
@@ -283,7 +278,12 @@ def validate_config(config: Any) -> None:
 
 
 def validate_overrides(overrides: Dict[str, Any]) -> None:
-    """Validate only the keys present in the overrides dictionary."""
+    """
+    Validate only the keys present in the overrides dictionary.
+
+    Raises:
+        ConfigError: If any override value fails validation.
+    """
     for field_name, value in overrides.items():
         if field_name in _VALIDATORS:
             validator, *args = _VALIDATORS[field_name]
