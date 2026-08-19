@@ -1,11 +1,11 @@
 """API public modules."""
 
-from . import window
+from . import windows
 from .session import UpscalerSession
 from ..utils import exceptions
 
 __all__ = [
     "UpscalerSession",
     "exceptions",
-    "window",
+    "windows",
 ]

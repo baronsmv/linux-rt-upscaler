@@ -37,7 +37,7 @@ class UpscalerSession(QObject):
     - **Script mode (session owns the Qt event loop)**::
 
         from upscaler import UpscalerSession
-        from upscaler.window import find_window_by_title
+        from upscaler.windows import find_window_by_title
 
         win = find_window_by_title(contains="A Game")
         with UpscalerSession(window=win) as session:
@@ -46,7 +46,7 @@ class UpscalerSession(QObject):
     - **Embedded mode (host already has a Qt event loop)**::
 
         from upscaler import UpscalerSession
-        from upscaler.window import find_window_by_title
+        from upscaler.windows import find_window_by_title
 
         win = find_window_by_title(contains="A Game")
         session = UpscalerSession(window=win, enable_hotkeys=False)

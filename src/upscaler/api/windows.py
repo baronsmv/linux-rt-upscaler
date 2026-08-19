@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 
 from ..utils import WindowNotFound
 from ..window import (
-    AtomCache,
+    AtomCache as _AtomCache,
     WindowInfo,
     close_xcb_connection as _close_xcb_connection,
     find_window_by_pid as _find_window_by_pid,
@@ -136,7 +136,7 @@ def find_window_by_class(
         raise WindowNotFound("Cannot open XCB connection for window search.")
 
     try:
-        atoms = AtomCache(conn)
+        atoms = _AtomCache(conn)
         for win in list_windows():
             try:
                 klass = _get_window_class(conn, win.handle, atoms)
