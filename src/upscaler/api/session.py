@@ -6,10 +6,9 @@ setup_environment()
 
 import copy
 import logging
-import threading
 from typing import Any, Dict, Optional
 
-from PySide6.QtCore import QEventLoop, QObject, QTimer, Signal
+from PySide6.QtCore import QEventLoop, QObject, QThread, QTimer, Signal
 from PySide6.QtWidgets import QApplication
 
 from ..config import Config, load_config, finalize_config
@@ -284,7 +283,7 @@ class UpscalerSession(QObject):
         app = QApplication.instance()
         if app is None:
             raise EventLoopError("No QApplication available.")
-        if app.thread() != threading.current_thread():
+        if QThread.currentThread() != app.thread():
             raise EventLoopError("QApplication must run on the main thread.")
         if app.property("_is_executing"):
             raise EventLoopError(
