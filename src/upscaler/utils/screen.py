@@ -37,7 +37,7 @@ def list_monitors() -> List[str]:
     Return a sorted list of display names known to the system using XCB RandR.
     Prepends 'primary' and 'all'.
     """
-
+    # Local import since utils package shouldn't depend on any other
     from ..window import open_xcb_connection, close_xcb_connection
 
     conn = open_xcb_connection()
