@@ -208,14 +208,14 @@ def _find_by_pid(
 
     def check_total_timeout() -> None:
         if total_timeout is not None and (time.time() - overall_start) > total_timeout:
-            raise TimeoutError(
+            raise WindowNotFound(
                 f"No matching window found within total timeout of {total_timeout} seconds"
             )
 
     # Single XCB connection for the entire search (more efficient)
     conn = open_xcb_connection()
     if not conn:
-        raise RuntimeError("Failed to open XCB connection for window search")
+        raise WindowNotFound("Failed to open XCB connection for window search")
     atoms = AtomCache(conn)
 
     try:
@@ -341,43 +341,55 @@ def _find_window_by_title(
     return None
 
 
-def _launch_and_find_window(config: Config) -> Tuple[WindowInfo, subprocess.Popen]:
+def launch_and_find_window(
+    program: List[str],
+    pid_timeout: float = 5,
+    class_hint: Optional[str] = None,
+    class_timeout: float = 5,
+    total_timeout: Optional[float] = 60,
+    starting_phase: int = 1,
+) -> Tuple[WindowInfo, subprocess.Popen]:
     """
-    Launch the program from config.program and locate its window.
+    Launch a program and locate its main window.
 
     Args:
-        config: Configuration containing program list and timeout settings.
+        program: List of command and arguments (e.g., ["myapp", "--flag"]).
+        pid_timeout: Seconds to spend in the PID phase.
+        class_hint: Optional substring for class phase.
+        class_timeout: Seconds to spend in the class phase.
+        total_timeout: Maximum total wait time. None means no limit.
+        starting_phase: 1 for PID first, 2 for class first.
 
     Returns:
         Tuple (WindowInfo, Popen) on success.
 
     Raises:
-        WindowNotFound: If no program is specified, or if a window cannot be
-            found within the timeout.
+        WindowNotFound: If no window appears within the timeout or the program
+            fails to start.
     """
-    if not config.program:
-        raise WindowNotFound("No program specified in config.")
+    if not program:
+        raise WindowNotFound("No program specified.")
 
-    program_name = config.program[0]
-    logger.info(f"Launching: {' '.join(config.program)}")
-    proc = subprocess.Popen(config.program)
+    program_name = program[0]
+    logger.info(f"Launching: {' '.join(program)}")
+    proc = subprocess.Popen(program)
 
     logger.info("Waiting for window")
     try:
         win_info = _find_by_pid(
             proc.pid,
-            pid_timeout=config.pid_timeout,
-            class_hint=program_name,
-            class_timeout=config.class_timeout,
-            total_timeout=config.total_timeout,
-            starting_phase=config.starting_phase,
+            pid_timeout=pid_timeout,
+            class_hint=class_hint or program_name,
+            class_timeout=class_timeout,
+            total_timeout=total_timeout,
+            starting_phase=starting_phase,
         )
         logger.debug(f"Found window for PID {proc.pid}: {win_info.title}")
         return win_info, proc
-    except TimeoutError as e:
+    except WindowNotFound:
         proc.terminate()
         proc.wait()
-        raise WindowNotFound(f"Timeout while waiting for window: {e}") from e
+        raise
     except Exception as e:
         proc.terminate()
         proc.wait()
@@ -566,7 +578,14 @@ def acquire_target_window(
 
     elif config.program:
         logger.debug(f"Launching and finding window for program: {config.program}")
-        result = _launch_and_find_window(config)
+        result = launch_and_find_window(
+            program=config.program,
+            pid_timeout=config.pid_timeout,
+            class_hint=config.program[0],
+            class_timeout=config.class_timeout,
+            total_timeout=config.total_timeout,
+            starting_phase=config.starting_phase,
+        )
         logger.debug(
             f"Window acquired via program launch in {time.perf_counter() - start_time:.2f}s"
         )

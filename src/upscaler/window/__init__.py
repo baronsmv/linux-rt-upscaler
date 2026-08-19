@@ -1,6 +1,11 @@
 """Window public modules."""
 
-from .acquisition import acquire_target_window, activate_window, list_windows
+from .acquisition import (
+    acquire_target_window,
+    activate_window,
+    launch_and_find_window,
+    list_windows,
+)
 from .connection import open_xcb_connection, close_xcb_connection
 from .focus import FocusMonitor
 from .hotkeys import HotkeyManager
@@ -18,6 +23,7 @@ __all__ = [
     "close_xcb_connection",
     "get_window_icon",
     "get_window_name",
+    "launch_and_find_window",
     "list_windows",
     "open_xcb_connection",
 ]
