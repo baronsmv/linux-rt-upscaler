@@ -35,7 +35,7 @@ jobs:
           pip install mkdocs-material mkdocstrings[python]
 
       - name: Build docs
-        run: mkdocs build --config-file docs/mkdocs.yml
+        run: mkdocs build
 
       - uses: actions/upload-pages-artifact@v3
         with:
