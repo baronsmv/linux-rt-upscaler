@@ -13,6 +13,69 @@ from .info import AtomCache, WindowInfo, get_window_geometry, get_window_name
 logger = logging.getLogger(__name__)
 
 
+def _get_active_window_id(
+    conn: xcffib.Connection,
+    root: int,
+    atoms: AtomCache,
+) -> Optional[int]:
+    """
+    Return the X11 window ID of the currently active window.
+
+    Args:
+        conn: Active XCB connection.
+        root: Root window ID.
+        atoms: AtomCache for the connection.
+
+    Returns:
+        Window ID, or None if no active window or property not found.
+    """
+    try:
+        cookie = conn.core.GetProperty(
+            False,
+            root,
+            atoms.get("_NET_ACTIVE_WINDOW"),
+            xcffib.xproto.Atom.WINDOW,
+            0,
+            1,
+        )
+        reply = cookie.reply()
+        if reply and reply.value_len:
+            # The property value is a 32-bit window ID
+            return reply.value.to_atoms()[0]
+        return None
+    except Exception as e:
+        logger.debug(f"Failed to get active window: {e}")
+        return None
+
+
+def _get_window_info(
+    conn: xcffib.Connection,
+    win_handle: int,
+    atoms: AtomCache,
+) -> Optional[WindowInfo]:
+    """
+    Fetch full window information (geometry and title) for a given XID.
+
+    Args:
+        conn: Active XCB connection.
+        win_handle: X11 window ID.
+        atoms: AtomCache for the connection.
+
+    Returns:
+        WindowInfo object, or None if the window is invalid or has no geometry.
+    """
+    try:
+        geom = get_window_geometry(conn, win_handle)
+        if geom is None:
+            return None
+        _, _, w, h = geom
+        title = get_window_name(conn, win_handle, atoms) or "unknown"
+        return WindowInfo(win_handle, w, h, title)
+    except Exception as e:
+        logger.debug(f"Failed to get window info for {win_handle:#x}: {e}")
+        return None
+
+
 class FocusMonitor(QObject):
     """
     Monitors the active X11 window and emits a signal when it changes.
@@ -82,13 +145,13 @@ class FocusMonitor(QObject):
             while self._running:
                 try:
                     # Get the currently active window
-                    active_handle = self._get_active_window(conn, root, atoms)
+                    active_handle = _get_active_window_id(conn, root, atoms)
                     if (
                         active_handle is not None
                         and active_handle != self._current_handle
                     ):
                         # Fetch full window info
-                        win_info = self._get_window_info(conn, active_handle, atoms)
+                        win_info = _get_window_info(conn, active_handle, atoms)
                         if win_info:
                             logger.info(
                                 f"Focus changed to '%s' (%d{chr(215)}%d)",
@@ -124,66 +187,3 @@ class FocusMonitor(QObject):
         finally:
             close_xcb_connection(conn)
             logger.debug("Focus monitor thread finished")
-
-    def _get_active_window(
-        self,
-        conn: xcffib.Connection,
-        root: int,
-        atoms: AtomCache,
-    ) -> Optional[int]:
-        """
-        Return the X11 window ID of the currently active window.
-
-        Args:
-            conn: Active XCB connection.
-            root: Root window ID.
-            atoms: AtomCache for the connection.
-
-        Returns:
-            Window ID, or None if no active window or property not found.
-        """
-        try:
-            cookie = conn.core.GetProperty(
-                False,
-                root,
-                atoms.get("_NET_ACTIVE_WINDOW"),
-                xcffib.xproto.Atom.WINDOW,
-                0,
-                1,
-            )
-            reply = cookie.reply()
-            if reply and reply.value_len:
-                # The property value is a 32-bit window ID
-                return reply.value.to_atoms()[0]
-            return None
-        except Exception as e:
-            logger.debug(f"Failed to get active window: {e}")
-            return None
-
-    def _get_window_info(
-        self,
-        conn: xcffib.Connection,
-        win_handle: int,
-        atoms: AtomCache,
-    ) -> Optional[WindowInfo]:
-        """
-        Fetch full window information (geometry and title) for a given XID.
-
-        Args:
-            conn: Active XCB connection.
-            win_handle: X11 window ID.
-            atoms: AtomCache for the connection.
-
-        Returns:
-            WindowInfo object, or None if the window is invalid or has no geometry.
-        """
-        try:
-            geom = get_window_geometry(conn, win_handle)
-            if geom is None:
-                return None
-            _, _, w, h = geom
-            title = get_window_name(conn, win_handle, atoms) or "unknown"
-            return WindowInfo(win_handle, w, h, title)
-        except Exception as e:
-            logger.debug(f"Failed to get window info for {win_handle:#x}: {e}")
-            return None

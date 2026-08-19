@@ -160,7 +160,7 @@ def _get_all_descendant_pids(pid: int) -> Set[int]:
     return pids
 
 
-def _find_by_pid(
+def find_window_by_pid(
     pid: int,
     pid_timeout: float = 5,
     class_hint: Optional[str] = None,
@@ -312,7 +312,7 @@ def _find_by_pid(
         logger.debug("Closed XCB connection after window search")
 
 
-def _find_window_by_title(
+def find_window_by_title(
     contains: Optional[str] = None,
     regex: Optional[str] = None,
 ) -> Optional[WindowInfo]:
@@ -376,7 +376,7 @@ def launch_and_find_window(
 
     logger.info("Waiting for window")
     try:
-        win_info = _find_by_pid(
+        win_info = find_window_by_pid(
             proc.pid,
             pid_timeout=pid_timeout,
             class_hint=class_hint or program_name,
@@ -545,7 +545,7 @@ def acquire_target_window(
 
     if config.target_title or config.target_title_regex:
         logger.debug("Attaching to window by title criteria")
-        win_info = _find_window_by_title(
+        win_info = find_window_by_title(
             contains=config.target_title,
             regex=config.target_title_regex,
         )
