@@ -16,16 +16,17 @@ With the `upscale` command, you can target windows using different options:
 
 - By matching its name:
 
-  - Using a substring:
+    - Using a substring:
     ```bash
     upscale -t firefox
     ```
-  - Or a regular expression:
+
+    - Or a regular expression:
     ```bash
     upscale --target-title-regex "(Yuzu|Ryujinx).*"
     ```
 
-- By starting in daemon mode (more info below):
+- By starting in daemon mode:
   ```bash
   upscale -d
   ```
