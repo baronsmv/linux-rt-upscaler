@@ -60,6 +60,7 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 - [ ] Community-contributed translations
 - [ ] GUI Profiles operations (drag & drop, duplicate)
 - [ ] GUI System Tray
+- [ ] Complete GUI Style settings (font size, spacing, etc.)
 - [ ] More SRCNN models ([FSRCNNX](https://github.com/igv/FSRCNN-TensorFlow/releases/tag/1.1) planned)
 - [ ] Native Wayland capture prototype
 
