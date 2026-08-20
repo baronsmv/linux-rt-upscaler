@@ -8,7 +8,7 @@ The configuration file stores your custom settings and profiles. You only need t
 
 You can also specify a different file with the `--config <path>` option.
 
-### “Settings precedence
+### Settings precedence
 
 Settings are merged in this order, from lowest to highest priority:
 
