@@ -4,15 +4,16 @@
 
 While upscaling a window, you can use hotkeys to change the behavior of the upscaler, to take a screenshot or to exit.
 
-| Shortcut                            | Action                                                      |
-| ----------------------------------- |-------------------------------------------------------------|
-| `Alt`+`Shift`+`S`                   | Pause / resume upscaling                                    |
-| `Alt`+`Shift`+`Escape`              | Exit the upscaler                                           |
-| `Alt`+`Shift`+`P`                   | Take a lossless screenshot (directly from the SRCNN output) |
-| `Alt`+`Shift`+`M`                   | Switch to the next upscaling model                          |
-| `Alt`+`Shift`+`G`                   | Cycle output geometry (fit, stretch, cover)                 |
-| `Alt`+`Shift`+`+` / `-`             | Zoom in / zoom out                                          |
-| `Alt`+`Shift`+`↑` / `↓` / `←` / `→` | Pan the upscaled content                                    |
+| Shortcut                            | Action                                                        |
+| ----------------------------------- |---------------------------------------------------------------|
+| `Alt`+`Shift`+`S`                   | Pause / resume upscaling                                      |
+| `Alt`+`Shift`+`Escape`              | Exit the upscaler                                             |
+| `Alt`+`Shift`+`P`                   | Take a lossless screenshot (directly from the SRCNN output)   |
+| `Alt`+`Shift`+`M`                   | Switch to the next upscaling model                            |
+| `Alt`+`Shift`+`G`                   | Cycle output geometry (fit, stretch, cover)                   |
+| `Alt`+`Shift`+`+` / `-`             | Zoom in / zoom out                                            |
+| `Alt`+`Shift`+`↑` / `↓` / `←` / `→` | Pan the upscaled content                                      |
+| `Alt`+`Shift`+`R`                   | Restore output geometry, zoom and pan to their initial values |
 
 ### Screenshots
 
@@ -50,6 +51,7 @@ hotkeys:
   screenshot: "Alt+Shift+P"
   cycle_model: "Alt+Shift+M"
   cycle_geometry: "Alt+Shift+G"
+  restore_view: "Alt+Shift+R"
   zoom_in: "Alt+Shift+Plus"
   zoom_out: "Alt+Shift+Minus"
   offset_up: "Alt+Shift+Up"

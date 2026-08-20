@@ -579,7 +579,10 @@ hotkeys:
   offset_left: "Alt+Shift+Left"
   offset_right: "Alt+Shift+Right"
 
-  # Gracefully exit the application
+  # Restore output geometry, zoom and pan to their initial values
+  restore_view: "Alt+Shift+R"
+
+  # Exit the application
   exit_app: "Alt+Shift+Escape"
 
 # ------------------------------------------------------------------------------

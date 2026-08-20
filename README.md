@@ -51,6 +51,7 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 - [GUI Usage](https://baronsmv.github.io/linux-rt-upscaler/user/gui/)
 - [CLI Options](https://baronsmv.github.io/linux-rt-upscaler/user/cli/)
 - [Controls](https://baronsmv.github.io/linux-rt-upscaler/user/controls/)
+- [Configuration](https://baronsmv.github.io/linux-rt-upscaler/user/configuration/)
 - [API Reference](https://baronsmv.github.io/linux-rt-upscaler/api/overview/)
 
 ## Future Plans

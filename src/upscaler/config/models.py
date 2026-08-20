@@ -28,7 +28,7 @@ DOWNSAMPLERS: Dict[str, str] = {
     "Lanczos (adaptive)": "lanczos",
 }
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
-ZOOM_LEVELS = ("50%", "75%", "100%", "150%", "200%", "300%", "400%")
+ZOOM_LEVELS = tuple(f"{level}%" for level in range(50, 401, 25))
 
 DEFAULT_HOTKEYS = {
     "toggle_scaling": "Alt+Shift+S",
@@ -36,6 +36,7 @@ DEFAULT_HOTKEYS = {
     "screenshot": "Alt+Shift+P",
     "cycle_model": "Alt+Shift+M",
     "cycle_geometry": "Alt+Shift+G",
+    "restore_view": "Alt+Shift+R",
     "zoom_in": "Alt+Shift+Plus",
     "zoom_out": "Alt+Shift+Minus",
     "offset_up": "Alt+Shift+Up",

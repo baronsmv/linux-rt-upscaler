@@ -143,7 +143,7 @@ class Pipeline(QObject):
             [f"Model: {m}" for m in self.controller.available_models]
             + [f"Geometry: {g}" for g in self.controller.available_geometries]
             + [f"Zoom: {z}" for z in self.controller.available_zoom_levels]
-            + ["Screenshot saved", "Screenshot failed"]
+            + ["View restored", "Screenshot saved", "Screenshot failed"]
         )
         self.osd = OSDManager(osd_texts, self._screen_width, self._screen_height)
 

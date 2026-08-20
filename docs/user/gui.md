@@ -134,4 +134,4 @@ When **Daemon Mode** is enabled (found in the General tab), a background process
 2. Starts upscaling with the profile’s settings.
 3. If the window closes, the daemon goes back to scanning for the next match.
 
-Daemon mode is ideal if you want to automatically upscaling a profiled window as soon as it launches, or if your mouse died from exhaustion after a long day of multi-clicking~.
+Daemon mode is ideal if you want to automatically upscale a profiled window as soon as it launches, or if your mouse died from exhaustion after a long day of multi-clicking~.

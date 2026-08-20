@@ -23,6 +23,8 @@ class HotkeyManager(QObject):
     cycle_model = Signal()
     cycle_geometry = Signal()
 
+    restore_view = Signal()
+
     zoom_in = Signal()
     zoom_out = Signal()
 

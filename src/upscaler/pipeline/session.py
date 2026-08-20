@@ -136,6 +136,7 @@ def create_pipeline_session(
     hotkey_manager.screenshot.connect(controller.take_screenshot)
     hotkey_manager.cycle_model.connect(controller.switch_model)
     hotkey_manager.cycle_geometry.connect(controller.switch_geometry)
+    hotkey_manager.restore_view.connect(controller.restore_view)
     hotkey_manager.zoom_in.connect(controller.zoom_in)
     hotkey_manager.zoom_out.connect(controller.zoom_out)
     hotkey_manager.offset_up.connect(controller.offset_up)

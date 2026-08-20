@@ -8,7 +8,6 @@ from queue import Empty, Queue
 from typing import TYPE_CHECKING, Tuple
 
 from PIL import Image
-from PySide6.QtCore import Q_ARG, QMetaObject, Qt
 from PySide6.QtWidgets import QApplication
 
 from ..config import OUTPUT_GEOMETRIES, UPSCALING_MODELS, ZOOM_LEVELS
@@ -63,6 +62,12 @@ class PipelineController:
         self.available_models = available_models
         self.available_geometries = available_geometries
         self.available_zoom_levels = available_zoom_levels
+
+        # Store initial view state for the restore hotkey
+        self._initial_output_geometry = self._pipeline.config.output_geometry
+        self._initial_offset_x = self._pipeline.config.offset_x
+        self._initial_offset_y = self._pipeline.config.offset_y
+        self._initial_scale_mode = self._pipeline.overlay.scale_mode
 
         # OSD
         self._osd_duration = self._pipeline.config.osd_duration
@@ -123,22 +128,23 @@ class PipelineController:
         self._zoom_switch_queue.put(False)
 
     def offset_left(self, step: int = 25):
-        self._pipeline.config.offset_x -= step
-        self._sync_presenter_offset()
-
-    def offset_right(self, step: int = 25):
         self._pipeline.config.offset_x += step
         self._sync_presenter_offset()
 
-    def offset_up(self, step: int = 25):
-        self._pipeline.config.offset_y -= step
+    def offset_right(self, step: int = 25):
+        self._pipeline.config.offset_x -= step
         self._sync_presenter_offset()
 
-    def offset_down(self, step: int = 25):
+    def offset_up(self, step: int = 25):
         self._pipeline.config.offset_y += step
         self._sync_presenter_offset()
 
-    def exit_app(self):
+    def offset_down(self, step: int = 25):
+        self._pipeline.config.offset_y -= step
+        self._sync_presenter_offset()
+
+    @staticmethod
+    def exit_app():
         QApplication.instance().quit()
 
     # ----------------------------------------------------------------------
@@ -171,23 +177,44 @@ class PipelineController:
         self._current_geometry_index = new_idx
         self._pipeline.config.output_geometry = new_geometry
 
-        # 1. Update the presenter's scale mode so it applies on the next frame
+        # Update the presenter's scale mode so it applies on the next frame
         self._pipeline.presenter.scale_mode = new_geometry
 
-        # 2. Notify the overlay window on the main thread (for UI consistency)
-        QMetaObject.invokeMethod(
-            self._pipeline.overlay,
-            "set_scale_mode",
-            Qt.QueuedConnection,
-            Q_ARG(str, new_geometry),
-        )
+        # Notify the overlay window on the main thread
+        self._pipeline.overlay.update_scale_mode.emit(new_geometry)
 
-        # 3. Recalculate content dimensions based on new geometry and overlay size
+        # Recalculate content dimensions based on new geometry and overlay size
         self._pipeline.update_content_dimensions()
 
-        # 4. Show OSD message with the new geometry name
+        # Show OSD message
         self._pipeline.osd_queue.put(
             (f"Geometry: {new_geometry}", self._pipeline.config.osd_duration)
+        )
+
+    def restore_view(self) -> None:
+        """Restore the original output geometry, zoom, and pan offsets."""
+        logger.info(f"Restoring view")
+        self._pipeline.config.output_geometry = self._initial_output_geometry
+        self._pipeline.config.offset_x = self._initial_offset_x
+        self._pipeline.config.offset_y = self._initial_offset_y
+
+        # Restore the presenter scale mode and notify the overlay
+        self._pipeline.presenter.scale_mode = self._initial_scale_mode
+        self._pipeline.overlay.update_scale_mode.emit(self._initial_scale_mode)
+
+        # Sync presenter offsets
+        self._sync_presenter_offset()
+
+        # Recalculate content dimensions for the restored geometry
+        self._pipeline.update_content_dimensions()
+
+        # Reset the internal cycle indices to match the restored geometry
+        self.set_initial_geometry_index(self._initial_output_geometry)
+        self.set_initial_zoom_index()
+
+        # Show an OSD message
+        self._pipeline.osd_queue.put(
+            ("View restored", self._pipeline.config.osd_duration)
         )
 
     def process_requests(self) -> None:
@@ -282,16 +309,13 @@ class PipelineController:
         # Percentage zoom always works in "fit" mode
         self._pipeline.presenter.scale_mode = "fit"
 
-        # Notify the overlay (optional but keeps UI consistent)
-        QMetaObject.invokeMethod(
-            self._pipeline.overlay,
-            "set_scale_mode",
-            Qt.QueuedConnection,
-            Q_ARG(str, "fit"),
-        )
+        # Notify the overlay
+        self._pipeline.overlay.update_scale_mode.emit("fit")
 
+        # Recalculate content dimensions based on new geometry and overlay size
         self._pipeline.update_content_dimensions()
 
+        # Show OSD message
         self._pipeline.osd_queue.put(
             (f"Zoom: {new_zoom}", self._pipeline.config.osd_duration)
         )
