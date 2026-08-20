@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/data/icons/hicolor/scalable/apps/io.github.baronsmv.linux-rt-upscaler.svg" width="128" alt="icon">
+  <img src="https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/data/icons/hicolor/scalable/apps/io.github.baronsmv.linux-rt-upscaler.svg" width="128" alt="icon">
 </p>
 
 <h1 align="center">Real-Time Upscaler for Linux</h1>
@@ -12,17 +12,17 @@
 
 A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It uses [CuNNy](https://github.com/funnyplanter/CuNNy) neural networks to perform 2x (or 4x) upscaling to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
 
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/docs/assets/screenshots/dark_02.png)
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/assets/screenshots/dark_02.png)
 
 ## Results at 400% magnification
 
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/docs/assets/comparisons/gurikaji/w40-60_h20-50_4x_comparison.png)
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/assets/comparisons/gurikaji/w40-60_h20-50_4x_comparison.png)
 
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/docs/assets/comparisons/fatamoru/w30-50_h10-50_4x_comparison.png)
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/assets/comparisons/fatamoru/w30-50_h10-50_4x_comparison.png)
 
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/docs/assets/comparisons/konosora/w10-30_h20-50_4x_comparison.png)
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/assets/comparisons/konosora/w10-30_h20-50_4x_comparison.png)
 
-![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/6f3f1c70b54e705665d2039d549afc0e4a8380b2/docs/assets/comparisons/diagram/w40-70_h40-90_4x_comparison.png)
+![](https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/docs/assets/comparisons/diagram/w40-70_h40-90_4x_comparison.png)
 
 ## Features
 
