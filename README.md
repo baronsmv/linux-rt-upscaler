@@ -54,10 +54,14 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 - [Configuration](https://baronsmv.github.io/linux-rt-upscaler/user/configuration/)
 - [API Reference](https://baronsmv.github.io/linux-rt-upscaler/api/overview/)
 
-## Future Plans
+## Roadmap
 
-- [ ] Addition of more SRCNN models ([FSRCNNX](https://github.com/igv/FSRCNN-TensorFlow/releases/tag/1.1) planned).
-- [ ] ~~Native Wayland support~~ (**on hold**: Wayland capture is deeply compositor-specific and currently doesn’t align with the XShm/XDamage pipeline.)
+- [ ] Translation infrastructure
+- [ ] Community-contributed translations
+- [ ] GUI Profiles operations (drag & drop, duplicate)
+- [ ] GUI System Tray
+- [ ] More SRCNN models ([FSRCNNX](https://github.com/igv/FSRCNN-TensorFlow/releases/tag/1.1) planned)
+- [ ] Native Wayland capture prototype
 
 ## Known Issues
 
