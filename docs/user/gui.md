@@ -1,5 +1,9 @@
 # Graphical User Interface (GUI)
 
+## Starting
+
+You can start the GUI running `upscale-gui` from the terminal or using the [desktop entry](installation.md#desktop-integration-optional).
+
 ## Layout
 
 The main window is split into three panels:
@@ -12,21 +16,22 @@ The main window is split into three panels:
 
 ### Central Grid: Window Previews
 
-First, the windows that the upscaler can capture.
+First, the central grid shows the windows that the upscaler can capture.
 
-!!! note "A window doesn't appear"
+!!! note "If a window doesn't appear"
 
-    - The grid updates periodically (every 2 seconds).
-    - If you can't see a window which should be valid, verify it's not minimized.
+    The grid updates periodically (every 2 seconds). If you can't see a window which should be valid, make sure it's not minimized.
 
 Here you can:
 
-- Type in the bar at the top to filter by window title.
-- You can also use `Ctrl+F` to focus the filter bar, then `↓` to move focus to the grid and any other arrow key to navigate through the thumbnails.
+- Type in the bar at the top to **filter** by window title.
+- You can also use `Ctrl`+`F` to focus the filter bar, then `↓` to move focus to the grid and any other arrow key to navigate through the thumbnails.
 - Finally, click or press `Enter`/`Space` on a selected tile to start upscaling that window.
 - And... That's it! Superresolution magic (hopefully)! ✨✨✨
 
 ### Right Sidebar: Settings
+
+#### Settings tabs
 
 To customize the upscaling (or the app itself) you can change the settings at the right sidebar, organized into these tabs:
 
@@ -41,25 +46,41 @@ To customize the upscaling (or the app itself) you can change the settings at th
 | **Extras**       | Screenshot directory and template, On-Screen Display                      |
 | **GUI Style**    | GUI color scheme and style                                                |
 
+#### Relevant settings
+
+Three of these settings deserve a look:
+
+- **Model** changes the SRCNN model to use, ordered from the fastest (but worst quality) `veryfast` to the slowest (but superior) `8x32`. Depending on your system and the window to upscale, you may want to test each to determine what's the best tradeoff for you. If measuring performance, consider using tools like [MangoHUD](https://github.com/flightlessmango/MangoHud).
+- **Double upscaling** applies two consecutive 2x upscaling passes, with a total of 4x. This increases GPU usage and could lead to slower frames, so keep that in mind.
+- **Daemon Mode**, that enables automatic upscaling ([see below](#daemon-mode)).
+
+#### Saving settings, or reverting them
+
 After changing any settings to your liking, you can either save them or revert them with the buttons at the bottom:
 
-- `Save`: Writes the current configuration to `~/.config/linux-rt-upscaler/config.yaml`.
-  - For changes to the GUI style it saves the changes to `~/.config/linux-rt-upscaler/config-gui.yaml`.
-- `Reset`: Reverts all unsaved changes back to the last saved state. The button also has a dropdown menu:
-  - If a profile is active: "Clear profile overrides" removes all options from that profile, falling back to global settings.
-  - If global settings are active: "Restore system defaults" resets every option to the factory defaults.
+- **Save**: Writes the current configuration to the YAML configuration file in `~/.config/linux-rt-upscaler/config.yaml`.
+- **Reset**: Reverts all unsaved changes back to the last saved state. The button also has a dropdown menu:
+    - If a profile is active: "Clear profile overrides" removes all options from that profile, falling back to global settings.
+    - If global settings are active: "Restore system defaults" resets every option to the factory defaults.
+
+
+!!! note "About the YAML configuraton file"
+
+    - For operations like duplicating a profile, editing it with a text editor instead is way better.
+    - The upscaler keeps backups of this file but, if the data there is important for you, consider keeping your own.
+    - Changes to the GUI style are saved to `~/.config/linux-rt-upscaler/config-gui.yaml`, independently of the upscaler settings.
+    - For more info, see [Configuration](configuration.md/#yaml-configuration-file).
+
 
 ### Left Sidebar: Profiles
 
 !!! tip "Why use profiles"
 
-    When upscaling a variety of windows, you may want to use different settings for each scenario.
+    When upscaling a variety of windows, you may want to use different settings for each scenario. For example, while an 800x600 window would need double upscaling to reach a 4k output, a 1080p one doesn't need the extra upscaling.
 
-    For example, while an 800x600 window would need double upscaling (two 2x passes = 4x total) to reach a 4k output, a 1080p one doesn't need the extra upscaling. For this reason, the upscaler supports profiles.
+    For this reason, the upscaler supports configuration profiles that let you define specific settings for each window or setup. They contain **settings overrides** that change how the upscaler behaves for matching windows.
 
-    Profiles let you define specific settings for each window or setup. They contain **settings overrides** that change how the upscaler behaves for matching windows.
-
-    For more info on profiles, see [Configuration](configuration.md).
+    For more info on profiles, see [Profiles](configuration.md/#profiles).
 
 #### Profile list and toolbar
 
@@ -68,7 +89,7 @@ The profile list shows **Global** (applies to all windows) followed by your cust
 The toolbar at the button contains buttons that let you:
 
 - **Add** a new profile (`Ctrl`+`N`).
-- **Edit** an existing profile (`Enter`/`F2` or double-click).
+- **Edit** an existing profile (`Enter`, `F2` or double-click).
 - **Delete** a profile (`Del`).
 - **Reorder** with up/down arrows (`Ctrl`+`Shift`+`↑`/`↓`).
 
@@ -93,7 +114,7 @@ Profiles are applied:
 
 - **Manually** by clicking a profile in the list. Any window upscaled that doesn't match a profile will use the manually selected profile.
 - **Automatically** when selecting a window thumbnail if all the match rules are satisfied.
-- With the **Daemon mode** (see below), if a match is found, the daemon switches to that window and applies the profile’s options.
+- With the **Daemon mode** ([see below](#daemon-mode)), if a match is found, the daemon switches to that window and applies the profile’s options.
 
 ## Daemon Mode
 
@@ -103,4 +124,4 @@ When **Daemon Mode** is enabled (found in the General tab), a background process
 2. Starts upscaling with the profile’s settings.
 3. If the window closes, the daemon goes back to scanning for the next match.
 
-Daemon mode is ideal if you want to automatically upscaling a profiled window as soon as it launches, or to save your mouse from exhaustion after a day of multi-clicking.
+Daemon mode is ideal if you want to automatically upscaling a profiled window as soon as it launches, or if your mouse died from exhaustion after a long day of multi-clicking~.

@@ -1,5 +1,5 @@
 Work In Progress :)
 
-Meanwhile, take a lemonade by the sea...
+Meanwhile, relax by the sea, but just for a moment...
 
 𓇼 ⋆.˚ 𓆉 𓆝 𓆡⋆.˚ 𓇼

@@ -1,5 +1,7 @@
 # Installation
 
+## Dependencies
+
 !!! warning "Dependency needed for the GUI"
 
     The [GUI](gui.md) used by the upscaler depends on Qt, which often requires a library that is not installed by default on most desktop environments. Make sure it's installed.

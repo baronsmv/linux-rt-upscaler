@@ -1,7 +1,21 @@
 docs_dir: docs
 site_name: linux-rt-upscaler
+repo_url: https://github.com/baronsmv/linux-rt-upscaler
+repo_name: baronsmv/linux-rt-upscaler
+site_description: A real-time SRCNN upscaler for any X-Window.
+site_author: baronsmv
 theme:
   name: material
+  features:
+    - content.code.annotate
+    - content.code.copy
+    - navigation.footer
+    - navigation.instant
+    - navigation.tabs
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - toc.integrate
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
