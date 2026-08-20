@@ -35,7 +35,7 @@ Want to embed upscaling into your own Python applications, scripts and game laun
 
 Ready? Let's go then!
 
-The simplest way to use the API is to find a window and run an upscaling session (optionally inside a `with` block):
+The simplest way to use the API is to find a window and run an upscaling session inside a `with` block:
 
 ```py
 from upscaler import UpscalerSession
@@ -46,25 +46,32 @@ with UpscalerSession(window=win) as session:
     session.run()
 ```
 
-This starts the pipeline and enters the Qt event loop. When the window closes or the session is stopped, the instance cleans up the subresources used automatically.
+This starts the pipeline and enters the Qt event loop. `session.run()` calls `QApplication.exec()` and blocks until the session finishes. When the window closes or the session is stopped, the session automatically cleans up its resources.
+
+Use this for simple scripts where no Qt application already exists.
 
 ## Embedded mode
 
-If your application already has a Qt event loop running, do not call `run()`. Instead, use `start()` and `wait()`:
+If your application already has a Qt event loop running, do not call `run()`. Instead, use `start()` and `close()`:
 
-```python
+```py
 from upscaler import UpscalerSession
 from upscaler.acquisition import find_window_by_title
 
 win = find_window_by_title(contains="A Game")
 session = UpscalerSession(window=win, enable_hotkeys=False)
-session.start()
 
-# do other things...
-session.wait(10.0)   # blocks until session finishes or timeout
+# Connect signals before starting
+session.finished.connect(lambda: session.close())
+session.error.connect(print)
+
+session.start()
+# The host event loop keeps running, while the session runs in the background
 ```
 
-In embedded mode, you can also connect to the session’s signals: `finished`, `error`, `window_changed`, and `daemon_match`.
+In embedded mode, `session.start()` uses the existing `QApplication`, creating the pipeline and returning immediately instead of blocking. Then, your Qt event loop can continue running normally and handle the session's signals.
+
+The session runs in the background and notifies you via Qt signals, that you can connect and handle: `finished`, `error`, `window_changed`, and `daemon_match`.
 
 ## Error handling
 
@@ -79,13 +86,13 @@ from upscaler.acquisition import find_window_by_title
 from upscaler.exceptions import UpscalerError, WindowNotFound
 
 try:
-    win = find_window_by_title(contains="My Game")
-    session = UpscalerSession(window=win)
-    session.run()
+    win = find_window_by_title(contains="A Game")
+    with UpscalerSession(window=win) as session:
+        session.run()
 except WindowNotFound:
     print("Window not found")
-except UpscalerError as exc:
-    print(f"Upscaler error: {exc}")
+except UpscalerError as e:
+    print(f"Upscaler error: {e}")
 ```
 
 ## What to read next
