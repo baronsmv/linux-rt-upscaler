@@ -1,6 +1,6 @@
-# Overview
+# API Overview
 
-Wanting to embed upscaling into your own Python applications, scripts and game launchers?
+Want to embed upscaling into your own Python applications, scripts and game launchers?
 
 **Use the API of the upscaler!**
 
@@ -35,7 +35,7 @@ Wanting to embed upscaling into your own Python applications, scripts and game l
 
 Ready? Let's go then!
 
-The simplest way to use the API is to find a window and run an upscaling session (optionally in a `with` block):
+The simplest way to use the API is to find a window and run an upscaling session (optionally inside a `with` block):
 
 ```py
 from upscaler import UpscalerSession

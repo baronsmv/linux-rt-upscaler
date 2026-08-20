@@ -56,7 +56,7 @@ nav:
       - Controls: user/controls.md
       - Configuration: user/configuration.md
   - API Reference:
-      - Overview: api/overview.md
+      - API Overview: api/overview.md
       - Classes:
           - UpscalerSession: api/classes/upscaler_session.md
           - WindowInfo: api/classes/window_info.md

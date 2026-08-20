@@ -67,6 +67,8 @@ A profile in the configuration file may contain a `match` section with one or mo
 
 For a window to match a profile, all rules in its `match` block must be satisfied (AND logic). If a window matches, and the profile has an `options` block, then all of those options are applied.
 
+Profiles are checked top-to-bottom: if multiple profiles would match a window, only the first one will match.
+
 Width and height rules accept the following interval syntax:
 
 - Exact values: `1920`
@@ -124,3 +126,22 @@ profiles:
       model: 4x16
       double_upscale: false
 ```
+
+## Overlay
+
+### Overlay mode
+
+The overlay is the Qt window that displays the upscaled result on top of the target window. It supports these modes:
+
+| Mode               | Description                                                                                                                                                                                                  |
+|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `always-on-top`    | Floating, borderless overlay that stays above all other windows **without taking focus**. Mouse events are forwarded to the target window. This is the default mode.                                         |
+| `top-transparent`  | Same as `always-on-top`, but click-through. Mouse events pass through the overlay to the window underneath, and the overlay gets semi-transparent when the mouse isn't inside the source window coordinates. |
+| `fullscreen`       | Frameless fullscreen window covering the entire monitor (or most of it, depending on the Window Manager).                                                                                                    |
+| `windowed`         | Normal window with decorations and a fixed size.                                                                                                                                                             |
+
+!!! note "Keyboard events"
+
+    **Keyboard events are never forwarded**, regardless of overlay mode.
+
+    If you need to use the keyboard (or any other peripheral input besides the mouse) in the target application, keep its window always focused. On a single monitor, `always-on-top` works well for this since the overlay cannot be focused, keeping the focus on the target window instead.

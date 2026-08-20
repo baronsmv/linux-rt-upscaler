@@ -16,7 +16,7 @@ The main window is split into three panels:
 
 ### Central Grid: Window Previews
 
-First, the central grid shows the windows that the upscaler can capture.
+The central grid shows the windows that the upscaler can capture.
 
 !!! note "If a window doesn't appear"
 
@@ -25,9 +25,15 @@ First, the central grid shows the windows that the upscaler can capture.
 Here you can:
 
 - Type in the bar at the top to **filter** by window title.
-- You can also use `Ctrl`+`F` to focus the filter bar, then `↓` to move focus to the grid and any other arrow key to navigate through the thumbnails.
+- You can also navigate through it using `Ctrl`+`F` to focus the filter bar, then `↓` to move focus to the grid and any other arrow key to navigate through the thumbnails.
 - Finally, click or press `Enter`/`Space` on a selected tile to start upscaling that window.
 - And... That's it! Superresolution magic (hopefully)! ✨✨✨
+
+!!! note "Closing the upscale overlay"
+
+    Once upscaling, you can use the Close hotkey `Alt`+`Shift`+`Escape` to stop upscaling and close the app.
+
+    For more info on hotkeys, see [Controls](controls.md#hotkeys).
 
 ### Right Sidebar: Settings
 
@@ -50,27 +56,32 @@ To customize the upscaling (or the app itself) you can change the settings at th
 
 Three of these settings deserve a look:
 
-- **Model** changes the SRCNN model to use, ordered from the fastest (but worst quality) `veryfast` to the slowest (but superior) `8x32`. Depending on your system and the window to upscale, you may want to test each to determine what's the best tradeoff for you. If measuring performance, consider using tools like [MangoHUD](https://github.com/flightlessmango/MangoHud).
+- **Model** defines the SRCNN model to use, ordered from the fastest (but worst quality) `veryfast` to the slowest (but superior) `8x32`. Each model upscales to 2x, differing in resource usage. Depending on your system and the window to upscale, you may want to test each to find the best tradeoff for you.
+
+    !!! note "Testing SRCNN models"
+
+        - You can cycle through all the models using the hotkey `Alt`+`Shift`+`M`.
+        - The upscaler uses a tile-based processing, actively processing only the tiles (sections of the frame) that change. Static or mostly static frames therefore consume less GPU power than dynamic ones. Use a window with changing frames when evaluating models.
+        - If you want to measure performance, consider using a tool like [MangoHUD](https://github.com/flightlessmango/MangoHud). 
+
 - **Double upscaling** applies two consecutive 2x upscaling passes, with a total of 4x. This increases GPU usage and could lead to slower frames, so keep that in mind.
 - **Daemon Mode**, that enables automatic upscaling ([see below](#daemon-mode)).
 
 #### Saving settings, or reverting them
 
-After changing any settings to your liking, you can either save them or revert them with the buttons at the bottom:
+Once you've changed any settings to your liking, you can save or revert them with the buttons at the bottom:
 
 - **Save**: Writes the current configuration to the YAML configuration file in `~/.config/linux-rt-upscaler/config.yaml`.
-- **Reset**: Reverts all unsaved changes back to the last saved state. The button also has a dropdown menu:
+- **Reset**: Reverts all unsaved changes back to the last saved state. The button also has a dropdown menu with additional actions:
     - If a profile is active: "Clear profile overrides" removes all options from that profile, falling back to global settings.
     - If global settings are active: "Restore system defaults" resets every option to the factory defaults.
 
+!!! note "About the YAML configuration file"
 
-!!! note "About the YAML configuraton file"
-
-    - For operations like duplicating a profile, editing it with a text editor instead is way better.
-    - The upscaler keeps backups of this file but, if the data there is important for you, consider keeping your own.
+    - For operations like duplicating a profile, editing the file with a text editor may be easier.
+    - The upscaler keeps backups of this file, but if the data is important to you, consider keeping your own backups.
     - Changes to the GUI style are saved to `~/.config/linux-rt-upscaler/config-gui.yaml`, independently of the upscaler settings.
-    - For more info, see [Configuration](configuration.md/#yaml-configuration-file).
-
+    - For more info, see [Configuration](configuration.md#yaml-configuration-file).
 
 ### Left Sidebar: Profiles
 
@@ -80,7 +91,7 @@ After changing any settings to your liking, you can either save them or revert t
 
     For this reason, the upscaler supports configuration profiles that let you define specific settings for each window or setup. They contain **settings overrides** that change how the upscaler behaves for matching windows.
 
-    For more info on profiles, see [Profiles](configuration.md/#profiles).
+    For more info on profiles, see [Configuration](configuration.md#profiles).
 
 #### Profile list and toolbar
 
@@ -97,16 +108,15 @@ The toolbar at the button contains buttons that let you:
 
 1. Click the `+` button in the profile toolbar (or press `Ctrl`+`N`).
 2. A dialog opens where you can:
-   - Name the profile.
-   - Optionally, set an icon from an open window or from a file.
-   - Optionally, define any rules that the window needs to satisfy to automatically match.
+    - Name the profile.
+    - Optionally, set an icon from an open window or from a file.
+    - Optionally, define any rules that the window needs to satisfy to automatically match.
 3. After creating it, the profile appears in the left list, where it can be selected and edited.
 
 !!! note "Selecting a profile"
 
-    Selecting a profile (clicking it or navigating to it with arrow keys) activates it, and the right sidebar switches to editing that profile’s overrides.
-
-    Instead, if the **Global** entry is active (no custom profile selected), the settings sidebar edits the base configuration that every window uses unless a profile overrides it.
+    - Selecting a profile (clicking it or navigating to it with arrow keys) activates it, and the right sidebar switches to editing that profile’s overrides.
+    - Instead, if the **Global** entry is active (no custom profile selected), the settings sidebar edits the base configuration that every window uses unless a profile overrides it.
 
 #### Applying a profile
 

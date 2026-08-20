@@ -4,7 +4,7 @@
 
 !!! warning "Dependency needed for the GUI"
 
-    The [GUI](gui.md) used by the upscaler depends on Qt, which often requires a library that is not installed by default on most desktop environments. Make sure it's installed.
+    The [GUI](gui.md) used by the upscaler depends on Qt, which often requires a library that is not installed by default on most desktop environments.
 
     <details>
     <summary>Install instructions for Qt XCB plugin (click to expand)</summary>
@@ -89,10 +89,10 @@ And that's it! ⭐
 git clone https://github.com/baronsmv/linux-rt-upscaler.git
 cd linux-rt-upscaler
 
-# build in local env
+# build in local env:
 pip install -e .
 
-# or inside a uv virtual env:
+# or better, inside a uv virtual env:
 uv venv && uv pip install -e . 
 ```
 
@@ -111,4 +111,5 @@ sh /tmp/desktop_integration.sh
 
 - Learn the basics of the [Graphical User Interface (GUI)](gui.md).
 - If launching from terminal, see some of the options of the [Command-Line Interface (CLI)](cli.md).
-- Read more about the YAML configuration file in [Configuration](configuration.md).
+- Check out the hotkeys you can use while upscaling in [Controls](controls.md).
+- Read about the configuration options in [Configuration](configuration.md).
