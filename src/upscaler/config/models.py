@@ -28,7 +28,7 @@ DOWNSAMPLERS: Dict[str, str] = {
     "Lanczos (adaptive)": "lanczos",
 }
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
-ZOOM_LEVELS = tuple(f"{level}%" for level in range(50, 401, 25))
+ZOOM_LEVELS = tuple(f"{level}%" for level in range(50, 801, 25))
 
 DEFAULT_HOTKEYS = {
     "toggle_scaling": "Alt+Shift+S",
