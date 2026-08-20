@@ -36,7 +36,7 @@ A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It u
 - Python 3.10 or newer
 - Qt dependencies (see [Dependencies](https://baronsmv.github.io/linux-rt-upscaler/user/installation/#dependencies)).
 
-## Installation
+## Quick Installation
 
 ```sh
 pipx install linux-rt-upscaler
@@ -50,6 +50,7 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 - [Installation](https://baronsmv.github.io/linux-rt-upscaler/user/installation/)
 - [GUI Usage](https://baronsmv.github.io/linux-rt-upscaler/user/gui/)
 - [CLI Options](https://baronsmv.github.io/linux-rt-upscaler/user/cli/)
+- [Controls](https://baronsmv.github.io/linux-rt-upscaler/user/controls/)
 - [API Reference](https://baronsmv.github.io/linux-rt-upscaler/api/overview/)
 
 ## Future Plans

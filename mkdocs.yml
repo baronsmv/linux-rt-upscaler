@@ -53,6 +53,7 @@ nav:
       - Installation: user/installation.md
       - Graphical User Interface (GUI): user/gui.md
       - Command-Line Interface (CLI): user/cli.md
+      - Controls: user/controls.md
       - Configuration: user/configuration.md
   - API Reference:
       - Overview: api/overview.md
