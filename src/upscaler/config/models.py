@@ -64,7 +64,6 @@ BackgroundColor = Union[str, Tuple[float, float, float, float]]
 
 
 @dataclass
-@dataclass
 class Config:
     """
     Global configuration for the upscaler.
