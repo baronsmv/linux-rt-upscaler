@@ -53,10 +53,13 @@ class UpscalerSession(QObject):
 
         win = find_window_by_title(contains="A Game")
         session = UpscalerSession(window=win, enable_hotkeys=False)
-        session.start()
 
-        # later...
-        session.wait(10.0)
+        # Connect signals before starting
+        session.finished.connect(lambda: session.close())
+        session.error.connect(print)
+
+        session.start()
+        # The host event loop keeps running, while the session runs in the background
         ```
 
     **Errors**
@@ -73,18 +76,17 @@ class UpscalerSession(QObject):
 
     ```py
     from upscaler import UpscalerSession
-    from upscaler.window import find_window_by_title
+    from upscaler.acquisition import find_window_by_title
     from upscaler.exceptions import UpscalerError, WindowNotFound
 
     try:
         win = find_window_by_title(contains="A Game")
-        session = UpscalerSession(window=win)
-        session.start()
-        session.run()
+        with UpscalerSession(window=win) as session:
+            session.run()
     except WindowNotFound:
         print("Window not found")
-    except UpscalerError as exc:
-        print(f"Upscaler error: {exc}")
+    except UpscalerError as e:
+        print(f"Upscaler error: {e}")
     ```
 
     **Signals**
