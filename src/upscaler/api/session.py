@@ -64,7 +64,8 @@ class UpscalerSession(QObject):
 
     **Errors**
 
-    All errors derive from [``UpscalerError``](../modules/exceptions.md#upscaler.exceptions.UpscalerError):
+    All errors derive from
+    [``UpscalerError``](../modules/exceptions.md#upscaler.exceptions.UpscalerError):
 
     - ``WindowNotFound``: target window could not be found/acquired.
     - ``ConfigError``: configuration loading/validation failed.

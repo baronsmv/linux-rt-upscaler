@@ -40,6 +40,44 @@
 
 ### Install with pipx (recommended)
 
+!!! note "First time using pipx?"
+
+    If you don’t have pipx installed, install it first with your package manager.
+
+    <details>
+    <summary>Install instructions for pipx (click to expand)</summary>
+
+    **Debian / Ubuntu / Linux Mint**
+
+    ```sh
+    sudo apt update
+    sudo apt install pipx
+    pipx ensurepath
+    ```
+
+    **Fedora / RHEL / CentOS**
+
+    ```sh
+    sudo dnf install pipx
+    pipx ensurepath
+    ```
+
+    **Arch Linux / CachyOS**
+
+    ```sh
+    sudo pacman -S python-pipx
+    pipx ensurepath
+    ```
+
+    **openSUSE**
+
+    ```sh
+    sudo zypper install python-pipx
+    pipx ensurepath
+    ```
+
+    </details>
+
 ```bash
 pipx install linux-rt-upscaler
 ```
