@@ -2,81 +2,67 @@
 
 ## Dependencies
 
-!!! warning "Dependency needed for the GUI"
+The GUI depends on Qt, which often requires a library that is not installed by default on most desktop environments. Install it with:
 
-    The [GUI](gui.md) used by the upscaler depends on Qt, which often requires a library that is not installed by default on most desktop environments.
-
-    <details>
-    <summary>Install instructions for Qt XCB plugin (click to expand)</summary>
-
-    **Debian / Ubuntu / Linux Mint**
+=== "Debian / Ubuntu / Linux Mint"
 
     ```sh
-    sudo apt update
-    sudo apt install libxcb-cursor0
+    sudo apt update && sudo apt install libxcb-cursor0
     ```
 
-    **Fedora / RHEL / CentOS**
+=== "Fedora / RHEL / CentOS"
 
     ```sh
     sudo dnf install xcb-util-cursor
     ```
 
-    **Arch Linux / CachyOS**
+=== "Arch Linux / CachyOS"
 
     ```sh
     sudo pacman -S xcb-util-cursor
     ```
 
-    **openSUSE**
-    
+=== "openSUSE"
+
     ```sh
     sudo zypper install libxcb-cursor0
     ```
-
-    </details>
 
 ## Installation methods
 
 ### Install with pipx (recommended)
 
-!!! note "First time using pipx?"
+If you don’t have pipx installed, install it first:
 
-    If you don’t have pipx installed, install it first with your package manager.
-
-    <details>
-    <summary>Install instructions for pipx (click to expand)</summary>
-
-    **Debian / Ubuntu / Linux Mint**
+=== "Debian / Ubuntu / Linux Mint"
 
     ```sh
-    sudo apt update
-    sudo apt install pipx
+    sudo apt update && sudo apt install pipx
     pipx ensurepath
     ```
 
-    **Fedora / RHEL / CentOS**
+=== "Fedora / RHEL / CentOS"
 
     ```sh
     sudo dnf install pipx
     pipx ensurepath
     ```
 
-    **Arch Linux / CachyOS**
+=== "Arch Linux / CachyOS"
 
     ```sh
     sudo pacman -S python-pipx
     pipx ensurepath
     ```
 
-    **openSUSE**
+=== "openSUSE"
 
     ```sh
     sudo zypper install python-pipx
     pipx ensurepath
     ```
 
-    </details>
+Then install the upscaler:
 
 ```bash
 pipx install linux-rt-upscaler
@@ -86,42 +72,36 @@ And that's it! ⭐
 
 ### Install from source
 
-!!! note "Source compilation dependencies"
+Building from source requires C/C++ compilation tools and development packages. Install them with:
 
-    At build time, the upscaler compiles a couple of C/C++ extensions, which require some dependencies, listed below.
+=== "Debian / Ubuntu / Linux Mint"
 
-    <details>
-    <summary>Required development packages (click to expand)</summary>
-    
-    **Debian / Ubuntu / Linux Mint**
-    
     ```sh
-    sudo apt update
-    sudo apt install gcc make libvulkan-dev libx11-dev libxcb1-dev libx11-xcb-dev \
-        libxext-dev libxdamage-dev libxfixes-dev
+    sudo apt update && sudo apt install gcc make libvulkan-dev libx11-dev libxcb1-dev \
+        libx11-xcb-dev libxext-dev libxdamage-dev libxfixes-dev
     ```
-    
-    **Fedora / RHEL / CentOS**
-    
+
+=== "Fedora / RHEL / CentOS"
+
     ```sh
     sudo dnf install gcc make vulkan-loader-devel libX11-devel libxcb-devel libX11-xcb-devel \
         libXext-devel libXdamage-devel libXfixes-devel
     ```
-    
-    **Arch Linux / CachyOS**
-    
+
+=== "Arch Linux / CachyOS"
+
     ```sh
     sudo pacman -S base-devel vulkan-devel libx11 libxcb libxext libxdamage libxfixes
     ```
-    
-    **openSUSE**
-    
+
+=== "openSUSE"
+
     ```sh
     sudo zypper install gcc make vulkan-devel libX11-devel libxcb-devel libX11-xcb-devel \
         libXext-devel libXdamage-devel libXfixes-devel
     ```
-    
-    </details>
+
+Then clone and install:
 
 ```sh
 git clone https://github.com/baronsmv/linux-rt-upscaler.git
@@ -131,7 +111,7 @@ cd linux-rt-upscaler
 pip install -e .
 
 # or better, inside a uv virtual env:
-uv venv && uv pip install -e . 
+uv venv && uv pip install -e .
 ```
 
 ## Desktop integration (optional)
