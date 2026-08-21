@@ -42,6 +42,8 @@ A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It u
 pipx install linux-rt-upscaler
 ```
 
+For detailed installation instructions, including how to install `pipx`, see the [Installation Guide](https://baronsmv.github.io/linux-rt-upscaler/user/installation/).
+
 After installation, the `upscale` and `upscale-gui` commands will be available globally. You can also create a [desktop entry](https://baronsmv.github.io/linux-rt-upscaler/user/installation/#desktop-integration-optional) of the GUI for easy access. 
 
 ## Guides and Docs
@@ -56,8 +58,7 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 
 ## Roadmap
 
-- [ ] Translation infrastructure
-- [ ] Community-contributed translations
+- [ ] Translation infrastructure and community-contributed translations
 - [ ] GUI Profiles operations (drag & drop, duplicate)
 - [ ] GUI System Tray
 - [ ] Complete GUI Style settings (font size, spacing, etc.)
