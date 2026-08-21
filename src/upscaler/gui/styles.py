@@ -578,12 +578,14 @@ def profile_list_style(cfg: GUIConfig) -> str:
     """Style for the QListWidget that displays profiles."""
     return f"""
     QListWidget {{
+        font-size: {cfg.sidebar.tab_font_size}px;
         background-color: transparent;
         border: none;
         outline: none;
     }}
     QListWidget::item {{
         color: {cfg.palette.text};
+        font-size: {cfg.sidebar.tab_font_size}px;
         background-color: transparent;
         border-radius: {cfg.profile.profile_border_radius}px;
         padding: 4px 8px;
