@@ -467,8 +467,6 @@ class OverlayWindow(QMainWindow):
 
         # Get positions
         pos = event.position().toPoint()  # local overlay coordinates
-        screen_x = int(event.globalPosition().x())  # root X coordinate
-        screen_y = int(event.globalPosition().y())  # root Y coordinate
 
         # Map to target window coordinates
         target_x, target_y, inside = self._mapper.map(pos.x(), pos.y())
@@ -480,30 +478,18 @@ class OverlayWindow(QMainWindow):
 
         # Dispatch based on event type
         if event.type() == QEvent.MouseMove:
-            self._forwarder.forward_motion(screen_x, screen_y, target_x, target_y)
-
+            self._forwarder.forward_motion(target_x, target_y)
         elif event.type() == QEvent.MouseButtonPress:
-            self._forwarder.forward_button(
-                event.button(), True, screen_x, screen_y, target_x, target_y
-            )
-
+            self._forwarder.forward_button(event.button(), True, target_x, target_y)
         elif event.type() == QEvent.MouseButtonRelease:
-            self._forwarder.forward_button(
-                event.button(), False, screen_x, screen_y, target_x, target_y
-            )
-
+            self._forwarder.forward_button(event.button(), False, target_x, target_y)
         elif event.type() == QEvent.Wheel:
             delta = event.angleDelta()
             # Process vertical and horizontal separately
             if delta.y() != 0:
-                self._forwarder.forward_wheel(
-                    delta.y(), False, screen_x, screen_y, target_x, target_y
-                )
+                self._forwarder.forward_wheel(delta.y(), False, target_x, target_y)
             if delta.x() != 0:
-                self._forwarder.forward_wheel(
-                    delta.x(), True, screen_x, screen_y, target_x, target_y
-                )
-
+                self._forwarder.forward_wheel(delta.x(), True, target_x, target_y)
         else:
             logger.warning(f"Unexpected event type in _handle_mouse: {event.type()}")
 

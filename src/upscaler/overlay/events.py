@@ -140,13 +140,26 @@ class X11EventForwarder:
 
         return state
 
-    def forward_motion(
-        self,
-        screen_x: int,
-        screen_y: int,
-        target_x: int,
-        target_y: int,
-    ) -> None:
+    def _get_target_root_origin(self) -> tuple[int, int]:
+        """Return (root_x, root_y) of the target window's origin."""
+        if self.conn is None or self.target_handle is None:
+            return 0, 0
+
+        try:
+            cookie = self.conn.core.TranslateCoordinates(
+                self.target_handle,
+                self._root,
+                0,
+                0,
+            )
+            reply = cookie.reply()
+            if reply:
+                return reply.dst_x, reply.dst_y
+        except Exception as e:
+            logger.debug(f"TranslateCoordinates failed: {e}")
+        return 0, 0
+
+    def forward_motion(self, target_x: int, target_y: int) -> None:
         """
         Send a MotionNotify event to the target window.
 
@@ -159,6 +172,7 @@ class X11EventForwarder:
             target_x, target_y: Coordinates within the target window.
         """
         state = self._get_current_state()
+        root_origin_x, root_origin_y = self._get_target_root_origin()
 
         motion_event = xcffib.xproto.MotionNotifyEvent.synthetic(
             detail=0,  # not used for motion
@@ -166,8 +180,8 @@ class X11EventForwarder:
             root=self._root,
             event=self.target_handle,
             child=0,
-            root_x=screen_x,
-            root_y=screen_y,
+            root_x=root_origin_x + target_x,
+            root_y=root_origin_y + target_y,
             event_x=target_x,
             event_y=target_y,
             state=state,
@@ -181,13 +195,7 @@ class X11EventForwarder:
         self._send_event(motion_event.pack(), mask)
 
     def forward_button(
-        self,
-        qt_button: Qt.MouseButton,
-        press: bool,
-        screen_x: int,
-        screen_y: int,
-        target_x: int,
-        target_y: int,
+        self, qt_button: Qt.MouseButton, press: bool, target_x: int, target_y: int
     ) -> None:
         """
         Send a ButtonPress or ButtonRelease event.
@@ -195,7 +203,6 @@ class X11EventForwarder:
         Args:
             qt_button: Qt button constant (e.g., Qt.LeftButton).
             press: True for press, False for release.
-            screen_x, screen_y: Global screen coordinates.
             target_x, target_y: Coordinates within the target window.
         """
         x11_button = BUTTON_MAP.get(qt_button)
@@ -205,6 +212,7 @@ class X11EventForwarder:
 
         # Get the current state (buttons + modifiers) before this event
         state = self._get_current_state()
+        root_origin_x, root_origin_y = self._get_target_root_origin()
 
         if press:
             event = xcffib.xproto.ButtonPressEvent.synthetic(
@@ -213,8 +221,8 @@ class X11EventForwarder:
                 root=self._root,
                 event=self.target_handle,
                 child=0,
-                root_x=screen_x,
-                root_y=screen_y,
+                root_x=root_origin_x + target_x,
+                root_y=root_origin_y + target_y,
                 event_x=target_x,
                 event_y=target_y,
                 state=state,
@@ -228,8 +236,8 @@ class X11EventForwarder:
                 root=self._root,
                 event=self.target_handle,
                 child=0,
-                root_x=screen_x,
-                root_y=screen_y,
+                root_x=root_origin_x + target_x,
+                root_y=root_origin_y + target_y,
                 event_x=target_x,
                 event_y=target_y,
                 state=state,
@@ -240,13 +248,7 @@ class X11EventForwarder:
         self._send_event(event.pack(), mask)
 
     def forward_wheel(
-        self,
-        delta: int,
-        horizontal: bool,
-        screen_x: int,
-        screen_y: int,
-        target_x: int,
-        target_y: int,
+        self, delta: int, horizontal: bool, target_x: int, target_y: int
     ) -> None:
         """
         Send wheel events (simulated as button presses/releases).
@@ -259,7 +261,6 @@ class X11EventForwarder:
         Args:
             delta: Signed wheel movement (positive = up/right, negative = down/left).
             horizontal: True for horizontal scroll, False for vertical.
-            screen_x, screen_y: Global screen coordinates.
             target_x, target_y: Coordinates within the target window.
         """
         if horizontal:
@@ -271,6 +272,7 @@ class X11EventForwarder:
         # Use the current button+modifier state for each step
         # Note: some applications ignore the state field in wheel events
         state = self._get_current_state()
+        root_origin_x, root_origin_y = self._get_target_root_origin()
 
         for _ in range(steps):
             # ButtonPress
@@ -280,8 +282,8 @@ class X11EventForwarder:
                 root=self._root,
                 event=self.target_handle,
                 child=0,
-                root_x=screen_x,
-                root_y=screen_y,
+                root_x=root_origin_x + target_x,
+                root_y=root_origin_y + target_y,
                 event_x=target_x,
                 event_y=target_y,
                 state=state,
@@ -296,8 +298,8 @@ class X11EventForwarder:
                 root=self._root,
                 event=self.target_handle,
                 child=0,
-                root_x=screen_x,
-                root_y=screen_y,
+                root_x=root_origin_x + target_x,
+                root_y=root_origin_y + target_y,
                 event_x=target_x,
                 event_y=target_y,
                 state=state,
