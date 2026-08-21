@@ -402,10 +402,12 @@ def slider_style(cfg: GUIConfig, enabled: bool = True) -> str:
 #  Control: File dialog
 # ---------------------------------------------------------------------------
 def file_dialog_style(cfg: GUIConfig) -> str:
-    """Style the QFileDialog to match the application theme."""
+    """Style every relevant widget inside a QFileDialog."""
     return f"""
     QFileDialog {{
         background-color: {cfg.palette.background};
+        color: {cfg.palette.text};
+        font-size: {cfg.dialog.label_font_size}px;
     }}
     QFileDialog QLabel {{
         color: {cfg.palette.text};
@@ -426,7 +428,8 @@ def file_dialog_style(cfg: GUIConfig) -> str:
     QFileDialog QSpinBox:focus {{
         border-color: {cfg.palette.control};
     }}
-    QFileDialog QPushButton {{
+    QFileDialog QPushButton,
+    QFileDialog QToolButton {{
         background-color: {cfg.palette.button};
         border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.button_border_radius}px;
@@ -434,32 +437,110 @@ def file_dialog_style(cfg: GUIConfig) -> str:
         color: {cfg.palette.text};
         font-size: {cfg.dialog.label_font_size}px;
     }}
-    QFileDialog QPushButton:hover {{
+    QFileDialog QPushButton:hover,
+    QFileDialog QToolButton:hover {{
         background-color: {cfg.palette.button_hover};
         border-color: {cfg.palette.border_hover};
         color: {cfg.palette.text_hover};
     }}
-    QFileDialog QPushButton:pressed {{
+    QFileDialog QPushButton:pressed,
+    QFileDialog QToolButton:pressed {{
         background-color: {cfg.palette.button_hover};
     }}
-    QFileDialog QListWidget {{
-        background-color: {cfg.palette.input};
+    QFileDialog QPushButton:disabled,
+    QFileDialog QToolButton:disabled {{
+        background-color: {cfg.palette.button};
+        color: {cfg.palette.text_subtle};
+        border-color: {cfg.palette.border};
+    }}
+    QFileDialog QListView,
+    QFileDialog QTreeView,
+    QFileDialog QTableView {{
         border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.list_border_radius}px;
         color: {cfg.palette.text};
+        font-size: {cfg.dialog.label_font_size}px;
+        outline: none;
     }}
-    QFileDialog QListWidget::item {{
-        padding: {cfg.dialog.list_item_padding};
+    QFileDialog QListView::item,
+    QFileDialog QTreeView::item,
+    QFileDialog QTableView::item {{
         border-radius: {cfg.dialog.list_item_border_radius}px;
+        color: {cfg.palette.text};
     }}
-    QFileDialog QListWidget::item:hover {{
+    QFileDialog QListView::item:hover,
+    QFileDialog QTreeView::item:hover,
+    QFileDialog QTableView::item:hover {{
         background-color: {cfg.palette.button_hover};
         color: {cfg.palette.text_hover};
     }}
-    QFileDialog QListWidget::item:selected {{
+    QFileDialog QListView::item:selected,
+    QFileDialog QTreeView::item:selected,
+    QFileDialog QTableView::item:selected {{
         background-color: {cfg.palette.control};
         color: {cfg.palette.text_hover};
     }}
+        QFileDialog QHeaderView::section {{
+        background-color: {cfg.palette.button};
+        color: {cfg.palette.text};
+        border: none;
+        border-bottom: 1px solid {cfg.palette.border};
+        padding: 2px 6px;
+        height: {round(cfg.dialog.label_font_size * 1.3)}px;
+        font-size: {cfg.dialog.label_font_size}px;
+    }}
+    QFileDialog QScrollBar:vertical {{
+        background: transparent;
+        width: 10px;
+        margin: 0;
+    }}
+    QFileDialog QScrollBar::handle:vertical {{
+        background-color: {cfg.palette.handle};
+        border-radius: 5px;
+        min-height: 30px;
+    }}
+    QFileDialog QScrollBar::handle:vertical:hover {{
+        background-color: {cfg.palette.handle_hover};
+    }}
+    QFileDialog QScrollBar:horizontal {{
+        background: transparent;
+        height: 10px;
+        margin: 0;
+    }}
+    QFileDialog QScrollBar::handle:horizontal {{
+        background-color: {cfg.palette.handle};
+        border-radius: 5px;
+        min-width: 30px;
+    }}
+    QFileDialog QScrollBar::handle:horizontal:hover {{
+        background-color: {cfg.palette.handle_hover};
+    }}
+    QFileDialog QScrollBar::add-line:vertical,
+    QFileDialog QScrollBar::sub-line:vertical,
+    QFileDialog QScrollBar::add-line:horizontal,
+    QFileDialog QScrollBar::sub-line:horizontal {{
+        height: 0px;
+        width: 0px;
+    }}
+    QFileDialog QScrollBar::add-page:vertical,
+    QFileDialog QScrollBar::sub-page:vertical,
+    QFileDialog QScrollBar::add-page:horizontal,
+    QFileDialog QScrollBar::sub-page:horizontal {{
+        background: none;
+    }}
+    QFileDialog QToolButton#qt_file_dialog_up_button,
+    QFileDialog QToolButton#qt_file_dialog_back_button,
+    QFileDialog QToolButton#qt_file_dialog_forward_button {{
+        border: none;
+        background-color: transparent;
+        padding: 4px;
+    }}
+    QFileDialog QToolButton#qt_file_dialog_up_button:hover,
+    QFileDialog QToolButton#qt_file_dialog_back_button:hover,
+    QFileDialog QToolButton#qt_file_dialog_forward_button:hover {{
+        background-color: {cfg.palette.button_hover};
+    }}
+    {tooltip_style(cfg)}
     """
 
 
