@@ -29,6 +29,7 @@ from ..styles import (
     dialog_match_label_style,
     dialog_style,
     icon_preview_style,
+    line_edit_style,
     message_box_style,
 )
 from ...window import get_window_icon
@@ -78,6 +79,7 @@ class ProfileDialog(QDialog):
         name_label.setStyleSheet(dialog_header_label_style(self._gui_config))
         name_col.addWidget(name_label)
         self._name_edit = QLineEdit(profile_name)
+        self._name_edit.setStyleSheet(line_edit_style(self._gui_config))
         self._name_edit.setPlaceholderText("Profile name")
         self._name_edit.setToolTip("A unique name for this profile. Required.")
         name_col.addWidget(self._name_edit)
@@ -264,6 +266,7 @@ class ProfileDialog(QDialog):
         match_label = QLabel(label)
         match_label.setStyleSheet(dialog_match_label_style(self._gui_config))
         line_edit = QLineEdit()
+        line_edit.setStyleSheet(line_edit_style(self._gui_config))
         line_edit.setPlaceholderText(placeholder)
         line_edit.setToolTip(tooltip)
         box_layout = QHBoxLayout()

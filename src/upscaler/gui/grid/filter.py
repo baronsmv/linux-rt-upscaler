@@ -4,7 +4,7 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QWidget, QLineEdit, QPushButton, QLabel
 
 from ..icons import load_icon, load_pixmap
-from ..styles import filter_bar_style
+from ..styles import filter_bar_style, line_edit_style
 
 
 class FilterBar(QWidget):
@@ -30,6 +30,7 @@ class FilterBar(QWidget):
 
         # ----- Line edit (fills the whole widget minus margins) -----
         self._line_edit = QLineEdit(self)
+        self._line_edit.setStyleSheet(line_edit_style(self._gui_config))
         self._line_edit.setPlaceholderText(f"Filter windows{chr(8230)}")
         self._line_edit.textChanged.connect(self._on_text_changed)
         self._line_edit.installEventFilter(self)

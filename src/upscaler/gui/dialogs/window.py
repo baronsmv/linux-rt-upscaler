@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..icons import load_pixmap
-from ..styles import dialog_style
+from ..styles import dialog_style, line_edit_style
 from ...window import WindowInfo, list_windows, get_window_icon
 
 if TYPE_CHECKING:
@@ -47,6 +47,7 @@ class WindowPickerDialog(QDialog):
 
         # Filter input
         self._filter = QLineEdit()
+        self._filter.setStyleSheet(line_edit_style(self._gui_config))
         self._filter.setPlaceholderText(f"Filter windows{chr(8230)}")
         self._filter.textChanged.connect(self._populate)
         layout.addWidget(self._filter)
