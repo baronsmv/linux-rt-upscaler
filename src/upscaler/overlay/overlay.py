@@ -108,10 +108,19 @@ class OverlayWindow(QMainWindow):
         self._mapper = CoordinateMapper()
         self._forwarder = X11EventForwarder()
 
+        # Send MotionNotify every 100 ms
+        self._hover_keepalive_timer = QTimer(self)
+        self._hover_keepalive_timer.setInterval(100)
+        self._hover_keepalive_timer.timeout.connect(
+            self._forwarder.send_keepalive_motion
+        )
+        self._hover_keepalive_timer.start()
+
         # Determine whether we should forward events
         self._should_forward = (
             config.overlay_mode != OverlayMode.ALWAYS_ON_TOP_TRANSPARENT.value
         )
+        self._start_keepalive()
         self._forwarder.enabled = self._should_forward
         self._forwarder.target_handle = win_info.handle
 
@@ -377,7 +386,8 @@ class OverlayWindow(QMainWindow):
         self._update_mapper()
 
         # Update forwarding target
-        self._forwarder.target_handle = win_info.handle
+        self._forwarder.set_target_handle(win_info.handle)
+        self._forwarder.reset_inside_state()
         self._opacity_controller.update_target_info(
             win_info.handle,
             self._mapper.client_width,
@@ -451,6 +461,13 @@ class OverlayWindow(QMainWindow):
 
         return super().eventFilter(obj, event)
 
+    def _start_keepalive(self):
+        if self._should_forward and not self._hover_keepalive_timer.isActive():
+            self._hover_keepalive_timer.start()
+
+    def _stop_keepalive(self):
+        self._hover_keepalive_timer.stop()
+
     def _handle_mouse(self, event: QEvent) -> None:
         """
         Convert a Qt mouse event to X11 events and forward them.
@@ -471,6 +488,7 @@ class OverlayWindow(QMainWindow):
         # Map to target window coordinates
         target_x, target_y, inside = self._mapper.map(pos.x(), pos.y())
         if not inside:
+            self._forwarder.forward_leave()
             logger.debug(
                 f"Ignoring mouse event outside scaling rect: ({pos.x()},{pos.y()})"
             )

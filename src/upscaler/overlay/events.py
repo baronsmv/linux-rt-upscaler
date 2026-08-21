@@ -50,10 +50,14 @@ class X11EventForwarder:
 
     def __init__(self) -> None:
         """Create an X11EventForwarder and open an XCB connection."""
-        self.conn: Optional[xcffib.Connection] = None
-        self._root: Optional[int] = None
-        self.target_handle: Optional[int] = None
         self.enabled: bool = True
+        self.conn: Optional[xcffib.Connection] = None
+        self.target_handle: Optional[int] = None
+        self._root: Optional[int] = None
+        self._inside_target: bool = False
+        self._last_target_x: Optional[int] = None
+        self._last_target_y: Optional[int] = None
+
         self._open_connection()
 
     def _open_connection(self) -> None:
@@ -159,7 +163,66 @@ class X11EventForwarder:
             logger.debug(f"TranslateCoordinates failed: {e}")
         return 0, 0
 
-    def forward_motion(self, target_x: int, target_y: int) -> None:
+    def _send_enter_notify(self, target_x: int, target_y: int) -> None:
+        """Send an EnterNotify event for the target window."""
+        if self.conn is None or self.target_handle is None:
+            return
+
+        root_origin_x, root_origin_y = self._get_target_root_origin()
+        enter_event = xcffib.xproto.EnterNotifyEvent.synthetic(
+            detail=xcffib.xproto.NotifyDetail.Nonlinear,
+            time=xcffib.xproto.Time.CurrentTime,
+            root=self._root,
+            event=self.target_handle,
+            child=0,
+            root_x=root_origin_x + target_x,
+            root_y=root_origin_y + target_y,
+            event_x=target_x,
+            event_y=target_y,
+            state=self._get_current_state(),
+            mode=xcffib.xproto.NotifyMode.Normal,
+            same_screen_focus=1,
+        )
+        self._send_event(enter_event.pack(), xcffib.xproto.EventMask.EnterWindow)
+
+    def _send_leave_notify(self) -> None:
+        """Send a LeaveNotify event for the target window."""
+        if self.conn is None or self.target_handle is None:
+            return
+
+        root_origin_x, root_origin_y = self._get_target_root_origin()
+        leave_event = xcffib.xproto.LeaveNotifyEvent.synthetic(
+            detail=xcffib.xproto.NotifyDetail.Nonlinear,
+            time=xcffib.xproto.Time.CurrentTime,
+            root=self._root,
+            event=self.target_handle,
+            child=0,
+            root_x=root_origin_x,
+            root_y=root_origin_y,
+            event_x=0,
+            event_y=0,
+            state=self._get_current_state(),
+            mode=xcffib.xproto.NotifyMode.Normal,
+            same_screen_focus=1,
+        )
+        self._send_event(leave_event.pack(), xcffib.xproto.EventMask.LeaveWindow)
+
+    def set_target_handle(self, handle: int) -> None:
+        self.target_handle = handle
+        self._inside_target = False
+        self._last_target_x = None
+        self._last_target_y = None
+
+    def send_keepalive_motion(self) -> None:
+        """
+        Send a MotionNotify at the last known target position, if the pointer
+        was inside the target window. This keeps hover state alive without
+        moving the real pointer.
+        """
+        if self._inside_target and self._last_target_x is not None:
+            self.forward_motion(self._last_target_x, self._last_target_y)
+
+    def forward_motion(self, target_x: Optional[int], target_y: Optional[int]) -> None:
         """
         Send a MotionNotify event to the target window.
 
@@ -171,6 +234,14 @@ class X11EventForwarder:
             screen_x, screen_y: Global screen coordinates (root coordinates).
             target_x, target_y: Coordinates within the target window.
         """
+        # Send EnterNotify the first time the pointer enters the target window.
+        if not self._inside_target:
+            self._send_enter_notify(target_x, target_y)
+            self._inside_target = True
+
+        self._last_target_x = target_x
+        self._last_target_y = target_y
+
         state = self._get_current_state()
         root_origin_x, root_origin_y = self._get_target_root_origin()
 
@@ -194,6 +265,14 @@ class X11EventForwarder:
         )
         self._send_event(motion_event.pack(), mask)
 
+    def forward_leave(self) -> None:
+        """Send a LeaveNotify event if the pointer was inside the target window."""
+        if self._inside_target:
+            self._send_leave_notify()
+            self._inside_target = False
+        self._last_target_x = None
+        self._last_target_y = None
+
     def forward_button(
         self, qt_button: Qt.MouseButton, press: bool, target_x: int, target_y: int
     ) -> None:
@@ -205,6 +284,11 @@ class X11EventForwarder:
             press: True for press, False for release.
             target_x, target_y: Coordinates within the target window.
         """
+        # Send EnterNotify the first time the pointer enters the target window.
+        if not self._inside_target:
+            self._send_enter_notify(target_x, target_y)
+            self._inside_target = True
+
         x11_button = BUTTON_MAP.get(qt_button)
         if x11_button is None:
             logger.warning(f"Unmapped Qt button {qt_button}, ignoring")
@@ -263,6 +347,11 @@ class X11EventForwarder:
             horizontal: True for horizontal scroll, False for vertical.
             target_x, target_y: Coordinates within the target window.
         """
+        # Send EnterNotify the first time the pointer enters the target window.
+        if not self._inside_target:
+            self._send_enter_notify(target_x, target_y)
+            self._inside_target = True
+
         if horizontal:
             button = 6 if delta > 0 else 7  # 6 = right, 7 = left
         else:
@@ -308,3 +397,7 @@ class X11EventForwarder:
             self._send_event(
                 release_event.pack(), xcffib.xproto.EventMask.ButtonRelease
             )
+
+    def reset_inside_state(self) -> None:
+        """Force the next motion event to send EnterNotify again."""
+        self._inside_target = False
