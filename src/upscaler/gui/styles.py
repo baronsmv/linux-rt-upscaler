@@ -658,10 +658,12 @@ def dialog_style(cfg: GUIConfig) -> str:
         border-radius: {cfg.dialog.list_border_radius}px;
         outline: none;
         color: {cfg.palette.text};
+        font-size: {cfg.dialog.label_font_size}px;
     }}
     QListWidget::item {{
         padding: {cfg.dialog.list_item_padding};
         border-radius: {cfg.dialog.list_item_border_radius}px;
+        font-size: {cfg.dialog.label_font_size}px;
     }}
     QListWidget::item:hover {{
         background-color: {cfg.palette.button_hover};
