@@ -743,6 +743,7 @@ def message_box_style(cfg: GUIConfig) -> str:
         border-radius: {cfg.dialog.button_border_radius}px;
         padding: {cfg.dialog.button_padding};
         color: {cfg.palette.text};
+        font-size: {cfg.dialog.label_font_size}px;
         min-width: 60px;
     }}
     QMessageBox QPushButton:hover {{
