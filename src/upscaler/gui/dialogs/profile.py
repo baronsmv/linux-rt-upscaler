@@ -128,7 +128,7 @@ class ProfileDialog(QDialog):
         self._actions_row.setSpacing(6)
 
         # Capture window
-        capture_win_btn = QPushButton("  Capture window")
+        capture_win_btn = QPushButton("\u2009\u2009Capture window")
         capture_win_btn.setIcon(
             load_icon("actions/capture", 20, 20, color=self._gui_config.palette.icon)
         )

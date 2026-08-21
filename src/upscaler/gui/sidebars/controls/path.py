@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from ._base import BaseRow
-from ...styles import line_edit_style
+from ...styles import file_dialog_style, line_edit_style, path_browse_button_style
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
@@ -98,15 +98,20 @@ class PathPickerRow(BaseRow):
         self._edit.setStyleSheet(
             line_edit_style(self._gui_config, enabled=self.isEnabled())
         )
+        self._browse_btn.setStyleSheet(
+            path_browse_button_style(self._gui_config, enabled=self.isEnabled())
+        )
 
     def _browse(self) -> None:
         current = self._edit.text() or os.path.expanduser("~")
-        chosen = QFileDialog.getExistingDirectory(
-            parent=self,
-            caption="Choose Screenshot Directory",
-            dir=current,
-            options=QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks,
-        )
-        if chosen:
-            self._edit.setText(chosen)
-            self.pathChanged.emit(chosen)
+        dlg = QFileDialog(parent=self, caption="Choose Screenshot Directory")
+        dlg.setDirectory(current)
+        dlg.setFileMode(QFileDialog.Directory)
+        dlg.setOption(QFileDialog.ShowDirsOnly, True)
+        dlg.setOption(QFileDialog.DontResolveSymlinks, True)
+        dlg.setStyleSheet(file_dialog_style(self._gui_config))
+        if dlg.exec() == QFileDialog.Accepted:
+            chosen = dlg.selectedFiles()[0]
+            if chosen:
+                self._edit.setText(chosen)
+                self.pathChanged.emit(chosen)

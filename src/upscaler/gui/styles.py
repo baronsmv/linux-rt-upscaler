@@ -399,6 +399,102 @@ def slider_style(cfg: GUIConfig, enabled: bool = True) -> str:
 
 
 # ---------------------------------------------------------------------------
+#  Control: File dialog
+# ---------------------------------------------------------------------------
+def file_dialog_style(cfg: GUIConfig) -> str:
+    """Style the QFileDialog to match the application theme."""
+    return f"""
+    QFileDialog {{
+        background-color: {cfg.palette.background};
+    }}
+    QFileDialog QLabel {{
+        color: {cfg.palette.text};
+        font-size: {cfg.dialog.label_font_size}px;
+    }}
+    QFileDialog QLineEdit,
+    QFileDialog QComboBox,
+    QFileDialog QSpinBox {{
+        background-color: {cfg.palette.input};
+        border: 1px solid {cfg.palette.border};
+        border-radius: {cfg.dialog.input_border_radius}px;
+        padding: {cfg.dialog.input_padding};
+        color: {cfg.palette.text};
+        font-size: {cfg.dialog.label_font_size}px;
+    }}
+    QFileDialog QLineEdit:focus,
+    QFileDialog QComboBox:focus,
+    QFileDialog QSpinBox:focus {{
+        border-color: {cfg.palette.control};
+    }}
+    QFileDialog QPushButton {{
+        background-color: {cfg.palette.button};
+        border: 1px solid {cfg.palette.border};
+        border-radius: {cfg.dialog.button_border_radius}px;
+        padding: {cfg.dialog.button_padding};
+        color: {cfg.palette.text};
+        font-size: {cfg.dialog.label_font_size}px;
+    }}
+    QFileDialog QPushButton:hover {{
+        background-color: {cfg.palette.button_hover};
+        border-color: {cfg.palette.border_hover};
+        color: {cfg.palette.text_hover};
+    }}
+    QFileDialog QPushButton:pressed {{
+        background-color: {cfg.palette.button_hover};
+    }}
+    QFileDialog QListWidget {{
+        background-color: {cfg.palette.input};
+        border: 1px solid {cfg.palette.border};
+        border-radius: {cfg.dialog.list_border_radius}px;
+        color: {cfg.palette.text};
+    }}
+    QFileDialog QListWidget::item {{
+        padding: {cfg.dialog.list_item_padding};
+        border-radius: {cfg.dialog.list_item_border_radius}px;
+    }}
+    QFileDialog QListWidget::item:hover {{
+        background-color: {cfg.palette.button_hover};
+        color: {cfg.palette.text_hover};
+    }}
+    QFileDialog QListWidget::item:selected {{
+        background-color: {cfg.palette.control};
+        color: {cfg.palette.text_hover};
+    }}
+    """
+
+
+# ---------------------------------------------------------------------------
+#  Control: Browse button
+# ---------------------------------------------------------------------------
+def path_browse_button_style(cfg: GUIConfig, enabled: bool = True) -> str:
+    """Style for the small browse button next to a path field."""
+    palette = _control_palette(cfg=cfg, enabled=enabled)
+    return f"""
+    QPushButton {{
+        background-color: {cfg.palette.button};
+        border: 1px solid {palette.border};
+        border-radius: {cfg.edit_field.border_radius}px;
+        color: {palette.text};
+        font-size: {cfg.sidebar.tab_font_size}px;
+    }}
+    QPushButton:hover {{
+        background-color: {cfg.palette.button_hover};
+        border-color: {palette.border_hover};
+        color: {palette.text_hover};
+    }}
+    QPushButton:pressed {{
+        background-color: {cfg.palette.button_hover};
+    }}
+    QPushButton:disabled {{
+        background-color: {cfg.palette.button};
+        color: {cfg.palette.text_subtle};
+        border-color: {palette.border};
+    }}
+    {tooltip_style(cfg)}
+    """
+
+
+# ---------------------------------------------------------------------------
 #  Dialog
 # ---------------------------------------------------------------------------
 def dialog_style(cfg: GUIConfig) -> str:
@@ -442,10 +538,14 @@ def dialog_style(cfg: GUIConfig) -> str:
     }}
     QPushButton {{
         background-color: {cfg.palette.button};
+        font-size: {cfg.dialog.label_font_size}px;
         border: 1px solid {cfg.palette.border};
         border-radius: {cfg.dialog.button_border_radius}px;
         padding: {cfg.dialog.button_padding};
         color: {cfg.palette.text};
+    }}
+    QDialogButtonBox QPushButton {{
+        font-size: {cfg.dialog.label_font_size}px;
     }}
     QPushButton:hover {{
         background-color: {cfg.palette.button_hover};
