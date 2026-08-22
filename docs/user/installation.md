@@ -32,7 +32,7 @@ The GUI depends on Qt, which often requires a library that is not installed by d
 
 ### Install with pipx (recommended)
 
-If you don’t have pipx installed, install it first:
+If you don't have pipx installed, install it first:
 
 === "Debian / Ubuntu / Linux Mint"
 

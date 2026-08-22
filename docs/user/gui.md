@@ -115,23 +115,23 @@ The toolbar at the button contains buttons that let you:
 
 !!! note "Selecting a profile"
 
-    - Selecting a profile (clicking it or navigating to it with arrow keys) activates it, and the right sidebar switches to editing that profile’s overrides.
+    - Selecting a profile (clicking it or navigating to it with arrow keys) activates it, and the right sidebar switches to editing that profile's overrides.
     - Instead, if the **Global** entry is active (no custom profile selected), the settings sidebar edits the base configuration that every window uses unless a profile overrides it.
 
 #### Applying a profile
 
 Profiles are applied:
 
-- **Manually** by clicking a profile in the list. Any window upscaled that doesn't match a profile will use the manually selected profile.
+- **Manually** by clicking a profile in the list. Any window selected in the grid will use the manually selected profile.
 - **Automatically** when selecting a window thumbnail if all the match rules are satisfied.
-- With the **Daemon mode** ([see below](#daemon-mode)), if a match is found, the daemon switches to that window and applies the profile’s options.
+- With the **Daemon mode** ([see below](#daemon-mode)), if a match is found, the daemon switches to that window and applies the profile's options.
 
 ## Daemon Mode
 
 When **Daemon Mode** is enabled (found in the General tab), a background process continuously looks for windows that match any of your profiles. As soon as a match appears, the daemon:
 
 1. Focus the matched window.
-2. Starts upscaling with the profile’s settings.
+2. Starts upscaling with the profile's settings.
 3. If the window closes, the daemon goes back to scanning for the next match.
 
 Daemon mode is ideal if you want to automatically upscale a profiled window as soon as it launches, or if your mouse died from exhaustion after a long day of multi-clicking~.

@@ -12,7 +12,7 @@ Want to embed upscaling into your own Python applications, scripts and game laun
 
 !!! tip "Missing an API feature?"
 
-    If you need something that isn’t exposed in the API yet (for example, a different window acquisition method, a runtime setting or a new Qt signal) please [open an issue](https://github.com/baronsmv/linux-rt-upscaler/issues/new?template=feature_request.md) and describe your use case.
+    If you need something that isn't exposed in the API yet (for example, a different window acquisition method, a runtime setting or a new Qt signal) please [open an issue](https://github.com/baronsmv/linux-rt-upscaler/issues/new?template=feature_request.md) and describe your use case.
 
 ## Components
 
