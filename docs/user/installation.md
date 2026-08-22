@@ -7,7 +7,8 @@ The GUI depends on Qt, which often requires a library that is not installed by d
 === "Debian / Ubuntu / Linux Mint"
 
     ```sh
-    sudo apt update && sudo apt install libxcb-cursor0
+    sudo apt update
+    sudo apt install libxcb-cursor0
     ```
 
 === "Fedora / RHEL / CentOS"
@@ -37,7 +38,8 @@ If you don't have pipx installed, install it first:
 === "Debian / Ubuntu / Linux Mint"
 
     ```sh
-    sudo apt update && sudo apt install pipx
+    sudo apt update
+    sudo apt install pipx
     pipx ensurepath
     ```
 
@@ -77,7 +79,8 @@ Building from source requires C/C++ compilation tools and development packages. 
 === "Debian / Ubuntu / Linux Mint"
 
     ```sh
-    sudo apt update && sudo apt install gcc make libvulkan-dev libx11-dev libxcb1-dev \
+    sudo apt update
+    sudo apt install gcc make libvulkan-dev libx11-dev libxcb1-dev \
         libx11-xcb-dev libxext-dev libxdamage-dev libxfixes-dev
     ```
 
