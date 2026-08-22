@@ -71,4 +71,4 @@ nav:
   - Developer:
       - Overview: developer/overview.md
       - Architecture:
-          - Limitations: developer/architecture/limitations.md
+          - Architecture Limitations: developer/architecture/limitations.md
