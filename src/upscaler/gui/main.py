@@ -251,21 +251,30 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _on_window_selected(self, win_info: WindowInfo) -> None:
         """Auto-apply a matching profile, then start a one-shot pipeline."""
-        profile_name, _ = find_matching_profile(self._config_manager.profiles, win_info)
-        if profile_name and profile_name != self._config_manager.active_profile_name:
-            if not self.profile_act.maybe_save_before_switch():
-                return
-            self._config_manager.set_active_profile(profile_name)
-            self.left_sidebar.set_active_item(profile_name)
-            logger.info("Auto-applied profile '%s'.", profile_name)
-
-        # If daemon is running, switch its pipeline to the selected window
+        # Daemon mode: always auto-matches
         if self.daemon_ctrl.active:
             self.grid_mgr.stop()
             self.hide()
             activate_window(win_info.handle)
             self.daemon_ctrl.request_switch(win_info)
             return
+
+        # No daemon mode: auto-match only while Global is selected
+        if not self._config_manager.active_profile_name:  # Auto-match
+            profile_name, _ = find_matching_profile(
+                self._config_manager.profiles, win_info
+            )
+            if profile_name:
+                if not self.profile_act.maybe_save_before_switch():
+                    return
+                self._config_manager.set_active_profile(profile_name)
+                self.left_sidebar.set_active_item(profile_name)
+                logger.info("Auto-applied profile '%s'.", profile_name)
+        else:  # Manual profile
+            logger.info(
+                "Manual profile applied: '%s'.",
+                self._config_manager.active_profile_name,
+            )
 
         QTimer.singleShot(0, lambda: self._start_pipeline(win_info))
 
@@ -291,6 +300,8 @@ class MainWindow(QMainWindow):
         self.grid_mgr.stop()
         activate_window(win_info.handle)
         self.hide()
+
+        # Copy configuration
         eff_gui_config = copy.deepcopy(self._config_manager.effective_config)
         eff_gui_config.daemon = False
         parse_config(eff_gui_config)
@@ -299,14 +310,24 @@ class MainWindow(QMainWindow):
         clean_base = copy.deepcopy(self._config_manager.global_baseline)
         apply_overrides(clean_base, self._config_manager.cli_overrides)
         parse_config(clean_base)
+        active_profile = self._config_manager.active_profile_name
 
+        # Only pass profiles for auto-matching if Global is selected
+        if not active_profile:
+            profiles = self._config_manager.profiles
+            profile_name_arg = None
+        else:
+            profiles = {}
+            profile_name_arg = active_profile
+
+        # Create pipeline session
         try:
             self.manual_session = create_pipeline_session(
                 eff_gui_config,
                 win_info,
                 base_config=clean_base,
-                profiles=self._config_manager.profiles,
-                profile_name=self._profile_name,
+                profiles=profiles,
+                profile_name=profile_name_arg,
             )
             self.manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
         except Exception as e:

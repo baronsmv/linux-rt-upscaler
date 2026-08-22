@@ -74,8 +74,14 @@ class ProfileActions:
             return
         if not self.maybe_save_before_switch():
             return
+
         self._config_manager.set_active_profile(name)
         self._sidebar.set_active_item(name)
+
+        if name:
+            logger.info("Manual profile selected: '%s'", name)
+        else:
+            logger.info("Global settings selected (auto-match enabled)")
 
     def add_profile(self) -> None:
         """Open the Add Profile dialog and process the result."""
