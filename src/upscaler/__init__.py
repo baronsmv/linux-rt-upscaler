@@ -14,4 +14,4 @@ __all__ = [
     "acquisition",
     "exceptions",
 ]
-__version__ = "1.1.2.post2"
+__version__ = "1.1.2.post3"
