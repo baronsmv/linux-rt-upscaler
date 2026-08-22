@@ -123,7 +123,7 @@ uv venv && uv pip install -e .
 
 ## Desktop integration (optional)
 
-After installing, you can add a desktop entry so the [GUI](gui.md) appears in your application menu:
+After installing, you can add a desktop entry so the GUI appears in your application menu:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/scripts/desktop_integration.sh | sh
