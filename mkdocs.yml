@@ -70,3 +70,5 @@ nav:
           - Exceptions: api/modules/exceptions.md
   - Developer:
       - Overview: developer/overview.md
+      - Architecture:
+          - Limitations: developer/architecture/limitations.md

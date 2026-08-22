@@ -63,18 +63,7 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 - [ ] GUI System Tray
 - [ ] Complete GUI Style settings (font size, spacing, etc.)
 - [ ] More SRCNN models ([FSRCNNX](https://github.com/igv/FSRCNN-TensorFlow/releases/tag/1.1) planned)
-- [ ] Native Wayland capture prototype
-
-## Known Issues
-
-### Mouse forwarding may not work with Wine, Proton <10 and other applications
-
-Synthetic mouse events (clicks, motion, wheel) sent by the overlay are ignored by:
-
-- Wine and Proton versions older than 10.0 (GE-Proton10 + UMU works).
-- Some native applications like Firefox.
-
-For more details, see [issue #7](https://github.com/baronsmv/linux-rt-upscaler/issues/7).
+- [ ] ~~Native Wayland upscaling~~ (not planned: see [Architecture Limitations](https://baronsmv.github.io/linux-rt-upscaler/developer/architecture/limitations/))
 
 ## Acknowledgments
 
