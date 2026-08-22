@@ -608,13 +608,13 @@ hotkeys:
 # Width/height intervals support any of these formats:
 #   Exact:       1920
 #   Comparison:  <1280, >1024, <=1366, >=1920, 800<  (same as >800)
-#   Range:       1280‑1920, 720..1080, 1024,1366
+#   Range:       1280-1920, 720..1080, 1024,1366
 
 # Examples of profiles:
 profiles:
 
   # ------------------------------------------------------------------
-  # Manual‑only profile (no match rules), requires -p to activate
+  # Manual-only profile (no match rules), requires -p to activate
   # ------------------------------------------------------------------
   manual:
     options:

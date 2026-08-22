@@ -85,8 +85,8 @@ class Config:
         daemon_poll_interval: Seconds between daemon window scans.
         pipeline_poll_interval: Seconds between pipeline idle checks.
         target_delay: Seconds to wait before capturing the active window.
-        pid_timeout: Seconds for PID‑based window detection.
-        class_timeout: Seconds for WM_CLASS‑based detection.
+        pid_timeout: Seconds for PID-based window detection.
+        class_timeout: Seconds for WM_CLASS-based detection.
         total_timeout: Maximum seconds to wait for a window.
         starting_phase: Which detection phase to try first (1 or 2).
         model: SRCNN model name.
@@ -94,8 +94,8 @@ class Config:
         upsampler: Final upsampling filter (lanczos, fsr, nis).
         downsampler: Final downsampling filter (catmull, lanczos).
         blur: Kernel width for final resampling.
-        antiring_strength: Anti‑ringing strength.
-        tight_antiring: If True, use tight anti‑ringing.
+        antiring_strength: Anti-ringing strength.
+        tight_antiring: If True, use tight anti-ringing.
         kernel_radius: Override automatic Lanczos radius.
         deband_enabled: If True, apply debanding before scaling.
         deband_strength: Debanding intensity.
@@ -111,7 +111,7 @@ class Config:
         vignette_falloff: Softness of vignette transition.
         lut_enabled: If True, apply 3D color LUT.
         lut_intensity: Blend between original and graded image.
-        lut_preset: Built‑in LUT preset name.
+        lut_preset: Built-in LUT preset name.
         grain_enabled: If True, apply film grain.
         grain_strength: Film grain intensity.
         grain_size: Apparent particle size.
@@ -132,18 +132,18 @@ class Config:
         overlay_opacity_max: Maximum overlay opacity.
         screenshot_dir: Directory for screenshots.
         screenshot_filename: Filename template for screenshots.
-        show_osd: If True, show on‑screen display messages.
+        show_osd: If True, show on-screen display messages.
         osd_duration: How long OSD messages stay visible.
         max_fps: Maximum pipeline frames per second.
         vulkan_present_mode: Vulkan presentation mode (fifo, mailbox, immediate).
         vulkan_buffer_pool_size: Number of staging buffers.
         frame_timeout: GPU frame fence timeout in nanoseconds.
-        use_tile_processing: If True, enable tile‑based processing.
+        use_tile_processing: If True, enable tile-based processing.
         use_damage_tracking: If True, transfer only damaged regions.
         tile_size: Tile interior size in pixels.
         tile_context_margin: Extra border pixels added to each tile.
         max_tile_layers: Maximum tiles to process per frame.
-        area_threshold: Dirty area fraction that forces full‑frame fallback.
+        area_threshold: Dirty area fraction that forces full-frame fallback.
         max_capture_failures: Consecutive capture failures before shutdown.
         capture_failure_delay: Seconds to wait after a capture failure.
         swapchain_debounce: Minimum seconds between swapchain recreations.
