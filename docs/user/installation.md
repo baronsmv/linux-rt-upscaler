@@ -80,27 +80,31 @@ Building from source requires C/C++ compilation tools and development packages. 
 
     ```sh
     sudo apt update
-    sudo apt install gcc make libvulkan-dev libx11-dev libxcb1-dev \
-        libx11-xcb-dev libxext-dev libxdamage-dev libxfixes-dev
+    sudo apt install \
+        gcc make libvulkan-dev libx11-dev libxcb1-dev libx11-xcb-dev \
+        libxext-dev libxdamage-dev libxfixes-dev
     ```
 
 === "Fedora / RHEL / CentOS"
 
     ```sh
-    sudo dnf install gcc make vulkan-loader-devel libX11-devel libxcb-devel libX11-xcb-devel \
-        libXext-devel libXdamage-devel libXfixes-devel
+    sudo dnf install \
+        gcc make vulkan-loader-devel libX11-devel libxcb-devel \
+        libX11-xcb-devel libXext-devel libXdamage-devel libXfixes-devel
     ```
 
 === "Arch Linux / CachyOS"
 
     ```sh
-    sudo pacman -S base-devel vulkan-devel libx11 libxcb libxext libxdamage libxfixes
+    sudo pacman -S \
+        base-devel vulkan-devel libx11 libxcb libxext libxdamage libxfixes
     ```
 
 === "openSUSE"
 
     ```sh
-    sudo zypper install gcc make vulkan-devel libX11-devel libxcb-devel libX11-xcb-devel \
+    sudo zypper install \
+        gcc make vulkan-devel libX11-devel libxcb-devel libX11-xcb-devel \
         libXext-devel libXdamage-devel libXfixes-devel
     ```
 
@@ -122,11 +126,10 @@ uv venv && uv pip install -e .
 After installing, you can add a desktop entry so the [GUI](gui.md) appears in your application menu:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/refs/heads/main/scripts/desktop_integration.sh \
-    -o /tmp/desktop_integration.sh
-less /tmp/desktop_integration.sh  # always review scripts before running them
-sh /tmp/desktop_integration.sh
+curl -fsSL https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/scripts/desktop_integration.sh | sh
 ```
+
+Before running the script, you can review it [here](https://github.com/baronsmv/linux-rt-upscaler/blob/main/scripts/desktop_integration.sh).
 
 ## What to read next
 
