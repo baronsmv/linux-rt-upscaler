@@ -31,11 +31,11 @@ A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It u
 
 ## Requirements
 
-- GNU/Linux
-- X11, or Wayland with XWayland
-- Vulkan-capable GPU (NVIDIA, AMD, Intel)
-- Python 3.10 or newer
-- Qt dependencies (see [Dependencies](https://baronsmv.github.io/linux-rt-upscaler/user/installation/#dependencies)).
+- **Operating System:** GNU/Linux
+- **Display Server:** X11, or Wayland with XWayland
+- **GPU:** Vulkan-capable (NVIDIA, AMD, Intel)
+- **Python:** 3.10 or newer
+- **Qt dependencies:** see [Dependencies](https://baronsmv.github.io/linux-rt-upscaler/user/installation/#dependencies)
 
 ## Installation
 
