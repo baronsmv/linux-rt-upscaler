@@ -61,7 +61,7 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 
 ## Localization
 
-Thanks to [Weblate](https://hosted.weblate.org/engage/linux-rt-upscaler/) for hosting! If you'd like to help translate the upscaler GUI into your language, please [go here]((https://hosted.weblate.org/engage/linux-rt-upscaler/)!
+Thanks to [Weblate](https://hosted.weblate.org/engage/linux-rt-upscaler/) for hosting! If you'd like to help translate the upscaler GUI into your language, please [go here](https://hosted.weblate.org/engage/linux-rt-upscaler/)!
 
 ## Roadmap
 
