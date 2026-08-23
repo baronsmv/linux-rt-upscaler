@@ -1,10 +1,10 @@
-<p align="center">
+<p text-align="center">
   <img src="https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/data/icons/hicolor/scalable/apps/io.github.baronsmv.linux-rt-upscaler.svg" width="128" alt="icon">
 </p>
 
-<h1 align="center">Real-Time Upscaler for Linux</h1>
+<h1 text-align="center">Real-Time Upscaler for Linux</h1>
 
-<p align="center">
+<p text-align="center">
   <a href="https://pypi.org/project/linux-rt-upscaler/"><img src="https://img.shields.io/pypi/v/linux-rt-upscaler.svg" alt="PyPI version"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPLv3"></a>
   <a href="https://hosted.weblate.org/engage/linux-rt-upscaler/"><img src="https://hosted.weblate.org/widget/linux-rt-upscaler/svg-badge.svg" alt="Localization status"></a>
@@ -63,11 +63,7 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 
 Thanks to [Weblate](https://hosted.weblate.org/engage/linux-rt-upscaler/) for hosting!
 
-If you'd like to help translate the upscaler into your language, click in this image:
-
-<a href="https://hosted.weblate.org/engage/linux-rt-upscaler/"><img src="https://hosted.weblate.org/widget/linux-rt-upscaler/multi-auto.svg" alt="Localization status"></a>
-
-For more info, read the [Localization Guide](https://baronsmv.github.io/linux-rt-upscaler/contributing/localization/).
+If you'd like to help translate the upscaler into your language, please read the [Localization Guide](https://baronsmv.github.io/linux-rt-upscaler/contributing/localization/).
 
 ## Roadmap
 

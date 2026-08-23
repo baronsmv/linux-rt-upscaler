@@ -43,12 +43,12 @@ class SidebarBase(QWidget):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(0)
 
-        "Name of a settings tab"_widget = QTabWidget()
-        layout.addWidget("Name of a settings tab"_widget)
+        self.tab_widget = QTabWidget()
+        layout.addWidget(self.tab_widget)
 
     # ------------------------------------------------------------------
     #  Public helpers
     # ------------------------------------------------------------------
     def add_tab(self, widget: QWidget, title: str) -> None:
         """Add a new tab with the given title to the sidebar."""
-        "Name of a settings tab"_widget.addTab(widget, title)
+        self.tab_widget.addTab(widget, title)

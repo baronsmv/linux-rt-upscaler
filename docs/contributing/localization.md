@@ -6,11 +6,11 @@ This page explains how to contribute translations and what guidelines to follow.
 
 ## Quick Start
 
-The upscaler use Weblate to manage translations.
+The upscaler uses [Weblate](https://hosted.weblate.org/engage/linux-rt-upscaler/) to manage translations.
 
 No coding knowledge is required, you can start translating directly in your browser:
 
-1. Visit the translation page [hosted here](https://hosted.weblate.org/engage/linux-rt-upscaler/).
+1. Visit the translation page [here](https://hosted.weblate.org/engage/linux-rt-upscaler/).
 2. Choose your language (or start a new one if it doesn’t exist yet).
 3. Begin translating strings. Your changes are saved automatically.
 
@@ -19,7 +19,7 @@ No coding knowledge is required, you can start translating directly in your brow
 ### Consistency
 
 - Check existing translations for similar strings and use the same terminology.
-- Try to keep text concise, but don't omit information.
+- Try to keep text concise.
 - If you are unsure, you can leave the translation empty or add a comment in Weblate.
 
 !!! tip "Use the context"
