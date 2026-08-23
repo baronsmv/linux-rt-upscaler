@@ -79,9 +79,7 @@ class ProfileDialog(QDialog):
 
         # Name field
         name_col = QVBoxLayout()
-        name_label = QLabel(
-            self.tr("Name", disambiguation="Profile dialog label of profile 'Name'")
-        )
+        name_label = QLabel(self.tr("Name", "Profile dialog label of profile 'Name'"))
         name_label.setStyleSheet(dialog_header_label_style(self._gui_config))
         name_col.addWidget(name_label)
         self._name_edit = QLineEdit(profile_name)
