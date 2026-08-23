@@ -36,7 +36,7 @@ class WindowPickerDialog(QDialog):
         exclude_handle: int = 0,
     ):
         super().__init__(parent)
-        self.setWindowTitle("Select Window")
+        self.setWindowTitle(self.tr("Select Window"))
         self.setMinimumSize(500, 400)
         self._gui_config = gui_config
         self._exclude_handle = exclude_handle
@@ -48,7 +48,7 @@ class WindowPickerDialog(QDialog):
         # Filter input
         self._filter = QLineEdit()
         self._filter.setStyleSheet(line_edit_style(self._gui_config))
-        self._filter.setPlaceholderText(f"Filter windows{chr(8230)}")
+        self._filter.setPlaceholderText(self.tr("Filter windows") + "…")
         self._filter.textChanged.connect(self._populate)
         layout.addWidget(self._filter)
 
@@ -89,7 +89,9 @@ class WindowPickerDialog(QDialog):
         try:
             all_windows = list_windows()
         except Exception:
-            QMessageBox.warning(self, "Error", "Could not list windows.")
+            QMessageBox.warning(
+                self, self.tr("Error"), self.tr("Could not list windows.")
+            )
             return
 
         # Sort by title, case-insensitive
@@ -137,7 +139,9 @@ class WindowPickerDialog(QDialog):
     def _accept(self) -> None:
         item = self._list.currentItem()
         if item is None:
-            QMessageBox.warning(self, "No selection", "Select a window first.")
+            QMessageBox.warning(
+                self, self.tr("No selection"), self.tr("Select a window first.")
+            )
             return
         self._selected_win = item.data(Qt.UserRole)
         self.accept()

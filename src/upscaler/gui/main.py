@@ -80,7 +80,7 @@ class MainWindow(QMainWindow):
         os.makedirs(self._icons_dir, exist_ok=True)
 
         # Window properties
-        self.setWindowTitle("Real-Time Upscaler")
+        self.setWindowTitle(self.tr("Real-Time Upscaler"))
         self.setMinimumSize(1200, 600)
 
         # Setup UI
@@ -136,7 +136,7 @@ class MainWindow(QMainWindow):
         self.about_btn.setIconSize(QSize(20, 20))
         self.about_btn.setFixedSize(32, 32)
         self.about_btn.setCursor(Qt.PointingHandCursor)
-        self.about_btn.setToolTip("About Real-Time Upscaler.")
+        self.about_btn.setToolTip(self.tr("About Real-Time Upscaler."))
         self.about_btn.setAutoRaise(True)
         self.about_btn.setStyleSheet(
             circular_button_style(self.gui_config, icon_size=32)
@@ -332,7 +332,11 @@ class MainWindow(QMainWindow):
             self.manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
         except Exception as e:
             logger.exception("Failed to start pipeline")
-            QMessageBox.critical(None, "Error", f"Could not start pipeline:\n{e}")
+            QMessageBox.critical(
+                None,
+                self.tr("Error"),
+                self.tr("Could not start pipeline:\n{0}").format(e),
+            )
             QApplication.instance().quit()
 
     # ------------------------------------------------------------------
@@ -447,7 +451,11 @@ class MainWindow(QMainWindow):
             self._config_manager.save()
         except Exception as e:
             logger.exception("Save failed")
-            QMessageBox.critical(self, "Save Error", f"Could not save:\n{e}")
+            QMessageBox.critical(
+                self,
+                self.tr("Save Error"),
+                self.tr("Could not save:\n{0}").format(e),
+            )
 
     def _on_reset_settings(self) -> None:
         """Revert unsaved changes to the last saved state."""

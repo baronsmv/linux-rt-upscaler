@@ -48,17 +48,17 @@ class PathPickerRow(BaseRow):
         self._edit = QLineEdit(initial_path)
         self._edit.setFixedHeight(self._gui_config.sidebar.row_height)
         self._edit.setReadOnly(True)
-        self._edit.setPlaceholderText(f"Select directory{chr(8230)}")
+        self._edit.setPlaceholderText(self.tr("Select directory") + "…")
         self._edit.textChanged.connect(self._on_text_changed)
         self._content_layout.addWidget(self._edit, stretch=1)
 
         # Browse button
-        self._browse_btn = QPushButton(chr(8230))
+        self._browse_btn = QPushButton("…")
         self._browse_btn.setFixedSize(
             self._gui_config.swatch.browse_button_width,
             self._gui_config.sidebar.row_height,
         )
-        self._browse_btn.setToolTip("Browse for directory.")
+        self._browse_btn.setToolTip(self.tr("Browse for directory."))
         self._browse_btn.setCursor(Qt.PointingHandCursor)
         self._browse_btn.clicked.connect(self._browse)
         self._content_layout.addWidget(self._browse_btn)
@@ -104,7 +104,7 @@ class PathPickerRow(BaseRow):
 
     def _browse(self) -> None:
         current = self._edit.text() or os.path.expanduser("~")
-        dlg = QFileDialog(parent=self, caption="Choose Screenshot Directory")
+        dlg = QFileDialog(parent=self, caption=self.tr("Choose screenshot directory"))
         dlg.setDirectory(current)
         dlg.setFileMode(QFileDialog.Directory)
         dlg.setOption(QFileDialog.ShowDirsOnly, True)

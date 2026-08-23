@@ -4,7 +4,7 @@ import logging
 from typing import List, Optional, TYPE_CHECKING
 
 import xcffib
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtWidgets import QMessageBox
 
 from ...window import (
@@ -124,7 +124,11 @@ class WindowGridManager:
         except Exception:
             logger.exception("Window enumeration failed")
             QMessageBox.warning(
-                self._main_window, "Error", "Could not enumerate windows."
+                self._main_window,
+                QCoreApplication.translate("WindowGridManager", "Error"),
+                QCoreApplication.translate(
+                    "WindowGridManager", "Could not enumerate windows."
+                ),
             )
             return
 

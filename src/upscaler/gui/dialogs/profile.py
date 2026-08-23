@@ -55,7 +55,9 @@ class ProfileDialog(QDialog):
         self._profiles = profiles or {}
         self._match = match
 
-        self.setWindowTitle("Profile Editor" if profile_name else "New Profile")
+        self.setWindowTitle(
+            self.tr("Profile Editor") if profile_name else self.tr("New Profile")
+        )
         self.setMinimumWidth(520)
         self.setStyleSheet(dialog_style(self._gui_config))
 
@@ -75,19 +77,19 @@ class ProfileDialog(QDialog):
 
         # Name field
         name_col = QVBoxLayout()
-        name_label = QLabel("Name")
+        name_label = QLabel(self.tr("Name", disambiguation="Profile dialog"))
         name_label.setStyleSheet(dialog_header_label_style(self._gui_config))
         name_col.addWidget(name_label)
         self._name_edit = QLineEdit(profile_name)
         self._name_edit.setStyleSheet(line_edit_style(self._gui_config))
-        self._name_edit.setPlaceholderText("Profile name")
-        self._name_edit.setToolTip("A unique name for this profile. Required.")
+        self._name_edit.setPlaceholderText(self.tr("Profile name"))
+        self._name_edit.setToolTip(self.tr("A unique name for this profile. Required."))
         name_col.addWidget(self._name_edit)
         header.addLayout(name_col, 1)
 
         # Icon
         icon_col = QVBoxLayout()
-        icon_label = QLabel("Icon")
+        icon_label = QLabel(self.tr("Icon"))
         icon_label.setStyleSheet(dialog_header_label_style(self._gui_config))
         icon_col.addWidget(icon_label)
 
@@ -128,11 +130,13 @@ class ProfileDialog(QDialog):
         self._actions_row.setSpacing(6)
 
         # Capture window
-        capture_win_btn = QPushButton("\u2009\u2009Capture window")
+        capture_win_btn = QPushButton("\u2009\u2009" + self.tr("Capture window"))
         capture_win_btn.setIcon(
             load_icon("actions/capture", 20, 20, color=self._gui_config.palette.icon)
         )
-        capture_win_btn.setToolTip("Fill name, icon, and match rules from a window.")
+        capture_win_btn.setToolTip(
+            self.tr("Fill name, icon, and match rules from a window.")
+        )
         capture_win_btn.clicked.connect(self._capture_full)
         self._actions_row.addWidget(capture_win_btn)
         self._actions_row.addStretch()
@@ -140,36 +144,38 @@ class ProfileDialog(QDialog):
         # Capture icon
         self._add_icon_button(
             "actions/camera",
-            "Capture icon from window",
+            self.tr("Capture icon from window"),
             self._capture_icon,
         )
         # Load icon
         self._add_icon_button(
             "actions/folder",
-            "Load icon from file",
+            self.tr("Load icon from file"),
             self._select_icon_file,
         )
         # Remove icon
         self._add_icon_button(
             "actions/delete",
-            "Remove icon",
+            self.tr("Remove icon"),
             self._remove_icon,
         )
         layout.addLayout(self._actions_row)
 
         # ── Match rules group ────────────────────────────────────────
-        match_group = QGroupBox("Match rules")
+        match_group = QGroupBox(self.tr("Match rules"))
         match_group.setToolTip(
-            "All filled rules must match for the profile to apply (AND logic).\n"
-            "Examples:\n"
-            f"{chr(8226)} Match any Firefox windows wider than 1280px:\n"
-            f"    {chr(8226)} Title (exact): Firefox\n"
-            f"    {chr(8226)} Width: >1280\n"
-            f"{chr(8226)} Match any VLC window (regardless of its size):\n"
-            f"    {chr(8226)} Title contains: VLC\n"
-            f"{chr(8226)} Match emulator windows between 720px and 1080px tall:\n"
-            f"    {chr(8226)} Title (regex): (Yuzu|Ryujinx).*\n"
-            f"    {chr(8226)} Height: 720-1080"
+            self.tr(
+                "All filled rules must match for the profile to apply (AND logic).\n"
+                "Examples:\n"
+                "• Match any Firefox windows wider than 1280px:\n"
+                "    • Title (exact): Firefox\n"
+                "    • Width: >1280\n"
+                "• Match any VLC window (regardless of its size):\n"
+                "    • Title contains: VLC\n"
+                "• Match emulator windows between 720px and 1080px tall:\n"
+                "    • Title (regex): (Yuzu|Ryujinx).*\n"
+                "    • Height: 720-1080"
+            )
         )
         self._match_layout = QVBoxLayout(match_group)
         self._match_layout.setSpacing(8)
@@ -178,30 +184,36 @@ class ProfileDialog(QDialog):
         # Title exact
         self._match_title_exact = self._add_match_row(
             rule="title_exact",
-            label="Title (exact):",
-            placeholder="e.g., Steam",
+            label=self.tr("Title (exact):"),
+            placeholder=self.tr("e.g., Steam"),
             tooltip=(
-                "Match if the window title exactly equals this text "
-                "(case-insensitive)."
+                self.tr(
+                    "Match if the window title exactly equals this text "
+                    "(case-insensitive)."
+                )
             ),
         )
         # Title contains
         self._match_title_contains = self._add_match_row(
             rule="title_contains",
-            label="Title contains:",
-            placeholder="e.g., VLC",
+            label=self.tr("Title contains:"),
+            placeholder=self.tr("e.g., VLC"),
             tooltip=(
-                "Match if the window title contains this text (case-insensitive)."
+                self.tr(
+                    "Match if the window title contains this text (case-insensitive)."
+                )
             ),
         )
         # Title regex
         self._match_title_regex = self._add_match_row(
             rule="title_regex",
-            label="Title (regex):",
-            placeholder="e.g., (Yuzu|Ryujinx).*",
+            label=self.tr("Title (regex):"),
+            placeholder=self.tr("e.g., (Yuzu|Ryujinx).*"),
             tooltip=(
-                "Match if the window title matches this regular expression "
-                "(case-insensitive)."
+                self.tr(
+                    "Match if the window title matches this regular expression "
+                    "(case-insensitive)."
+                )
             ),
         )
 
@@ -211,10 +223,12 @@ class ProfileDialog(QDialog):
             label="Width:",
             placeholder="e.g., >1280",
             tooltip=(
-                "Match if the window width satisfies this condition:\n"
-                f"{chr(8226)} Exact: 1920\n"
-                f"{chr(8226)} Comparison: <800, >1024, <=1366, >=1920\n"
-                f"{chr(8226)} Range: 1280-1920, 720..1080, 1024,1366"
+                self.tr(
+                    "Match if the window width satisfies this condition:\n"
+                    "• Exact: 1920\n"
+                    "• Comparison: <800, >1024, <=1366, >=1920\n"
+                    "• Range: 1280-1920, 720..1080, 1024,1366"
+                )
             ),
         )
         # Height
@@ -223,20 +237,24 @@ class ProfileDialog(QDialog):
             label="Height:",
             placeholder="e.g., >800",
             tooltip=(
-                "Match if the window height satisfies this condition:\n"
-                f"{chr(8226)} Exact: 1080\n"
-                f"{chr(8226)} Comparison: <600, >900, <=768, >=1440\n"
-                f"{chr(8226)} Range: 480-1080, 600..900, 720,1024"
+                self.tr(
+                    "Match if the window height satisfies this condition:\n"
+                    f"• Exact: 1080\n"
+                    f"• Comparison: <600, >900, <=768, >=1440\n"
+                    f"• Range: 480-1080, 600..900, 720,1024"
+                )
             ),
         )
 
         # Info note
         info = QLabel(
-            "Profiles let you override settings for specific windows and setups.\n"
-            "A profile is applied automatically when the upscaled window matches "
-            "all the rules defined here, or when manually selected before upscaling.\n"
-            "Profiles are checked top-to-bottom: the first match wins.\n"
-            "Leave a rule blank to ignore that property."
+            self.tr(
+                "Profiles let you override settings for specific windows and setups.\n"
+                "A profile is applied automatically when the upscaled window matches "
+                "all the rules defined here, or when manually selected before upscaling.\n"
+                "Profiles are checked top-to-bottom: the first match wins.\n"
+                "Leave a rule blank to ignore that property."
+            )
         )
         info.setWordWrap(True)
         info.setStyleSheet(dialog_info_label_style(self._gui_config))
@@ -344,7 +362,9 @@ class ProfileDialog(QDialog):
             )
             self._icon_preview.setPixmap(pix)
         else:
-            QMessageBox.information(self, "No icon", "The selected window has no icon.")
+            QMessageBox.information(
+                self, self.tr("No icon"), self.tr("The selected window has no icon.")
+            )
 
     # ------------------------------------------------------------------
     #  Icon button actions
@@ -360,13 +380,15 @@ class ProfileDialog(QDialog):
 
     def _select_icon_file(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Select Icon", "", "Images (*.png *.jpg *.jpeg *.bmp)"
+            self, self.tr("Select Icon"), "", "Images (*.png *.jpg *.jpeg *.bmp)"
         )
         if file_path:
             img = QImage(file_path)
             if img.isNull():
                 QMessageBox.warning(
-                    self, "Invalid image", "Could not load the selected file."
+                    self,
+                    self.tr("Invalid image"),
+                    self.tr("Could not load the selected file."),
                 )
                 return
             self._captured_icon = img
@@ -393,7 +415,9 @@ class ProfileDialog(QDialog):
     def _validate_and_accept(self):
         name = self._name_edit.text().strip()
         if not name:
-            QMessageBox.warning(self, "Missing name", "Profile name cannot be empty.")
+            QMessageBox.warning(
+                self, self.tr("Missing name"), self.tr("Profile name cannot be empty.")
+            )
             return
 
         # Duplicate check using the provided profiles dictionary
@@ -401,8 +425,10 @@ class ProfileDialog(QDialog):
             if name in self._profiles:
                 msg = QMessageBox(
                     QMessageBox.Warning,
-                    "Duplicate name",
-                    f"A profile named '{name}' already exists.\nPlease choose a different name.",
+                    self.tr("Duplicate name"),
+                    self.tr(
+                        "A profile named '{0}' already exists.\nPlease choose a different name."
+                    ).format(name),
                     QMessageBox.Ok,
                     self,
                 )

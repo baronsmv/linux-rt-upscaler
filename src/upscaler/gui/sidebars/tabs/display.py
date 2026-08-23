@@ -30,65 +30,81 @@ class DisplayTab(SettingsTab):
         parent: Optional[QWidget] = None,
     ) -> None:
         self._config = config
+        self._auto_device = self.tr("Auto (best)", "GPU automatic device option")
         super().__init__(
             gui_config,
-            title="Display",
+            title=self.tr("Display", self.TAB),
             baseline_config=baseline_config,
             parent=parent,
         )
 
     def _build_content(self) -> None:
         # ---- Devices ----
-        self._add_section("Devices")
+        self._add_section(self.tr("Devices", self.SECTION))
         self._monitor_combo = self._add_combo(
-            "Monitor",
+            self.tr("Monitor", self.SETTING),
             list_monitors(),
             self._config.monitor,
             self._on_monitor_changed,
             baseline=self.baseline_config.monitor,
-            help="Monitor to cover: 'primary', 'all' (multi-monitor), "
-            "or a specific output name (e.g., 'HDMI-1').",
+            help=self.tr(
+                "Monitor to cover: 'primary', 'all' (multi-monitor), "
+                "or a specific output name (e.g., 'HDMI-1').",
+                self.DESCRIPTION,
+            ),
         )
-        device_names = ["Auto (best)"] + [
+        device_names = [self._auto_device] + [
             _short_device_name(d.name) for d in get_discovered_devices()
         ]
-        current_name = self._config.gpu if self._config.gpu else "Auto (best)"
+        current_name = self._config.gpu if self._config.gpu else self._auto_device
         if current_name not in device_names:
-            current_name = "Auto (best)"
+            current_name = self._auto_device
         self._gpu_combo = self._add_combo(
-            "GPU",
+            self.tr("GPU", self.SETTING),
             device_names,
             current_name,
             self._on_gpu_changed,
             baseline=(
-                self.baseline_config.gpu if self.baseline_config.gpu else "Auto (best)"
+                self.baseline_config.gpu
+                if self.baseline_config.gpu
+                else self._auto_device
             ),
-            help="Vulkan GPU used for rendering. Auto (best) selects the most powerful GPU found.",
+            help=self.tr(
+                "Vulkan GPU used for rendering. '{0}' selects the most powerful GPU found.",
+                self.DESCRIPTION,
+            ).format(self._auto_device),
         )
 
         # ---- V-Sync ----
-        self._add_section("V-Sync")
+        self._add_section(self.tr("V-Sync", self.SECTION))
         self._present_combo = self._add_combo(
-            "Present Mode",
+            self.tr("Present Mode", self.SETTING),
             [e.value for e in VulkanPresentMode],
             self._config.vulkan_present_mode,
             self._on_present_mode,
             baseline=self.baseline_config.vulkan_present_mode,
-            help="Vulkan presentation mode:\n"
-            f"{chr(8226)} fifo: VSync on, lowest power, no tearing\n"
-            f"{chr(8226)} mailbox: tear-free, lower latency, higher power\n"
-            f"{chr(8226)} immediate: no VSync, lowest latency, may tear",
+            #: Do not translate "fifo", "mailbox", "immediate": they are Vulkan presentation mode identifiers.
+            help=self.tr(
+                "Vulkan presentation mode:\n"
+                "• fifo: VSync on, lowest power, no tearing\n"
+                "• mailbox: tear-free, lower latency, higher power\n"
+                "• immediate: no VSync, lowest latency, may tear",
+                self.DESCRIPTION,
+            ),
         )
         self._fps_cap_cb = self._add_cb(
-            "Limit FPS",
+            self.tr("Limit FPS", self.SETTING),
             self._config.max_fps is not None,
             self._on_fps_cap_toggle,
             baseline=self.baseline_config.max_fps is not None,
-            help="Enable an upper frame-rate limit.\n"
-            "It's recommended to use 'mailbox' presentation mode when limiting FPS.",
+            help=self.tr(
+                "Enable an upper frame-rate limit.\n"
+                "It's recommended to use 'mailbox' presentation mode when limiting FPS.",
+                self.DESCRIPTION,
+            ),
         )
         self._fps_slider = self._add_slider(
-            "Max FPS",
+            self.tr("Max FPS", self.SETTING),
             1,
             240,
             self._config.max_fps if self._config.max_fps is not None else 60,
@@ -98,22 +114,25 @@ class DisplayTab(SettingsTab):
                 if self.baseline_config.max_fps is not None
                 else 60
             ),
-            help="Target maximum frames per second.",
+            help=self.tr("Target maximum frames per second.", self.DESCRIPTION),
         )
         self._fps_slider.setEnabled(self._config.max_fps is not None)
 
         # ---- Scale Factor ----
-        self._add_section("Scale Factor")
+        self._add_section(self.tr("Scale Factor", self.SECTION))
         self._auto_scale_cb = self._add_cb(
-            "Auto Scale",
+            self.tr("Auto Scale", self.SETTING),
             self._config.scale_factor is None,
             self._on_auto_scale_changed,
             baseline=self.baseline_config.scale_factor is None,
-            help="Let the application automatically detect the correct scale factor "
-            "based on the physical monitor resolution.",
+            help=self.tr(
+                "Let the application automatically detect the correct scale factor "
+                "based on the physical monitor resolution.",
+                self.DESCRIPTION,
+            ),
         )
         self._scale_slider = self._add_slider(
-            "Scale Factor %",
+            self.tr("Scale Factor %", self.SETTING),
             100,
             400,
             max(100, int((self._config.scale_factor or 1.0) * 100)),
@@ -124,8 +143,11 @@ class DisplayTab(SettingsTab):
                 if self.baseline_config.scale_factor is not None
                 else 1.0
             ),
-            help="Manual scale factor (e.g., 1.50 for 150% scaling). "
-            "Only available when 'Auto Scale' is disabled.",
+            help=self.tr(
+                "Manual scale factor (e.g., 1.50 for 150% scaling). "
+                "Only available when 'Auto Scale' is disabled.",
+                self.DESCRIPTION,
+            ),
         )
         self._scale_slider.setEnabled(self._config.scale_factor is not None)
 
@@ -134,7 +156,7 @@ class DisplayTab(SettingsTab):
         self.config_changed.emit()
 
     def _on_gpu_changed(self, text: str) -> None:
-        self._config.gpu = None if text == "Auto (best)" else text
+        self._config.gpu = None if text == self._auto_device else text
         self.config_changed.emit()
 
     def _on_fps_cap_toggle(self, state: int) -> None:

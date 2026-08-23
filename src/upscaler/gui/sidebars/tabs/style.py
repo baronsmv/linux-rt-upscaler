@@ -25,123 +25,6 @@ class StyleTab(SettingsTab):
     """Tab to customize the GUI color palette, stored in a separate YAML file."""
 
     style_dirty_changed = Signal(bool)
-    COLOR_CATEGORIES: List[Dict[str, Union[str, List[Tuple[str, str, str]]]]] = [
-        {
-            "title": "Background & Surfaces",
-            "fields": [
-                (
-                    "background",
-                    "Primary Background",
-                    "Main background color of the application window and dialogs.",
-                ),
-                (
-                    "input",
-                    "Input Background",
-                    "Background color of text fields, combo boxes, and editable areas.",
-                ),
-                (
-                    "input_hover",
-                    "Input Background (hover)",
-                    "Background color when the mouse hovers over an input field.",
-                ),
-                (
-                    "input_disabled",
-                    "Input Background (disabled)",
-                    "Background color for disabled (greyed-out) input fields.",
-                ),
-                (
-                    "button",
-                    "Button Background",
-                    "Background color of buttons.",
-                ),
-                (
-                    "button_hover",
-                    "Button Background (hover)",
-                    "Background color of a button when the mouse hovers over it.",
-                ),
-                (
-                    "caption_background",
-                    "Caption Background",
-                    "Semi-transparent background color of each window titles.",
-                ),
-            ],
-        },
-        {
-            "title": "Text & Icons",
-            "fields": [
-                (
-                    "text",
-                    "Primary Text",
-                    "Text color of body text and labels.",
-                ),
-                (
-                    "text_hover",
-                    "Primary Text (hover)",
-                    "Text color when the mouse hovers over clickable items.",
-                ),
-                (
-                    "text_subtle",
-                    "Secondary Text",
-                    "Text color for secondary information, captions, and section headers.",
-                ),
-                (
-                    "icon",
-                    "Icon Fill",
-                    "Fill color of sidebar and toolbar icons.",
-                ),
-            ],
-        },
-        {
-            "title": "Borders & Separators",
-            "fields": [
-                (
-                    "border",
-                    "Border",
-                    "Border color for input fields, buttons, and panels.",
-                ),
-                (
-                    "border_hover",
-                    "Border (hover)",
-                    "Border color when hovering over interactive elements.",
-                ),
-            ],
-        },
-        {
-            "title": "Controls & Highlights",
-            "fields": [
-                (
-                    "control",
-                    "Accent",
-                    "Primary accent color for checkboxes, sliders and other interactive controls.",
-                ),
-                (
-                    "control_hover",
-                    "Accent (hover)",
-                    "Accent color when the mouse hovers over an interactive control.",
-                ),
-                (
-                    "reset",
-                    "Revert Button",
-                    "Background color of the 'Reset' button.",
-                ),
-                (
-                    "reset_hover",
-                    "Revert Button (hover)",
-                    "'Reset' button background color on hover.",
-                ),
-                (
-                    "handle",
-                    "Handle",
-                    "Fill color of scrollbar handles and subtle interactive areas.",
-                ),
-                (
-                    "handle_hover",
-                    "Handle (hover)",
-                    "Handle control fill color on hover.",
-                ),
-            ],
-        },
-    ]
 
     def __init__(
         self,
@@ -156,22 +39,204 @@ class StyleTab(SettingsTab):
         self._updating_from_preset = False
         super().__init__(
             gui_config,
-            title="GUI Style",
+            title=self.tr("GUI Style", self.TAB),
             baseline_config=None,
             parent=parent,
         )
 
+    # ------------------------------------------------------------------
+    #  Translated color categories
+    # ------------------------------------------------------------------
+    def _get_color_categories(
+        self,
+    ) -> List[Dict[str, Union[str, List[Tuple[str, str, str]]]]]:
+        """Return the color category structure with translated strings."""
+        return [
+            {
+                "title": self.tr("Background & Surfaces", self.SECTION),
+                "fields": [
+                    (
+                        "background",
+                        self.tr("Primary Background", self.SETTING),
+                        self.tr(
+                            "Main background color of the application window and dialogs.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "input",
+                        self.tr("Input Background", self.SETTING),
+                        self.tr(
+                            "Background color of text fields, combo boxes, and editable areas.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "input_hover",
+                        self.tr("Input Background (hover)", self.SETTING),
+                        self.tr(
+                            "Background color when the mouse hovers over an input field.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "input_disabled",
+                        self.tr("Input Background (disabled)", self.SETTING),
+                        self.tr(
+                            "Background color for disabled (greyed-out) input fields.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "button",
+                        self.tr("Button Background", self.SETTING),
+                        self.tr("Background color of buttons.", self.DESCRIPTION),
+                    ),
+                    (
+                        "button_hover",
+                        self.tr("Button Background (hover)", self.SETTING),
+                        self.tr(
+                            "Background color of a button when the mouse hovers over it.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "caption_background",
+                        self.tr("Caption Background", self.SETTING),
+                        self.tr(
+                            "Semi-transparent background color of each window titles.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                ],
+            },
+            {
+                "title": self.tr("Text & Icons", self.SECTION),
+                "fields": [
+                    (
+                        "text",
+                        self.tr("Primary Text", self.SETTING),
+                        self.tr(
+                            "Text color of body text and labels.", self.DESCRIPTION
+                        ),
+                    ),
+                    (
+                        "text_hover",
+                        self.tr("Primary Text (hover)", self.SETTING),
+                        self.tr(
+                            "Text color when the mouse hovers over clickable items.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "text_subtle",
+                        self.tr("Secondary Text", self.SETTING),
+                        self.tr(
+                            "Text color for secondary information, captions, and section headers.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "icon",
+                        self.tr("Icon Fill", self.SETTING),
+                        self.tr(
+                            "Fill color of sidebar and toolbar icons.", self.DESCRIPTION
+                        ),
+                    ),
+                ],
+            },
+            {
+                "title": self.tr("Borders & Separators", self.SECTION),
+                "fields": [
+                    (
+                        "border",
+                        self.tr("Border", self.SETTING),
+                        self.tr(
+                            "Border color for input fields, buttons, and panels.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "border_hover",
+                        self.tr("Border (hover)", self.SETTING),
+                        self.tr(
+                            "Border color when hovering over interactive elements.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                ],
+            },
+            {
+                "title": self.tr("Controls & Highlights", self.SECTION),
+                "fields": [
+                    (
+                        "control",
+                        self.tr("Accent", self.SETTING),
+                        self.tr(
+                            "Primary accent color for checkboxes, sliders and other interactive controls.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "control_hover",
+                        self.tr("Accent (hover)", self.SETTING),
+                        self.tr(
+                            "Accent color when the mouse hovers over an interactive control.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "reset",
+                        self.tr("Revert Button", self.SETTING),
+                        self.tr(
+                            "Background color of the 'Reset' button.", self.DESCRIPTION
+                        ),
+                    ),
+                    (
+                        "reset_hover",
+                        self.tr("Revert Button (hover)", self.SETTING),
+                        self.tr(
+                            "'Reset' button background color on hover.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "handle",
+                        self.tr("Handle", self.SETTING),
+                        self.tr(
+                            "Fill color of scrollbar handles and subtle interactive areas.",
+                            self.DESCRIPTION,
+                        ),
+                    ),
+                    (
+                        "handle_hover",
+                        self.tr("Handle (hover)", self.SETTING),
+                        self.tr(
+                            "Handle control fill color on hover.", self.DESCRIPTION
+                        ),
+                    ),
+                ],
+            },
+        ]
+
+    # ------------------------------------------------------------------
+    #  UI construction
+    # ------------------------------------------------------------------
     def _build_content(self) -> None:
         self._picker_widgets: Dict[str, ColorPickerRow] = {}
 
         # ── Preset selector ───────────────────────────────────────
-        self._add_section("Palette Preset")
+        self._add_section(self.tr("Palette Preset", self.SECTION))
         self._preset_combo = self._add_combo(
-            "Preset",
+            self.tr("Preset", self.SETTING),
             ["Custom"] + list(PRESETS.keys()),
             "Auto",
             self._on_preset_changed,
-            help="Select a pre-built color scheme for the GUI.",
+            #: Do not translate "Custom" and preset names like "Auto", they are internal identifiers.
+            help=self.tr(
+                "Select a pre-built color scheme for the GUI.",
+                self.DESCRIPTION,
+            ),
         )
 
         # Block signals to avoid premature _on_preset_changed
@@ -181,7 +246,7 @@ class StyleTab(SettingsTab):
         self._preset_combo.blockSignals(False)
 
         # ── Grouped color pickers ─────────────────────────────────
-        for category in self.COLOR_CATEGORIES:
+        for category in self._get_color_categories():
             self._add_section(str(category["title"]))
             for field_name, label, tooltip in category["fields"]:
                 picker = self._add_color_picker(

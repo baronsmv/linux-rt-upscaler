@@ -71,15 +71,16 @@ class SettingsSidebar(IconSidebarBase):
         general_tab.daemon_toggled.connect(self.daemon_toggled)
         self._style_tab: Optional[StyleTab] = None
 
+        _tab = "Settings tab"
         tabs = [
-            (general_tab, "general", "General"),
-            (ScalingTab(*tab_args), "scaling", "Scaling"),
-            (DisplayTab(*tab_args), "display", "Display"),
-            (PresentationTab(*tab_args), "presentation", "Presentation"),
-            (EffectsTab(*tab_args), "effects", "Effects"),
-            (AdvancedTab(*tab_args), "advanced", "Advanced"),
-            (ExtrasTab(*tab_args), "extras", "Extras"),
-            (StyleTab(*style_tab_args), "style", "GUI Style"),
+            (general_tab, "general", self.tr("General", _tab)),
+            (ScalingTab(*tab_args), "scaling", self.tr("Scaling", _tab)),
+            (DisplayTab(*tab_args), "display", self.tr("Display", _tab)),
+            (PresentationTab(*tab_args), "presentation", self.tr("Presentation", _tab)),
+            (EffectsTab(*tab_args), "effects", self.tr("Effects", _tab)),
+            (AdvancedTab(*tab_args), "advanced", self.tr("Advanced", _tab)),
+            (ExtrasTab(*tab_args), "extras", self.tr("Extras", _tab)),
+            (StyleTab(*style_tab_args), "style", self.tr("GUI Style", _tab)),
         ]
 
         for tab, icon, tooltip in tabs:
@@ -182,7 +183,11 @@ class SettingsSidebar(IconSidebarBase):
         button_layout.setSpacing(8)
 
         # ---- Save button ----
-        self._save_btn = QPushButton("Save Profile" if self._profile_active else "Save")
+        self._save_btn = QPushButton(
+            self.tr("Save Profile", "Save button")
+            if self._profile_active
+            else self.tr("Save", "Save button")
+        )
         self._save_btn.setCursor(Qt.PointingHandCursor)
         self._save_btn.setFixedHeight(cfg.footer.button_height)
         self._save_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -192,7 +197,7 @@ class SettingsSidebar(IconSidebarBase):
 
         # ---- Reset split-button ----
         self._reset_btn = QToolButton()
-        self._reset_btn.setText("Reset")
+        self._reset_btn.setText(self.tr("Reset", "Reset button"))
         self._reset_btn.setToolButtonStyle(Qt.ToolButtonTextOnly)
         self._reset_btn.setPopupMode(QToolButton.MenuButtonPopup)
         self._reset_btn.setCursor(Qt.PointingHandCursor)
@@ -203,9 +208,9 @@ class SettingsSidebar(IconSidebarBase):
         # Drop-down menu
         self._config_reset_menu = QMenu(self._reset_btn)
         restore_text = (
-            "Clear profile overrides"
+            self.tr("Clear profile overrides", "Reset button")
             if self._profile_active
-            else "Restore system defaults"
+            else self.tr("Restore system defaults", "Reset button")
         )
         self._restore_action = self._config_reset_menu.addAction(restore_text)
         self._restore_action.triggered.connect(self.restore_defaults.emit)
@@ -213,10 +218,10 @@ class SettingsSidebar(IconSidebarBase):
 
         self._style_reset_menu = QMenu(self._reset_btn)
         self._style_reset_last_action = self._style_reset_menu.addAction(
-            "Reset to last applied"
+            self.tr("Reset to last applied", "Reset button")
         )
         self._style_reset_auto_action = self._style_reset_menu.addAction(
-            "Restore Auto preset"
+            self.tr("Restore Auto preset", "Reset button")
         )
         self._style_reset_menu.setStyleSheet(reset_submenu_style(cfg))
 
@@ -265,8 +270,8 @@ class SettingsSidebar(IconSidebarBase):
         """
         if self._is_style_tab_active():
             # === Style tab active ===
-            self._save_btn.setText("Apply Style")
-            self._reset_btn.setText("Reset Style")
+            self._save_btn.setText(self.tr("Apply Style", "Apply button"))
+            self._reset_btn.setText(self.tr("Reset Style", "Reset button"))
             # Swap menu
             self._reset_btn.setMenu(self._style_reset_menu)
             # Connect style menu actions
@@ -284,8 +289,12 @@ class SettingsSidebar(IconSidebarBase):
             self._update_style_footer_state()
         else:
             # === Normal config tab ===
-            self._save_btn.setText("Save Profile" if self._profile_active else "Save")
-            self._reset_btn.setText("Reset")
+            self._save_btn.setText(
+                self.tr("Save Profile", "Save button")
+                if self._profile_active
+                else self.tr("Save", "Save button")
+            )
+            self._reset_btn.setText(self.tr("Reset", "Reset button"))
             self._reset_btn.setMenu(self._config_reset_menu)
             # Restore normal config dirty-state logic
             self._check_dirty()  # existing method already sets enabled states

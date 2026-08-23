@@ -31,7 +31,7 @@ class FilterBar(QWidget):
         # ----- Line edit (fills the whole widget minus margins) -----
         self._line_edit = QLineEdit(self)
         self._line_edit.setStyleSheet(line_edit_style(self._gui_config))
-        self._line_edit.setPlaceholderText(f"Filter windows{chr(8230)}")
+        self._line_edit.setPlaceholderText(self.tr("Filter windows") + "…")
         self._line_edit.textChanged.connect(self._on_text_changed)
         self._line_edit.installEventFilter(self)
 

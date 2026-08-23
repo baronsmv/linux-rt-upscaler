@@ -95,7 +95,7 @@ class ColorPickerRow(BaseRow):
     # ------------------------------------------------------------------
     def _pick_color(self) -> None:
         dlg = QColorDialog(self._current_color, self)
-        dlg.setWindowTitle("Choose Background Color")
+        dlg.setWindowTitle(self.tr("Choose Background Color"))
         dlg.setOptions(QColorDialog.DontUseNativeDialog | QColorDialog.ShowAlphaChannel)
         dlg.setStyleSheet(color_dialog_style(self._gui_config))
         if dlg.exec() == QColorDialog.Accepted:

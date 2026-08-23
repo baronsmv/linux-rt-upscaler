@@ -22,55 +22,64 @@ class ExtrasTab(SettingsTab):
         self._config = config
         super().__init__(
             gui_config,
-            title="Extras",
+            title=self.tr("Extras", self.TAB),
             baseline_config=baseline_config,
             parent=parent,
         )
 
     def _build_content(self) -> None:
         # ---- Screenshot Location ----
-        self._add_section("Screenshot Location")
+        self._add_section(self.tr("Screenshot Location", self.SECTION))
         self._dir_picker = self._add_path_picker(
-            "Directory",
+            self.tr("Directory", self.SETTING),
             self._config.screenshot_dir,
             self._on_dir_changed,
             baseline=self.baseline_config.screenshot_dir,
-            help="Folder where screenshots will be saved.",
+            help=self.tr("Folder where screenshots will be saved.", self.DESCRIPTION),
         )
         self._file_input = self._add_text(
-            "Template",
+            self.tr("Template", self.SETTING),
             self._config.screenshot_filename,
             self._on_file_changed,
             baseline=self.baseline_config.screenshot_filename,
-            help="Filename template for screenshots. Available placeholders:\n"
-            f"{chr(8226)} {{timestamp}}: capture time (supports strftime, e.g. "
-            "{timestamp:%Y-%m-%d-%H-%M-%S})\n"
-            f"{chr(8226)} {{title}}: current window title\n"
-            f"{chr(8226)} {{profile}}: active profile name (fallback to {{title}} if no profile)\n"
-            f"{chr(8226)} {{model}}: active upscaling model\n"
-            f"{chr(8226)} {{width}}: upscaled image width\n"
-            f"{chr(8226)} {{height}}: upscaled image height",
+            help=self.tr(
+                "Filename template for screenshots. Available placeholders:\n"
+                "• {timestamp}: capture time (supports strftime, e.g. "
+                "{timestamp:%Y-%m-%d-%H-%M-%S})\n"
+                "• {title}: current window title\n"
+                "• {profile}: active profile name (fallback to {{title}} if no profile)\n"
+                "• {model}: active upscaling model\n"
+                "• {width}: upscaled image width\n"
+                "• {height}: upscaled image height",
+                self.DESCRIPTION,
+            ),
         )
 
         # ---- On-Screen Display ----
-        self._add_section("On-Screen Display")
+        self._add_section(self.tr("On-Screen Display", self.SECTION))
         self._osd_enabled = self._add_cb(
-            "Show OSD",
+            self.tr("Show OSD", self.SETTING),
             self._config.show_osd,
             self._on_osd_enabled,
             baseline=self.baseline_config.show_osd,
-            help="Show on-screen messages when model, geometry, or zoom changes, "
-            "and after taking a screenshot.",
+            help=self.tr(
+                "Show on-screen messages when model, geometry, or zoom changes, "
+                "and after taking a screenshot.",
+                self.DESCRIPTION,
+            ),
         )
         self._osd_duration = self._add_slider(
-            "Duration (s)",
+            self.tr("Duration (s)", self.SETTING),
             1,
             1000,
             int(self._config.osd_duration * 100),
             scale_factor=100,
             float_slot=self._on_osd_duration,
             baseline=self.baseline_config.osd_duration,
-            help="How many seconds OSD messages remain visible before fading out.",
+            help=self.tr(
+                "How many seconds OSD messages remain visible before fading out.",
+                self.DESCRIPTION,
+            ),
         )
         self._osd_duration.setEnabled(self._config.show_osd)
 

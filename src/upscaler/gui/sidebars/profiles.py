@@ -130,20 +130,20 @@ class ProfilesSidebar(QWidget):
 
         self._add_btn = self._make_tool_button(
             "actions/add",
-            "Add profile (Ctrl+N)",
+            self.tr("Add profile (Ctrl+N)"),
             self.add_profile_requested.emit,
             btn_gui_config,
         )
         self._edit_btn = self._make_tool_button(
             "actions/edit",
-            "Edit match criteria (Enter/F2)",
+            self.tr("Edit match criteria (Enter/F2)"),
             self._emit_edit,
             btn_gui_config,
             enabled=False,
         )
         self._delete_btn = self._make_tool_button(
             "actions/delete",
-            "Delete profile (Del)",
+            self.tr("Delete profile (Del)"),
             self._emit_delete,
             btn_gui_config,
             enabled=False,
@@ -151,14 +151,14 @@ class ProfilesSidebar(QWidget):
 
         self._up_btn = self._make_tool_button(
             "actions/up",
-            "Move up (Ctrl+Shift+Up)",
+            self.tr("Move up (Ctrl+Shift+Up)"),
             self._emit_move_up,
             btn_gui_config,
             enabled=False,
         )
         self._down_btn = self._make_tool_button(
             "actions/down",
-            "Move down (Ctrl+Shift+Down)",
+            self.tr("Move down (Ctrl+Shift+Down)"),
             self._emit_move_down,
             btn_gui_config,
             enabled=False,
@@ -259,17 +259,21 @@ class ProfilesSidebar(QWidget):
         default_item.setData(Qt.UserRole, "")
         default_item.setSizeHint(QSize(0, self._gui_config.profile.profile_height))
         default_item.setToolTip(
-            "When selected, the settings panel on the right edits the global configuration."
+            self.tr(
+                "When selected, the settings panel on the right edits the global configuration."
+            )
         )
         self._list.addItem(default_item)
 
         # If no profile, show a hint
         if not self._profiles:
             hint_label = QLabel(
-                "Global settings apply to all windows.\n\n"
-                "Create a profile to override settings\n"
-                "for a specific window, matched by its\n"
-                "name or size."
+                self.tr(
+                    "Global settings apply to all windows.\n\n"
+                    "Create a profile to override settings\n"
+                    "for a specific window, matched by its\n"
+                    "name or size."
+                )
             )
             hint_label.setWordWrap(True)
             hint_label.setContentsMargins(8, 16, 8, 4)
@@ -306,8 +310,10 @@ class ProfilesSidebar(QWidget):
             item.setSizeHint(QSize(0, self._gui_config.profile.profile_height))
             if name:
                 item.setToolTip(
-                    "When selected, the settings panel on the right edits the "
-                    f"'{name}' profile overrides."
+                    self.tr(
+                        "When selected, the settings panel on the right edits the "
+                        "'{0}' profile overrides."
+                    ).format(name)
                 )
             self._list.addItem(item)
 
