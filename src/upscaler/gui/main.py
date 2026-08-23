@@ -339,7 +339,9 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(
                 None,
                 self.tr("Error", "Error starting pipeline"),
-                self.tr("Could not start pipeline:\n{0}").format(e),
+                self.tr(
+                    "Could not start pipeline:\n{0}", "Error starting pipeline"
+                ).format(e),
             )
             QApplication.instance().quit()
 

@@ -258,7 +258,6 @@ class StyleTab(SettingsTab):
             ["Custom"] + list(PRESETS.keys()),
             "Auto",
             self._on_preset_changed,
-            #: Do not translate "Custom" and preset names like "Auto", they are internal identifiers.
             help=self.tr(
                 "Select a pre-built color scheme for the GUI.",
                 "Description of a setting (tooltip)",

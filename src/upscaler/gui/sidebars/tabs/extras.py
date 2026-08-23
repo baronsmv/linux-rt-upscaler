@@ -54,7 +54,8 @@ class ExtrasTab(SettingsTab):
                 "• {model}: active upscaling model\n"
                 "• {width}: upscaled image width\n"
                 "• {height}: upscaled image height",
-                "Description of a setting (tooltip)",
+                "Description of a setting (tooltip). "
+                "Do not translate any of the placeholders (eg. {timestamp}).",
             ),
         )
 

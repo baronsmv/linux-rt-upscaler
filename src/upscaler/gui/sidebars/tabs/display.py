@@ -83,13 +83,14 @@ class DisplayTab(SettingsTab):
             self._config.vulkan_present_mode,
             self._on_present_mode,
             baseline=self.baseline_config.vulkan_present_mode,
-            #: Do not translate "fifo", "mailbox", "immediate": they are Vulkan presentation mode identifiers.
             help=self.tr(
                 "Vulkan presentation mode:\n"
                 "• fifo: VSync on, lowest power, no tearing\n"
                 "• mailbox: tear-free, lower latency, higher power\n"
                 "• immediate: no VSync, lowest latency, may tear",
-                "Description of a setting (tooltip)",
+                "Description of a setting (tooltip). "
+                "Do not translate fifo, mailbox and immediate: "
+                "they are Vulkan presentation mode identifiers.",
             ),
         )
         self._fps_cap_cb = self._add_cb(

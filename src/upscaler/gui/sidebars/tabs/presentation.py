@@ -38,14 +38,13 @@ class PresentationTab(SettingsTab):
             self._config.overlay_mode,
             self._on_overlay_mode,
             baseline=self.baseline_config.overlay_mode,
-            #: Do not translate "always-on-top", "top-transparent", "fullscreen", "windowed": they are internal overlay mode identifiers.
             help=self.tr(
                 "Overlay window behaviour:\n"
                 "• always-on-top: floating, cannot be focused (recommended)\n"
                 "• top-transparent: click-through (mouse passes to window below)\n"
                 "• fullscreen: covers entire monitor\n"
                 "• windowed: normal window with decorations",
-                "Description of a setting (tooltip)",
+                "Description of a setting (tooltip). Do not translate 'always-on-top', 'top-transparent', 'fullscreen', 'windowed': they are internal overlay mode identifiers.",
             ),
         )
         self._geom_combo = self._add_combo(
@@ -54,13 +53,14 @@ class PresentationTab(SettingsTab):
             self._config.output_geometry,
             self._on_geometry_changed,
             baseline=self.baseline_config.output_geometry,
-            #: Do not translate "fit", "stretch", "cover": they are internal output geometry identifiers.
             help=self.tr(
                 "How the upscaled content fits the overlay:\n"
                 "• fit: letterbox, preserves aspect ratio\n"
                 "• stretch: fill, aspect ratio may be distorted\n"
                 "• cover: fill and crop to fit",
-                "Description of a setting (tooltip)",
+                "Description of a setting (tooltip). "
+                "Do not translate 'fit', 'stretch', 'cover': "
+                "they are internal output geometry identifiers.",
             ),
         )
 
@@ -100,12 +100,15 @@ class PresentationTab(SettingsTab):
 
         # ---- Crop ----
         self._add_section("Crop")
-        _dir = "Cropping from"
         for label, field, slot in [
-            (self.tr("Left", _dir), "crop_left", self._on_crop_left),
-            (self.tr("Top", _dir), "crop_top", self._on_crop_top),
-            (self.tr("Right", _dir), "crop_right", self._on_crop_right),
-            (self.tr("Bottom", _dir), "crop_bottom", self._on_crop_bottom),
+            (self.tr("Left", "Crop border label"), "crop_left", self._on_crop_left),
+            (self.tr("Top", "Crop border label"), "crop_top", self._on_crop_top),
+            (self.tr("Right", "Crop border label"), "crop_right", self._on_crop_right),
+            (
+                self.tr("Bottom", "Crop border label"),
+                "crop_bottom",
+                self._on_crop_bottom,
+            ),
         ]:
             self._add_slider(
                 label,

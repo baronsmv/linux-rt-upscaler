@@ -48,7 +48,8 @@ class ScalingTab(SettingsTab):
                 "• Fixed Lanczos-2 — sharp, linear-light, best for 2D art\n"
                 "• AMD FidelityFX Super Resolution 1.0 — fast, edge-adaptive, best for 3D content\n"
                 "• NVIDIA Image Scaling — directional sharpening, sRGB, may look oversharpened",
-                "Description of a setting (tooltip)",
+                "Description of a setting (tooltip). "
+                "Do not alter the names of the filters (eg. Lanczos-2).",
             ),
         )
         self._downsampler_combo = self._add_combo(
@@ -63,7 +64,8 @@ class ScalingTab(SettingsTab):
                 "Applied after SRCNN upscaling to reduce the image to the target output size (e.g., 1440p → 1080p).\n"
                 "• Catmull-Rom (bicubic) — sharper and faster than Lanczos for mild downscaling\n"
                 "• Adaptive Lanczos — variable radius, high quality even in extreme downscales",
-                "Description of a setting (tooltip)",
+                "Description of a setting (tooltip). "
+                "Do not alter the names of the filters (eg. Catmull-Rom).",
             ),
         )
 

@@ -71,16 +71,47 @@ class SettingsSidebar(IconSidebarBase):
         general_tab.daemon_toggled.connect(self.daemon_toggled)
         self._style_tab: Optional[StyleTab] = None
 
-        _tab = "Settings tab label tooltip"
         tabs = [
-            (general_tab, "general", self.tr("General", _tab)),
-            (ScalingTab(*tab_args), "scaling", self.tr("Scaling", _tab)),
-            (DisplayTab(*tab_args), "display", self.tr("Display", _tab)),
-            (PresentationTab(*tab_args), "presentation", self.tr("Presentation", _tab)),
-            (EffectsTab(*tab_args), "effects", self.tr("Effects", _tab)),
-            (AdvancedTab(*tab_args), "advanced", self.tr("Advanced", _tab)),
-            (ExtrasTab(*tab_args), "extras", self.tr("Extras", _tab)),
-            (StyleTab(*style_tab_args), "style", self.tr("GUI Style", _tab)),
+            (
+                general_tab,
+                "general",
+                self.tr("General", "Name of a settings tab"),
+            ),
+            (
+                ScalingTab(*tab_args),
+                "scaling",
+                self.tr("Scaling", "Name of a settings tab"),
+            ),
+            (
+                DisplayTab(*tab_args),
+                "display",
+                self.tr("Display", "Name of a settings tab"),
+            ),
+            (
+                PresentationTab(*tab_args),
+                "presentation",
+                self.tr("Presentation", "Name of a settings tab"),
+            ),
+            (
+                EffectsTab(*tab_args),
+                "effects",
+                self.tr("Effects", "Name of a settings tab"),
+            ),
+            (
+                AdvancedTab(*tab_args),
+                "advanced",
+                self.tr("Advanced", "Name of a settings tab"),
+            ),
+            (
+                ExtrasTab(*tab_args),
+                "extras",
+                self.tr("Extras", "Name of a settings tab"),
+            ),
+            (
+                StyleTab(*style_tab_args),
+                "style",
+                self.tr("GUI Style", "Name of a settings tab"),
+            ),
         ]
 
         for tab, icon, tooltip in tabs:
