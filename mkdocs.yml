@@ -72,3 +72,4 @@ nav:
       - Overview: developer/overview.md
       - Architecture:
           - Architecture Limitations: developer/architecture/limitations.md
+  - Localization: contributing/localization.md

@@ -67,6 +67,8 @@ If you'd like to help translate the upscaler into your language, click in this i
 
 <a href="https://hosted.weblate.org/engage/linux-rt-upscaler/"><img src="https://hosted.weblate.org/widget/linux-rt-upscaler/multi-auto.svg" alt="Localization status"></a>
 
+For more info, read the [Localization Guide](https://baronsmv.github.io/linux-rt-upscaler/contributing/localization/).
+
 ## Roadmap
 
 - [X] Translation infrastructure and community-contributed translations
