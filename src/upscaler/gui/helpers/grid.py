@@ -125,9 +125,15 @@ class WindowGridManager:
             logger.exception("Window enumeration failed")
             QMessageBox.warning(
                 self._main_window,
-                QCoreApplication.translate("WindowGridManager", "Error"),
                 QCoreApplication.translate(
-                    "WindowGridManager", "Could not enumerate windows."
+                    "WindowGridManager",
+                    "Error",
+                    "Error warning while enumerating windows",
+                ),
+                QCoreApplication.translate(
+                    "WindowGridManager",
+                    "Could not enumerate windows.",
+                    "Error warning while enumerating windows",
                 ),
             )
             return

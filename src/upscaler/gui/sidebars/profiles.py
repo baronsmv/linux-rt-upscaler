@@ -77,7 +77,7 @@ class ProfilesSidebar(QWidget):
         layout.setSpacing(0)
 
         # Title
-        title = QLabel("Profiles")
+        title = QLabel(self.tr("Profiles", "Profiles sidebar title"))
         title.setStyleSheet(section_title_style(self._gui_config))
         layout.addWidget(title)
 
@@ -130,20 +130,20 @@ class ProfilesSidebar(QWidget):
 
         self._add_btn = self._make_tool_button(
             "actions/add",
-            self.tr("Add profile (Ctrl+N)"),
+            self.tr("Add profile (Ctrl+N)", "Profile add action tooltip"),
             self.add_profile_requested.emit,
             btn_gui_config,
         )
         self._edit_btn = self._make_tool_button(
             "actions/edit",
-            self.tr("Edit match criteria (Enter/F2)"),
+            self.tr("Edit match criteria (Enter/F2)", "Profile edit action tooltip"),
             self._emit_edit,
             btn_gui_config,
             enabled=False,
         )
         self._delete_btn = self._make_tool_button(
             "actions/delete",
-            self.tr("Delete profile (Del)"),
+            self.tr("Delete profile (Del)", "Profile delete action tooltip"),
             self._emit_delete,
             btn_gui_config,
             enabled=False,
@@ -151,14 +151,14 @@ class ProfilesSidebar(QWidget):
 
         self._up_btn = self._make_tool_button(
             "actions/up",
-            self.tr("Move up (Ctrl+Shift+Up)"),
+            self.tr("Move up (Ctrl+Shift+Up)", "Profile move up action tooltip"),
             self._emit_move_up,
             btn_gui_config,
             enabled=False,
         )
         self._down_btn = self._make_tool_button(
             "actions/down",
-            self.tr("Move down (Ctrl+Shift+Down)"),
+            self.tr("Move down (Ctrl+Shift+Down)", "Profile move down action tooltip"),
             self._emit_move_down,
             btn_gui_config,
             enabled=False,
@@ -255,12 +255,15 @@ class ProfilesSidebar(QWidget):
                 color=self._gui_config.palette.icon,
             )
         )
-        default_item = QListWidgetItem(default_icon, "  Global")
+        default_item = QListWidgetItem(
+            default_icon, "  " + self.tr("Global", "Global entry profile name")
+        )
         default_item.setData(Qt.UserRole, "")
         default_item.setSizeHint(QSize(0, self._gui_config.profile.profile_height))
         default_item.setToolTip(
             self.tr(
-                "When selected, the settings panel on the right edits the global configuration."
+                "When selected, the settings panel on the right edits the global configuration.",
+                "Global entry profile tooltip",
             )
         )
         self._list.addItem(default_item)
@@ -272,7 +275,8 @@ class ProfilesSidebar(QWidget):
                     "Global settings apply to all windows.\n\n"
                     "Create a profile to override settings\n"
                     "for a specific window, matched by its\n"
-                    "name or size."
+                    "name or size.",
+                    "No profile message (preserve line width)",
                 )
             )
             hint_label.setWordWrap(True)
@@ -312,7 +316,8 @@ class ProfilesSidebar(QWidget):
                 item.setToolTip(
                     self.tr(
                         "When selected, the settings panel on the right edits the "
-                        "'{0}' profile overrides."
+                        "'{0}' profile overrides.",
+                        "Profile selected tooltip",
                     ).format(name)
                 )
             self._list.addItem(item)

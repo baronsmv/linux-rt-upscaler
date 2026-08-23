@@ -22,23 +22,26 @@ class ExtrasTab(SettingsTab):
         self._config = config
         super().__init__(
             gui_config,
-            title=self.tr("Extras", self.TAB),
+            title=self.tr("Extras", "Name of a settings tab"),
             baseline_config=baseline_config,
             parent=parent,
         )
 
     def _build_content(self) -> None:
         # ---- Screenshot Location ----
-        self._add_section(self.tr("Screenshot Location", self.SECTION))
+        self._add_section(self.tr("Screenshot Location", "Settings section"))
         self._dir_picker = self._add_path_picker(
-            self.tr("Directory", self.SETTING),
+            self.tr("Directory", "Label of setting (must be short)"),
             self._config.screenshot_dir,
             self._on_dir_changed,
             baseline=self.baseline_config.screenshot_dir,
-            help=self.tr("Folder where screenshots will be saved.", self.DESCRIPTION),
+            help=self.tr(
+                "Folder where screenshots will be saved.",
+                "Description of a setting (tooltip)",
+            ),
         )
         self._file_input = self._add_text(
-            self.tr("Template", self.SETTING),
+            self.tr("Template", "Label of setting (must be short)"),
             self._config.screenshot_filename,
             self._on_file_changed,
             baseline=self.baseline_config.screenshot_filename,
@@ -51,25 +54,25 @@ class ExtrasTab(SettingsTab):
                 "• {model}: active upscaling model\n"
                 "• {width}: upscaled image width\n"
                 "• {height}: upscaled image height",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
 
         # ---- On-Screen Display ----
-        self._add_section(self.tr("On-Screen Display", self.SECTION))
+        self._add_section(self.tr("On-Screen Display", "Settings section"))
         self._osd_enabled = self._add_cb(
-            self.tr("Show OSD", self.SETTING),
+            self.tr("Show OSD", "Label of setting (must be short)"),
             self._config.show_osd,
             self._on_osd_enabled,
             baseline=self.baseline_config.show_osd,
             help=self.tr(
                 "Show on-screen messages when model, geometry, or zoom changes, "
                 "and after taking a screenshot.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._osd_duration = self._add_slider(
-            self.tr("Duration (s)", self.SETTING),
+            self.tr("Duration (s)", "Label of setting (must be short)"),
             1,
             1000,
             int(self._config.osd_duration * 100),
@@ -78,7 +81,7 @@ class ExtrasTab(SettingsTab):
             baseline=self.baseline_config.osd_duration,
             help=self.tr(
                 "How many seconds OSD messages remain visible before fading out.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._osd_duration.setEnabled(self._config.show_osd)

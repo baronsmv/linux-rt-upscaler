@@ -92,20 +92,25 @@ class AboutDialog(QDialog):
         layout.addLayout(icon_container)
 
         # App name
-        name = QLabel(self.tr("Real-Time Upscaler"))
+        name = QLabel(self.tr("Real-Time Upscaler", "Localized application name"))
         name.setAlignment(Qt.AlignCenter)
         name.setStyleSheet(about_dialog_name_style(gui_config))
         layout.addWidget(name)
 
         # Version
-        version = QLabel(self.tr("Version {0}").format(get_version()))
+        version = QLabel(
+            self.tr("Version {0}", "Version of the upscaler").format(get_version())
+        )
         version.setAlignment(Qt.AlignCenter)
         version.setStyleSheet(about_dialog_version_style(gui_config))
         layout.addWidget(version)
 
         # Description
         desc = QLabel(
-            self.tr("A real-time SRCNN upscaler for any X-Window on GNU/Linux.")
+            self.tr(
+                "A real-time SRCNN upscaler for any X-Window on GNU/Linux.",
+                "Description of the upscaler",
+            )
         )
         desc.setWordWrap(True)
         desc.setAlignment(Qt.AlignCenter)
@@ -117,7 +122,7 @@ class AboutDialog(QDialog):
         layout.addStretch()
 
         # Close button
-        close_btn = QPushButton(self.tr("Close"))
+        close_btn = QPushButton(self.tr("Close", "Close button"))
         close_btn.setFixedSize(120, 36)
         close_btn.setCursor(Qt.PointingHandCursor)
         close_btn.clicked.connect(self.accept)

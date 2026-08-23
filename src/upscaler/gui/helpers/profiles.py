@@ -56,9 +56,13 @@ class ProfileActions:
         if self._config_manager.is_dirty():
             reply = QMessageBox.question(
                 self._main_window,
-                QCoreApplication.translate("ProfileActions", "Unsaved changes"),
                 QCoreApplication.translate(
-                    "ProfileActions", "Save changes before switching profile?"
+                    "ProfileActions", "Unsaved changes", "Warning dialog title"
+                ),
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "Save changes before switching profile?",
+                    "Warning dialog",
                 ),
                 QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
             )
@@ -111,8 +115,14 @@ class ProfileActions:
             logger.exception("Failed to add profile")
             QMessageBox.critical(
                 self._main_window,
-                QCoreApplication.translate("ProfileActions", "Error"),
-                QCoreApplication.translate("ProfileActions", "Could not add profile."),
+                QCoreApplication.translate(
+                    "ProfileActions", "Error", "Error dialog title"
+                ),
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "Could not add profile.",
+                    "Error while adding profile",
+                ),
             )
 
     def edit_profile(self, name: str) -> None:
@@ -135,11 +145,12 @@ class ProfileActions:
                         QMessageBox.warning(
                             self._main_window,
                             QCoreApplication.translate(
-                                "ProfileActions", "Duplicate name"
+                                "ProfileActions", "Duplicate name", "Error dialog title"
                             ),
                             QCoreApplication.translate(
                                 "ProfileActions",
                                 "A profile named '{0}' already exists.",
+                                "Error while adding profile",
                             ).format(new_name),
                         )
                         return
@@ -166,8 +177,14 @@ class ProfileActions:
             logger.exception("Failed to edit profile")
             QMessageBox.critical(
                 self._main_window,
-                QCoreApplication.translate("ProfileActions", "Error"),
-                QCoreApplication.translate("ProfileActions", "Could not edit profile."),
+                QCoreApplication.translate(
+                    "ProfileActions", "Error", "Error dialog title"
+                ),
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "Could not edit profile.",
+                    "Error while editing profile",
+                ),
             )
 
     def delete_profile(self, name: str) -> None:
@@ -175,9 +192,15 @@ class ProfileActions:
         try:
             reply = QMessageBox.question(
                 self._main_window,
-                QCoreApplication.translate("ProfileActions", "Delete profile"),
                 QCoreApplication.translate(
-                    "ProfileActions", "Delete profile '{0}'?"
+                    "ProfileActions",
+                    "Delete profile",
+                    "Delete window confirmation title",
+                ),
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "Delete profile '{0}'?",
+                    "Delete profile confirmation",
                 ).format(name),
                 QMessageBox.Yes | QMessageBox.No,
             )
@@ -192,9 +215,13 @@ class ProfileActions:
             logger.exception("Failed to delete profile")
             QMessageBox.critical(
                 self._main_window,
-                QCoreApplication.translate("ProfileActions", "Error"),
                 QCoreApplication.translate(
-                    "ProfileActions", "Could not delete profile."
+                    "ProfileActions", "Error", "Error window title"
+                ),
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "Could not delete profile.",
+                    "Error while deleting profile",
                 ),
             )
 
@@ -207,9 +234,13 @@ class ProfileActions:
             logger.exception("Failed to move profile up")
             QMessageBox.critical(
                 self._main_window,
-                QCoreApplication.translate("ProfileActions", "Error"),
                 QCoreApplication.translate(
-                    "ProfileActions", "Could not reorder profiles."
+                    "ProfileActions", "Error", "Error window title"
+                ),
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "Could not reorder profiles.",
+                    "Error while reordering profiles",
                 ),
             )
 
@@ -222,9 +253,13 @@ class ProfileActions:
             logger.exception("Failed to move profile down")
             QMessageBox.critical(
                 self._main_window,
-                QCoreApplication.translate("ProfileActions", "Error"),
                 QCoreApplication.translate(
-                    "ProfileActions", "Could not reorder profiles."
+                    "ProfileActions", "Error", "Error window title"
+                ),
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "Could not reorder profiles.",
+                    "Error while reordering profiles",
                 ),
             )
 

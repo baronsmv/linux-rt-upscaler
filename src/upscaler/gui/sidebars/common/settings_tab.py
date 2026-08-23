@@ -48,11 +48,6 @@ class SettingsTab(QWidget):
 
     config_changed = Signal()
 
-    TAB = "Settings tab"
-    SETTING = "Setting"
-    SECTION = "Settings section"
-    DESCRIPTION = "Setting description"
-
     def __init__(
         self,
         gui_config: GUIConfig,

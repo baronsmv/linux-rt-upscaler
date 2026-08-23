@@ -29,16 +29,16 @@ class GeneralTab(SettingsTab):
         self._profile_active = profile_active
         super().__init__(
             gui_config,
-            title=self.tr("General", self.TAB),
+            title=self.tr("General", "Name of a settings tab"),
             baseline_config=baseline_config,
             parent=parent,
         )
 
     def _build_content(self) -> None:
         # ---- Model & double upscale ----
-        self._add_section(self.tr("Upscaling Model", self.SECTION))
+        self._add_section(self.tr("Upscaling Model", "Settings section"))
         self._add_named_slider(
-            self.tr("Model", self.SETTING),
+            self.tr("Model", "Label of setting (must be short)"),
             UPSCALING_MODELS,
             self._config.model,
             self._on_model_changed,
@@ -46,11 +46,11 @@ class GeneralTab(SettingsTab):
             help=self.tr(
                 "Upscaling model to use. Models are ordered from worst to best quality. "
                 "Larger numbers indicate deeper networks (slower, higher quality).",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._double_cb = self._add_cb(
-            self.tr("Double Upscale (4x)", self.SETTING),
+            self.tr("Double Upscale (4x)", "Label of setting (must be short)"),
             self._config.double_upscale,
             self._on_double_changed,
             baseline=self.baseline_config.double_upscale,
@@ -59,51 +59,52 @@ class GeneralTab(SettingsTab):
                     "Perform two consecutive 2x upscales for a 4x total (e.g., 720p to 2880p). "
                     "Useful for high-resolution screens (4K) and low-resolution sources. "
                     "Increases GPU usage.",
-                    self.DESCRIPTION,
+                    "Description of a setting (tooltip)",
                 )
             ),
         )
 
         # ---- Focus Tracking ----
-        self._add_section(self.tr("Focus Tracking", self.SECTION))
+        self._add_section(self.tr("Focus Tracking", "Settings section"))
         self._follow_focus_cb = self._add_cb(
-            self.tr("Follow Focus", self.SETTING),
+            self.tr("Follow Focus", "Label of setting (must be short)"),
             self._config.follow_focus,
             self._on_follow_focus,
             baseline=self.baseline_config.follow_focus,
             help=self.tr(
                 "Automatically switch the upscaling target to the currently focused window. "
                 "Useful when moving between multiple windows.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._pause_focus_loss_cb = self._add_cb(
-            self.tr("Pause on Focus Loss", self.SETTING),
+            self.tr("Pause on Focus Loss", "Label of setting (must be short)"),
             self._config.pause_on_focus_loss,
             self._on_pause_focus_loss,
             baseline=self.baseline_config.pause_on_focus_loss,
             help=self.tr(
                 "When the target window loses focus, hide the overlay until it regains focus. "
                 "Uncheck to keep the overlay always visible.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
 
         # ---- Daemon ----
-        self._add_section(self.tr("Automatic Upscaling", self.SECTION))
+        self._add_section(self.tr("Automatic Upscaling", "Settings section"))
         if self._profile_active:
             self._auto_cb = self._add_cb(
-                self.tr("Exclude from Daemon Mode", self.SETTING),
+                self.tr("Exclude from Daemon Mode", "Label of setting (must be short)"),
                 self._config.daemon_exclude,
                 self._on_daemon_exclude_changed,
                 baseline=self.baseline_config.daemon_exclude,
                 help=self.tr(
-                    "Exclude this profile from automatic upscaling.", self.DESCRIPTION
+                    "Exclude this profile from automatic upscaling.",
+                    "Description of a setting (tooltip)",
                 ),
             )
         else:
             self._daemon_cb = self._add_cb(
-                self.tr("Daemon Mode", self.SETTING),
+                self.tr("Daemon Mode", "Label of setting (must be short)"),
                 self._config.daemon,
                 self._on_daemon_changed,
                 baseline=self.baseline_config.daemon,
@@ -112,7 +113,7 @@ class GeneralTab(SettingsTab):
                         "When enabled, a daemon process runs in the background and "
                         "automatically upscales any window that matches a profile.\n"
                         "Disable this to manually pick a window from the grid.",
-                        self.DESCRIPTION,
+                        "Description of a setting (tooltip)",
                     )
                 ),
             )

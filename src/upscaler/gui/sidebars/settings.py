@@ -71,7 +71,7 @@ class SettingsSidebar(IconSidebarBase):
         general_tab.daemon_toggled.connect(self.daemon_toggled)
         self._style_tab: Optional[StyleTab] = None
 
-        _tab = "Settings tab"
+        _tab = "Settings tab label tooltip"
         tabs = [
             (general_tab, "general", self.tr("General", _tab)),
             (ScalingTab(*tab_args), "scaling", self.tr("Scaling", _tab)),
