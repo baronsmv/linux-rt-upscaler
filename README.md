@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/linux-rt-upscaler/"><img src="https://img.shields.io/pypi/v/linux-rt-upscaler.svg" alt="PyPI version"></a>
-  <a href="https://pypi.org/project/linux-rt-upscaler/"><img src="https://img.shields.io/pypi/pyversions/linux-rt-upscaler.svg" alt="Python versions"></a>
+  <a href="https://hosted.weblate.org/engage/linux-rt-upscaler/"><img src="https://hosted.weblate.org/widget/linux-rt-upscaler/gui/svg-badge.svg" alt="Estado de la traducción"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPLv3"></a>
 </p>
 
@@ -59,9 +59,13 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 - [Configuration](https://baronsmv.github.io/linux-rt-upscaler/user/configuration/)
 - [API Reference](https://baronsmv.github.io/linux-rt-upscaler/api/overview/)
 
+## Localization
+
+Thanks to [Weblate](https://hosted.weblate.org/engage/linux-rt-upscaler/) for hosting! If you'd like to help translate the upscaler GUI into your language, please [go here]((https://hosted.weblate.org/engage/linux-rt-upscaler/))!
+
 ## Roadmap
 
-- [ ] Translation infrastructure and community-contributed translations
+- [X] Translation infrastructure and community-contributed translations
 - [ ] GUI Profiles operations (drag & drop, duplicate)
 - [ ] GUI System Tray
 - [ ] Complete GUI Style settings (font size, spacing, etc.)
