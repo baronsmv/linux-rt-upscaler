@@ -292,7 +292,7 @@ class ProfilesSidebar(QWidget):
             self._hint_label = QLabel(
                 self.tr(
                     "Global settings apply to all windows.\n\n"
-                    "Create a profile to override settings for a specific window, "
+                    "You can create a profile to override settings for a specific window, "
                     "matched by its title or size.",
                     "No profile message",
                 )

@@ -1382,60 +1382,58 @@ Please choose a different name.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="133" />
+      <location filename="../sidebars/profiles.py" line="135" />
       <source>Add profile (Ctrl+N)</source>
       <comment>Profile add action tooltip</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="139" />
+      <location filename="../sidebars/profiles.py" line="141" />
       <source>Edit match criteria (Enter/F2)</source>
       <comment>Profile edit action tooltip</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="146" />
+      <location filename="../sidebars/profiles.py" line="148" />
       <source>Delete profile (Del)</source>
       <comment>Profile delete action tooltip</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="154" />
+      <location filename="../sidebars/profiles.py" line="156" />
       <source>Move up (Ctrl+Shift+Up)</source>
       <comment>Profile move up action tooltip</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="161" />
+      <location filename="../sidebars/profiles.py" line="163" />
       <source>Move down (Ctrl+Shift+Down)</source>
       <comment>Profile move down action tooltip</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="259" />
+      <location filename="../sidebars/profiles.py" line="278" />
       <source>Global</source>
       <comment>Global entry profile name</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="264" />
+      <location filename="../sidebars/profiles.py" line="283" />
       <source>When selected, the settings panel on the right edits the global configuration.</source>
       <comment>Global entry profile tooltip</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="274" />
+      <location filename="../sidebars/profiles.py" line="293" />
       <source>Global settings apply to all windows.
 
-Create a profile to override settings
-for a specific window, matched by its
-name or size.</source>
-      <comment>No profile message (preserve line width)</comment>
+You can create a profile to override settings for a specific window, matched by its title or size.</source>
+      <comment>No profile message</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="317" />
-      <source>When selected, the settings panel on the right edits the '{0}' profile overrides.</source>
+      <location filename="../sidebars/profiles.py" line="341" />
+      <source>When selected, the settings panel on the right edits the settings overrides for '{0}'.</source>
       <comment>Profile selected tooltip</comment>
       <translation type="unfinished" />
     </message>
