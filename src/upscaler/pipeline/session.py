@@ -27,6 +27,32 @@ class PipelineSession:
     daemon_monitor: Optional[DaemonMonitor] = None
     hotkey_manager: Optional[HotkeyManager] = None
 
+    def shutdown(self):
+        """Stop all resources before interpreter exit."""
+        # Stop monitors
+        if self.monitor:
+            self.monitor.stop()
+        if self.daemon_monitor:
+            self.daemon_monitor.stop()
+        if self.hotkey_manager:
+            self.hotkey_manager.stop()
+
+        # Stop pipeline
+        self.pipeline.stop()
+
+        # Close overlay
+        self.overlay.close()
+        QApplication.processEvents()
+        self.overlay.deleteLater()
+        QApplication.processEvents()
+
+        # Clear references
+        self.monitor = None
+        self.daemon_monitor = None
+        self.hotkey_manager = None
+        self.pipeline = None
+        self.overlay = None
+
 
 def create_pipeline_session(
     config: Config,

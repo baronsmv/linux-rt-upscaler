@@ -88,6 +88,7 @@ class MainWindow(QMainWindow):
         # Setup UI
         self._setup_ui()
         self._config_manager.config_changed.connect(self._on_config_changed)
+        QApplication.instance().aboutToQuit.connect(self._cleanup_before_quit)
 
     def _setup_ui(self):
         """Create the entire UI from scratch, using self.gui_config."""
@@ -294,7 +295,7 @@ class MainWindow(QMainWindow):
     def _on_manual_overlay_closed(self) -> None:
         """Called when the overlay of a manual session is closed."""
         if self.manual_session:
-            self.manual_session.pipeline.stop()
+            self.manual_session.shutdown()
             self.manual_session = None
         QApplication.instance().quit()
 
@@ -484,9 +485,15 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Window close
     # ------------------------------------------------------------------
+    def _cleanup_before_quit(self) -> None:
+        if self.manual_session is not None:
+            self.manual_session.shutdown()
+            self.manual_session = None
+
     def closeEvent(self, event) -> None:
         """Stop all background activity before closing."""
         self.grid_mgr.stop()
         self.daemon_ctrl.stop()
+        self._cleanup_before_quit()
         self._settings.setValue("mainwindow/geometry", self.saveGeometry())
         super().closeEvent(event)

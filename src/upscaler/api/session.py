@@ -368,28 +368,14 @@ class UpscalerSession(QObject):
         This method is idempotent and safe to call multiple times.
         """
         if self._session is not None:
-            # Stop the pipeline thread first
-            if self._session.pipeline is not None:
-                self._session.pipeline.stop()
-
-            # Stop monitors and hotkeys if they exist
-            if self._session.monitor is not None:
-                self._session.monitor.stop()
-            if self._session.daemon_monitor is not None:
-                self._session.daemon_monitor.stop()
-            if self._session.hotkey_manager is not None:
-                self._session.hotkey_manager.stop()
-
-            # Terminate any launched process if we have one
+            self._session.shutdown()
             if self._proc is not None:
                 try:
                     self._proc.terminate()
                     self._proc.wait(timeout=2.0)
                 except Exception as e:
                     logger.debug(f"Error terminating launched process: {e}")
-
             self._session = None
-
         self._started = False
         self._finished = True
         logger.debug("Session closed")

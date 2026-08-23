@@ -77,16 +77,11 @@ def main() -> None:
         logger.error(f"Unexpected error in Qt event loop: {e}", exc_info=True)
         exit_code = 1
     finally:
-        session.pipeline.stop()
-        if session.monitor is not None:
-            session.monitor.stop()
-        if session.daemon_monitor is not None:
-            session.daemon_monitor.stop()
+        session.shutdown()
         if proc is not None:
             logger.debug(f"Terminating launched process {proc.pid}")
             proc.terminate()
             proc.wait()
-        session.hotkey_manager.stop()
         sys.exit(exit_code)
 
 
