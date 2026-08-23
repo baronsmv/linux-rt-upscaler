@@ -6,22 +6,22 @@
     <message>
         <location filename="../dialogs/about.py" line="95"/>
         <source>Real-Time Upscaler</source>
-        <translation type="unfinished"></translation>
+        <translation>Escalador en Tiempo Real</translation>
     </message>
     <message>
         <location filename="../dialogs/about.py" line="101"/>
         <source>Version {0}</source>
-        <translation type="unfinished"></translation>
+        <translation>Versión {0}</translation>
     </message>
     <message>
         <location filename="../dialogs/about.py" line="109"/>
         <source>A real-time SRCNN upscaler for any X-Window on GNU/Linux.</source>
-        <translation type="unfinished"></translation>
+        <translation>Un escalador SRCNN en tiempo real para cualquier ventana X en GNU/Linux.</translation>
     </message>
     <message>
         <location filename="../dialogs/about.py" line="120"/>
         <source>Close</source>
-        <translation type="unfinished"></translation>
+        <translation>Cerrar</translation>
     </message>
 </context>
 <context>
@@ -29,12 +29,12 @@
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="26"/>
         <source>Advanced</source>
-        <translation type="unfinished"></translation>
+        <translation>Avanzado</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="33"/>
         <source>Vulkan Rendering</source>
-        <translation type="unfinished"></translation>
+        <translation>Renderizado Vulkan</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="35"/>
