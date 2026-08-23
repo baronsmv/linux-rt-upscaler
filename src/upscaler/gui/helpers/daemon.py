@@ -104,12 +104,12 @@ class DaemonController:
         if not self._active:
             return
         self._active = False
-
         if self._session:
-            self._session.pipeline.finished.disconnect(self._on_error)
-            self._teardown_session(self._session)
+            try:
+                self._session.shutdown()
+            except Exception:
+                logger.exception("Error shutting down daemon session")
             self._session = None
-
         self._show_gui()
 
     def shutdown(self) -> None:
@@ -117,7 +117,10 @@ class DaemonController:
         if self._active:
             self._active = False
             if self._session:
-                self._teardown_session(self._session)
+                try:
+                    self._session.shutdown()
+                except Exception:
+                    logger.exception("Error shutting down daemon session")
                 self._session = None
         QApplication.instance().quit()
 
@@ -140,38 +143,18 @@ class DaemonController:
         logger.warning("Daemon pipeline finished unexpectedly, stopping it")
         if not self._active:
             return
-
         self._active = False
         if self._session:
-            # Avoid double cleanup
+            try:
+                self._session.shutdown()
+            except Exception:
+                logger.exception("Error shutting down daemon session")
             self._session = None
         self._show_gui()
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
-    @staticmethod
-    def _teardown_session(session) -> None:
-        """Safely stop all parts of a pipeline session."""
-        try:
-            session.pipeline.stop()
-        except Exception:
-            logger.exception("Error stopping pipeline")
-        try:
-            if session.monitor:
-                session.monitor.stop()
-        except Exception:
-            pass
-        try:
-            if session.daemon_monitor:
-                session.daemon_monitor.stop()
-        except Exception:
-            pass
-        try:
-            session.hotkey_manager.stop()
-        except Exception:
-            pass
-
     def _show_gui(self) -> None:
         """Show the main window and restart grid refreshes (if daemon active)."""
         self._main_window.show()
