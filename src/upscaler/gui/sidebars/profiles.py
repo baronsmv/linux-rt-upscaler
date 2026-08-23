@@ -249,7 +249,7 @@ class ProfilesSidebar(QWidget):
         return super().eventFilter(obj, event)
 
     def _update_hint_size(self) -> None:
-        if not hasattr(self, "_hint_item") or not hasattr(self, "_hint_label"):
+        if self._hint_item is None or self._hint_label is None:
             return
         width = self._list.viewport().width()
         height = self._hint_label.heightForWidth(width)
@@ -263,6 +263,8 @@ class ProfilesSidebar(QWidget):
         Use this after adding, deleting, or reordering profiles.
         """
         self._list.blockSignals(True)
+        self._hint_item = None
+        self._hint_label = None
         self._list.clear()
 
         # Default entry (global settings)
