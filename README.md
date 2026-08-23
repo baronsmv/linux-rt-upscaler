@@ -1,10 +1,10 @@
-<p text-align="center">
+<p align="center">
   <img src="https://raw.githubusercontent.com/baronsmv/linux-rt-upscaler/main/data/icons/hicolor/scalable/apps/io.github.baronsmv.linux-rt-upscaler.svg" width="128" alt="icon">
 </p>
 
-<h1 text-align="center">Real-Time Upscaler for Linux</h1>
+<h1 align="center">Real-Time Upscaler for Linux</h1>
 
-<p text-align="center">
+<p align="center">
   <a href="https://pypi.org/project/linux-rt-upscaler/"><img src="https://img.shields.io/pypi/v/linux-rt-upscaler.svg" alt="PyPI version"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPLv3"></a>
   <a href="https://hosted.weblate.org/engage/linux-rt-upscaler/"><img src="https://hosted.weblate.org/widget/linux-rt-upscaler/svg-badge.svg" alt="Localization status"></a>
