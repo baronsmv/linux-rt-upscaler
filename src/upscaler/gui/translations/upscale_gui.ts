@@ -6,21 +6,25 @@
     <message>
         <location filename="../dialogs/about.py" line="95"/>
         <source>Real-Time Upscaler</source>
+        <comment>Localized application name</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/about.py" line="101"/>
+        <location filename="../dialogs/about.py" line="102"/>
         <source>Version {0}</source>
+        <comment>Version of the upscaler</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/about.py" line="109"/>
+        <location filename="../dialogs/about.py" line="113"/>
         <source>A real-time SRCNN upscaler for any X-Window on GNU/Linux.</source>
+        <comment>Description of the upscaler</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/about.py" line="120"/>
+        <location filename="../dialogs/about.py" line="125"/>
         <source>Close</source>
+        <comment>Close button</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -29,137 +33,161 @@
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="26"/>
         <source>Advanced</source>
+        <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="33"/>
         <source>Vulkan Rendering</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="35"/>
         <source>Buffer Pool Size</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="45"/>
+        <location filename="../sidebars/tabs/advanced.py" line="46"/>
         <source>Number of pre-allocated staging buffers for partial texture updates.
 Raise this if you notice stutters when many small regions change rapidly.
 Recommended range: 2 - 16.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="49"/>
         <source>Frame Timeout (ms)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="59"/>
+        <location filename="../sidebars/tabs/advanced.py" line="60"/>
         <source>Maximum time (in milliseconds) to wait for the GPU to finish the previous frame.
 Lower values reduce CPU blocking but may drop frames under heavy load.
 Recommended range: 17 (1/60 s) - 1000 (1 s).</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="64"/>
         <source>Tile-Based Processing</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="66"/>
         <source>Enable Tile Mode</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="74"/>
+        <location filename="../sidebars/tabs/advanced.py" line="75"/>
         <source>Divide the frame into tiles and only re-process the ones that have changed.
 Ideal for mostly static content (e.g. text editors, visual novels).
 When disabled, the whole frame is upscaled in one pass: better for video or rapid changes.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="78"/>
         <source>Damage Tracking</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="85"/>
+        <location filename="../sidebars/tabs/advanced.py" line="86"/>
         <source>Transfer only the changed regions of the frame to the GPU instead of the entire image.
 Disable if you suspect missed updates from the compositor causing glitches.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="89"/>
         <source>Tile Size</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="100"/>
+        <location filename="../sidebars/tabs/advanced.py" line="101"/>
         <source>Interior size of each tile in pixels.
 Smaller tiles track changes more precisely but add CPU overhead.
 Multiples of 32 work best with GPU workgroups.
 Recommended range: 32 - 128.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="104"/>
         <source>Context Margin</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="114"/>
+        <location filename="../sidebars/tabs/advanced.py" line="115"/>
         <source>Extra border pixels added around each tile to provide context for the neural network.
 Larger margins improve boundary quality but increase processing.
 Recommended range: 4 - 24.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="118"/>
         <source>Max Tiles per Frame</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="128"/>
+        <location filename="../sidebars/tabs/advanced.py" line="129"/>
         <source>Maximum number of dirty tiles processed per frame.
 When exceeded, the pipeline falls back to full-frame processing to avoid excessive GPU dispatches.
 Recommended range: 4 - 32.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="132"/>
         <source>Area Threshold %</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="144"/>
+        <location filename="../sidebars/tabs/advanced.py" line="145"/>
         <source>Fraction of the window area (in %) that, when dirty, forces a fallback to full-frame processing.
 Smaller values fall back earlier, preventing too many tiny tile dispatches.
 Recommended range: 15% - 50%.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="149"/>
         <source>Timing</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="151"/>
         <source>Daemon Poll (s)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="160"/>
+        <location filename="../sidebars/tabs/advanced.py" line="161"/>
         <source>How often the daemon scans for matching windows.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="164"/>
         <source>Focus Poll (s)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="173"/>
+        <location filename="../sidebars/tabs/advanced.py" line="174"/>
         <source>How often the focus monitor checks for active window changes.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -168,43 +196,51 @@ Recommended range: 15% - 50%.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="186"/>
+        <location filename="../sidebars/tabs/advanced.py" line="187"/>
         <source>How often the pipeline checks its internal state when idle.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="191"/>
         <source>Error Recovery</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="193"/>
         <source>Max Capture Failures</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="202"/>
+        <location filename="../sidebars/tabs/advanced.py" line="203"/>
         <source>Consecutive frame-grab failures before the pipeline stops.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="206"/>
         <source>Capture Failure Delay (s)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="214"/>
+        <location filename="../sidebars/tabs/advanced.py" line="216"/>
         <source>Pause after a capture failure before retrying.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="218"/>
+        <location filename="../sidebars/tabs/advanced.py" line="219"/>
         <source>Swapchain Debounce (s)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/advanced.py" line="227"/>
+        <location filename="../sidebars/tabs/advanced.py" line="229"/>
         <source>Minimum time between two Vulkan swapchain recreations.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -227,96 +263,113 @@ Recommended range: 15% - 50%.</source>
     <message>
         <location filename="../sidebars/tabs/display.py" line="36"/>
         <source>Display</source>
+        <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/display.py" line="43"/>
         <source>Devices</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/display.py" line="45"/>
         <source>Monitor</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="53"/>
+        <location filename="../sidebars/tabs/display.py" line="54"/>
         <source>Monitor to cover: &apos;primary&apos;, &apos;all&apos; (multi-monitor), or a specific output name (e.g., &apos;HDMI-1&apos;).</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/display.py" line="63"/>
         <source>GPU</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="74"/>
+        <location filename="../sidebars/tabs/display.py" line="75"/>
         <source>Vulkan GPU used for rendering. &apos;{0}&apos; selects the most powerful GPU found.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/display.py" line="79"/>
         <source>V-Sync</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/display.py" line="81"/>
         <source>Present Mode</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="92"/>
+        <location filename="../sidebars/tabs/display.py" line="94"/>
         <source>Vulkan presentation mode:
 • fifo: VSync on, lowest power, no tearing
 • mailbox: tear-free, lower latency, higher power
 • immediate: no VSync, lowest latency, may tear</source>
-        <extracomment>Do not translate &quot;fifo&quot;, &quot;mailbox&quot;, &quot;immediate&quot;: they are Vulkan presentation mode identifiers.</extracomment>
+        <comment>Description of a setting (tooltip). Do not translate fifo, mailbox and immediate: they are Vulkan presentation mode identifiers.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="96"/>
+        <location filename="../sidebars/tabs/display.py" line="97"/>
         <source>Limit FPS</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="103"/>
+        <location filename="../sidebars/tabs/display.py" line="105"/>
         <source>Enable an upper frame-rate limit.
 It&apos;s recommended to use &apos;mailbox&apos; presentation mode when limiting FPS.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="107"/>
+        <location filename="../sidebars/tabs/display.py" line="108"/>
         <source>Max FPS</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="117"/>
+        <location filename="../sidebars/tabs/display.py" line="121"/>
         <source>Target maximum frames per second.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="122"/>
+        <location filename="../sidebars/tabs/display.py" line="126"/>
         <source>Scale Factor</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="124"/>
+        <location filename="../sidebars/tabs/display.py" line="128"/>
         <source>Auto Scale</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="131"/>
+        <location filename="../sidebars/tabs/display.py" line="136"/>
         <source>Let the application automatically detect the correct scale factor based on the physical monitor resolution.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="135"/>
+        <location filename="../sidebars/tabs/display.py" line="139"/>
         <source>Scale Factor %</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/display.py" line="149"/>
+        <location filename="../sidebars/tabs/display.py" line="154"/>
         <source>Manual scale factor (e.g., 1.50 for 150% scaling). Only available when &apos;Auto Scale&apos; is disabled.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -325,21 +378,25 @@ It&apos;s recommended to use &apos;mailbox&apos; presentation mode when limiting
     <message>
         <location filename="../sidebars/tabs/effects.py" line="26"/>
         <source>Effects</source>
+        <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="33"/>
         <source>Debanding</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="35"/>
         <source>Enable Deband</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="42"/>
+        <location filename="../sidebars/tabs/effects.py" line="43"/>
         <source>Smooth harsh color banding in gradients before upscaling. Helps skies, fog and smooth backgrounds.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -349,172 +406,206 @@ It&apos;s recommended to use &apos;mailbox&apos; presentation mode when limiting
         <location filename="../sidebars/tabs/effects.py" line="160"/>
         <location filename="../sidebars/tabs/effects.py" line="220"/>
         <source>Strength</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="56"/>
+        <location filename="../sidebars/tabs/effects.py" line="57"/>
         <source>Debanding intensity (0 = off, 1 = maximum). Low values (0.1-0.3) are sufficient for most content.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="62"/>
         <source>CAS Sharpening</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="64"/>
         <source>Enable CAS</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="71"/>
+        <location filename="../sidebars/tabs/effects.py" line="72"/>
         <source>Contrast Adaptive Sharpening: enhances text and line art without the halos of traditional unsharp masks.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="84"/>
+        <location filename="../sidebars/tabs/effects.py" line="85"/>
         <source>Sharpening amount (0 = none, 1 = max). 0.2-0.5 gives pleasant crispness.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="90"/>
         <source>Bloom (Glow)</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="92"/>
         <source>Enable Bloom</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="98"/>
+        <location filename="../sidebars/tabs/effects.py" line="99"/>
         <source>Soft glow around bright areas, creating a cinematic look.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="112"/>
+        <location filename="../sidebars/tabs/effects.py" line="113"/>
         <source>Bloom intensity (0 = off, 1 = max). Subtle values (0.02-0.06) add a gentle, polished look.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="118"/>
         <source>Threshold</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="128"/>
+        <location filename="../sidebars/tabs/effects.py" line="129"/>
         <source>Brightness cutoff for bloom. Only pixels above this contribute. Lower values include more of the scene.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="134"/>
         <location filename="../sidebars/tabs/effects.py" line="176"/>
         <source>Radius</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="142"/>
+        <location filename="../sidebars/tabs/effects.py" line="143"/>
         <source>Blur radius in pixels. Larger radii spread the glow further.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="148"/>
         <source>Vignette</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="150"/>
         <source>Enable Vignette</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="156"/>
+        <location filename="../sidebars/tabs/effects.py" line="157"/>
         <source>Radial darkening of screen edges, drawing focus to the center.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="170"/>
+        <location filename="../sidebars/tabs/effects.py" line="171"/>
         <source>Edge darkening intensity (0 = none, 1 = max). Moderate values (0.3-0.6) give a subtle framing effect.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="186"/>
+        <location filename="../sidebars/tabs/effects.py" line="187"/>
         <source>Distance from center where darkening begins. Higher values keep the center bright longer.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="192"/>
         <source>Falloff</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="202"/>
+        <location filename="../sidebars/tabs/effects.py" line="203"/>
         <source>Softness of the vignette transition. Low values = gentle, high values = sharp ring.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="208"/>
         <source>Film Grain</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="210"/>
         <source>Enable Grain</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="216"/>
+        <location filename="../sidebars/tabs/effects.py" line="217"/>
         <source>Simulated film grain for a photochemical, organic look.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="230"/>
+        <location filename="../sidebars/tabs/effects.py" line="231"/>
         <source>Grain intensity (0 = off, 1 = max). Low values (0.1-0.2) mimic fine photochemical grain.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="236"/>
         <source>Size</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="246"/>
+        <location filename="../sidebars/tabs/effects.py" line="247"/>
         <source>Apparent particle size of the grain. Larger values produce coarser, more visible grain.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="252"/>
         <source>Color Grading (3D LUT)</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="254"/>
         <source>Enable LUT</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="261"/>
+        <location filename="../sidebars/tabs/effects.py" line="262"/>
         <source>Apply a cinematic color-lookup table for instant film-stock emulation or color grading.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="265"/>
         <source>Preset</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="272"/>
+        <location filename="../sidebars/tabs/effects.py" line="273"/>
         <source>Built-in 3D LUT preset. Choose from warm, cool, film, sepia, etc.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="278"/>
         <source>Intensity</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/effects.py" line="287"/>
+        <location filename="../sidebars/tabs/effects.py" line="288"/>
         <source>Blend between original and graded image (0 = original, 1 = full effect).</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -523,30 +614,35 @@ It&apos;s recommended to use &apos;mailbox&apos; presentation mode when limiting
     <message>
         <location filename="../sidebars/tabs/extras.py" line="25"/>
         <source>Extras</source>
+        <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="32"/>
         <source>Screenshot Location</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="34"/>
         <source>Directory</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/extras.py" line="38"/>
-        <source>Folder where screenshots will be saved.</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="41"/>
-        <source>Template</source>
+        <source>Folder where screenshots will be saved.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/extras.py" line="54"/>
+        <location filename="../sidebars/tabs/extras.py" line="44"/>
+        <source>Template</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/extras.py" line="59"/>
         <source>Filename template for screenshots. Available placeholders:
 • {timestamp}: capture time (supports strftime, e.g. {timestamp:%Y-%m-%d-%H-%M-%S})
 • {title}: current window title
@@ -554,39 +650,46 @@ It&apos;s recommended to use &apos;mailbox&apos; presentation mode when limiting
 • {model}: active upscaling model
 • {width}: upscaled image width
 • {height}: upscaled image height</source>
+        <comment>Description of a setting (tooltip). Do not translate any of the placeholders (eg. {timestamp}).</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/extras.py" line="59"/>
+        <location filename="../sidebars/tabs/extras.py" line="63"/>
         <source>On-Screen Display</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/extras.py" line="61"/>
+        <location filename="../sidebars/tabs/extras.py" line="65"/>
         <source>Show OSD</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/extras.py" line="68"/>
+        <location filename="../sidebars/tabs/extras.py" line="73"/>
         <source>Show on-screen messages when model, geometry, or zoom changes, and after taking a screenshot.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/extras.py" line="72"/>
+        <location filename="../sidebars/tabs/extras.py" line="76"/>
         <source>Duration (s)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/extras.py" line="81"/>
+        <location filename="../sidebars/tabs/extras.py" line="86"/>
         <source>How many seconds OSD messages remain visible before fading out.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>FilterBar</name>
     <message>
-        <location filename="../grid/filter.py" line="34"/>
+        <location filename="../grid/filter.py" line="35"/>
         <source>Filter windows</source>
+        <comment>Filter windows search bar placeholder</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -595,135 +698,160 @@ It&apos;s recommended to use &apos;mailbox&apos; presentation mode when limiting
     <message>
         <location filename="../sidebars/tabs/general.py" line="32"/>
         <source>General</source>
+        <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="39"/>
         <source>Upscaling Model</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="41"/>
         <source>Model</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/general.py" line="49"/>
+        <location filename="../sidebars/tabs/general.py" line="50"/>
         <source>Upscaling model to use. Models are ordered from worst to best quality. Larger numbers indicate deeper networks (slower, higher quality).</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="53"/>
         <source>Double Upscale (4x)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/general.py" line="62"/>
+        <location filename="../sidebars/tabs/general.py" line="63"/>
         <source>Perform two consecutive 2x upscales for a 4x total (e.g., 720p to 2880p). Useful for high-resolution screens (4K) and low-resolution sources. Increases GPU usage.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="68"/>
         <source>Focus Tracking</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="70"/>
         <source>Follow Focus</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/general.py" line="77"/>
+        <location filename="../sidebars/tabs/general.py" line="78"/>
         <source>Automatically switch the upscaling target to the currently focused window. Useful when moving between multiple windows.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="81"/>
         <source>Pause on Focus Loss</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/general.py" line="88"/>
+        <location filename="../sidebars/tabs/general.py" line="89"/>
         <source>When the target window loses focus, hide the overlay until it regains focus. Uncheck to keep the overlay always visible.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="93"/>
         <source>Automatic Upscaling</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="96"/>
         <source>Exclude from Daemon Mode</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/general.py" line="101"/>
+        <location filename="../sidebars/tabs/general.py" line="103"/>
         <source>Exclude this profile from automatic upscaling.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/general.py" line="106"/>
+        <location filename="../sidebars/tabs/general.py" line="107"/>
         <source>Daemon Mode</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/general.py" line="115"/>
+        <location filename="../sidebars/tabs/general.py" line="117"/>
         <source>When enabled, a daemon process runs in the background and automatically upscales any window that matches a profile.
 Disable this to manually pick a window from the grid.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../main.py" line="83"/>
+        <location filename="../main.py" line="85"/>
         <source>Real-Time Upscaler</source>
+        <comment>Localized name of the application</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../main.py" line="139"/>
+        <location filename="../main.py" line="143"/>
         <source>About Real-Time Upscaler.</source>
+        <comment>About dialog button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../main.py" line="337"/>
+        <location filename="../main.py" line="341"/>
         <source>Error</source>
+        <comment>Error starting pipeline</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../main.py" line="338"/>
+        <location filename="../main.py" line="344"/>
         <source>Could not start pipeline:
 {0}</source>
+        <comment>Error starting pipeline</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../main.py" line="457"/>
+        <location filename="../main.py" line="462"/>
+        <source>Save Error</source>
+        <comment>Error while saving configuration</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../main.py" line="465"/>
         <source>Could not save:
 {0}</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../main.py" line="456"/>
-        <source>Save Error</source>
+        <comment>Error while saving configuration</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>PathPickerRow</name>
     <message>
-        <location filename="../sidebars/controls/path.py" line="51"/>
+        <location filename="../sidebars/controls/path.py" line="52"/>
         <source>Select directory</source>
+        <comment>Path selector placeholder</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/controls/path.py" line="61"/>
+        <location filename="../sidebars/controls/path.py" line="65"/>
         <source>Browse for directory.</source>
+        <comment>Path selector placeholder</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/controls/path.py" line="107"/>
+        <location filename="../sidebars/controls/path.py" line="115"/>
         <source>Choose screenshot directory</source>
+        <comment>Screenshot directory dialog title</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -732,16 +860,55 @@ Disable this to manually pick a window from the grid.</source>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="27"/>
         <source>Presentation</source>
+        <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="34"/>
         <source>Overlay</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="36"/>
         <source>Overlay Mode</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/presentation.py" line="51"/>
+        <source>Output Geometry</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/presentation.py" line="68"/>
+        <source>Cursor</source>
+        <comment>Settings section</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/presentation.py" line="70"/>
+        <source>Hide cursor</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/presentation.py" line="77"/>
+        <source>Automatically hide the mouse cursor after a period of inactivity.</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/presentation.py" line="87"/>
+        <source>Hide Timeout (s)</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/presentation.py" line="97"/>
+        <source>Time in seconds after which the cursor disappears.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -751,241 +918,251 @@ Disable this to manually pick a window from the grid.</source>
 • top-transparent: click-through (mouse passes to window below)
 • fullscreen: covers entire monitor
 • windowed: normal window with decorations</source>
-        <extracomment>Do not translate &quot;always-on-top&quot;, &quot;top-transparent&quot;, &quot;fullscreen&quot;, &quot;windowed&quot;: they are internal overlay mode identifiers.</extracomment>
+        <comment>Description of a setting (tooltip). Do not translate &apos;always-on-top&apos;, &apos;top-transparent&apos;, &apos;fullscreen&apos;, &apos;windowed&apos;: they are internal overlay mode identifiers.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/presentation.py" line="52"/>
-        <source>Output Geometry</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/presentation.py" line="63"/>
+        <location filename="../sidebars/tabs/presentation.py" line="64"/>
         <source>How the upscaled content fits the overlay:
 • fit: letterbox, preserves aspect ratio
 • stretch: fill, aspect ratio may be distorted
 • cover: fill and crop to fit</source>
-        <extracomment>Do not translate &quot;fit&quot;, &quot;stretch&quot;, &quot;cover&quot;: they are internal output geometry identifiers.</extracomment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/presentation.py" line="68"/>
-        <source>Cursor</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/presentation.py" line="70"/>
-        <source>Hide cursor</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/presentation.py" line="76"/>
-        <source>Automatically hide the mouse cursor after a period of inactivity.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/presentation.py" line="87"/>
-        <source>Hide Timeout (s)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/presentation.py" line="95"/>
-        <source>Time in seconds after which the cursor disappears.</source>
+        <comment>Description of a setting (tooltip). Do not translate &apos;fit&apos;, &apos;stretch&apos;, &apos;cover&apos;: they are internal output geometry identifiers.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="104"/>
         <source>Left</source>
+        <comment>Crop border label</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="105"/>
         <source>Top</source>
+        <comment>Crop border label</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="106"/>
         <source>Right</source>
+        <comment>Crop border label</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/presentation.py" line="107"/>
+        <location filename="../sidebars/tabs/presentation.py" line="108"/>
         <source>Bottom</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/presentation.py" line="118"/>
-        <source>Pixels to crop from the {0} border of the target window.</source>
+        <comment>Crop border label</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="123"/>
+        <source>Pixels to crop from the {0} border of the target window.</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/presentation.py" line="127"/>
         <source>Offset</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/presentation.py" line="125"/>
+        <location filename="../sidebars/tabs/presentation.py" line="130"/>
         <source>X Offset</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/presentation.py" line="126"/>
+        <location filename="../sidebars/tabs/presentation.py" line="135"/>
         <source>Y Offset</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/presentation.py" line="139"/>
+        <location filename="../sidebars/tabs/presentation.py" line="152"/>
         <source>Horizontal offset from the centered position (positive = right, negative = left).</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/presentation.py" line="145"/>
+        <location filename="../sidebars/tabs/presentation.py" line="158"/>
         <source>Vertical offset from the centered position (positive = down, negative = up).</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/presentation.py" line="151"/>
+        <location filename="../sidebars/tabs/presentation.py" line="163"/>
         <source>Background Color</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/presentation.py" line="155"/>
+        <location filename="../sidebars/tabs/presentation.py" line="167"/>
         <source>Color</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/presentation.py" line="160"/>
+        <location filename="../sidebars/tabs/presentation.py" line="174"/>
         <source>Color of the letterbox bars. Supports transparency.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>ProfileActions</name>
     <message>
-        <location filename="../helpers/profiles.py" line="59"/>
+        <location filename="../helpers/profiles.py" line="61"/>
         <source>Unsaved changes</source>
+        <comment>Warning dialog title</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../helpers/profiles.py" line="62"/>
+        <location filename="../helpers/profiles.py" line="66"/>
         <source>Save changes before switching profile?</source>
+        <comment>Warning dialog</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../helpers/profiles.py" line="114"/>
-        <location filename="../helpers/profiles.py" line="169"/>
-        <location filename="../helpers/profiles.py" line="195"/>
-        <location filename="../helpers/profiles.py" line="210"/>
-        <location filename="../helpers/profiles.py" line="225"/>
+        <location filename="../helpers/profiles.py" line="120"/>
+        <location filename="../helpers/profiles.py" line="182"/>
         <source>Error</source>
+        <comment>Error dialog title</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../helpers/profiles.py" line="115"/>
+        <location filename="../helpers/profiles.py" line="125"/>
         <source>Could not add profile.</source>
+        <comment>Error while adding profile</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../helpers/profiles.py" line="139"/>
+        <location filename="../helpers/profiles.py" line="149"/>
         <source>Duplicate name</source>
+        <comment>Error dialog title</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../helpers/profiles.py" line="143"/>
+        <location filename="../helpers/profiles.py" line="154"/>
         <source>A profile named &apos;{0}&apos; already exists.</source>
+        <comment>Error while adding profile</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../helpers/profiles.py" line="181"/>
-        <source>Delete profile &apos;{0}&apos;?</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../helpers/profiles.py" line="170"/>
+        <location filename="../helpers/profiles.py" line="187"/>
         <source>Could not edit profile.</source>
+        <comment>Error while editing profile</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../helpers/profiles.py" line="178"/>
+        <location filename="../helpers/profiles.py" line="199"/>
         <source>Delete profile</source>
+        <comment>Delete window confirmation title</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../helpers/profiles.py" line="198"/>
+        <location filename="../helpers/profiles.py" line="204"/>
+        <source>Delete profile &apos;{0}&apos;?</source>
+        <comment>Delete profile confirmation</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../helpers/profiles.py" line="220"/>
+        <location filename="../helpers/profiles.py" line="239"/>
+        <location filename="../helpers/profiles.py" line="258"/>
+        <source>Error</source>
+        <comment>Error window title</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../helpers/profiles.py" line="225"/>
         <source>Could not delete profile.</source>
+        <comment>Error while deleting profile</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../helpers/profiles.py" line="213"/>
-        <location filename="../helpers/profiles.py" line="228"/>
+        <location filename="../helpers/profiles.py" line="244"/>
+        <location filename="../helpers/profiles.py" line="263"/>
         <source>Could not reorder profiles.</source>
+        <comment>Error while reordering profiles</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>ProfileDialog</name>
     <message>
-        <location filename="../dialogs/profile.py" line="59"/>
-        <source>Profile Editor</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../dialogs/profile.py" line="60"/>
-        <source>New Profile</source>
+        <source>Profile Editor</source>
+        <comment>Window title of the profile editor</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="80"/>
+        <location filename="../dialogs/profile.py" line="62"/>
+        <source>New Profile</source>
+        <comment>Window title of the profile creator</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="83"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="85"/>
+        <location filename="../dialogs/profile.py" line="91"/>
         <source>Profile name</source>
+        <comment>Profile name label</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="86"/>
+        <location filename="../dialogs/profile.py" line="96"/>
         <source>A unique name for this profile. Required.</source>
+        <comment>Tooltip of profile name text input</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="92"/>
+        <location filename="../dialogs/profile.py" line="103"/>
         <source>Icon</source>
+        <comment>Label of Icon button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="133"/>
+        <location filename="../dialogs/profile.py" line="146"/>
         <source>Capture window</source>
+        <comment>&apos;Capture window&apos; button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="139"/>
+        <location filename="../dialogs/profile.py" line="154"/>
         <source>Fill name, icon, and match rules from a window.</source>
+        <comment>Capture window tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="147"/>
+        <location filename="../dialogs/profile.py" line="163"/>
         <source>Capture icon from window</source>
+        <comment>Capture icon tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="153"/>
+        <location filename="../dialogs/profile.py" line="169"/>
         <source>Load icon from file</source>
+        <comment>Load icon tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="159"/>
+        <location filename="../dialogs/profile.py" line="175"/>
         <source>Remove icon</source>
+        <comment>Remove icon tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="165"/>
+        <location filename="../dialogs/profile.py" line="181"/>
         <source>Match rules</source>
+        <comment>Match rules group label</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="179"/>
+        <location filename="../dialogs/profile.py" line="195"/>
         <source>All filled rules must match for the profile to apply (AND logic).
 Examples:
 • Match any Firefox windows wider than 1280px:
@@ -996,168 +1173,234 @@ Examples:
 • Match emulator windows between 720px and 1080px tall:
     • Title (regex): (Yuzu|Ryujinx).*
     • Height: 720-1080</source>
+        <comment>Match rules tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="187"/>
+        <location filename="../dialogs/profile.py" line="204"/>
         <source>Title (exact):</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../dialogs/profile.py" line="188"/>
-        <source>e.g., Steam</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../dialogs/profile.py" line="194"/>
-        <source>Match if the window title exactly equals this text (case-insensitive).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../dialogs/profile.py" line="199"/>
-        <source>Title contains:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../dialogs/profile.py" line="200"/>
-        <source>e.g., VLC</source>
+        <comment>Match rule label</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../dialogs/profile.py" line="205"/>
-        <source>Match if the window title contains this text (case-insensitive).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../dialogs/profile.py" line="210"/>
-        <source>Title (regex):</source>
+        <source>e.g., Steam</source>
+        <comment>Match rule placeholder</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../dialogs/profile.py" line="211"/>
-        <source>e.g., (Yuzu|Ryujinx).*</source>
+        <source>Match if the window title exactly equals this text (case-insensitive).</source>
+        <comment>Match rule tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../dialogs/profile.py" line="217"/>
-        <source>Match if the window title matches this regular expression (case-insensitive).</source>
+        <source>Title contains:</source>
+        <comment>Match rule label</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="232"/>
+        <location filename="../dialogs/profile.py" line="218"/>
+        <source>e.g., VLC</source>
+        <comment>Match rule placeholder</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="223"/>
+        <source>Match if the window title contains this text (case-insensitive).</source>
+        <comment>Match rule tooltip</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="229"/>
+        <source>Title (regex):</source>
+        <comment>Match rule label</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="230"/>
+        <source>e.g., (Yuzu|Ryujinx).*</source>
+        <comment>Match rule placeholder</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="236"/>
+        <source>Match if the window title matches this regular expression (case-insensitive).</source>
+        <comment>Match rule tooltip</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="243"/>
+        <source>Width:</source>
+        <comment>Match rule label</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="244"/>
+        <source>e.g., &gt;1280</source>
+        <comment>Match rule placeholder</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="252"/>
         <source>Match if the window width satisfies this condition:
 • Exact: 1920
 • Comparison: &lt;800, &gt;1024, &lt;=1366, &gt;=1920
 • Range: 1280-1920, 720..1080, 1024,1366</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../dialogs/profile.py" line="246"/>
-        <source>Match if the window height satisfies this condition:
-• Exact: 1080
-• Comparison: &lt;600, &gt;900, &lt;=768, &gt;=1440
-• Range: 480-1080, 600..900, 720,1024</source>
+        <comment>Match rule tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../dialogs/profile.py" line="258"/>
+        <source>Height:</source>
+        <comment>Match rule label</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="259"/>
+        <source>e.g., &gt;800</source>
+        <comment>Match rule placeholder</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="267"/>
+        <source>Match if the window height satisfies this condition:
+• Exact: 1080
+• Comparison: &lt;600, &gt;900, &lt;=768, &gt;=1440
+• Range: 480-1080, 600..900, 720,1024</source>
+        <comment>Match rule tooltip</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="280"/>
         <source>Profiles let you override settings for specific windows and setups.
 A profile is applied automatically when the upscaled window matches all the rules defined here, or when manually selected before upscaling.
 Profiles are checked top-to-bottom: the first match wins.
 Leave a rule blank to ignore that property.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../dialogs/profile.py" line="366"/>
-        <source>No icon</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../dialogs/profile.py" line="367"/>
-        <source>The selected window has no icon.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../dialogs/profile.py" line="383"/>
-        <source>Select Icon</source>
+        <comment>Profile note</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../dialogs/profile.py" line="390"/>
-        <source>Invalid image</source>
+        <source>No icon</source>
+        <comment>No icon warning</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../dialogs/profile.py" line="391"/>
+        <source>The selected window has no icon.</source>
+        <comment>No icon warning</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="409"/>
+        <source>Select Icon</source>
+        <comment>Select Icon dialog title</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="418"/>
+        <source>Invalid image</source>
+        <comment>Invalid image warning</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../dialogs/profile.py" line="421"/>
         <source>Could not load the selected file.</source>
+        <comment>Invalid image warning</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="419"/>
+        <location filename="../dialogs/profile.py" line="450"/>
         <source>Missing name</source>
+        <comment>Warning while saving a profile without name</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="420"/>
+        <location filename="../dialogs/profile.py" line="454"/>
         <source>Profile name cannot be empty.</source>
+        <comment>Warning while saving a profile without name</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="428"/>
+        <location filename="../dialogs/profile.py" line="466"/>
         <source>Duplicate name</source>
+        <comment>Warning while saving a profile with an existing name</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/profile.py" line="431"/>
+        <location filename="../dialogs/profile.py" line="470"/>
         <source>A profile named &apos;{0}&apos; already exists.
 Please choose a different name.</source>
+        <comment>Warning while saving a profile with an existing name</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>ProfilesSidebar</name>
     <message>
+        <location filename="../sidebars/profiles.py" line="80"/>
+        <source>Profiles</source>
+        <comment>Profiles sidebar title</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../sidebars/profiles.py" line="133"/>
         <source>Add profile (Ctrl+N)</source>
+        <comment>Profile add action tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/profiles.py" line="139"/>
         <source>Edit match criteria (Enter/F2)</source>
+        <comment>Profile edit action tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/profiles.py" line="146"/>
         <source>Delete profile (Del)</source>
+        <comment>Profile delete action tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/profiles.py" line="154"/>
         <source>Move up (Ctrl+Shift+Up)</source>
+        <comment>Profile move up action tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/profiles.py" line="161"/>
         <source>Move down (Ctrl+Shift+Down)</source>
+        <comment>Profile move down action tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/profiles.py" line="265"/>
+        <location filename="../sidebars/profiles.py" line="260"/>
+        <source>Global</source>
+        <comment>Global entry profile name</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/profiles.py" line="267"/>
         <source>When selected, the settings panel on the right edits the global configuration.</source>
+        <comment>Global entry profile tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/profiles.py" line="277"/>
+        <location filename="../sidebars/profiles.py" line="280"/>
         <source>Global settings apply to all windows.
 
 Create a profile to override settings
 for a specific window, matched by its
 name or size.</source>
+        <comment>No profile message (preserve line width)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/profiles.py" line="316"/>
+        <location filename="../sidebars/profiles.py" line="321"/>
         <source>When selected, the settings panel on the right edits the &apos;{0}&apos; profile overrides.</source>
+        <comment>Profile selected tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1166,201 +1409,227 @@ name or size.</source>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="32"/>
         <source>Scaling</source>
+        <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="39"/>
         <source>Sampler Algorithm</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="41"/>
         <source>Upsampler</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/scaler.py" line="51"/>
+        <location filename="../sidebars/tabs/scaler.py" line="56"/>
+        <source>Downsampler</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/scaler.py" line="53"/>
         <source>Applied after SRCNN upscaling to reach the target output size (e.g., 1440p → 4k).
 • Fixed Lanczos-2 — sharp, linear-light, best for 2D art
 • AMD FidelityFX Super Resolution 1.0 — fast, edge-adaptive, best for 3D content
 • NVIDIA Image Scaling — directional sharpening, sRGB, may look oversharpened</source>
+        <comment>Description of a setting (tooltip). Do not alter the names of the filters (eg. Lanczos-2).</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/scaler.py" line="55"/>
-        <source>Downsampler</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/scaler.py" line="66"/>
+        <location filename="../sidebars/tabs/scaler.py" line="69"/>
         <source>Applied after SRCNN upscaling to reduce the image to the target output size (e.g., 1440p → 1080p).
 • Catmull-Rom (bicubic) — sharper and faster than Lanczos for mild downscaling
 • Adaptive Lanczos — variable radius, high quality even in extreme downscales</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/scaler.py" line="71"/>
-        <source>Sampler Options</source>
+        <comment>Description of a setting (tooltip). Do not alter the names of the filters (eg. Catmull-Rom).</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="73"/>
-        <source>Blur</source>
+        <source>Sampler Options</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/scaler.py" line="84"/>
+        <location filename="../sidebars/tabs/scaler.py" line="75"/>
+        <source>Blur</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/scaler.py" line="87"/>
         <source>Kernel width (blur factor) for Lanczos and Catmull-Rom.
 Lower values increase sharpness/ringing, while higher values smooth the result.
 Recommended range: 0.8 - 1.2.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/scaler.py" line="88"/>
+        <location filename="../sidebars/tabs/scaler.py" line="90"/>
         <source>Antiring Strength</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/scaler.py" line="99"/>
+        <location filename="../sidebars/tabs/scaler.py" line="102"/>
         <source>Anti-ringing strength (0.0 - 1.0) for Adaptive Lanczos and Catmull-Rom.
 Lower values soften the clamp, preserving more detail at the cost of possible ringing.
 Recommended range: 0.7 - 1.0.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/scaler.py" line="104"/>
-        <source>Lanczos Options</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="106"/>
-        <source>Tight Antiring</source>
+        <source>Lanczos Options</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/scaler.py" line="114"/>
+        <location filename="../sidebars/tabs/scaler.py" line="108"/>
+        <source>Tight Antiring</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/scaler.py" line="117"/>
         <source>Use only the central 2x2 neighborhood for anti-ringing bounds.
 Keeps thin text and line art sharp. Disable if you see distant ringing artifacts on high-contrast edges.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/scaler.py" line="118"/>
+        <location filename="../sidebars/tabs/scaler.py" line="120"/>
         <source>Override Lanczos Radius</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/scaler.py" line="125"/>
+        <location filename="../sidebars/tabs/scaler.py" line="128"/>
         <source>Force a specific Lanczos kernel radius instead of the automatic selection.
 When unchecked, radius is chosen automatically (2 for upscaling, variable for downscaling).</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/scaler.py" line="129"/>
+        <location filename="../sidebars/tabs/scaler.py" line="131"/>
         <source>Radius</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/scaler.py" line="142"/>
+        <location filename="../sidebars/tabs/scaler.py" line="145"/>
         <source>Lanczos kernel radius (2 = standard Lanczos2, 3 = sharper 6-tap, etc.).
 Higher radii reduce aliasing but increase GPU load.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>SettingsSidebar</name>
     <message>
-        <location filename="../sidebars/settings.py" line="76"/>
-        <source>General</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/settings.py" line="77"/>
-        <source>Scaling</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../sidebars/settings.py" line="78"/>
-        <source>Display</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/settings.py" line="79"/>
-        <source>Presentation</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/settings.py" line="80"/>
-        <source>Effects</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/settings.py" line="81"/>
-        <source>Advanced</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/settings.py" line="82"/>
-        <source>Extras</source>
+        <source>General</source>
+        <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="83"/>
-        <source>GUI Style</source>
+        <source>Scaling</source>
+        <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/settings.py" line="188"/>
-        <location filename="../sidebars/settings.py" line="294"/>
+        <location filename="../sidebars/settings.py" line="88"/>
+        <source>Display</source>
+        <comment>Name of a settings tab</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/settings.py" line="93"/>
+        <source>Presentation</source>
+        <comment>Name of a settings tab</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/settings.py" line="98"/>
+        <source>Effects</source>
+        <comment>Name of a settings tab</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/settings.py" line="103"/>
+        <source>Advanced</source>
+        <comment>Name of a settings tab</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/settings.py" line="108"/>
+        <source>Extras</source>
+        <comment>Name of a settings tab</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/settings.py" line="113"/>
+        <source>GUI Style</source>
+        <comment>Name of a settings tab</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/settings.py" line="219"/>
+        <location filename="../sidebars/settings.py" line="325"/>
         <source>Save Profile</source>
         <comment>Save button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/settings.py" line="190"/>
-        <location filename="../sidebars/settings.py" line="296"/>
+        <location filename="../sidebars/settings.py" line="221"/>
+        <location filename="../sidebars/settings.py" line="327"/>
         <source>Save</source>
         <comment>Save button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/settings.py" line="200"/>
-        <location filename="../sidebars/settings.py" line="297"/>
+        <location filename="../sidebars/settings.py" line="231"/>
+        <location filename="../sidebars/settings.py" line="328"/>
         <source>Reset</source>
         <comment>Reset button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/settings.py" line="212"/>
+        <location filename="../sidebars/settings.py" line="243"/>
         <source>Clear profile overrides</source>
         <comment>Reset button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/settings.py" line="214"/>
+        <location filename="../sidebars/settings.py" line="245"/>
         <source>Restore system defaults</source>
         <comment>Reset button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/settings.py" line="222"/>
+        <location filename="../sidebars/settings.py" line="253"/>
         <source>Reset to last applied</source>
         <comment>Reset button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/settings.py" line="225"/>
+        <location filename="../sidebars/settings.py" line="256"/>
         <source>Restore Auto preset</source>
         <comment>Reset button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/settings.py" line="273"/>
+        <location filename="../sidebars/settings.py" line="304"/>
         <source>Apply Style</source>
         <comment>Apply button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/settings.py" line="274"/>
+        <location filename="../sidebars/settings.py" line="305"/>
         <source>Reset Style</source>
         <comment>Reset button</comment>
         <translation type="unfinished"></translation>
@@ -1371,245 +1640,292 @@ Higher radii reduce aliasing but increase GPU load.</source>
     <message>
         <location filename="../sidebars/tabs/style.py" line="42"/>
         <source>GUI Style</source>
+        <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="56"/>
         <source>Background &amp; Surfaces</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="60"/>
+        <location filename="../sidebars/tabs/style.py" line="62"/>
         <source>Primary Background</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="63"/>
+        <location filename="../sidebars/tabs/style.py" line="66"/>
         <source>Main background color of the application window and dialogs.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="68"/>
+        <location filename="../sidebars/tabs/style.py" line="70"/>
         <source>Input Background</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="71"/>
+        <location filename="../sidebars/tabs/style.py" line="74"/>
         <source>Background color of text fields, combo boxes, and editable areas.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="76"/>
+        <location filename="../sidebars/tabs/style.py" line="81"/>
         <source>Input Background (hover)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="79"/>
+        <location filename="../sidebars/tabs/style.py" line="85"/>
         <source>Background color when the mouse hovers over an input field.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="84"/>
-        <source>Input Background (disabled)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="87"/>
-        <source>Background color for disabled (greyed-out) input fields.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="92"/>
+        <source>Input Background (disabled)</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="96"/>
+        <source>Background color for disabled (greyed-out) input fields.</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="102"/>
         <source>Button Background</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="93"/>
+        <location filename="../sidebars/tabs/style.py" line="106"/>
         <source>Background color of buttons.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="97"/>
+        <location filename="../sidebars/tabs/style.py" line="113"/>
         <source>Button Background (hover)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="100"/>
+        <location filename="../sidebars/tabs/style.py" line="117"/>
         <source>Background color of a button when the mouse hovers over it.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="105"/>
+        <location filename="../sidebars/tabs/style.py" line="123"/>
         <source>Caption Background</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="108"/>
+        <location filename="../sidebars/tabs/style.py" line="127"/>
         <source>Semi-transparent background color of each window titles.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="114"/>
+        <location filename="../sidebars/tabs/style.py" line="132"/>
         <source>Text &amp; Icons</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="118"/>
-        <source>Primary Text</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="120"/>
-        <source>Text color of body text and labels.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="125"/>
-        <source>Primary Text (hover)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="128"/>
-        <source>Text color when the mouse hovers over clickable items.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="133"/>
-        <source>Secondary Text</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="136"/>
+        <source>Primary Text</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="140"/>
+        <source>Text color of body text and labels.</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="146"/>
+        <source>Primary Text (hover)</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="150"/>
+        <source>Text color when the mouse hovers over clickable items.</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="154"/>
+        <source>Secondary Text</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="158"/>
         <source>Text color for secondary information, captions, and section headers.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="141"/>
+        <location filename="../sidebars/tabs/style.py" line="162"/>
         <source>Icon Fill</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="143"/>
+        <location filename="../sidebars/tabs/style.py" line="166"/>
         <source>Fill color of sidebar and toolbar icons.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="149"/>
+        <location filename="../sidebars/tabs/style.py" line="171"/>
         <source>Borders &amp; Separators</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="153"/>
+        <location filename="../sidebars/tabs/style.py" line="175"/>
         <source>Border</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="156"/>
+        <location filename="../sidebars/tabs/style.py" line="179"/>
         <source>Border color for input fields, buttons, and panels.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="161"/>
+        <location filename="../sidebars/tabs/style.py" line="183"/>
         <source>Border (hover)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="164"/>
+        <location filename="../sidebars/tabs/style.py" line="187"/>
         <source>Border color when hovering over interactive elements.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="170"/>
-        <source>Controls &amp; Highlights</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="174"/>
-        <source>Accent</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="177"/>
-        <source>Primary accent color for checkboxes, sliders and other interactive controls.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="182"/>
-        <source>Accent (hover)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="185"/>
-        <source>Accent color when the mouse hovers over an interactive control.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="190"/>
-        <source>Revert Button</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="192"/>
-        <source>Background color of the &apos;Reset&apos; button.</source>
+        <source>Controls &amp; Highlights</source>
+        <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="197"/>
-        <source>Revert Button (hover)</source>
+        <location filename="../sidebars/tabs/style.py" line="196"/>
+        <source>Accent</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="200"/>
-        <source>&apos;Reset&apos; button background color on hover.</source>
+        <source>Primary accent color for checkboxes, sliders and other interactive controls.</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="205"/>
-        <source>Handle</source>
+        <location filename="../sidebars/tabs/style.py" line="204"/>
+        <source>Accent (hover)</source>
+        <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="208"/>
+        <source>Accent color when the mouse hovers over an interactive control.</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="212"/>
+        <source>Revert Button</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="216"/>
+        <source>Background color of the &apos;Reset&apos; button.</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="222"/>
+        <source>Revert Button (hover)</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="226"/>
+        <source>&apos;Reset&apos; button background color on hover.</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="230"/>
+        <source>Handle</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="234"/>
         <source>Fill color of scrollbar handles and subtle interactive areas.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="213"/>
-        <source>Handle (hover)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="215"/>
-        <source>Handle control fill color on hover.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="229"/>
-        <source>Palette Preset</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="231"/>
-        <source>Preset</source>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="238"/>
+        <source>Handle (hover)</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="242"/>
+        <source>Handle control fill color on hover.</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="255"/>
+        <source>Palette Preset</source>
+        <comment>Settings section</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="257"/>
+        <source>Preset</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="264"/>
         <source>Select a pre-built color scheme for the GUI.</source>
-        <extracomment>Do not translate &quot;Custom&quot; and preset names like &quot;Auto&quot;, they are internal identifiers.</extracomment>
+        <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>WindowGridManager</name>
     <message>
-        <location filename="../helpers/grid.py" line="128"/>
+        <location filename="../helpers/grid.py" line="132"/>
         <source>Error</source>
+        <comment>Error warning while enumerating windows</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../helpers/grid.py" line="131"/>
+        <location filename="../helpers/grid.py" line="137"/>
         <source>Could not enumerate windows.</source>
+        <comment>Error warning while enumerating windows</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1618,31 +1934,37 @@ Higher radii reduce aliasing but increase GPU load.</source>
     <message>
         <location filename="../dialogs/window.py" line="39"/>
         <source>Select Window</source>
+        <comment>Select Window dialog title</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/window.py" line="51"/>
+        <location filename="../dialogs/window.py" line="52"/>
         <source>Filter windows</source>
+        <comment>Filter windows placeholder</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/window.py" line="93"/>
+        <location filename="../dialogs/window.py" line="96"/>
         <source>Error</source>
+        <comment>Could not list windows error</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/window.py" line="94"/>
+        <location filename="../dialogs/window.py" line="97"/>
         <source>Could not list windows.</source>
+        <comment>Could not list windows error</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/window.py" line="143"/>
+        <location filename="../dialogs/window.py" line="148"/>
         <source>No selection</source>
+        <comment>No window selected warning title</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../dialogs/window.py" line="144"/>
+        <location filename="../dialogs/window.py" line="149"/>
         <source>Select a window first.</source>
+        <comment>No window selected warning</comment>
         <translation type="unfinished"></translation>
     </message>
 </context>

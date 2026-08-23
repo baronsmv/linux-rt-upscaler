@@ -80,7 +80,9 @@ class MainWindow(QMainWindow):
         os.makedirs(self._icons_dir, exist_ok=True)
 
         # Window properties
-        self.setWindowTitle(self.tr("Real-Time Upscaler"))
+        self.setWindowTitle(
+            self.tr("Real-Time Upscaler", "Localized name of the application")
+        )
         self.setMinimumSize(1200, 600)
 
         # Setup UI
@@ -136,7 +138,9 @@ class MainWindow(QMainWindow):
         self.about_btn.setIconSize(QSize(20, 20))
         self.about_btn.setFixedSize(32, 32)
         self.about_btn.setCursor(Qt.PointingHandCursor)
-        self.about_btn.setToolTip(self.tr("About Real-Time Upscaler."))
+        self.about_btn.setToolTip(
+            self.tr("About Real-Time Upscaler.", "About dialog button")
+        )
         self.about_btn.setAutoRaise(True)
         self.about_btn.setStyleSheet(
             circular_button_style(self.gui_config, icon_size=32)
@@ -334,8 +338,10 @@ class MainWindow(QMainWindow):
             logger.exception("Failed to start pipeline")
             QMessageBox.critical(
                 None,
-                self.tr("Error"),
-                self.tr("Could not start pipeline:\n{0}").format(e),
+                self.tr("Error", "Error starting pipeline"),
+                self.tr(
+                    "Could not start pipeline:\n{0}", "Error starting pipeline"
+                ).format(e),
             )
             QApplication.instance().quit()
 
@@ -453,8 +459,10 @@ class MainWindow(QMainWindow):
             logger.exception("Save failed")
             QMessageBox.critical(
                 self,
-                self.tr("Save Error"),
-                self.tr("Could not save:\n{0}").format(e),
+                self.tr("Save Error", "Error while saving configuration"),
+                self.tr(
+                    "Could not save:\n{0}", "Error while saving configuration"
+                ).format(e),
             )
 
     def _on_reset_settings(self) -> None:

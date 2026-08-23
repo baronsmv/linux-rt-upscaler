@@ -33,16 +33,16 @@ class DisplayTab(SettingsTab):
         self._auto_device = self.tr("Auto (best)", "GPU automatic device option")
         super().__init__(
             gui_config,
-            title=self.tr("Display", self.TAB),
+            title=self.tr("Display", "Name of a settings tab"),
             baseline_config=baseline_config,
             parent=parent,
         )
 
     def _build_content(self) -> None:
         # ---- Devices ----
-        self._add_section(self.tr("Devices", self.SECTION))
+        self._add_section(self.tr("Devices", "Settings section"))
         self._monitor_combo = self._add_combo(
-            self.tr("Monitor", self.SETTING),
+            self.tr("Monitor", "Label of setting (must be short)"),
             list_monitors(),
             self._config.monitor,
             self._on_monitor_changed,
@@ -50,7 +50,7 @@ class DisplayTab(SettingsTab):
             help=self.tr(
                 "Monitor to cover: 'primary', 'all' (multi-monitor), "
                 "or a specific output name (e.g., 'HDMI-1').",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         device_names = [self._auto_device] + [
@@ -60,7 +60,7 @@ class DisplayTab(SettingsTab):
         if current_name not in device_names:
             current_name = self._auto_device
         self._gpu_combo = self._add_combo(
-            self.tr("GPU", self.SETTING),
+            self.tr("GPU", "Label of setting (must be short)"),
             device_names,
             current_name,
             self._on_gpu_changed,
@@ -71,40 +71,41 @@ class DisplayTab(SettingsTab):
             ),
             help=self.tr(
                 "Vulkan GPU used for rendering. '{0}' selects the most powerful GPU found.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ).format(self._auto_device),
         )
 
         # ---- V-Sync ----
-        self._add_section(self.tr("V-Sync", self.SECTION))
+        self._add_section(self.tr("V-Sync", "Settings section"))
         self._present_combo = self._add_combo(
-            self.tr("Present Mode", self.SETTING),
+            self.tr("Present Mode", "Label of setting (must be short)"),
             [e.value for e in VulkanPresentMode],
             self._config.vulkan_present_mode,
             self._on_present_mode,
             baseline=self.baseline_config.vulkan_present_mode,
-            #: Do not translate "fifo", "mailbox", "immediate": they are Vulkan presentation mode identifiers.
             help=self.tr(
                 "Vulkan presentation mode:\n"
                 "• fifo: VSync on, lowest power, no tearing\n"
                 "• mailbox: tear-free, lower latency, higher power\n"
                 "• immediate: no VSync, lowest latency, may tear",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip). "
+                "Do not translate fifo, mailbox and immediate: "
+                "they are Vulkan presentation mode identifiers.",
             ),
         )
         self._fps_cap_cb = self._add_cb(
-            self.tr("Limit FPS", self.SETTING),
+            self.tr("Limit FPS", "Label of setting (must be short)"),
             self._config.max_fps is not None,
             self._on_fps_cap_toggle,
             baseline=self.baseline_config.max_fps is not None,
             help=self.tr(
                 "Enable an upper frame-rate limit.\n"
                 "It's recommended to use 'mailbox' presentation mode when limiting FPS.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._fps_slider = self._add_slider(
-            self.tr("Max FPS", self.SETTING),
+            self.tr("Max FPS", "Label of setting (must be short)"),
             1,
             240,
             self._config.max_fps if self._config.max_fps is not None else 60,
@@ -114,25 +115,28 @@ class DisplayTab(SettingsTab):
                 if self.baseline_config.max_fps is not None
                 else 60
             ),
-            help=self.tr("Target maximum frames per second.", self.DESCRIPTION),
+            help=self.tr(
+                "Target maximum frames per second.",
+                "Description of a setting (tooltip)",
+            ),
         )
         self._fps_slider.setEnabled(self._config.max_fps is not None)
 
         # ---- Scale Factor ----
-        self._add_section(self.tr("Scale Factor", self.SECTION))
+        self._add_section(self.tr("Scale Factor", "Settings section"))
         self._auto_scale_cb = self._add_cb(
-            self.tr("Auto Scale", self.SETTING),
+            self.tr("Auto Scale", "Label of setting (must be short)"),
             self._config.scale_factor is None,
             self._on_auto_scale_changed,
             baseline=self.baseline_config.scale_factor is None,
             help=self.tr(
                 "Let the application automatically detect the correct scale factor "
                 "based on the physical monitor resolution.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._scale_slider = self._add_slider(
-            self.tr("Scale Factor %", self.SETTING),
+            self.tr("Scale Factor %", "Label of setting (must be short)"),
             100,
             400,
             max(100, int((self._config.scale_factor or 1.0) * 100)),
@@ -146,7 +150,7 @@ class DisplayTab(SettingsTab):
             help=self.tr(
                 "Manual scale factor (e.g., 1.50 for 150% scaling). "
                 "Only available when 'Auto Scale' is disabled.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._scale_slider.setEnabled(self._config.scale_factor is not None)

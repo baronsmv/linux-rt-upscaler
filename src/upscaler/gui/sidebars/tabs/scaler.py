@@ -29,16 +29,16 @@ class ScalingTab(SettingsTab):
         self._profile_active = profile_active
         super().__init__(
             gui_config,
-            title=self.tr("Scaling", self.TAB),
+            title=self.tr("Scaling", "Name of a settings tab"),
             baseline_config=baseline_config,
             parent=parent,
         )
 
     def _build_content(self) -> None:
         # ---- Sampler Selection ----
-        self._add_section(self.tr("Sampler Algorithm", self.SECTION))
+        self._add_section(self.tr("Sampler Algorithm", "Settings section"))
         self._upsampler_combo = self._add_combo(
-            self.tr("Upsampler", self.SETTING),
+            self.tr("Upsampler", "Label of setting (must be short)"),
             list(UPSAMPLERS.keys()),
             UPSAMPLER_NAMES.get(self._config.upsampler, "Lanczos"),
             self._on_upsampler,
@@ -48,11 +48,12 @@ class ScalingTab(SettingsTab):
                 "• Fixed Lanczos-2 — sharp, linear-light, best for 2D art\n"
                 "• AMD FidelityFX Super Resolution 1.0 — fast, edge-adaptive, best for 3D content\n"
                 "• NVIDIA Image Scaling — directional sharpening, sRGB, may look oversharpened",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip). "
+                "Do not alter the names of the filters (eg. Lanczos-2).",
             ),
         )
         self._downsampler_combo = self._add_combo(
-            self.tr("Downsampler", self.SETTING),
+            self.tr("Downsampler", "Label of setting (must be short)"),
             list(DOWNSAMPLERS.keys()),
             DOWNSAMPLER_NAMES.get(self._config.downsampler, "Catmull-Rom"),
             self._on_downsampler,
@@ -63,14 +64,15 @@ class ScalingTab(SettingsTab):
                 "Applied after SRCNN upscaling to reduce the image to the target output size (e.g., 1440p → 1080p).\n"
                 "• Catmull-Rom (bicubic) — sharper and faster than Lanczos for mild downscaling\n"
                 "• Adaptive Lanczos — variable radius, high quality even in extreme downscales",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip). "
+                "Do not alter the names of the filters (eg. Catmull-Rom).",
             ),
         )
 
         # ---- Sampler Options ----
-        self._add_section(self.tr("Sampler Options", self.SECTION))
+        self._add_section(self.tr("Sampler Options", "Settings section"))
         self._blur = self._add_slider(
-            self.tr("Blur", self.SETTING),
+            self.tr("Blur", "Label of setting (must be short)"),
             1,
             200,
             max(1, int(self._config.blur * 100)),
@@ -81,11 +83,11 @@ class ScalingTab(SettingsTab):
                 "Kernel width (blur factor) for Lanczos and Catmull-Rom.\n"
                 "Lower values increase sharpness/ringing, while higher values smooth the result.\n"
                 "Recommended range: 0.8 - 1.2.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._antiring = self._add_slider(
-            self.tr("Antiring Strength", self.SETTING),
+            self.tr("Antiring Strength", "Label of setting (must be short)"),
             0,
             100,
             int(self._config.antiring_strength * 100),
@@ -96,14 +98,14 @@ class ScalingTab(SettingsTab):
                 "Anti-ringing strength (0.0 - 1.0) for Adaptive Lanczos and Catmull-Rom.\n"
                 "Lower values soften the clamp, preserving more detail at the cost of possible ringing.\n"
                 "Recommended range: 0.7 - 1.0.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
 
         # ---- Sampler Options ----
-        self._add_section(self.tr("Lanczos Options", self.SECTION))
+        self._add_section(self.tr("Lanczos Options", "Settings section"))
         self._tight_cb = self._add_cb(
-            self.tr("Tight Antiring", self.SETTING),
+            self.tr("Tight Antiring", "Label of setting (must be short)"),
             self._config.tight_antiring,
             self._on_tight_antiring,
             baseline=self.baseline_config.tight_antiring,
@@ -111,22 +113,22 @@ class ScalingTab(SettingsTab):
                 "Use only the central 2x2 neighborhood for anti-ringing bounds.\n"
                 "Keeps thin text and line art sharp. Disable if you see distant ringing artifacts "
                 "on high-contrast edges.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._radius_override_cb = self._add_cb(
-            self.tr("Override Lanczos Radius", self.SETTING),
+            self.tr("Override Lanczos Radius", "Label of setting (must be short)"),
             self._config.kernel_radius is not None,
             self._on_radius_override_toggle,
             baseline=self.baseline_config.kernel_radius is not None,
             help=self.tr(
                 "Force a specific Lanczos kernel radius instead of the automatic selection.\n"
                 "When unchecked, radius is chosen automatically (2 for upscaling, variable for downscaling).",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._radius_slider = self._add_slider(
-            self.tr("Radius", self.SETTING),
+            self.tr("Radius", "Label of setting (must be short)"),
             2,
             10,
             self._config.kernel_radius if self._config.kernel_radius is not None else 2,
@@ -139,7 +141,7 @@ class ScalingTab(SettingsTab):
             help=self.tr(
                 "Lanczos kernel radius (2 = standard Lanczos2, 3 = sharper 6-tap, etc.).\n"
                 "Higher radii reduce aliasing but increase GPU load.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._radius_slider.setEnabled(self._config.kernel_radius is not None)

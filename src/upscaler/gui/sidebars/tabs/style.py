@@ -39,7 +39,7 @@ class StyleTab(SettingsTab):
         self._updating_from_preset = False
         super().__init__(
             gui_config,
-            title=self.tr("GUI Style", self.TAB),
+            title=self.tr("GUI Style", "Name of a settings tab"),
             baseline_config=None,
             parent=parent,
         )
@@ -53,166 +53,192 @@ class StyleTab(SettingsTab):
         """Return the color category structure with translated strings."""
         return [
             {
-                "title": self.tr("Background & Surfaces", self.SECTION),
+                "title": self.tr("Background & Surfaces", "Settings section"),
                 "fields": [
                     (
                         "background",
-                        self.tr("Primary Background", self.SETTING),
+                        self.tr(
+                            "Primary Background", "Label of setting (must be short)"
+                        ),
                         self.tr(
                             "Main background color of the application window and dialogs.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "input",
-                        self.tr("Input Background", self.SETTING),
+                        self.tr("Input Background", "Label of setting (must be short)"),
                         self.tr(
                             "Background color of text fields, combo boxes, and editable areas.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "input_hover",
-                        self.tr("Input Background (hover)", self.SETTING),
+                        self.tr(
+                            "Input Background (hover)",
+                            "Label of setting (must be short)",
+                        ),
                         self.tr(
                             "Background color when the mouse hovers over an input field.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "input_disabled",
-                        self.tr("Input Background (disabled)", self.SETTING),
+                        self.tr(
+                            "Input Background (disabled)",
+                            "Label of setting (must be short)",
+                        ),
                         self.tr(
                             "Background color for disabled (greyed-out) input fields.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "button",
-                        self.tr("Button Background", self.SETTING),
-                        self.tr("Background color of buttons.", self.DESCRIPTION),
+                        self.tr(
+                            "Button Background", "Label of setting (must be short)"
+                        ),
+                        self.tr(
+                            "Background color of buttons.",
+                            "Description of a setting (tooltip)",
+                        ),
                     ),
                     (
                         "button_hover",
-                        self.tr("Button Background (hover)", self.SETTING),
+                        self.tr(
+                            "Button Background (hover)",
+                            "Label of setting (must be short)",
+                        ),
                         self.tr(
                             "Background color of a button when the mouse hovers over it.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "caption_background",
-                        self.tr("Caption Background", self.SETTING),
+                        self.tr(
+                            "Caption Background", "Label of setting (must be short)"
+                        ),
                         self.tr(
                             "Semi-transparent background color of each window titles.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                 ],
             },
             {
-                "title": self.tr("Text & Icons", self.SECTION),
+                "title": self.tr("Text & Icons", "Settings section"),
                 "fields": [
                     (
                         "text",
-                        self.tr("Primary Text", self.SETTING),
+                        self.tr("Primary Text", "Label of setting (must be short)"),
                         self.tr(
-                            "Text color of body text and labels.", self.DESCRIPTION
+                            "Text color of body text and labels.",
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "text_hover",
-                        self.tr("Primary Text (hover)", self.SETTING),
+                        self.tr(
+                            "Primary Text (hover)", "Label of setting (must be short)"
+                        ),
                         self.tr(
                             "Text color when the mouse hovers over clickable items.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "text_subtle",
-                        self.tr("Secondary Text", self.SETTING),
+                        self.tr("Secondary Text", "Label of setting (must be short)"),
                         self.tr(
                             "Text color for secondary information, captions, and section headers.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "icon",
-                        self.tr("Icon Fill", self.SETTING),
+                        self.tr("Icon Fill", "Label of setting (must be short)"),
                         self.tr(
-                            "Fill color of sidebar and toolbar icons.", self.DESCRIPTION
+                            "Fill color of sidebar and toolbar icons.",
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                 ],
             },
             {
-                "title": self.tr("Borders & Separators", self.SECTION),
+                "title": self.tr("Borders & Separators", "Settings section"),
                 "fields": [
                     (
                         "border",
-                        self.tr("Border", self.SETTING),
+                        self.tr("Border", "Label of setting (must be short)"),
                         self.tr(
                             "Border color for input fields, buttons, and panels.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "border_hover",
-                        self.tr("Border (hover)", self.SETTING),
+                        self.tr("Border (hover)", "Label of setting (must be short)"),
                         self.tr(
                             "Border color when hovering over interactive elements.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                 ],
             },
             {
-                "title": self.tr("Controls & Highlights", self.SECTION),
+                "title": self.tr("Controls & Highlights", "Settings section"),
                 "fields": [
                     (
                         "control",
-                        self.tr("Accent", self.SETTING),
+                        self.tr("Accent", "Label of setting (must be short)"),
                         self.tr(
                             "Primary accent color for checkboxes, sliders and other interactive controls.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "control_hover",
-                        self.tr("Accent (hover)", self.SETTING),
+                        self.tr("Accent (hover)", "Label of setting (must be short)"),
                         self.tr(
                             "Accent color when the mouse hovers over an interactive control.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "reset",
-                        self.tr("Revert Button", self.SETTING),
+                        self.tr("Revert Button", "Label of setting (must be short)"),
                         self.tr(
-                            "Background color of the 'Reset' button.", self.DESCRIPTION
+                            "Background color of the 'Reset' button.",
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "reset_hover",
-                        self.tr("Revert Button (hover)", self.SETTING),
+                        self.tr(
+                            "Revert Button (hover)", "Label of setting (must be short)"
+                        ),
                         self.tr(
                             "'Reset' button background color on hover.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "handle",
-                        self.tr("Handle", self.SETTING),
+                        self.tr("Handle", "Label of setting (must be short)"),
                         self.tr(
                             "Fill color of scrollbar handles and subtle interactive areas.",
-                            self.DESCRIPTION,
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                     (
                         "handle_hover",
-                        self.tr("Handle (hover)", self.SETTING),
+                        self.tr("Handle (hover)", "Label of setting (must be short)"),
                         self.tr(
-                            "Handle control fill color on hover.", self.DESCRIPTION
+                            "Handle control fill color on hover.",
+                            "Description of a setting (tooltip)",
                         ),
                     ),
                 ],
@@ -226,16 +252,15 @@ class StyleTab(SettingsTab):
         self._picker_widgets: Dict[str, ColorPickerRow] = {}
 
         # ── Preset selector ───────────────────────────────────────
-        self._add_section(self.tr("Palette Preset", self.SECTION))
+        self._add_section(self.tr("Palette Preset", "Settings section"))
         self._preset_combo = self._add_combo(
-            self.tr("Preset", self.SETTING),
+            self.tr("Preset", "Label of setting (must be short)"),
             ["Custom"] + list(PRESETS.keys()),
             "Auto",
             self._on_preset_changed,
-            #: Do not translate "Custom" and preset names like "Auto", they are internal identifiers.
             help=self.tr(
                 "Select a pre-built color scheme for the GUI.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
 

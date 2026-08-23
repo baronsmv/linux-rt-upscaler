@@ -23,16 +23,16 @@ class AdvancedTab(SettingsTab):
         self._config = config
         super().__init__(
             gui_config,
-            title=self.tr("Advanced", self.TAB),
+            title=self.tr("Advanced", "Name of a settings tab"),
             baseline_config=baseline_config,
             parent=parent,
         )
 
     def _build_content(self) -> None:
         # ---- Vulkan Rendering ----
-        self._add_section(self.tr("Vulkan Rendering", self.SECTION))
+        self._add_section(self.tr("Vulkan Rendering", "Settings section"))
         self._buffer_pool = self._add_slider(
-            self.tr("Buffer Pool Size", self.SETTING),
+            self.tr("Buffer Pool Size", "Label of setting (must be short)"),
             2,
             16,
             self._config.vulkan_buffer_pool_size,
@@ -42,11 +42,11 @@ class AdvancedTab(SettingsTab):
                 "Number of pre-allocated staging buffers for partial texture updates.\n"
                 "Raise this if you notice stutters when many small regions change rapidly.\n"
                 "Recommended range: 2 - 16.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._frame_timeout = self._add_slider(
-            self.tr("Frame Timeout (ms)", self.SETTING),
+            self.tr("Frame Timeout (ms)", "Label of setting (must be short)"),
             1,
             1000,
             max(1, self._config.frame_timeout // 1_000_000),
@@ -56,14 +56,14 @@ class AdvancedTab(SettingsTab):
                 "Maximum time (in milliseconds) to wait for the GPU to finish the previous frame.\n"
                 "Lower values reduce CPU blocking but may drop frames under heavy load.\n"
                 "Recommended range: 17 (1/60 s) - 1000 (1 s).",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
 
         # ---- Tile-Based Processing ----
-        self._add_section(self.tr("Tile-Based Processing", self.SECTION))
+        self._add_section(self.tr("Tile-Based Processing", "Settings section"))
         self._tile_mode_cb = self._add_cb(
-            self.tr("Enable Tile Mode", self.SETTING),
+            self.tr("Enable Tile Mode", "Label of setting (must be short)"),
             self._config.use_tile_processing,
             self._on_tile_mode,
             baseline=self.baseline_config.use_tile_processing,
@@ -71,22 +71,22 @@ class AdvancedTab(SettingsTab):
                 "Divide the frame into tiles and only re-process the ones that have changed.\n"
                 "Ideal for mostly static content (e.g. text editors, visual novels).\n"
                 "When disabled, the whole frame is upscaled in one pass: better for video or rapid changes.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._damage_cb = self._add_cb(
-            self.tr("Damage Tracking", self.SETTING),
+            self.tr("Damage Tracking", "Label of setting (must be short)"),
             self._config.use_damage_tracking,
             self._on_damage_tracking,
             baseline=self.baseline_config.use_damage_tracking,
             help=self.tr(
                 "Transfer only the changed regions of the frame to the GPU instead of the entire image.\n"
                 "Disable if you suspect missed updates from the compositor causing glitches.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._tile_size = self._add_slider(
-            self.tr("Tile Size", self.SETTING),
+            self.tr("Tile Size", "Label of setting (must be short)"),
             16,
             128,
             self._config.tile_size,
@@ -97,11 +97,11 @@ class AdvancedTab(SettingsTab):
                 "Smaller tiles track changes more precisely but add CPU overhead.\n"
                 "Multiples of 32 work best with GPU workgroups.\n"
                 "Recommended range: 32 - 128.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._margin = self._add_slider(
-            self.tr("Context Margin", self.SETTING),
+            self.tr("Context Margin", "Label of setting (must be short)"),
             4,
             24,
             self._config.tile_context_margin,
@@ -111,11 +111,11 @@ class AdvancedTab(SettingsTab):
                 "Extra border pixels added around each tile to provide context for the neural network.\n"
                 "Larger margins improve boundary quality but increase processing.\n"
                 "Recommended range: 4 - 24.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._max_layers = self._add_slider(
-            self.tr("Max Tiles per Frame", self.SETTING),
+            self.tr("Max Tiles per Frame", "Label of setting (must be short)"),
             4,
             32,
             self._config.max_tile_layers,
@@ -125,11 +125,11 @@ class AdvancedTab(SettingsTab):
                 "Maximum number of dirty tiles processed per frame.\n"
                 "When exceeded, the pipeline falls back to full-frame processing to avoid excessive GPU dispatches.\n"
                 "Recommended range: 4 - 32.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._area_thresh = self._add_slider(
-            self.tr("Area Threshold %", self.SETTING),
+            self.tr("Area Threshold %", "Label of setting (must be short)"),
             0,
             100,
             int(self._config.area_threshold * 100),
@@ -141,14 +141,14 @@ class AdvancedTab(SettingsTab):
                 "full-frame processing.\n"
                 "Smaller values fall back earlier, preventing too many tiny tile dispatches.\n"
                 "Recommended range: 15% - 50%.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
 
         # ---- Timing ----
-        self._add_section(self.tr("Timing", self.SECTION))
+        self._add_section(self.tr("Timing", "Settings section"))
         self._add_slider(
-            self.tr("Daemon Poll (s)", self.SETTING),
+            self.tr("Daemon Poll (s)", "Label of setting (must be short)"),
             1,
             100,
             int(self._config.daemon_poll_interval * 10),
@@ -157,11 +157,11 @@ class AdvancedTab(SettingsTab):
             baseline=self.baseline_config.daemon_poll_interval,
             help=self.tr(
                 "How often the daemon scans for matching windows.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._add_slider(
-            self.tr("Focus Poll (s)", self.SETTING),
+            self.tr("Focus Poll (s)", "Label of setting (must be short)"),
             1,
             1000,
             int(self._config.focus_poll_interval * 100),
@@ -170,7 +170,7 @@ class AdvancedTab(SettingsTab):
             baseline=self.baseline_config.focus_poll_interval,
             help=self.tr(
                 "How often the focus monitor checks for active window changes.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._add_slider(
@@ -183,14 +183,14 @@ class AdvancedTab(SettingsTab):
             baseline=self.baseline_config.pipeline_poll_interval,
             help=self.tr(
                 "How often the pipeline checks its internal state when idle.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
 
         # ---- Error Recovery ----
-        self._add_section(self.tr("Error Recovery", self.SECTION))
+        self._add_section(self.tr("Error Recovery", "Settings section"))
         self._add_slider(
-            self.tr("Max Capture Failures", self.SETTING),
+            self.tr("Max Capture Failures", "Label of setting (must be short)"),
             1,
             100,
             self._config.max_capture_failures,
@@ -199,11 +199,11 @@ class AdvancedTab(SettingsTab):
             baseline=self.baseline_config.max_capture_failures,
             help=self.tr(
                 "Consecutive frame-grab failures before the pipeline stops.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
         self._add_slider(
-            self.tr("Capture Failure Delay (s)", self.SETTING),
+            self.tr("Capture Failure Delay (s)", "Label of setting (must be short)"),
             0,
             500,
             int(self._config.capture_failure_delay * 100),
@@ -211,11 +211,12 @@ class AdvancedTab(SettingsTab):
             scale_factor=100,
             baseline=self.baseline_config.capture_failure_delay,
             help=self.tr(
-                "Pause after a capture failure before retrying.", self.DESCRIPTION
+                "Pause after a capture failure before retrying.",
+                "Description of a setting (tooltip)",
             ),
         )
         self._add_slider(
-            self.tr("Swapchain Debounce (s)", self.SETTING),
+            self.tr("Swapchain Debounce (s)", "Label of setting (must be short)"),
             0,
             100,
             int(self._config.swapchain_debounce * 10),
@@ -224,7 +225,7 @@ class AdvancedTab(SettingsTab):
             baseline=self.baseline_config.swapchain_debounce,
             help=self.tr(
                 "Minimum time between two Vulkan swapchain recreations.",
-                self.DESCRIPTION,
+                "Description of a setting (tooltip)",
             ),
         )
 
