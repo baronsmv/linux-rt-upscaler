@@ -6,8 +6,8 @@
 
 <p align="center">
   <a href="https://pypi.org/project/linux-rt-upscaler/"><img src="https://img.shields.io/pypi/v/linux-rt-upscaler.svg" alt="PyPI version"></a>
-  <a href="https://hosted.weblate.org/engage/linux-rt-upscaler/"><img src="https://hosted.weblate.org/widget/linux-rt-upscaler/gui/svg-badge.svg" alt="Estado de la traducción"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPLv3"></a>
+  <a href="https://hosted.weblate.org/engage/linux-rt-upscaler/"><img src="https://hosted.weblate.org/widget/linux-rt-upscaler/svg-badge.svg" alt="Localization status"></a>
 </p>
 
 A real-time SRCNN upscaler for any X-Window (X11 or XWayland) on GNU/Linux. It uses [CuNNy](https://github.com/funnyplanter/CuNNy) neural networks to perform 2x (or 4x) upscaling to full screen while preserving aspect ratio. Mouse clicks and motion are automatically forwarded to the original window.
@@ -61,7 +61,11 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 
 ## Localization
 
-Thanks to [Weblate](https://hosted.weblate.org/engage/linux-rt-upscaler/) for hosting! If you'd like to help translate the upscaler GUI into your language, please [go here](https://hosted.weblate.org/engage/linux-rt-upscaler/)!
+Thanks to [Weblate](https://hosted.weblate.org/engage/linux-rt-upscaler/) for hosting!
+
+If you'd like to help translate the upscaler into your language, click in this image:
+
+<a href="https://hosted.weblate.org/engage/linux-rt-upscaler/"><img src="https://hosted.weblate.org/widget/linux-rt-upscaler/multi-auto.svg" alt="Localization status"></a>
 
 ## Roadmap
 
