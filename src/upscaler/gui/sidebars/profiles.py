@@ -91,6 +91,8 @@ class ProfilesSidebar(QWidget):
         layout.addSpacing(8)
 
         # Profile list
+        self._hint_item: Optional[QListWidgetItem] = None
+        self._hint_label: Optional[QLabel] = None
         self._list = QListWidget()
         self._list.setMouseTracking(True)
         self._list.viewport().installEventFilter(self)
@@ -179,8 +181,17 @@ class ProfilesSidebar(QWidget):
     # ------------------------------------------------------------------
     #  Public helpers
     # ------------------------------------------------------------------
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._update_hint_size()
+
     def eventFilter(self, obj, event) -> bool:
         """Handle mouse-hover cursor and keyboard shortcuts."""
+        # --- Resize handling to update hint label wrapping ---
+        if obj is self._list.viewport() and event.type() == QEvent.Resize:
+            self._update_hint_size()
+            return False
+
         # --- Mouse cursor over list items ---
         if obj is self._list.viewport() and event.type() == QEvent.MouseMove:
             pos = event.position().toPoint()
@@ -237,6 +248,14 @@ class ProfilesSidebar(QWidget):
 
         return super().eventFilter(obj, event)
 
+    def _update_hint_size(self) -> None:
+        if not hasattr(self, "_hint_item") or not hasattr(self, "_hint_label"):
+            return
+        width = self._list.viewport().width()
+        height = self._hint_label.heightForWidth(width)
+        self._hint_item.setSizeHint(QSize(width, height))
+        self._list.doItemsLayout()
+
     def populate_list(self, active_name: Optional[str] = None) -> None:
         """
         Clear and rebuild the list from *self._profiles*.
@@ -270,23 +289,28 @@ class ProfilesSidebar(QWidget):
 
         # If no profile, show a hint
         if not self._profiles:
-            hint_label = QLabel(
+            self._hint_label = QLabel(
                 self.tr(
                     "Global settings apply to all windows.\n\n"
-                    "Create a profile to override settings\n"
-                    "for a specific window, matched by its\n"
-                    "name or size.",
-                    "No profile message (preserve line width)",
+                    "Create a profile to override settings for a specific window, "
+                    "matched by its title or size.",
+                    "No profile message",
                 )
             )
-            hint_label.setWordWrap(True)
-            hint_label.setContentsMargins(8, 16, 8, 4)
-            hint_label.setStyleSheet(profile_hint_style(self._gui_config))
-            hint_item = QListWidgetItem()
-            hint_item.setFlags(Qt.NoItemFlags)
-            hint_item.setSizeHint(hint_label.sizeHint())
-            self._list.addItem(hint_item)
-            self._list.setItemWidget(hint_item, hint_label)
+            self._hint_label.setWordWrap(True)
+            self._hint_label.setContentsMargins(8, 16, 8, 4)
+            self._hint_label.setStyleSheet(profile_hint_style(self._gui_config))
+
+            self._hint_item = QListWidgetItem()
+            self._hint_item.setFlags(Qt.NoItemFlags)
+
+            # Compute correct initial height
+            width = self._list.viewport().width()
+            height = self._hint_label.heightForWidth(width)
+            self._hint_item.setSizeHint(QSize(width, height))
+
+            self._list.addItem(self._hint_item)
+            self._list.setItemWidget(self._hint_item, self._hint_label)
 
         # Profile entries
         for name in self._profiles.keys():
@@ -315,8 +339,8 @@ class ProfilesSidebar(QWidget):
             if name:
                 item.setToolTip(
                     self.tr(
-                        "When selected, the settings panel on the right edits the "
-                        "'{0}' profile overrides.",
+                        "When selected, the settings panel on the right edits "
+                        "the settings overrides for '{0}'.",
                         "Profile selected tooltip",
                     ).format(name)
                 )

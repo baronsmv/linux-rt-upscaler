@@ -44,12 +44,12 @@ class ScalingTab(SettingsTab):
             self._on_upsampler,
             baseline=UPSAMPLER_NAMES.get(self.baseline_config.upsampler, "Lanczos"),
             help=self.tr(
-                "Applied after SRCNN upscaling to reach the target output size (e.g., 1440p → 4k).\n"
-                "• Fixed Lanczos-2 — sharp, linear-light, best for 2D art\n"
-                "• AMD FidelityFX Super Resolution 1.0 — fast, edge-adaptive, best for 3D content\n"
-                "• NVIDIA Image Scaling — directional sharpening, sRGB, may look oversharpened",
+                "Applied after SRCNN upscaling to reach the target output size (for example, 1440p → 4K).\n"
+                "• Lanczos-2 — sharp, best for 2D art and text (recommended)\n"
+                "• AMD FSR 1.0 — fast, best for 3D but may introduce artifacts on fine details\n"
+                "• NVIDIA Image Scaling — oversharpens and introduces ringing, not recommended",
                 "Description of a setting (tooltip). "
-                "Do not alter the names of the filters (eg. Lanczos-2).",
+                "Do not translate the filter names (Lanczos-2, Lanczos-3, FSR, NIS).",
             ),
         )
         self._downsampler_combo = self._add_combo(
@@ -62,10 +62,10 @@ class ScalingTab(SettingsTab):
             ),
             help=self.tr(
                 "Applied after SRCNN upscaling to reduce the image to the target output size (e.g., 1440p → 1080p).\n"
-                "• Catmull-Rom (bicubic) — sharper and faster than Lanczos for mild downscaling\n"
-                "• Adaptive Lanczos — variable radius, high quality even in extreme downscales",
+                "• Catmull-Rom (bicubic) — sharp and fast, excellent tradeoff for most cases (recommended)\n"
+                "• Adaptive Lanczos — slower, best overall quality, handles extreme downscaling well",
                 "Description of a setting (tooltip). "
-                "Do not alter the names of the filters (eg. Catmull-Rom).",
+                "Do not translate the filter names (Catmull-Rom, Adaptive Lanczos).",
             ),
         )
 
@@ -81,7 +81,7 @@ class ScalingTab(SettingsTab):
             baseline=self.baseline_config.blur,
             help=self.tr(
                 "Kernel width (blur factor) for Lanczos and Catmull-Rom.\n"
-                "Lower values increase sharpness/ringing, while higher values smooth the result.\n"
+                "Lower values are sharper but may ring; higher values are smoother.\n"
                 "Recommended range: 0.8 - 1.2.",
                 "Description of a setting (tooltip)",
             ),
@@ -96,7 +96,7 @@ class ScalingTab(SettingsTab):
             baseline=self.baseline_config.antiring_strength,
             help=self.tr(
                 "Anti-ringing strength (0.0 - 1.0) for Adaptive Lanczos and Catmull-Rom.\n"
-                "Lower values soften the clamp, preserving more detail at the cost of possible ringing.\n"
+                "Lower values preserve more detail but may allow ringing.\n"
                 "Recommended range: 0.7 - 1.0.",
                 "Description of a setting (tooltip)",
             ),
@@ -110,9 +110,8 @@ class ScalingTab(SettingsTab):
             self._on_tight_antiring,
             baseline=self.baseline_config.tight_antiring,
             help=self.tr(
-                "Use only the central 2x2 neighborhood for anti-ringing bounds.\n"
-                "Keeps thin text and line art sharp. Disable if you see distant ringing artifacts "
-                "on high-contrast edges.",
+                "Use only the central 2x2 area for anti-ringing.\n"
+                "Keeps thin text and line art sharp. Turn off if you see ringing on high-contrast edges.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -122,8 +121,8 @@ class ScalingTab(SettingsTab):
             self._on_radius_override_toggle,
             baseline=self.baseline_config.kernel_radius is not None,
             help=self.tr(
-                "Force a specific Lanczos kernel radius instead of the automatic selection.\n"
-                "When unchecked, radius is chosen automatically (2 for upscaling, variable for downscaling).",
+                "Force a specific Lanczos kernel radius instead of automatic selection.\n"
+                "When off, the radius is chosen automatically (2 for upscaling, variable for downscaling).",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -139,7 +138,7 @@ class ScalingTab(SettingsTab):
                 else 2
             ),
             help=self.tr(
-                "Lanczos kernel radius (2 = standard Lanczos2, 3 = sharper 6-tap, etc.).\n"
+                "Lanczos kernel radius (2 = standard Lanczos2, 3 = sharper 6-tap).\n"
                 "Higher radii reduce aliasing but increase GPU load.",
                 "Description of a setting (tooltip)",
             ),

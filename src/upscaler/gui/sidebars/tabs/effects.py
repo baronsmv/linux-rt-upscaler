@@ -37,8 +37,8 @@ class EffectsTab(SettingsTab):
             self._on_deband_enabled,
             baseline=self.baseline_config.deband_enabled,
             help=self.tr(
-                "Smooth harsh color banding in gradients before upscaling. "
-                "Helps skies, fog and smooth backgrounds.",
+                "Reduce banding in smooth gradients before upscaling.\n"
+                "Only useful if you notice banding in skies, fog, and other large smooth areas.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -51,8 +51,7 @@ class EffectsTab(SettingsTab):
             float_slot=self._on_deband_strength,
             baseline=self.baseline_config.deband_strength,
             help=self.tr(
-                "Debanding intensity (0 = off, 1 = maximum). Low values (0.1-0.3) "
-                "are sufficient for most content.",
+                "Debanding intensity.\nRecommended range: 0.10 - 0.30.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -66,8 +65,7 @@ class EffectsTab(SettingsTab):
             self._on_cas_enabled,
             baseline=self.baseline_config.cas_enabled,
             help=self.tr(
-                "Contrast Adaptive Sharpening: enhances text and line art without "
-                "the halos of traditional unsharp masks.",
+                "Contrast Adaptive Sharpening: enhances text and line art contrast.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -80,7 +78,7 @@ class EffectsTab(SettingsTab):
             float_slot=self._on_cas_strength,
             baseline=self.baseline_config.cas_strength,
             help=self.tr(
-                "Sharpening amount (0 = none, 1 = max). 0.2-0.5 gives pleasant crispness.",
+                "Sharpening amount.\nRecommended range: 0.20 - 0.50.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -94,7 +92,8 @@ class EffectsTab(SettingsTab):
             self._on_bloom_enabled,
             baseline=self.baseline_config.bloom_enabled,
             help=self.tr(
-                "Soft glow around bright areas, creating a cinematic look.",
+                "Soft glow around bright areas, for a cinematic look.\n"
+                "May introduce halos, especially with white text.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -107,8 +106,7 @@ class EffectsTab(SettingsTab):
             float_slot=self._on_bloom_strength,
             baseline=self.baseline_config.bloom_strength,
             help=self.tr(
-                "Bloom intensity (0 = off, 1 = max). Subtle values (0.02-0.06) "
-                "add a gentle, polished look.",
+                "Bloom intensity.\nRecommended range: 0.02 - 0.06.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -123,8 +121,8 @@ class EffectsTab(SettingsTab):
             float_slot=self._on_bloom_threshold,
             baseline=self.baseline_config.bloom_threshold,
             help=self.tr(
-                "Brightness cutoff for bloom. Only pixels above this contribute. "
-                "Lower values include more of the scene.",
+                "Brightness cutoff for bloom.\n"
+                "Only pixels brighter than this value will glow.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -165,8 +163,7 @@ class EffectsTab(SettingsTab):
             float_slot=self._on_vignette_strength,
             baseline=self.baseline_config.vignette_strength,
             help=self.tr(
-                "Edge darkening intensity (0 = none, 1 = max). Moderate values "
-                "(0.3-0.6) give a subtle framing effect.",
+                "Edge darkening intensity.\nRecommended range: 0.30 - 0.60.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -181,8 +178,8 @@ class EffectsTab(SettingsTab):
             float_slot=self._on_vignette_radius,
             baseline=self.baseline_config.vignette_radius,
             help=self.tr(
-                "Distance from center where darkening begins. Higher values keep "
-                "the center bright longer.",
+                "Distance from center where darkening begins.\n"
+                "Higher values keep the center brighter.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -212,7 +209,7 @@ class EffectsTab(SettingsTab):
             self._on_grain_enabled,
             baseline=self.baseline_config.grain_enabled,
             help=self.tr(
-                "Simulated film grain for a photochemical, organic look.",
+                "Simulated film grain look.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -225,8 +222,7 @@ class EffectsTab(SettingsTab):
             float_slot=self._on_grain_strength,
             baseline=self.baseline_config.grain_strength,
             help=self.tr(
-                "Grain intensity (0 = off, 1 = max). Low values (0.1-0.2) mimic "
-                "fine photochemical grain.",
+                "Grain intensity.\nRecommended range: 0.10 - 0.20.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -241,8 +237,8 @@ class EffectsTab(SettingsTab):
             float_slot=self._on_grain_size_changed,
             baseline=self.baseline_config.grain_size,
             help=self.tr(
-                "Apparent particle size of the grain. Larger values produce "
-                "coarser, more visible grain.",
+                "Particle size of the grain.\n"
+                "Larger values produce coarser, more visible grain.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -256,8 +252,7 @@ class EffectsTab(SettingsTab):
             self._on_lut_enabled,
             baseline=self.baseline_config.lut_enabled,
             help=self.tr(
-                "Apply a cinematic color-lookup table for instant film-stock "
-                "emulation or color grading.",
+                "Apply a color grading preset (LUT) to change the look of the window.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -268,7 +263,7 @@ class EffectsTab(SettingsTab):
             self._on_lut_preset,
             baseline=self.baseline_config.lut_preset,
             help=self.tr(
-                "Built-in 3D LUT preset. Choose from warm, cool, film, sepia, etc.",
+                "Built-in color grading preset (warm, cool, film, sepia, etc.).",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -283,7 +278,7 @@ class EffectsTab(SettingsTab):
             float_slot=self._on_lut_intensity,
             baseline=self.baseline_config.lut_intensity,
             help=self.tr(
-                "Blend between original and graded image (0 = original, 1 = full effect).",
+                "Blend between original and graded image.",
                 "Description of a setting (tooltip)",
             ),
         )

@@ -122,7 +122,7 @@ class StyleTab(SettingsTab):
                             "Caption Background", "Label of setting (must be short)"
                         ),
                         self.tr(
-                            "Semi-transparent background color of each window titles.",
+                            "Semi-transparent background color of the central grid window titles.",
                             "Description of a setting (tooltip)",
                         ),
                     ),
@@ -209,7 +209,7 @@ class StyleTab(SettingsTab):
                     ),
                     (
                         "reset",
-                        self.tr("Revert Button", "Label of setting (must be short)"),
+                        self.tr("Reset Button", "Label of setting (must be short)"),
                         self.tr(
                             "Background color of the 'Reset' button.",
                             "Description of a setting (tooltip)",
@@ -218,7 +218,7 @@ class StyleTab(SettingsTab):
                     (
                         "reset_hover",
                         self.tr(
-                            "Revert Button (hover)", "Label of setting (must be short)"
+                            "Reset Button (hover)", "Label of setting (must be short)"
                         ),
                         self.tr(
                             "'Reset' button background color on hover.",
@@ -229,7 +229,7 @@ class StyleTab(SettingsTab):
                         "handle",
                         self.tr("Handle", "Label of setting (must be short)"),
                         self.tr(
-                            "Fill color of scrollbar handles and subtle interactive areas.",
+                            "Fill color of scrollbar handles and other small controls.",
                             "Description of a setting (tooltip)",
                         ),
                     ),
@@ -237,7 +237,7 @@ class StyleTab(SettingsTab):
                         "handle_hover",
                         self.tr("Handle (hover)", "Label of setting (must be short)"),
                         self.tr(
-                            "Handle control fill color on hover.",
+                            "Fill color of scrollbar handles when hovered.",
                             "Description of a setting (tooltip)",
                         ),
                     ),
@@ -260,7 +260,7 @@ class StyleTab(SettingsTab):
             self._on_preset_changed,
             help=self.tr(
                 "Select a pre-built color scheme for the GUI.",
-                "Description of a setting (tooltip)",
+                "Description of a setting (tooltip). Preset names are not translated.",
             ),
         )
 

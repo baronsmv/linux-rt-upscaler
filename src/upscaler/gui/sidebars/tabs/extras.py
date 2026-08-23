@@ -36,7 +36,7 @@ class ExtrasTab(SettingsTab):
             self._on_dir_changed,
             baseline=self.baseline_config.screenshot_dir,
             help=self.tr(
-                "Folder where screenshots will be saved.",
+                "Folder where screenshots are saved.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -46,16 +46,17 @@ class ExtrasTab(SettingsTab):
             self._on_file_changed,
             baseline=self.baseline_config.screenshot_filename,
             help=self.tr(
-                "Filename template for screenshots. Available placeholders:\n"
-                "• {timestamp}: capture time (supports strftime, e.g. "
+                "Filename template for screenshots. You can use these placeholders:\n"
+                "• {timestamp}: capture time (supports strftime, for example "
                 "{timestamp:%Y-%m-%d-%H-%M-%S})\n"
                 "• {title}: current window title\n"
-                "• {profile}: active profile name (fallback to {{title}} if no profile)\n"
+                "• {profile}: active profile name (or the window title if no profile)\n"
                 "• {model}: active upscaling model\n"
                 "• {width}: upscaled image width\n"
                 "• {height}: upscaled image height",
                 "Description of a setting (tooltip). "
-                "Do not translate any of the placeholders (eg. {timestamp}).",
+                "Keep all placeholders exactly as they are, including braces, "
+                "for example {timestamp} and the strftime format inside it.",
             ),
         )
 
@@ -67,8 +68,8 @@ class ExtrasTab(SettingsTab):
             self._on_osd_enabled,
             baseline=self.baseline_config.show_osd,
             help=self.tr(
-                "Show on-screen messages when model, geometry, or zoom changes, "
-                "and after taking a screenshot.",
+                "Show on-screen messages when the model, window geometry, or zoom changes, "
+                "or after taking a screenshot.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -81,7 +82,7 @@ class ExtrasTab(SettingsTab):
             float_slot=self._on_osd_duration,
             baseline=self.baseline_config.osd_duration,
             help=self.tr(
-                "How many seconds OSD messages remain visible before fading out.",
+                "How many seconds on-screen messages remain visible before fading out.",
                 "Description of a setting (tooltip)",
             ),
         )

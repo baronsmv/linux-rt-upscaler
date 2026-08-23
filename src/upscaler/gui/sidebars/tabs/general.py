@@ -44,8 +44,9 @@ class GeneralTab(SettingsTab):
             self._on_model_changed,
             baseline=self.baseline_config.model,
             help=self.tr(
-                "Upscaling model to use. Models are ordered from worst to best quality. "
-                "Larger numbers indicate deeper networks (slower, higher quality).",
+                "Upscaling SRCNN model to use.\n"
+                "All models upscale to 2x, and are ordered from lower to higher quality.\n"
+                "Rightmost models are deeper and slower, but produce better results.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -54,13 +55,11 @@ class GeneralTab(SettingsTab):
             self._config.double_upscale,
             self._on_double_changed,
             baseline=self.baseline_config.double_upscale,
-            help=(
-                self.tr(
-                    "Perform two consecutive 2x upscales for a 4x total (e.g., 720p to 2880p). "
-                    "Useful for high-resolution screens (4K) and low-resolution sources. "
-                    "Increases GPU usage.",
-                    "Description of a setting (tooltip)",
-                )
+            help=self.tr(
+                "Perform two 2x upscales in a row for a total of 4x (for example, 720p to 2880p).\n"
+                "Useful for high-resolution screens (4K) and low-resolution sources.\n"
+                "Uses more GPU power.",
+                "Description of a setting (tooltip)",
             ),
         )
 
@@ -72,8 +71,8 @@ class GeneralTab(SettingsTab):
             self._on_follow_focus,
             baseline=self.baseline_config.follow_focus,
             help=self.tr(
-                "Automatically switch the upscaling target to the currently focused window. "
-                "Useful when moving between multiple windows.",
+                "Automatically upscale the window that currently has focus.\n"
+                "Useful when working with multiple windows.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -83,8 +82,8 @@ class GeneralTab(SettingsTab):
             self._on_pause_focus_loss,
             baseline=self.baseline_config.pause_on_focus_loss,
             help=self.tr(
-                "When the target window loses focus, hide the overlay until it regains focus. "
-                "Uncheck to keep the overlay always visible.",
+                "Hide the upscaled overlay when the target window loses focus, and show it again when focus returns.\n"
+                "Turn off to keep the overlay always visible.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -98,7 +97,8 @@ class GeneralTab(SettingsTab):
                 self._on_daemon_exclude_changed,
                 baseline=self.baseline_config.daemon_exclude,
                 help=self.tr(
-                    "Exclude this profile from automatic upscaling.",
+                    "When Daemon Mode is active, "
+                    "this profile will not be used to automatically upscale matching windows.",
                     "Description of a setting (tooltip)",
                 ),
             )
@@ -108,13 +108,11 @@ class GeneralTab(SettingsTab):
                 self._config.daemon,
                 self._on_daemon_changed,
                 baseline=self.baseline_config.daemon,
-                help=(
-                    self.tr(
-                        "When enabled, a daemon process runs in the background and "
-                        "automatically upscales any window that matches a profile.\n"
-                        "Disable this to manually pick a window from the grid.",
-                        "Description of a setting (tooltip)",
-                    )
+                help=self.tr(
+                    "When enabled, a background process automatically upscales "
+                    "any window that matches a profile.\n"
+                    "Turn off to manually select a window from the grid.",
+                    "Description of a setting (tooltip)",
                 ),
             )
 

@@ -39,8 +39,8 @@ class AdvancedTab(SettingsTab):
             self._on_buffer_pool,
             baseline=self.baseline_config.vulkan_buffer_pool_size,
             help=self.tr(
-                "Number of pre-allocated staging buffers for partial texture updates.\n"
-                "Raise this if you notice stutters when many small regions change rapidly.\n"
+                "Number of buffers prepared in advance for updating the frame.\n"
+                "Increase this if you see stuttering when many small areas change quickly.\n"
                 "Recommended range: 2 - 16.",
                 "Description of a setting (tooltip)",
             ),
@@ -53,8 +53,8 @@ class AdvancedTab(SettingsTab):
             self._on_frame_timeout,
             baseline=self.baseline_config.frame_timeout // 1_000_000,
             help=self.tr(
-                "Maximum time (in milliseconds) to wait for the GPU to finish the previous frame.\n"
-                "Lower values reduce CPU blocking but may drop frames under heavy load.\n"
+                "Maximum time to wait for the GPU to finish the previous frame.\n"
+                "Lower values reduce waiting time but may cause dropped frames.\n"
                 "Recommended range: 17 (1/60 s) - 1000 (1 s).",
                 "Description of a setting (tooltip)",
             ),
@@ -68,9 +68,9 @@ class AdvancedTab(SettingsTab):
             self._on_tile_mode,
             baseline=self.baseline_config.use_tile_processing,
             help=self.tr(
-                "Divide the frame into tiles and only re-process the ones that have changed.\n"
-                "Ideal for mostly static content (e.g. text editors, visual novels).\n"
-                "When disabled, the whole frame is upscaled in one pass: better for video or rapid changes.",
+                "Process only the parts of the frame that have changed, using small tiles.\n"
+                "Best for mostly static content, such as text editors or visual novels.\n"
+                "When disabled, the entire frame is processed at once, better for video or fast-moving content.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -80,8 +80,8 @@ class AdvancedTab(SettingsTab):
             self._on_damage_tracking,
             baseline=self.baseline_config.use_damage_tracking,
             help=self.tr(
-                "Transfer only the changed regions of the frame to the GPU instead of the entire image.\n"
-                "Disable if you suspect missed updates from the compositor causing glitches.",
+                "Send only the changed parts of the frame to the GPU, instead of the whole image.\n"
+                "Disable this if you see glitches that may be caused by missed updates.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -93,9 +93,8 @@ class AdvancedTab(SettingsTab):
             self._on_tile_size,
             baseline=self.baseline_config.tile_size,
             help=self.tr(
-                "Interior size of each tile in pixels.\n"
-                "Smaller tiles track changes more precisely but add CPU overhead.\n"
-                "Multiples of 32 work best with GPU workgroups.\n"
+                "Size of each tile in pixels.\n"
+                "Smaller tiles update more precisely but use more CPU. Values that are multiples of 32 usually perform best.\n"
                 "Recommended range: 32 - 128.",
                 "Description of a setting (tooltip)",
             ),
@@ -108,8 +107,8 @@ class AdvancedTab(SettingsTab):
             self._on_margin,
             baseline=self.baseline_config.tile_context_margin,
             help=self.tr(
-                "Extra border pixels added around each tile to provide context for the neural network.\n"
-                "Larger margins improve boundary quality but increase processing.\n"
+                "Extra pixels added around each tile to give the neural network more context.\n"
+                "Larger margins can improve quality at tile edges but increase processing.\n"
                 "Recommended range: 4 - 24.",
                 "Description of a setting (tooltip)",
             ),
@@ -122,8 +121,8 @@ class AdvancedTab(SettingsTab):
             self._on_max_layers,
             baseline=self.baseline_config.max_tile_layers,
             help=self.tr(
-                "Maximum number of dirty tiles processed per frame.\n"
-                "When exceeded, the pipeline falls back to full-frame processing to avoid excessive GPU dispatches.\n"
+                "Maximum number of changed tiles to process per frame.\n"
+                "If more tiles than this need updating, the whole frame will be processed instead.\n"
                 "Recommended range: 4 - 32.",
                 "Description of a setting (tooltip)",
             ),
@@ -137,9 +136,9 @@ class AdvancedTab(SettingsTab):
             float_slot=self._on_area_threshold,
             baseline=self.baseline_config.area_threshold,
             help=self.tr(
-                "Fraction of the window area (in %) that, when dirty, forces a fallback to "
-                "full-frame processing.\n"
-                "Smaller values fall back earlier, preventing too many tiny tile dispatches.\n"
+                "If more than this percentage of the frame has changed, the whole frame will "
+                "be processed instead of individual tiles.\n"
+                "Lower values switch to full-frame processing sooner.\n"
                 "Recommended range: 15% - 50%.",
                 "Description of a setting (tooltip)",
             ),
@@ -156,7 +155,7 @@ class AdvancedTab(SettingsTab):
             scale_factor=10,
             baseline=self.baseline_config.daemon_poll_interval,
             help=self.tr(
-                "How often the daemon scans for matching windows.",
+                "How often the background service checks for matching windows.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -169,7 +168,7 @@ class AdvancedTab(SettingsTab):
             scale_factor=100,
             baseline=self.baseline_config.focus_poll_interval,
             help=self.tr(
-                "How often the focus monitor checks for active window changes.",
+                "How often the program checks which window is currently active.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -182,7 +181,7 @@ class AdvancedTab(SettingsTab):
             scale_factor=100,
             baseline=self.baseline_config.pipeline_poll_interval,
             help=self.tr(
-                "How often the pipeline checks its internal state when idle.",
+                "How often the program checks its internal state when no changes are detected.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -198,7 +197,7 @@ class AdvancedTab(SettingsTab):
             scale_factor=1,
             baseline=self.baseline_config.max_capture_failures,
             help=self.tr(
-                "Consecutive frame-grab failures before the pipeline stops.",
+                "Number of consecutive frame capture failures before the program stops.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -211,7 +210,7 @@ class AdvancedTab(SettingsTab):
             scale_factor=100,
             baseline=self.baseline_config.capture_failure_delay,
             help=self.tr(
-                "Pause after a capture failure before retrying.",
+                "Delay after a capture failure before trying again.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -224,7 +223,8 @@ class AdvancedTab(SettingsTab):
             scale_factor=10,
             baseline=self.baseline_config.swapchain_debounce,
             help=self.tr(
-                "Minimum time between two Vulkan swapchain recreations.",
+                "Minimum time between two Vulkan swapchain recreations.\n"
+                "This prevents unnecessary rebuilds of the rendering pipeline.",
                 "Description of a setting (tooltip)",
             ),
         )

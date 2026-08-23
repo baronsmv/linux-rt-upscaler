@@ -50,8 +50,8 @@
     </message>
     <message>
       <location filename="../sidebars/tabs/advanced.py" line="41" />
-      <source>Number of pre-allocated staging buffers for partial texture updates.
-Raise this if you notice stutters when many small regions change rapidly.
+      <source>Number of buffers prepared in advance for updating the frame.
+Increase this if you see stuttering when many small areas change quickly.
 Recommended range: 2 - 16.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
@@ -64,8 +64,8 @@ Recommended range: 2 - 16.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/advanced.py" line="55" />
-      <source>Maximum time (in milliseconds) to wait for the GPU to finish the previous frame.
-Lower values reduce CPU blocking but may drop frames under heavy load.
+      <source>Maximum time to wait for the GPU to finish the previous frame.
+Lower values reduce waiting time but may cause dropped frames.
 Recommended range: 17 (1/60 s) - 1000 (1 s).</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
@@ -84,9 +84,9 @@ Recommended range: 17 (1/60 s) - 1000 (1 s).</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/advanced.py" line="70" />
-      <source>Divide the frame into tiles and only re-process the ones that have changed.
-Ideal for mostly static content (e.g. text editors, visual novels).
-When disabled, the whole frame is upscaled in one pass: better for video or rapid changes.</source>
+      <source>Process only the parts of the frame that have changed, using small tiles.
+Best for mostly static content, such as text editors or visual novels.
+When disabled, the entire frame is processed at once, better for video or fast-moving content.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -98,8 +98,8 @@ When disabled, the whole frame is upscaled in one pass: better for video or rapi
     </message>
     <message>
       <location filename="../sidebars/tabs/advanced.py" line="82" />
-      <source>Transfer only the changed regions of the frame to the GPU instead of the entire image.
-Disable if you suspect missed updates from the compositor causing glitches.</source>
+      <source>Send only the changed parts of the frame to the GPU, instead of the whole image.
+Disable this if you see glitches that may be caused by missed updates.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -111,135 +111,135 @@ Disable if you suspect missed updates from the compositor causing glitches.</sou
     </message>
     <message>
       <location filename="../sidebars/tabs/advanced.py" line="95" />
-      <source>Interior size of each tile in pixels.
-Smaller tiles track changes more precisely but add CPU overhead.
-Multiples of 32 work best with GPU workgroups.
+      <source>Size of each tile in pixels.
+Smaller tiles update more precisely but use more CPU. Values that are multiples of 32 usually perform best.
 Recommended range: 32 - 128.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="104" />
+      <location filename="../sidebars/tabs/advanced.py" line="103" />
       <source>Context Margin</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="110" />
-      <source>Extra border pixels added around each tile to provide context for the neural network.
-Larger margins improve boundary quality but increase processing.
+      <location filename="../sidebars/tabs/advanced.py" line="109" />
+      <source>Extra pixels added around each tile to give the neural network more context.
+Larger margins can improve quality at tile edges but increase processing.
 Recommended range: 4 - 24.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="118" />
+      <location filename="../sidebars/tabs/advanced.py" line="117" />
       <source>Max Tiles per Frame</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="124" />
-      <source>Maximum number of dirty tiles processed per frame.
-When exceeded, the pipeline falls back to full-frame processing to avoid excessive GPU dispatches.
+      <location filename="../sidebars/tabs/advanced.py" line="123" />
+      <source>Maximum number of changed tiles to process per frame.
+If more tiles than this need updating, the whole frame will be processed instead.
 Recommended range: 4 - 32.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="132" />
+      <location filename="../sidebars/tabs/advanced.py" line="131" />
       <source>Area Threshold %</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="139" />
-      <source>Fraction of the window area (in %) that, when dirty, forces a fallback to full-frame processing.
-Smaller values fall back earlier, preventing too many tiny tile dispatches.
+      <location filename="../sidebars/tabs/advanced.py" line="138" />
+      <source>If more than this percentage of the frame has changed, the whole frame will be processed instead of individual tiles.
+Lower values switch to full-frame processing sooner.
 Recommended range: 15% - 50%.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="149" />
+      <location filename="../sidebars/tabs/advanced.py" line="148" />
       <source>Timing</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="151" />
+      <location filename="../sidebars/tabs/advanced.py" line="150" />
       <source>Daemon Poll (s)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="158" />
-      <source>How often the daemon scans for matching windows.</source>
+      <location filename="../sidebars/tabs/advanced.py" line="157" />
+      <source>How often the background service checks for matching windows.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="164" />
+      <location filename="../sidebars/tabs/advanced.py" line="163" />
       <source>Focus Poll (s)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="171" />
-      <source>How often the focus monitor checks for active window changes.</source>
+      <location filename="../sidebars/tabs/advanced.py" line="170" />
+      <source>How often the program checks which window is currently active.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="177" />
+      <location filename="../sidebars/tabs/advanced.py" line="176" />
       <source>Pipeline Idle (s)</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="184" />
-      <source>How often the pipeline checks its internal state when idle.</source>
+      <location filename="../sidebars/tabs/advanced.py" line="183" />
+      <source>How often the program checks its internal state when no changes are detected.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="191" />
+      <location filename="../sidebars/tabs/advanced.py" line="190" />
       <source>Error Recovery</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="193" />
+      <location filename="../sidebars/tabs/advanced.py" line="192" />
       <source>Max Capture Failures</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="200" />
-      <source>Consecutive frame-grab failures before the pipeline stops.</source>
+      <location filename="../sidebars/tabs/advanced.py" line="199" />
+      <source>Number of consecutive frame capture failures before the program stops.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="206" />
+      <location filename="../sidebars/tabs/advanced.py" line="205" />
       <source>Capture Failure Delay (s)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="213" />
-      <source>Pause after a capture failure before retrying.</source>
+      <location filename="../sidebars/tabs/advanced.py" line="212" />
+      <source>Delay after a capture failure before trying again.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="219" />
+      <location filename="../sidebars/tabs/advanced.py" line="218" />
       <source>Swapchain Debounce (s)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="226" />
-      <source>Minimum time between two Vulkan swapchain recreations.</source>
+      <location filename="../sidebars/tabs/advanced.py" line="225" />
+      <source>Minimum time between two Vulkan swapchain recreations.
+This prevents unnecessary rebuilds of the rendering pipeline.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -280,7 +280,7 @@ Recommended range: 15% - 50%.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/display.py" line="50" />
-      <source>Monitor to cover: 'primary', 'all' (multi-monitor), or a specific output name (e.g., 'HDMI-1').</source>
+      <source>Monitor used for upscaling: the primary monitor, multi-monitor, or a specific output name (for example, HDMI-1).</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -292,24 +292,25 @@ Recommended range: 15% - 50%.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/display.py" line="72" />
-      <source>Vulkan GPU used for rendering. '{0}' selects the most powerful GPU found.</source>
+      <source>GPU used for upscaling.
+Select '{0}' to automatically use the most powerful available GPU.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/display.py" line="79" />
+      <location filename="../sidebars/tabs/display.py" line="80" />
       <source>V-Sync</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/display.py" line="81" />
+      <location filename="../sidebars/tabs/display.py" line="82" />
       <source>Present Mode</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/display.py" line="86" />
+      <location filename="../sidebars/tabs/display.py" line="87" />
       <source>Vulkan presentation mode:
 • fifo: VSync on, lowest power, no tearing
 • mailbox: tear-free, lower latency, higher power
@@ -318,57 +319,58 @@ Recommended range: 15% - 50%.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/display.py" line="97" />
+      <location filename="../sidebars/tabs/display.py" line="98" />
       <source>Limit FPS</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/display.py" line="101" />
-      <source>Enable an upper frame-rate limit.
-It's recommended to use 'mailbox' presentation mode when limiting FPS.</source>
+      <location filename="../sidebars/tabs/display.py" line="102" />
+      <source>Enable a maximum frame rate.
+For best results, use the 'mailbox' presentation mode when limiting FPS.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/display.py" line="108" />
+      <location filename="../sidebars/tabs/display.py" line="109" />
       <source>Max FPS</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/display.py" line="118" />
+      <location filename="../sidebars/tabs/display.py" line="119" />
       <source>Target maximum frames per second.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/display.py" line="126" />
+      <location filename="../sidebars/tabs/display.py" line="127" />
       <source>Scale Factor</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/display.py" line="128" />
+      <location filename="../sidebars/tabs/display.py" line="129" />
       <source>Auto Scale</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/display.py" line="132" />
-      <source>Let the application automatically detect the correct scale factor based on the physical monitor resolution.</source>
+      <location filename="../sidebars/tabs/display.py" line="133" />
+      <source>Automatically detect the correct scale factor based on the physical monitor resolution.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
       <location filename="../sidebars/tabs/display.py" line="139" />
-      <source>Scale Factor %</source>
+      <source>Scale Factor</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
       <location filename="../sidebars/tabs/display.py" line="150" />
-      <source>Manual scale factor (e.g., 1.50 for 150% scaling). Only available when 'Auto Scale' is disabled.</source>
+      <source>Set the scale factor manually as a percentage (for example, 1.50 for 150% scaling).
+Only available when Auto Scale is off.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -395,15 +397,16 @@ It's recommended to use 'mailbox' presentation mode when limiting FPS.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/effects.py" line="39" />
-      <source>Smooth harsh color banding in gradients before upscaling. Helps skies, fog and smooth backgrounds.</source>
+      <source>Reduce banding in smooth gradients before upscaling.
+Only useful if you notice banding in skies, fog, and other large smooth areas.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="220" />
-      <location filename="../sidebars/tabs/effects.py" line="160" />
-      <location filename="../sidebars/tabs/effects.py" line="102" />
-      <location filename="../sidebars/tabs/effects.py" line="75" />
+      <location filename="../sidebars/tabs/effects.py" line="217" />
+      <location filename="../sidebars/tabs/effects.py" line="158" />
+      <location filename="../sidebars/tabs/effects.py" line="101" />
+      <location filename="../sidebars/tabs/effects.py" line="73" />
       <location filename="../sidebars/tabs/effects.py" line="46" />
       <source>Strength</source>
       <comment>Label of setting (must be short)</comment>
@@ -411,200 +414,209 @@ It's recommended to use 'mailbox' presentation mode when limiting FPS.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/effects.py" line="53" />
-      <source>Debanding intensity (0 = off, 1 = maximum). Low values (0.1-0.3) are sufficient for most content.</source>
+      <source>Debanding intensity.
+Recommended range: 0.10 - 0.30.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="62" />
+      <location filename="../sidebars/tabs/effects.py" line="61" />
       <source>CAS Sharpening</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="64" />
+      <location filename="../sidebars/tabs/effects.py" line="63" />
       <source>Enable CAS</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="68" />
-      <source>Contrast Adaptive Sharpening: enhances text and line art without the halos of traditional unsharp masks.</source>
+      <location filename="../sidebars/tabs/effects.py" line="67" />
+      <source>Contrast Adaptive Sharpening: enhances text and line art contrast.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="82" />
-      <source>Sharpening amount (0 = none, 1 = max). 0.2-0.5 gives pleasant crispness.</source>
+      <location filename="../sidebars/tabs/effects.py" line="80" />
+      <source>Sharpening amount.
+Recommended range: 0.20 - 0.50.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="90" />
+      <location filename="../sidebars/tabs/effects.py" line="88" />
       <source>Bloom (Glow)</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="92" />
+      <location filename="../sidebars/tabs/effects.py" line="90" />
       <source>Enable Bloom</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="96" />
-      <source>Soft glow around bright areas, creating a cinematic look.</source>
+      <location filename="../sidebars/tabs/effects.py" line="94" />
+      <source>Soft glow around bright areas, for a cinematic look.
+May introduce halos, especially with white text.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="109" />
-      <source>Bloom intensity (0 = off, 1 = max). Subtle values (0.02-0.06) add a gentle, polished look.</source>
+      <location filename="../sidebars/tabs/effects.py" line="108" />
+      <source>Bloom intensity.
+Recommended range: 0.02 - 0.06.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="118" />
+      <location filename="../sidebars/tabs/effects.py" line="116" />
       <source>Threshold</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="125" />
-      <source>Brightness cutoff for bloom. Only pixels above this contribute. Lower values include more of the scene.</source>
+      <location filename="../sidebars/tabs/effects.py" line="123" />
+      <source>Brightness cutoff for bloom.
+Only pixels brighter than this value will glow.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="176" />
-      <location filename="../sidebars/tabs/effects.py" line="134" />
+      <location filename="../sidebars/tabs/effects.py" line="173" />
+      <location filename="../sidebars/tabs/effects.py" line="132" />
       <source>Radius</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="140" />
+      <location filename="../sidebars/tabs/effects.py" line="138" />
       <source>Blur radius in pixels. Larger radii spread the glow further.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="148" />
+      <location filename="../sidebars/tabs/effects.py" line="146" />
       <source>Vignette</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="150" />
+      <location filename="../sidebars/tabs/effects.py" line="148" />
       <source>Enable Vignette</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="154" />
+      <location filename="../sidebars/tabs/effects.py" line="152" />
       <source>Radial darkening of screen edges, drawing focus to the center.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="167" />
-      <source>Edge darkening intensity (0 = none, 1 = max). Moderate values (0.3-0.6) give a subtle framing effect.</source>
+      <location filename="../sidebars/tabs/effects.py" line="165" />
+      <source>Edge darkening intensity.
+Recommended range: 0.30 - 0.60.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="183" />
-      <source>Distance from center where darkening begins. Higher values keep the center bright longer.</source>
+      <location filename="../sidebars/tabs/effects.py" line="180" />
+      <source>Distance from center where darkening begins.
+Higher values keep the center brighter.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="192" />
+      <location filename="../sidebars/tabs/effects.py" line="189" />
       <source>Falloff</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="199" />
+      <location filename="../sidebars/tabs/effects.py" line="196" />
       <source>Softness of the vignette transition. Low values = gentle, high values = sharp ring.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="208" />
+      <location filename="../sidebars/tabs/effects.py" line="205" />
       <source>Film Grain</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="210" />
+      <location filename="../sidebars/tabs/effects.py" line="207" />
       <source>Enable Grain</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="214" />
-      <source>Simulated film grain for a photochemical, organic look.</source>
+      <location filename="../sidebars/tabs/effects.py" line="211" />
+      <source>Simulated film grain look.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="227" />
-      <source>Grain intensity (0 = off, 1 = max). Low values (0.1-0.2) mimic fine photochemical grain.</source>
+      <location filename="../sidebars/tabs/effects.py" line="224" />
+      <source>Grain intensity.
+Recommended range: 0.10 - 0.20.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="236" />
+      <location filename="../sidebars/tabs/effects.py" line="232" />
       <source>Size</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="243" />
-      <source>Apparent particle size of the grain. Larger values produce coarser, more visible grain.</source>
+      <location filename="../sidebars/tabs/effects.py" line="239" />
+      <source>Particle size of the grain.
+Larger values produce coarser, more visible grain.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="252" />
+      <location filename="../sidebars/tabs/effects.py" line="248" />
       <source>Color Grading (3D LUT)</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="254" />
+      <location filename="../sidebars/tabs/effects.py" line="250" />
       <source>Enable LUT</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="258" />
-      <source>Apply a cinematic color-lookup table for instant film-stock emulation or color grading.</source>
+      <location filename="../sidebars/tabs/effects.py" line="254" />
+      <source>Apply a color grading preset (LUT) to change the look of the window.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="265" />
+      <location filename="../sidebars/tabs/effects.py" line="260" />
       <source>Preset</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="270" />
-      <source>Built-in 3D LUT preset. Choose from warm, cool, film, sepia, etc.</source>
+      <location filename="../sidebars/tabs/effects.py" line="265" />
+      <source>Built-in color grading preset (warm, cool, film, sepia, etc.).</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="278" />
+      <location filename="../sidebars/tabs/effects.py" line="273" />
       <source>Intensity</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/effects.py" line="285" />
-      <source>Blend between original and graded image (0 = original, 1 = full effect).</source>
+      <location filename="../sidebars/tabs/effects.py" line="280" />
+      <source>Blend between original and graded image.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -631,7 +643,7 @@ It's recommended to use 'mailbox' presentation mode when limiting FPS.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/extras.py" line="38" />
-      <source>Folder where screenshots will be saved.</source>
+      <source>Folder where screenshots are saved.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -643,43 +655,43 @@ It's recommended to use 'mailbox' presentation mode when limiting FPS.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/extras.py" line="48" />
-      <source>Filename template for screenshots. Available placeholders:
-• {timestamp}: capture time (supports strftime, e.g. {timestamp:%Y-%m-%d-%H-%M-%S})
+      <source>Filename template for screenshots. You can use these placeholders:
+• {timestamp}: capture time (supports strftime, for example {timestamp:%Y-%m-%d-%H-%M-%S})
 • {title}: current window title
-• {profile}: active profile name (fallback to {{title}} if no profile)
+• {profile}: active profile name (or the window title if no profile)
 • {model}: active upscaling model
 • {width}: upscaled image width
 • {height}: upscaled image height</source>
-      <comment>Description of a setting (tooltip). Do not translate any of the placeholders (eg. {timestamp}).</comment>
+      <comment>Description of a setting (tooltip). Keep all placeholders exactly as they are, including braces, for example {timestamp} and the strftime format inside it.</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/extras.py" line="63" />
+      <location filename="../sidebars/tabs/extras.py" line="64" />
       <source>On-Screen Display</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/extras.py" line="65" />
+      <location filename="../sidebars/tabs/extras.py" line="66" />
       <source>Show OSD</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/extras.py" line="69" />
-      <source>Show on-screen messages when model, geometry, or zoom changes, and after taking a screenshot.</source>
+      <location filename="../sidebars/tabs/extras.py" line="70" />
+      <source>Show on-screen messages when the model, window geometry, or zoom changes, or after taking a screenshot.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/extras.py" line="76" />
+      <location filename="../sidebars/tabs/extras.py" line="77" />
       <source>Duration (s)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/extras.py" line="83" />
-      <source>How many seconds OSD messages remain visible before fading out.</source>
+      <location filename="../sidebars/tabs/extras.py" line="84" />
+      <source>How many seconds on-screen messages remain visible before fading out.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -715,67 +727,73 @@ It's recommended to use 'mailbox' presentation mode when limiting FPS.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/general.py" line="46" />
-      <source>Upscaling model to use. Models are ordered from worst to best quality. Larger numbers indicate deeper networks (slower, higher quality).</source>
+      <source>Upscaling SRCNN model to use.
+All models upscale to 2x, and are ordered from lower to higher quality.
+Rightmost models are deeper and slower, but produce better results.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="53" />
+      <location filename="../sidebars/tabs/general.py" line="54" />
       <source>Double Upscale (4x)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
       <location filename="../sidebars/tabs/general.py" line="58" />
-      <source>Perform two consecutive 2x upscales for a 4x total (e.g., 720p to 2880p). Useful for high-resolution screens (4K) and low-resolution sources. Increases GPU usage.</source>
+      <source>Perform two 2x upscales in a row for a total of 4x (for example, 720p to 2880p).
+Useful for high-resolution screens (4K) and low-resolution sources.
+Uses more GPU power.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="68" />
+      <location filename="../sidebars/tabs/general.py" line="67" />
       <source>Focus Tracking</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="70" />
+      <location filename="../sidebars/tabs/general.py" line="69" />
       <source>Follow Focus</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="74" />
-      <source>Automatically switch the upscaling target to the currently focused window. Useful when moving between multiple windows.</source>
+      <location filename="../sidebars/tabs/general.py" line="73" />
+      <source>Automatically upscale the window that currently has focus.
+Useful when working with multiple windows.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="81" />
+      <location filename="../sidebars/tabs/general.py" line="80" />
       <source>Pause on Focus Loss</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="85" />
-      <source>When the target window loses focus, hide the overlay until it regains focus. Uncheck to keep the overlay always visible.</source>
+      <location filename="../sidebars/tabs/general.py" line="84" />
+      <source>Hide the upscaled overlay when the target window loses focus, and show it again when focus returns.
+Turn off to keep the overlay always visible.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="93" />
+      <location filename="../sidebars/tabs/general.py" line="92" />
       <source>Automatic Upscaling</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="96" />
+      <location filename="../sidebars/tabs/general.py" line="95" />
       <source>Exclude from Daemon Mode</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="100" />
-      <source>Exclude this profile from automatic upscaling.</source>
+      <location filename="../sidebars/tabs/general.py" line="99" />
+      <source>When Daemon Mode is active, this profile will not be used to automatically upscale matching windows.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -786,9 +804,9 @@ It's recommended to use 'mailbox' presentation mode when limiting FPS.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="112" />
-      <source>When enabled, a daemon process runs in the background and automatically upscales any window that matches a profile.
-Disable this to manually pick a window from the grid.</source>
+      <location filename="../sidebars/tabs/general.py" line="111" />
+      <source>When enabled, a background process automatically upscales any window that matches a profile.
+Turn off to manually select a window from the grid.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -878,133 +896,159 @@ Disable this to manually pick a window from the grid.</source>
     <message>
       <location filename="../sidebars/tabs/presentation.py" line="41" />
       <source>Overlay window behaviour:
-• always-on-top: floating, cannot be focused (recommended)
-• top-transparent: click-through (mouse passes to window below)
-• fullscreen: covers entire monitor
-• windowed: normal window with decorations</source>
+• always-on-top: always visible above other windows, keeps focus on the target window (recommended)
+• top-transparent: same as always-on-top, but click-through (mouse passes to window below)
+• fullscreen: covers entire monitor, keyboard may not reach the target window
+• windowed: normal window with decorations, keyboard may not reach the target window</source>
       <comment>Description of a setting (tooltip). Do not translate 'always-on-top', 'top-transparent', 'fullscreen', 'windowed': they are internal overlay mode identifiers.</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="51" />
+      <location filename="../sidebars/tabs/presentation.py" line="53" />
       <source>Output Geometry</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="56" />
+      <location filename="../sidebars/tabs/presentation.py" line="58" />
       <source>How the upscaled content fits the overlay:
-• fit: letterbox, preserves aspect ratio
-• stretch: fill, aspect ratio may be distorted
-• cover: fill and crop to fit</source>
+• fit: show the entire image, adding black bars if necessary
+• stretch: fill the whole area, aspect ratio may be distorted
+• cover: fill the whole area and crop any excess</source>
       <comment>Description of a setting (tooltip). Do not translate 'fit', 'stretch', 'cover': they are internal output geometry identifiers.</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="68" />
+      <location filename="../sidebars/tabs/presentation.py" line="70" />
       <source>Cursor</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="70" />
+      <location filename="../sidebars/tabs/presentation.py" line="72" />
       <source>Hide cursor</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="74" />
+      <location filename="../sidebars/tabs/presentation.py" line="76" />
       <source>Automatically hide the mouse cursor after a period of inactivity.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="87" />
+      <location filename="../sidebars/tabs/presentation.py" line="89" />
       <source>Hide Timeout (s)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="94" />
-      <source>Time in seconds after which the cursor disappears.</source>
+      <location filename="../sidebars/tabs/presentation.py" line="96" />
+      <source>Time in seconds after which the cursor disappears.
+Set to 0.00 to always hide the cursor.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="104" />
+      <location filename="../sidebars/tabs/presentation.py" line="105" />
+      <source>Crop</source>
+      <comment>Settings section</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../sidebars/tabs/presentation.py" line="107" />
       <source>Left</source>
       <comment>Crop border label</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="105" />
+      <location filename="../sidebars/tabs/presentation.py" line="113" />
+      <source>Pixels to crop from the left border of the target window.</source>
+      <comment>Description of a setting (tooltip)</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../sidebars/tabs/presentation.py" line="119" />
       <source>Top</source>
       <comment>Crop border label</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="106" />
+      <location filename="../sidebars/tabs/presentation.py" line="125" />
+      <source>Pixels to crop from the top border of the target window.</source>
+      <comment>Description of a setting (tooltip)</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../sidebars/tabs/presentation.py" line="131" />
       <source>Right</source>
       <comment>Crop border label</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="108" />
+      <location filename="../sidebars/tabs/presentation.py" line="137" />
+      <source>Pixels to crop from the right border of the target window.</source>
+      <comment>Description of a setting (tooltip)</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../sidebars/tabs/presentation.py" line="143" />
       <source>Bottom</source>
       <comment>Crop border label</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="120" />
-      <source>Pixels to crop from the {0} border of the target window.</source>
+      <location filename="../sidebars/tabs/presentation.py" line="149" />
+      <source>Pixels to crop from the bottom border of the target window.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="127" />
+      <location filename="../sidebars/tabs/presentation.py" line="156" />
       <source>Offset</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="130" />
+      <location filename="../sidebars/tabs/presentation.py" line="159" />
       <source>X Offset</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="135" />
+      <location filename="../sidebars/tabs/presentation.py" line="164" />
       <source>Y Offset</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="148" />
-      <source>Horizontal offset from the centered position (positive = right, negative = left).</source>
+      <location filename="../sidebars/tabs/presentation.py" line="177" />
+      <source>Horizontal offset in pixels (positive moves right, negative moves left).</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="154" />
-      <source>Vertical offset from the centered position (positive = down, negative = up).</source>
+      <location filename="../sidebars/tabs/presentation.py" line="182" />
+      <source>Vertical offset in pixels (positive moves down, negative moves up).</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="163" />
+      <location filename="../sidebars/tabs/presentation.py" line="190" />
       <source>Background Color</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="167" />
+      <location filename="../sidebars/tabs/presentation.py" line="194" />
       <source>Color</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/presentation.py" line="171" />
-      <source>Color of the letterbox bars. Supports transparency.</source>
+      <location filename="../sidebars/tabs/presentation.py" line="198" />
+      <source>Background color behind the upscaled image (letterbox bars).
+Supports transparency.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -1418,11 +1462,11 @@ name or size.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/scaler.py" line="46" />
-      <source>Applied after SRCNN upscaling to reach the target output size (e.g., 1440p → 4k).
-• Fixed Lanczos-2 — sharp, linear-light, best for 2D art
-• AMD FidelityFX Super Resolution 1.0 — fast, edge-adaptive, best for 3D content
-• NVIDIA Image Scaling — directional sharpening, sRGB, may look oversharpened</source>
-      <comment>Description of a setting (tooltip). Do not alter the names of the filters (eg. Lanczos-2).</comment>
+      <source>Applied after SRCNN upscaling to reach the target output size (for example, 1440p → 4K).
+• Lanczos-2 — sharp, best for 2D art and text (recommended)
+• AMD FSR 1.0 — fast, best for 3D but may introduce artifacts on fine details
+• NVIDIA Image Scaling — oversharpens and introduces ringing, not recommended</source>
+      <comment>Description of a setting (tooltip). Do not translate the filter names (Lanczos-2, Lanczos-3, FSR, NIS).</comment>
       <translation type="unfinished" />
     </message>
     <message>
@@ -1434,9 +1478,9 @@ name or size.</source>
     <message>
       <location filename="../sidebars/tabs/scaler.py" line="63" />
       <source>Applied after SRCNN upscaling to reduce the image to the target output size (e.g., 1440p → 1080p).
-• Catmull-Rom (bicubic) — sharper and faster than Lanczos for mild downscaling
-• Adaptive Lanczos — variable radius, high quality even in extreme downscales</source>
-      <comment>Description of a setting (tooltip). Do not alter the names of the filters (eg. Catmull-Rom).</comment>
+• Catmull-Rom (bicubic) — sharp and fast, excellent tradeoff for most cases (recommended)
+• Adaptive Lanczos — slower, best overall quality, handles extreme downscaling well</source>
+      <comment>Description of a setting (tooltip). Do not translate the filter names (Catmull-Rom, Adaptive Lanczos).</comment>
       <translation type="unfinished" />
     </message>
     <message>
@@ -1454,7 +1498,7 @@ name or size.</source>
     <message>
       <location filename="../sidebars/tabs/scaler.py" line="82" />
       <source>Kernel width (blur factor) for Lanczos and Catmull-Rom.
-Lower values increase sharpness/ringing, while higher values smooth the result.
+Lower values are sharper but may ring; higher values are smoother.
 Recommended range: 0.8 - 1.2.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
@@ -1468,7 +1512,7 @@ Recommended range: 0.8 - 1.2.</source>
     <message>
       <location filename="../sidebars/tabs/scaler.py" line="97" />
       <source>Anti-ringing strength (0.0 - 1.0) for Adaptive Lanczos and Catmull-Rom.
-Lower values soften the clamp, preserving more detail at the cost of possible ringing.
+Lower values preserve more detail but may allow ringing.
 Recommended range: 0.7 - 1.0.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
@@ -1487,33 +1531,33 @@ Recommended range: 0.7 - 1.0.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/scaler.py" line="112" />
-      <source>Use only the central 2x2 neighborhood for anti-ringing bounds.
-Keeps thin text and line art sharp. Disable if you see distant ringing artifacts on high-contrast edges.</source>
+      <source>Use only the central 2x2 area for anti-ringing.
+Keeps thin text and line art sharp. Turn off if you see ringing on high-contrast edges.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/scaler.py" line="120" />
+      <location filename="../sidebars/tabs/scaler.py" line="119" />
       <source>Override Lanczos Radius</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/scaler.py" line="124" />
-      <source>Force a specific Lanczos kernel radius instead of the automatic selection.
-When unchecked, radius is chosen automatically (2 for upscaling, variable for downscaling).</source>
+      <location filename="../sidebars/tabs/scaler.py" line="123" />
+      <source>Force a specific Lanczos kernel radius instead of automatic selection.
+When off, the radius is chosen automatically (2 for upscaling, variable for downscaling).</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/scaler.py" line="131" />
+      <location filename="../sidebars/tabs/scaler.py" line="130" />
       <source>Radius</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/scaler.py" line="141" />
-      <source>Lanczos kernel radius (2 = standard Lanczos2, 3 = sharper 6-tap, etc.).
+      <location filename="../sidebars/tabs/scaler.py" line="140" />
+      <source>Lanczos kernel radius (2 = standard Lanczos2, 3 = sharper 6-tap).
 Higher radii reduce aliasing but increase GPU load.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
@@ -1721,7 +1765,7 @@ Higher radii reduce aliasing but increase GPU load.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/style.py" line="124" />
-      <source>Semi-transparent background color of each window titles.</source>
+      <source>Semi-transparent background color of the central grid window titles.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -1841,7 +1885,7 @@ Higher radii reduce aliasing but increase GPU load.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/style.py" line="212" />
-      <source>Revert Button</source>
+      <source>Reset Button</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
@@ -1853,7 +1897,7 @@ Higher radii reduce aliasing but increase GPU load.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/style.py" line="220" />
-      <source>Revert Button (hover)</source>
+      <source>Reset Button (hover)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
@@ -1871,7 +1915,7 @@ Higher radii reduce aliasing but increase GPU load.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/style.py" line="231" />
-      <source>Fill color of scrollbar handles and subtle interactive areas.</source>
+      <source>Fill color of scrollbar handles and other small controls.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -1883,7 +1927,7 @@ Higher radii reduce aliasing but increase GPU load.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/style.py" line="239" />
-      <source>Handle control fill color on hover.</source>
+      <source>Fill color of scrollbar handles when hovered.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
@@ -1902,7 +1946,7 @@ Higher radii reduce aliasing but increase GPU load.</source>
     <message>
       <location filename="../sidebars/tabs/style.py" line="261" />
       <source>Select a pre-built color scheme for the GUI.</source>
-      <comment>Description of a setting (tooltip)</comment>
+      <comment>Description of a setting (tooltip). Preset names are not translated.</comment>
       <translation type="unfinished" />
     </message>
   </context>

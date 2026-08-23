@@ -40,11 +40,13 @@ class PresentationTab(SettingsTab):
             baseline=self.baseline_config.overlay_mode,
             help=self.tr(
                 "Overlay window behaviour:\n"
-                "• always-on-top: floating, cannot be focused (recommended)\n"
-                "• top-transparent: click-through (mouse passes to window below)\n"
-                "• fullscreen: covers entire monitor\n"
-                "• windowed: normal window with decorations",
-                "Description of a setting (tooltip). Do not translate 'always-on-top', 'top-transparent', 'fullscreen', 'windowed': they are internal overlay mode identifiers.",
+                "• always-on-top: always visible above other windows, keeps focus on the target window (recommended)\n"
+                "• top-transparent: same as always-on-top, but click-through (mouse passes to window below)\n"
+                "• fullscreen: covers entire monitor, keyboard may not reach the target window\n"
+                "• windowed: normal window with decorations, keyboard may not reach the target window",
+                "Description of a setting (tooltip). "
+                "Do not translate 'always-on-top', 'top-transparent', 'fullscreen', 'windowed': "
+                "they are internal overlay mode identifiers.",
             ),
         )
         self._geom_combo = self._add_combo(
@@ -55,9 +57,9 @@ class PresentationTab(SettingsTab):
             baseline=self.baseline_config.output_geometry,
             help=self.tr(
                 "How the upscaled content fits the overlay:\n"
-                "• fit: letterbox, preserves aspect ratio\n"
-                "• stretch: fill, aspect ratio may be distorted\n"
-                "• cover: fill and crop to fit",
+                "• fit: show the entire image, adding black bars if necessary\n"
+                "• stretch: fill the whole area, aspect ratio may be distorted\n"
+                "• cover: fill the whole area and crop any excess",
                 "Description of a setting (tooltip). "
                 "Do not translate 'fit', 'stretch', 'cover': "
                 "they are internal output geometry identifiers.",
@@ -92,36 +94,63 @@ class PresentationTab(SettingsTab):
             float_slot=self._on_hide_cursor_timeout,
             baseline=bl_seconds,
             help=self.tr(
-                "Time in seconds after which the cursor disappears.",
+                "Time in seconds after which the cursor disappears.\n"
+                "Set to 0.00 to always hide the cursor.",
                 "Description of a setting (tooltip)",
             ),
         )
         self._hide_cursor_timeout.setEnabled(self._config.hide_cursor is not None)
 
         # ---- Crop ----
-        self._add_section("Crop")
-        for label, field, slot in [
-            (self.tr("Left", "Crop border label"), "crop_left", self._on_crop_left),
-            (self.tr("Top", "Crop border label"), "crop_top", self._on_crop_top),
-            (self.tr("Right", "Crop border label"), "crop_right", self._on_crop_right),
-            (
-                self.tr("Bottom", "Crop border label"),
-                "crop_bottom",
-                self._on_crop_bottom,
+        self._add_section(self.tr("Crop", "Settings section"))
+        self._add_slider(
+            self.tr("Left", "Crop border label"),
+            0,
+            200,
+            self._config.crop_left,
+            self._on_crop_left,
+            baseline=self.baseline_config.crop_left,
+            help=self.tr(
+                "Pixels to crop from the left border of the target window.",
+                "Description of a setting (tooltip)",
             ),
-        ]:
-            self._add_slider(
-                label,
-                0,
-                200,
-                getattr(self._config, field),
-                slot,
-                baseline=getattr(self.baseline_config, field),
-                help=self.tr(
-                    "Pixels to crop from the {0} border of the target window.",
-                    "Description of a setting (tooltip)",
-                ).format(label.lower()),
-            )
+        )
+        self._add_slider(
+            self.tr("Top", "Crop border label"),
+            0,
+            200,
+            self._config.crop_top,
+            self._on_crop_top,
+            baseline=self.baseline_config.crop_top,
+            help=self.tr(
+                "Pixels to crop from the top border of the target window.",
+                "Description of a setting (tooltip)",
+            ),
+        )
+        self._add_slider(
+            self.tr("Right", "Crop border label"),
+            0,
+            200,
+            self._config.crop_right,
+            self._on_crop_right,
+            baseline=self.baseline_config.crop_right,
+            help=self.tr(
+                "Pixels to crop from the right border of the target window.",
+                "Description of a setting (tooltip)",
+            ),
+        )
+        self._add_slider(
+            self.tr("Bottom", "Crop border label"),
+            0,
+            200,
+            self._config.crop_bottom,
+            self._on_crop_bottom,
+            baseline=self.baseline_config.crop_bottom,
+            help=self.tr(
+                "Pixels to crop from the bottom border of the target window.",
+                "Description of a setting (tooltip)",
+            ),
+        )
 
         # ---- Offsets ----
         self._add_section(self.tr("Offset", "Settings section"))
@@ -146,14 +175,12 @@ class PresentationTab(SettingsTab):
                 baseline=getattr(self.baseline_config, field),
                 help=(
                     self.tr(
-                        "Horizontal offset from the centered position "
-                        "(positive = right, negative = left).",
+                        "Horizontal offset in pixels (positive moves right, negative moves left).",
                         "Description of a setting (tooltip)",
                     )
                     if field == "offset_x"
                     else self.tr(
-                        "Vertical offset from the centered position "
-                        "(positive = down, negative = up).",
+                        "Vertical offset in pixels (positive moves down, negative moves up).",
                         "Description of a setting (tooltip)",
                     )
                 ),
@@ -169,7 +196,8 @@ class PresentationTab(SettingsTab):
             self._on_bg_color,
             baseline=baseline_bg,
             help=self.tr(
-                "Color of the letterbox bars. Supports transparency.",
+                "Background color behind the upscaled image (letterbox bars).\n"
+                "Supports transparency.",
                 "Description of a setting (tooltip)",
             ),
         )

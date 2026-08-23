@@ -48,8 +48,8 @@ class DisplayTab(SettingsTab):
             self._on_monitor_changed,
             baseline=self.baseline_config.monitor,
             help=self.tr(
-                "Monitor to cover: 'primary', 'all' (multi-monitor), "
-                "or a specific output name (e.g., 'HDMI-1').",
+                "Monitor used for upscaling: the primary monitor, multi-monitor, "
+                "or a specific output name (for example, HDMI-1).",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -70,7 +70,8 @@ class DisplayTab(SettingsTab):
                 else self._auto_device
             ),
             help=self.tr(
-                "Vulkan GPU used for rendering. '{0}' selects the most powerful GPU found.",
+                "GPU used for upscaling.\n"
+                "Select '{0}' to automatically use the most powerful available GPU.",
                 "Description of a setting (tooltip)",
             ).format(self._auto_device),
         )
@@ -99,8 +100,8 @@ class DisplayTab(SettingsTab):
             self._on_fps_cap_toggle,
             baseline=self.baseline_config.max_fps is not None,
             help=self.tr(
-                "Enable an upper frame-rate limit.\n"
-                "It's recommended to use 'mailbox' presentation mode when limiting FPS.",
+                "Enable a maximum frame rate.\n"
+                "For best results, use the 'mailbox' presentation mode when limiting FPS.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -130,13 +131,12 @@ class DisplayTab(SettingsTab):
             self._on_auto_scale_changed,
             baseline=self.baseline_config.scale_factor is None,
             help=self.tr(
-                "Let the application automatically detect the correct scale factor "
-                "based on the physical monitor resolution.",
+                "Automatically detect the correct scale factor based on the physical monitor resolution.",
                 "Description of a setting (tooltip)",
             ),
         )
         self._scale_slider = self._add_slider(
-            self.tr("Scale Factor %", "Label of setting (must be short)"),
+            self.tr("Scale Factor", "Label of setting (must be short)"),
             100,
             400,
             max(100, int((self._config.scale_factor or 1.0) * 100)),
@@ -148,8 +148,8 @@ class DisplayTab(SettingsTab):
                 else 1.0
             ),
             help=self.tr(
-                "Manual scale factor (e.g., 1.50 for 150% scaling). "
-                "Only available when 'Auto Scale' is disabled.",
+                "Set the scale factor manually as a percentage (for example, 1.50 for 150% scaling).\n"
+                "Only available when Auto Scale is off.",
                 "Description of a setting (tooltip)",
             ),
         )
