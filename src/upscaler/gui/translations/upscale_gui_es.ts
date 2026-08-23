@@ -39,59 +39,66 @@
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="35"/>
         <source>Buffer Pool Size</source>
-        <translation type="unfinished"></translation>
+        <translation>Tamaño de grupo de búferes</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="45"/>
         <source>Number of pre-allocated staging buffers for partial texture updates.
 Raise this if you notice stutters when many small regions change rapidly.
 Recommended range: 2 - 16.</source>
-        <translation type="unfinished"></translation>
+        <translation>Número de buffers pre-asignados para actualizaciones de texturas parciales.
+Aumenta este valor si notas tirones de pantalla (stutters) cuando muchas regiones pequeñas cambian rápidamente.
+Rango recomendado: 2 - 16.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="49"/>
         <source>Frame Timeout (ms)</source>
-        <translation type="unfinished"></translation>
+        <translation>Espera de fotograma (ms)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="59"/>
         <source>Maximum time (in milliseconds) to wait for the GPU to finish the previous frame.
 Lower values reduce CPU blocking but may drop frames under heavy load.
 Recommended range: 17 (1/60 s) - 1000 (1 s).</source>
-        <translation type="unfinished"></translation>
+        <translation>Tiempo máximo (en milisegundos) a esperar a que la GPU termine el fotograma anterior.
+Valores bajos reducen el bloqueo de CPU, pero puede que se omitan fotogramas en cargas altas.
+Rango recomendado: 17 (1/60 s) - 1000 (1 s).</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="64"/>
         <source>Tile-Based Processing</source>
-        <translation type="unfinished"></translation>
+        <translation>Procesamiento por bloques</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="66"/>
         <source>Enable Tile Mode</source>
-        <translation type="unfinished"></translation>
+        <translation>Activar procesamiento por bloques</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="74"/>
         <source>Divide the frame into tiles and only re-process the ones that have changed.
 Ideal for mostly static content (e.g. text editors, visual novels).
 When disabled, the whole frame is upscaled in one pass: better for video or rapid changes.</source>
-        <translation type="unfinished"></translation>
+        <translation>Divide el fotograma en bloques y sólo procesa los que han cambiado.
+Ideal para contenido mayormente estático (por ejemplo, editores de texto, novelas visuales).
+Cuando esta opción está deshabilitada, todo el fotograma se escala en un solo paso: mejor para vídeo o contenido cambiante.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="78"/>
         <source>Damage Tracking</source>
-        <translation type="unfinished"></translation>
+        <translation>Rastreo de daños</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="85"/>
         <source>Transfer only the changed regions of the frame to the GPU instead of the entire image.
 Disable if you suspect missed updates from the compositor causing glitches.</source>
-        <translation type="unfinished"></translation>
+        <translation>Transfiere sólo las regiones cambiadas del fotograma a la GPU en lugar de toda la imagen.
+Inhabilita si sospechas que las actualizaciones perdidas del compositor causan fallos.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="89"/>
         <source>Tile Size</source>
-        <translation type="unfinished"></translation>
+        <translation>Tamaño del Bloque</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="100"/>
@@ -99,36 +106,43 @@ Disable if you suspect missed updates from the compositor causing glitches.</sou
 Smaller tiles track changes more precisely but add CPU overhead.
 Multiples of 32 work best with GPU workgroups.
 Recommended range: 32 - 128.</source>
-        <translation type="unfinished"></translation>
+        <translation>Tamaño interior de cada bloque en píxeles.
+Bloques más pequeños registran cambios más precisos pero aumentan carga de la CPU.
+Múltiplos de 32 trabajan mejor con grupos de trabajo de la GPU.
+Rango recomendado: 32 - 128.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="104"/>
         <source>Context Margin</source>
-        <translation type="unfinished"></translation>
+        <translation>Margen de contexto</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="114"/>
         <source>Extra border pixels added around each tile to provide context for the neural network.
 Larger margins improve boundary quality but increase processing.
 Recommended range: 4 - 24.</source>
-        <translation type="unfinished"></translation>
+        <translation>Píxeles adicionales agregados alrededor de cada bloque para proporcionar contexto para la red neuronal.
+Márgenes más grandes mejoran la calidad de los límites pero aumentan el procesamiento.
+Rango recomendado: 4 - 24.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="118"/>
         <source>Max Tiles per Frame</source>
-        <translation type="unfinished"></translation>
+        <translation>Límite de bloques</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="128"/>
         <source>Maximum number of dirty tiles processed per frame.
 When exceeded, the pipeline falls back to full-frame processing to avoid excessive GPU dispatches.
 Recommended range: 4 - 32.</source>
-        <translation type="unfinished"></translation>
+        <translation>Número máximo de bloques con cambios por fotograma.
+Cuando se supera, el escalador usa procesamiento de fotograma completo para evitar envíos excesivos de GPU.
+Rango recomendado: 4 - 32.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="132"/>
         <source>Area Threshold %</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Umbral de área %</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="144"/>
@@ -140,7 +154,7 @@ Recommended range: 15% - 50%.</source>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="149"/>
         <source>Timing</source>
-        <translation type="unfinished"></translation>
+        <translation>Tiempo</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="151"/>
@@ -679,7 +693,7 @@ Disable this to manually pick a window from the grid.</source>
     <message>
         <location filename="../main.py" line="83"/>
         <source>Real-Time Upscaler</source>
-        <translation type="unfinished"></translation>
+        <translation>Escalador en Tiempo Real</translation>
     </message>
     <message>
         <location filename="../main.py" line="139"/>
