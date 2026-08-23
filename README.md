@@ -61,7 +61,6 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 
 ## Roadmap
 
-- [ ] Translation infrastructure and community-contributed translations
 - [ ] GUI Profiles operations (drag & drop, duplicate)
 - [ ] GUI System Tray
 - [ ] Complete GUI Style settings (font size, spacing, etc.)
