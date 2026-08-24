@@ -364,7 +364,15 @@ class TrayController(QObject):
         self.refresh_menu()
 
     def _show_main_window(self) -> None:
-        """Show, raise, and focus the main window."""
+        """Show the main window, unless a manual session is active."""
+        if self._main_window.manual_session is not None:
+            self.tray_icon.showMessage(
+                "Real-Time Upscaler",
+                "Upscaling in progress.\n\nUse Stop from the tray menu to return.",
+                QSystemTrayIcon.MessageIcon.Information,
+                5000,
+            )
+            return
         self._main_window.show_gui()
         self.refresh_menu()
 
