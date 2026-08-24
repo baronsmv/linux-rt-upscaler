@@ -19,7 +19,7 @@ from .styles import message_box_style
 from ..config import parse_args, setup_logging, validate_overrides
 from ..utils import ConfigError
 
-TRANSLATIONS_DIR = Path(__file__).parent / "translations"
+LOCALE_DIR = Path(__file__).parent / "locale"
 
 
 def _install_translators(app: QApplication) -> None:
@@ -36,7 +36,7 @@ def _install_translators(app: QApplication) -> None:
 
     for candidate in candidates:
         translator = QTranslator(app)
-        if translator.load(f"upscale_gui_{candidate}", str(TRANSLATIONS_DIR)):
+        if translator.load(f"upscale_gui_{candidate}", str(LOCALE_DIR)):
             app.installTranslator(translator)
             break
 

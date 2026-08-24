@@ -728,19 +728,20 @@ Larger values produce coarser, more visible grain.</source>
     <message>
       <location filename="../sidebars/tabs/general.py" line="46" />
       <source>Upscaling SRCNN model to use.
-All models upscale to 2x, and are ordered from lower to higher quality.
-Rightmost models are deeper and slower, but produce better results.</source>
-      <comment>Description of a setting (tooltip)</comment>
+All models upscale to 2x, and are ordered from lowest to highest quality.
+Rightmost models are deeper and slower, but produce better results.
+The value 'none' disables SRCNN processing and uses only the selected scaler.</source>
+      <comment>Description of a setting (tooltip). Do not translate 'none', since it's a model identifier.</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="54" />
+      <location filename="../sidebars/tabs/general.py" line="56" />
       <source>Double Upscale (4x)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="58" />
+      <location filename="../sidebars/tabs/general.py" line="60" />
       <source>Perform two 2x upscales in a row for a total of 4x (for example, 720p to 2880p).
 Useful for high-resolution screens (4K) and low-resolution sources.
 Uses more GPU power.</source>
@@ -748,63 +749,63 @@ Uses more GPU power.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="67" />
+      <location filename="../sidebars/tabs/general.py" line="69" />
       <source>Focus Tracking</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="69" />
+      <location filename="../sidebars/tabs/general.py" line="71" />
       <source>Follow Focus</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="73" />
+      <location filename="../sidebars/tabs/general.py" line="75" />
       <source>Automatically upscale the window that currently has focus.
 Useful when working with multiple windows.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="80" />
+      <location filename="../sidebars/tabs/general.py" line="82" />
       <source>Pause on Focus Loss</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="84" />
+      <location filename="../sidebars/tabs/general.py" line="86" />
       <source>Hide the upscaled overlay when the target window loses focus, and show it again when focus returns.
 Turn off to keep the overlay always visible.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="92" />
+      <location filename="../sidebars/tabs/general.py" line="94" />
       <source>Automatic Upscaling</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="95" />
+      <location filename="../sidebars/tabs/general.py" line="97" />
       <source>Exclude from Daemon Mode</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="99" />
+      <location filename="../sidebars/tabs/general.py" line="101" />
       <source>When Daemon Mode is active, this profile will not be used to automatically upscale matching windows.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="107" />
+      <location filename="../sidebars/tabs/general.py" line="109" />
       <source>Daemon Mode</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="111" />
+      <location filename="../sidebars/tabs/general.py" line="113" />
       <source>When enabled, a background process automatically upscales any window that matches a profile.
 Turn off to manually select a window from the grid.</source>
       <comment>Description of a setting (tooltip)</comment>
@@ -820,32 +821,32 @@ Turn off to manually select a window from the grid.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="142" />
+      <location filename="../main.py" line="143" />
       <source>About Real-Time Upscaler.</source>
       <comment>About dialog button</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="341" />
+      <location filename="../main.py" line="342" />
       <source>Error</source>
       <comment>Error starting pipeline</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="342" />
+      <location filename="../main.py" line="343" />
       <source>Could not start pipeline:
 {0}</source>
       <comment>Error starting pipeline</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="462" />
+      <location filename="../main.py" line="463" />
       <source>Save Error</source>
       <comment>Error while saving configuration</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="463" />
+      <location filename="../main.py" line="464" />
       <source>Could not save:
 {0}</source>
       <comment>Error while saving configuration</comment>
@@ -1412,19 +1413,19 @@ Please choose a different name.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="278" />
+      <location filename="../sidebars/profiles.py" line="280" />
       <source>Global</source>
       <comment>Global entry profile name</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="283" />
+      <location filename="../sidebars/profiles.py" line="285" />
       <source>When selected, the settings panel on the right edits the global configuration.</source>
       <comment>Global entry profile tooltip</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="293" />
+      <location filename="../sidebars/profiles.py" line="295" />
       <source>Global settings apply to all windows.
 
 You can create a profile to override settings for a specific window, matched by its title or size.</source>
@@ -1432,7 +1433,7 @@ You can create a profile to override settings for a specific window, matched by 
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="341" />
+      <location filename="../sidebars/profiles.py" line="343" />
       <source>When selected, the settings panel on the right edits the settings overrides for '{0}'.</source>
       <comment>Profile selected tooltip</comment>
       <translation type="unfinished" />
