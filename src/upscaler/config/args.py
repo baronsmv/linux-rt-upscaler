@@ -942,24 +942,6 @@ micro-stutters and 'immediate' may still present tearing.
 """,
     )
     vulkan_group.add_argument(
-        "--vulkan-buffer-pool-size",
-        type=int,
-        default=DEFAULT_CONFIG.vulkan_buffer_pool_size,
-        help="""Number of pre-allocated staging buffers used for uploading
-partial texture updates.
-
-A larger pool reduces the overhead of creating temporary
-buffers on the fly during frequent damage updates, but
-reserves a small amount of extra VRAM.
-
-Raise this value if you notice stutters when many small
-regions change rapidly.
-
-Recommended range: 2 - 16. Default: %(default)s.
-
-""",
-    )
-    vulkan_group.add_argument(
         "--frame-timeout",
         type=int,
         default=DEFAULT_CONFIG.frame_timeout,
@@ -1161,7 +1143,9 @@ Minimum is 0.0. Default: %(default)s.""",
         "--swapchain-recreate-debounce": "--swapchain-debounce",
     }
     deprecated = {
-        "--no-lanczos-linear-light": "Linear light is now automatic based on each algorithm."
+        "--no-lanczos-linear-light": "Linear light is now automatic based on each algorithm.",
+        "--vulkan-buffer-pool-size": "Vulkan buffer size is now hardcoded to avoid segfaults "
+        "and Vulkan maintainability costs.",
     }
 
     def _warn_and_filter(unknown_args: List[str]) -> List[str]:

@@ -29,37 +29,6 @@ class AdvancedTab(SettingsTab):
         )
 
     def _build_content(self) -> None:
-        # ---- Vulkan Rendering ----
-        self._add_section(self.tr("Vulkan Rendering", "Settings section"))
-        self._buffer_pool = self._add_slider(
-            self.tr("Buffer Pool Size", "Label of setting (must be short)"),
-            2,
-            16,
-            self._config.vulkan_buffer_pool_size,
-            self._on_buffer_pool,
-            baseline=self.baseline_config.vulkan_buffer_pool_size,
-            help=self.tr(
-                "Number of buffers prepared in advance for updating the frame.\n"
-                "Increase this if you see stuttering when many small areas change quickly.\n"
-                "Recommended range: 2 - 16.",
-                "Description of a setting (tooltip)",
-            ),
-        )
-        self._frame_timeout = self._add_slider(
-            self.tr("Frame Timeout (ms)", "Label of setting (must be short)"),
-            1,
-            1000,
-            max(1, self._config.frame_timeout // 1_000_000),
-            self._on_frame_timeout,
-            baseline=self.baseline_config.frame_timeout // 1_000_000,
-            help=self.tr(
-                "Maximum time to wait for the GPU to finish the previous frame.\n"
-                "Lower values reduce waiting time but may cause dropped frames.\n"
-                "Recommended range: 17 (1/60 s) - 1000 (1 s).",
-                "Description of a setting (tooltip)",
-            ),
-        )
-
         # ---- Tile-Based Processing ----
         self._add_section(self.tr("Tile-Based Processing", "Settings section"))
         self._tile_mode_cb = self._add_cb(
@@ -147,6 +116,20 @@ class AdvancedTab(SettingsTab):
 
         # ---- Timing ----
         self._add_section(self.tr("Timing", "Settings section"))
+        self._frame_timeout = self._add_slider(
+            self.tr("Frame Timeout (ms)", "Label of setting (must be short)"),
+            1,
+            1000,
+            max(1, self._config.frame_timeout // 1_000_000),
+            self._on_frame_timeout,
+            baseline=self.baseline_config.frame_timeout // 1_000_000,
+            help=self.tr(
+                "Maximum time to wait for the GPU to finish the previous frame.\n"
+                "Lower values reduce waiting time but may cause dropped frames.\n"
+                "Recommended range: 17 (1/60 s) - 1000 (1 s).",
+                "Description of a setting (tooltip)",
+            ),
+        )
         self._add_slider(
             self.tr("Daemon Poll (s)", "Label of setting (must be short)"),
             1,
@@ -229,10 +212,6 @@ class AdvancedTab(SettingsTab):
                 "Description of a setting (tooltip)",
             ),
         )
-
-    def _on_buffer_pool(self, value: int):
-        self._config.vulkan_buffer_pool_size = value
-        self.config_changed.emit()
 
     def _on_frame_timeout(self, value: int):
         self._config.frame_timeout = value * 1_000_000

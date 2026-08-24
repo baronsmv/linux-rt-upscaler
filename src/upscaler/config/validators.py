@@ -250,7 +250,6 @@ _VALIDATORS: Dict[str, Tuple] = {
     "osd_duration": (validate_number, 0),
     # Vulkan
     "max_fps": (validate_number, 1),
-    "vulkan_buffer_pool_size": (validate_number, 0),
     "frame_timeout": (validate_number, 0),
     # Tile
     "tile_size": (validate_number, 1),

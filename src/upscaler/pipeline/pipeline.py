@@ -33,7 +33,7 @@ from ..utils import (
     get_base_geometry,
     parse_output_geometry,
 )
-from ..vulkan import SwapchainError, configure_device, select_device
+from ..vulkan import SwapchainError, select_device
 from ..window import WindowInfo, WindowTracker
 
 logger = logging.getLogger(__name__)
@@ -125,9 +125,6 @@ class Pipeline(QObject):
         self.controller.set_initial_model_index(config.model)
         self.controller.set_initial_geometry_index(config.output_geometry)
         self.controller.set_initial_zoom_index()
-
-        # Vulkan device configuration
-        configure_device(config.vulkan_buffer_pool_size)
 
         # Swapchain for presentation
         self._swapchain_manager = SwapchainManager(

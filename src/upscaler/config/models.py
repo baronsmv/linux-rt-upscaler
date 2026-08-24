@@ -137,7 +137,6 @@ class Config:
         osd_duration: How long OSD messages stay visible.
         max_fps: Maximum pipeline frames per second.
         vulkan_present_mode: Vulkan presentation mode (fifo, mailbox, immediate).
-        vulkan_buffer_pool_size: Number of staging buffers.
         frame_timeout: GPU frame fence timeout in nanoseconds.
         use_tile_processing: If True, enable tile-based processing.
         use_damage_tracking: If True, transfer only damaged regions.
@@ -259,7 +258,6 @@ class Config:
     # Vulkan
     max_fps: Optional[int] = None
     vulkan_present_mode: str = VulkanPresentMode.FIFO.value
-    vulkan_buffer_pool_size: int = 8
     frame_timeout: int = 1_000_000_000
 
     # Tile processing

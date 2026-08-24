@@ -312,7 +312,7 @@ vk_Device *vk_Device_get_initialized(vk_Device *self) {
   }
 
   // ---- Staging buffer pool (reusable, host-visible/coherent) ----
-  const int DEFAULT_POOL_SIZE = 4;
+  const int DEFAULT_POOL_SIZE = 8;
   const VkDeviceSize DEFAULT_BUFFER_SIZE = 2 * 1024 * 1024; // 2 MiB
   self->staging_pool.count = DEFAULT_POOL_SIZE;
   self->staging_pool.buffers =

@@ -442,15 +442,6 @@ vulkan_present_mode: fifo
 # Default: null (no cap)
 max_fps: null
 
-# Number of reusable staging buffers (each ~2 MB) for partial texture uploads.
-# A larger pool reduces the overhead of allocating temporary buffers during
-# frequent damage updates, preventing micro-stutters. Each additional buffer
-# consumes about 2 MB of VRAM.
-# Raise this value if you notice stutters when many small regions change rapidly.
-# Recommended range: 2 - 16
-# Default: 8
-vulkan_buffer_pool_size: 8
-
 # Maximum time (in nanoseconds) to wait for the GPU to finish the previous frame
 # before starting the next capture. If the GPU is still busy after this timeout,
 # the frame is skipped to avoid blocking the pipeline.
