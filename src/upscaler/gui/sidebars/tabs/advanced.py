@@ -94,7 +94,8 @@ class AdvancedTab(SettingsTab):
             baseline=self.baseline_config.tile_size,
             help=self.tr(
                 "Size of each tile in pixels.\n"
-                "Smaller tiles update more precisely but use more CPU. Values that are multiples of 32 usually perform best.\n"
+                "Smaller tiles update more precisely but use more CPU.\n"
+                "Values that are multiples of 32 usually perform best.\n"
                 "Recommended range: 32 - 128.",
                 "Description of a setting (tooltip)",
             ),
