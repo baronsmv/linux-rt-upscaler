@@ -423,9 +423,10 @@ class MainWindow(QMainWindow):
             self.stop_manual_session()
         else:
             self.force_exit = True
-            if self.manual_session is not None:
-                self.manual_session.shutdown()
-                self.manual_session = None
+            session = self.manual_session
+            self.manual_session = None
+            if session is not None:
+                session.shutdown()
             self.close()
             QApplication.instance().quit()
 

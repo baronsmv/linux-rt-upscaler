@@ -158,13 +158,16 @@ class HotkeyManager(QObject):
 
     def stop(self) -> None:
         """Ungrab keys and close connection."""
+        if self._conn is None:
+            return
+
         if self._socket_notifier:
             self._socket_notifier.setEnabled(False)
             self._socket_notifier = None
+
         self._ungrab_keys()
-        if self._conn:
-            self._conn.disconnect()
-            self._conn = None
+        self._conn.disconnect()
+        self._conn = None
         logger.debug("XCB hotkey manager stopped")
 
     def _grab_keys(self) -> None:
@@ -203,6 +206,10 @@ class HotkeyManager(QObject):
         self._conn.flush()
 
     def _ungrab_keys(self) -> None:
+        """Ungrab all registered key combinations."""
+        if self._conn is None:
+            return
+
         for (mod_mask, keycode), _ in self._grabbed.items():
             for lock_mask in self._lock_combinations:
                 self._conn.core.UngrabKey(keycode, self._root, mod_mask | lock_mask)

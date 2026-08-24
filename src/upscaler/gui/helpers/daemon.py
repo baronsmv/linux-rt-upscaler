@@ -127,10 +127,10 @@ class DaemonController(QObject):
             self.stop()
         else:
             self._main_window.force_exit = True
-            if self._active and self._session:
-                self._session.shutdown()
-                self._session = None
-                self._active = False
+            session = self._session
+            self._session = None
+            if session is not None:
+                session.shutdown()
             self._main_window.close()
             QApplication.instance().quit()
 

@@ -21,14 +21,17 @@ class PipelineSession:
 
     config: Config
     window_info: WindowInfo
-    overlay: OverlayWindow
-    pipeline: Pipeline
+    overlay: Optional[OverlayWindow] = None
+    pipeline: Optional[Pipeline] = None
     monitor: Optional[FocusMonitor] = None
     daemon_monitor: Optional[DaemonMonitor] = None
     hotkey_manager: Optional[HotkeyManager] = None
 
     def shutdown(self):
         """Stop all resources before interpreter exit."""
+        if self.pipeline is None:
+            return
+
         # Stop monitors
         if self.monitor:
             self.monitor.stop()
