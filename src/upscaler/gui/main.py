@@ -577,16 +577,17 @@ class MainWindow(QMainWindow):
                 "tray/enabled", False, type=bool
             ) and self._settings.value("tray/minimize_to_tray", False, type=bool):
                 QTimer.singleShot(0, self.hide)
+                QTimer.singleShot(0, self._tray_controller.refresh_menu)
         super().changeEvent(event)
 
     def closeEvent(self, event) -> None:
         if (
             self._settings.value("tray/enabled", False, type=bool)
             and self._settings.value("tray/close_to_tray", False, type=bool)
-            and hasattr(self, "_tray_controller")
             and self._tray_controller is not None
         ):
             self.hide()
+            self._tray_controller.refresh_menu()
             event.ignore()
             return
 

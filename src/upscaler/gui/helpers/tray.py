@@ -56,7 +56,7 @@ class TrayController(QObject):
         # while it is not open.
         self._check_timer = QTimer(self)
         self._check_timer.setInterval(2000)  # ms
-        self._check_timer.timeout.connect(self._maybe_rebuild_menu)
+        self._check_timer.timeout.connect(self.refresh_menu)
 
         # Initial build
         self._rebuild_menu()
@@ -128,7 +128,7 @@ class TrayController(QObject):
             main_window_visible,
         )
 
-    def _maybe_rebuild_menu(self) -> None:
+    def refresh_menu(self) -> None:
         """
         Rebuild the menu only if the cached signature differs from the
         current state. Does nothing while the menu is visible to avoid
@@ -265,7 +265,7 @@ class TrayController(QObject):
         daemon_action.setCheckable(True)
         daemon_action.setChecked(daemon_active)
         daemon_action.toggled.connect(self._daemon_ctrl.toggle)
-        daemon_action.toggled.connect(lambda _: self._maybe_rebuild_menu())
+        daemon_action.toggled.connect(lambda _: self.refresh_menu())
 
         self._menu.addSeparator()
 
@@ -328,22 +328,24 @@ class TrayController(QObject):
         """Start a manual upscaling session for the given window."""
         self._main_window._on_window_selected(win_info)
         # Immediate refresh because session state changed
-        self._maybe_rebuild_menu()
+        self.refresh_menu()
 
     def _stop_upscaling(self) -> None:
         """Stop the active manual session."""
         self._main_window.stop_manual_session()
-        self._maybe_rebuild_menu()
+        self.refresh_menu()
 
     def _hide_main_window(self) -> None:
         """Hide the main window."""
         self._main_window.hide()
+        self.refresh_menu()
 
     def _show_main_window(self) -> None:
         """Show, raise, and focus the main window."""
         self._main_window.show()
         self._main_window.raise_()
         self._main_window.activateWindow()
+        self.refresh_menu()
 
     def _quit_app(self) -> None:
         """Clean up and quit the application."""
