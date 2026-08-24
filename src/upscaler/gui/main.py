@@ -7,7 +7,7 @@ import os
 from dataclasses import fields
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import QEvent, Qt, QTimer, QSettings, QSize, QStandardPaths
+from PySide6.QtCore import QEvent, Qt, QTimer, QSettings, QSize, QStandardPaths, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -55,6 +55,8 @@ class MainWindow(QMainWindow):
     * **Settings sidebar** - editing of global and per-profile options.
     """
 
+    _exit_hotkey_signal = Signal()
+
     def __init__(
         self,
         config_manager: ConfigManager,
@@ -62,11 +64,13 @@ class MainWindow(QMainWindow):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
+        self._exit_hotkey_signal.connect(self._handle_exit_hotkey)
         self.settings = QSettings("linux-rt-upscaler")
         self.manual_session: Optional[PipelineSession] = None
         self._config_manager = config_manager
         self._profile_name = profile_name
         self._tray_controller: Optional[TrayController] = None
+        self.force_exit: bool = False
         self._stopping_manual_session: bool = False
         self._hide_gui_after_stop: bool = False
 
@@ -404,8 +408,13 @@ class MainWindow(QMainWindow):
         profile_data = self._config_manager.profiles.get(name, {})
         return bool(profile_data.get("options", {}))
 
-    def _on_exit_hotkey_pressed(self) -> None:
-        """Handle exit hotkey. If tray is active and keep_running is set, stop session; otherwise quit."""
+    def _handle_exit_hotkey(self) -> None:
+        """
+        Handle exit hotkey.
+
+        If tray is active and keep_running is set, stop session.
+        Otherwise, quit.
+        """
         if (
             self.settings.value("tray/enabled", False, type=bool)
             and self.settings.value("tray/keep_running_on_exit", False, type=bool)
@@ -413,7 +422,16 @@ class MainWindow(QMainWindow):
         ):
             self.stop_manual_session()
         else:
+            self.force_exit = True
+            if self.manual_session is not None:
+                self.manual_session.shutdown()
+                self.manual_session = None
+            self.close()
             QApplication.instance().quit()
+
+    def _on_exit_hotkey_pressed(self) -> None:
+        """Handle exit hotkey via signal."""
+        self._exit_hotkey_signal.emit()
 
     def _on_config_changed(self) -> None:
         """
@@ -626,15 +644,16 @@ class MainWindow(QMainWindow):
         super().changeEvent(event)
 
     def closeEvent(self, event) -> None:
-        if (
-            self.settings.value("tray/enabled", False, type=bool)
-            and self.settings.value("tray/close_to_tray", False, type=bool)
-            and self._tray_controller is not None
-        ):
-            self.hide()
-            self._tray_controller.refresh_menu()
-            event.ignore()
-            return
+        if not self.force_exit:
+            if (
+                self.settings.value("tray/enabled", False, type=bool)
+                and self.settings.value("tray/close_to_tray", False, type=bool)
+                and self._tray_controller is not None
+            ):
+                self.hide()
+                self._tray_controller.refresh_menu()
+                event.ignore()
+                return
 
         self.grid_mgr.stop()
         self.daemon_ctrl.stop()

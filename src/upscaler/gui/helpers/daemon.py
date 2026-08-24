@@ -4,13 +4,12 @@ import copy
 import logging
 from typing import Optional, TYPE_CHECKING
 
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication
 
 from ...config import apply_overrides, parse_config
 from ...pipeline import create_pipeline_session
 from ...window import WindowInfo
-
-logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .grid import WindowGridManager
@@ -18,8 +17,10 @@ if TYPE_CHECKING:
     from ..main import MainWindow
     from ...pipeline import PipelineSession
 
+logger = logging.getLogger(__name__)
 
-class DaemonController:
+
+class DaemonController(QObject):
     """
     Controls a single long-running daemon pipeline and reacts to its signals
     to show/hide the GUI and manage the window grid.
@@ -34,18 +35,22 @@ class DaemonController:
         The grid manager whose timer must be paused / resumed.
     """
 
+    _shutdown_signal = Signal()
+
     def __init__(
         self,
         main_window: MainWindow,
         config_manager: ConfigManager,
         grid_mgr: WindowGridManager,
     ) -> None:
+        super().__init__()
         self._main_window = main_window
         self._config_manager = config_manager
         self._grid_mgr = grid_mgr
         self._active: bool = False
         self._session: Optional[PipelineSession] = None
         self._restore_gui_visible: Optional[bool] = None
+        self._shutdown_signal.connect(self._shutdown)
 
     @property
     def active(self) -> bool:
@@ -90,7 +95,7 @@ class DaemonController:
             dummy,
             base_config=clean_base,
             profiles=self._config_manager.profiles,
-            on_exit=self.shutdown,
+            on_exit=self._on_exit_hotkey,
         )
 
         # Wire pipeline signals
@@ -111,8 +116,8 @@ class DaemonController:
             self._session = None
         self._show_gui()
 
-    def shutdown(self) -> None:
-        """Tear down the daemon pipeline and quit the application immediately, unless tray keep-running is set."""
+    def _shutdown(self) -> None:
+        """Actual shutdown logic, executed in the main thread."""
         if self._main_window.settings.value(
             "tray/enabled", False, type=bool
         ) and self._main_window.settings.value(
@@ -121,14 +126,12 @@ class DaemonController:
             # Stop daemon but keep app running
             self.stop()
         else:
-            if self._active:
+            self._main_window.force_exit = True
+            if self._active and self._session:
+                self._session.shutdown()
+                self._session = None
                 self._active = False
-                if self._session:
-                    try:
-                        self._session.shutdown()
-                    except Exception:
-                        logger.exception("Error shutting down daemon session")
-                    self._session = None
+            self._main_window.close()
             QApplication.instance().quit()
 
     # ------------------------------------------------------------------
@@ -160,6 +163,10 @@ class DaemonController:
                 logger.exception("Error shutting down daemon session")
             self._session = None
         self._show_gui()
+
+    def _on_exit_hotkey(self) -> None:
+        """Called from the hotkey thread; marshal to main thread."""
+        self._shutdown_signal.emit()
 
     # ------------------------------------------------------------------
     # Helpers
