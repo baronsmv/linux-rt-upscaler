@@ -6,7 +6,7 @@ import os
 from dataclasses import fields
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QTimer, QSettings, QSize, QStandardPaths
+from PySide6.QtCore import QEvent, Qt, QTimer, QSettings, QSize, QStandardPaths
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -176,15 +176,15 @@ class MainWindow(QMainWindow):
         central_layout.addLayout(filter_row)
 
         # Add grid
-        self._scene = WindowGridScene(self.gui_config)
-        self._view = WindowGridView(self._scene, self.gui_config)
+        self.scene = WindowGridScene(self.gui_config)
+        self._view = WindowGridView(self.scene, self.gui_config)
         central_layout.addWidget(self._view, stretch=1)
 
         # ------------------------------------------------------------------
         # Helpers
         # ------------------------------------------------------------------
         self.grid_mgr = WindowGridManager(
-            self, self.gui_config, self._scene, self._view, self.filter_bar
+            self, self.gui_config, self.scene, self._view, self.filter_bar
         )
         self.profile_act = ProfileActions(
             self, self._config_manager, self.left_sidebar, self._icons_dir
@@ -226,8 +226,8 @@ class MainWindow(QMainWindow):
         # Grid and filter
         self.filter_bar.filter_changed.connect(self.grid_mgr.populate)
         self.filter_bar.focus_grid_requested.connect(self.grid_mgr.focus_grid)
-        self._scene.window_selected.connect(self._on_window_selected)
-        self._scene.focus_filter_requested.connect(self.filter_bar.set_focus)
+        self.scene.window_selected.connect(self._on_window_selected)
+        self.scene.focus_filter_requested.connect(self.filter_bar.set_focus)
         self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
 
         # Profile
@@ -551,6 +551,8 @@ class MainWindow(QMainWindow):
         self.show()
         self.raise_()
         self.activateWindow()
+        QTimer.singleShot(0, self.scene.schedule_relayout)
+
         self.grid_mgr.start()
 
     # ------------------------------------------------------------------
@@ -567,6 +569,14 @@ class MainWindow(QMainWindow):
         if self.manual_session is not None:
             self.manual_session.shutdown()
             self.manual_session = None
+
+    def changeEvent(self, event) -> None:
+        if event.type() == QEvent.WindowStateChange and self.isMinimized():
+            if self._settings.value(
+                "tray/enabled", False, type=bool
+            ) and self._settings.value("tray/minimize_to_tray", False, type=bool):
+                QTimer.singleShot(0, self.hide)
+        super().changeEvent(event)
 
     def closeEvent(self, event) -> None:
         if (
