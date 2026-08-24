@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QSettings, QTimer
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from ..icons import load_icon
-from ...window import list_windows
+from ...window import list_windows, WindowInfo
 
 if TYPE_CHECKING:
     from .daemon import DaemonController
@@ -26,58 +26,177 @@ class TrayController(QObject):
         daemon_ctrl: DaemonController,
         parent: QObject = None,
     ) -> None:
+        """
+        Args:
+            main_window: The application's main window.
+            daemon_ctrl: The daemon controller (for toggling daemon mode).
+            parent: Optional QObject parent.
+        """
         super().__init__(parent)
         self._main_window = main_window
         self._daemon_ctrl = daemon_ctrl
         self._settings = QSettings("linux-rt-upscaler")
 
-        # Create tray icon
+        # Cache used for change detection
+        self._cached_signature: Optional[Tuple] = None
+
+        # Create the tray icon
         self.tray_icon = QSystemTrayIcon(load_icon("app/app", 64, 64), self)
         self.tray_icon.setToolTip("Real-Time Upscaler")
 
-        # Persistent menu – its content is refreshed by a timer
+        # Build a persistent QMenu; its contents are refreshed as needed
         self._menu = QMenu()
         self.tray_icon.setContextMenu(self._menu)
 
         # Tray icon activation
         self.tray_icon.activated.connect(self._on_tray_activated)
 
-        # Periodic refresh (like the window grid)
-        self._refresh_timer = QTimer(self)
-        self._refresh_timer.setInterval(3000)  # 3 seconds
-        self._refresh_timer.timeout.connect(self._rebuild_menu)
+        # Timer to periodically check for changes and refresh the menu
+        # while it is not open.
+        self._check_timer = QTimer(self)
+        self._check_timer.setInterval(2000)  # ms
+        self._check_timer.timeout.connect(self._maybe_rebuild_menu)
 
-        # Build initial content
+        # Initial build
         self._rebuild_menu()
 
+    # ------------------------------------------------------------------
+    #  Public API
+    # ------------------------------------------------------------------
     def show(self) -> None:
+        """Show the tray icon and start the change-detection timer."""
         self.tray_icon.show()
-        self._refresh_timer.start()
+        self._check_timer.start()
 
     def hide(self) -> None:
+        """Hide the tray icon and stop the timer."""
         self.tray_icon.hide()
-        self._refresh_timer.stop()
+        self._check_timer.stop()
 
     # ------------------------------------------------------------------
-    #  Full menu rebuild
+    #  Change detection
     # ------------------------------------------------------------------
-    def _rebuild_menu(self) -> None:
+    def _get_visible_windows(self) -> List[WindowInfo]:
+        """
+        Return a list of windows to display, excluding the GUI itself.
+
+        If enumeration fails, an empty list is returned and a warning is
+        logged.
+        """
+        gui_handle = self._main_window.winId()
+        try:
+            windows = list_windows()
+        except Exception:
+            logger.exception("Failed to list windows for tray menu")
+            return []
+        return [w for w in windows if w.handle != gui_handle]
+
+    def _get_tray_option_states(self) -> Tuple[bool, bool]:
+        """Return current (close_to_tray, minimize_to_tray) settings."""
+        return (
+            self._settings.value("tray/close_to_tray", False, type=bool),
+            self._settings.value("tray/minimize_to_tray", False, type=bool),
+        )
+
+    def _get_signature(
+        self,
+        windows: List[WindowInfo],
+        session_active: bool,
+        daemon_active: bool,
+        close_to_tray: bool,
+        minimize_to_tray: bool,
+    ) -> Tuple:
+        """
+        Build a hashable signature representing the current menu state.
+
+        The window list is sorted by (handle, title) to ensure a stable
+        order and to detect any change in the set of visible windows.
+        """
+        window_sig = tuple(sorted((w.handle, w.title or "") for w in windows))
+        return (
+            window_sig,
+            session_active,
+            daemon_active,
+            close_to_tray,
+            minimize_to_tray,
+        )
+
+    def _maybe_rebuild_menu(self) -> None:
+        """
+        Rebuild the menu only if the cached signature differs from the
+        current state. Does nothing while the menu is visible to avoid
+        native rendering glitches.
+        """
         if self._menu.isVisible():
             return
 
+        # Gather current state
+        windows = self._get_visible_windows()
         session_active = self._main_window.manual_session is not None
+        daemon_active = self._daemon_ctrl.active
+        close_to_tray, minimize_to_tray = self._get_tray_option_states()
+
+        new_signature = self._get_signature(
+            windows,
+            session_active,
+            daemon_active,
+            close_to_tray,
+            minimize_to_tray,
+        )
+
+        if new_signature != self._cached_signature:
+            self._cached_signature = new_signature
+            self._rebuild_menu(
+                windows=windows,
+                session_active=session_active,
+                daemon_active=daemon_active,
+                close_to_tray=close_to_tray,
+                minimize_to_tray=minimize_to_tray,
+            )
+
+    # ------------------------------------------------------------------
+    #  Menu construction
+    # ------------------------------------------------------------------
+    def _rebuild_menu(
+        self,
+        windows: Optional[List[WindowInfo]] = None,
+        session_active: Optional[bool] = None,
+        daemon_active: Optional[bool] = None,
+        close_to_tray: Optional[bool] = None,
+        minimize_to_tray: Optional[bool] = None,
+    ) -> None:
+        """
+        Rebuild the entire tray menu from scratch.
+
+        This method should only be called while the menu is not visible.
+        If optional arguments are omitted, current values are fetched.
+        """
+        # If no explicit data is provided, gather everything
+        if windows is None:
+            windows = self._get_visible_windows()
+        if session_active is None:
+            session_active = self._main_window.manual_session is not None
+        if daemon_active is None:
+            daemon_active = self._daemon_ctrl.active
+        if close_to_tray is None or minimize_to_tray is None:
+            close_to_tray, minimize_to_tray = self._get_tray_option_states()
+
+        # Update the cached signature for consistency
+        self._cached_signature = self._get_signature(
+            windows,
+            session_active,
+            daemon_active,
+            close_to_tray,
+            minimize_to_tray,
+        )
+
+        # Clear and rebuild the menu
         self._menu.clear()
 
-        # Window list
+        # --------------------------------------------------------------
+        # Dynamic window list (only when no manual session is active)
+        # --------------------------------------------------------------
         if not session_active:
-            try:
-                windows = list_windows()
-                gui_handle = self._main_window.winId()
-                windows = [w for w in windows if w.handle != gui_handle]
-            except Exception:
-                logger.exception("Failed to list windows for tray menu")
-                windows = []
-
             for win in windows:
                 title = win.title or "Unknown"
                 action = self._menu.addAction(title)
@@ -85,11 +204,12 @@ class TrayController(QObject):
                 action.triggered.connect(
                     lambda checked=False, w=win: self._start_upscaling(w)
                 )
-
             if windows:
                 self._menu.addSeparator()
 
-        # Show / Stop action
+        # --------------------------------------------------------------
+        # Show / Stop action (single action whose text/icon changes)
+        # --------------------------------------------------------------
         if session_active:
             stop_action = self._menu.addAction(self.tr("Stop"))
             stop_action.setIcon(
@@ -115,36 +235,39 @@ class TrayController(QObject):
             show_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
             show_action.triggered.connect(self._show_main_window)
 
-        # Daemon mode
+        # --------------------------------------------------------------
+        # Daemon Mode toggle
+        # --------------------------------------------------------------
         daemon_action = self._menu.addAction(self.tr("Daemon Mode"))
         daemon_action.setCheckable(True)
-        daemon_action.setChecked(self._daemon_ctrl.active)
+        daemon_action.setChecked(daemon_active)
         daemon_action.toggled.connect(self._daemon_ctrl.toggle)
+        daemon_action.toggled.connect(lambda _: self._maybe_rebuild_menu())
 
         self._menu.addSeparator()
 
+        # --------------------------------------------------------------
         # Tray options
+        # --------------------------------------------------------------
         close_to_tray_action = self._menu.addAction(self.tr("Close to Tray"))
         close_to_tray_action.setCheckable(True)
-        close_to_tray_action.setChecked(
-            self._settings.value("tray/close_to_tray", False, type=bool)
-        )
+        close_to_tray_action.setChecked(close_to_tray)
         close_to_tray_action.toggled.connect(
             lambda checked: self._settings.setValue("tray/close_to_tray", checked)
         )
 
         minimize_to_tray_action = self._menu.addAction(self.tr("Minimize to Tray"))
         minimize_to_tray_action.setCheckable(True)
-        minimize_to_tray_action.setChecked(
-            self._settings.value("tray/minimize_to_tray", False, type=bool)
-        )
+        minimize_to_tray_action.setChecked(minimize_to_tray)
         minimize_to_tray_action.toggled.connect(
             lambda checked: self._settings.setValue("tray/minimize_to_tray", checked)
         )
 
         self._menu.addSeparator()
 
+        # --------------------------------------------------------------
         # Exit
+        # --------------------------------------------------------------
         exit_action = self._menu.addAction(self.tr("Exit"))
         exit_action.setIcon(
             load_icon(
@@ -158,25 +281,31 @@ class TrayController(QObject):
         exit_action.triggered.connect(self._quit_app)
 
     # ------------------------------------------------------------------
-    #  Slots
+    #  Slots / action handlers
     # ------------------------------------------------------------------
     def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+        """Handle double‑click (or platform equivalent) to show the window."""
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self._show_main_window()
 
-    def _start_upscaling(self, win_info) -> None:
+    def _start_upscaling(self, win_info: WindowInfo) -> None:
+        """Start a manual upscaling session for the given window."""
         self._main_window._on_window_selected(win_info)
-        self._rebuild_menu()
+        # Immediate refresh because session state changed
+        self._maybe_rebuild_menu()
 
     def _stop_upscaling(self) -> None:
+        """Stop the active manual session."""
         self._main_window.stop_manual_session()
-        self._rebuild_menu()
+        self._maybe_rebuild_menu()
 
     def _show_main_window(self) -> None:
+        """Show, raise, and focus the main window."""
         self._main_window.show()
         self._main_window.raise_()
         self._main_window.activateWindow()
 
     def _quit_app(self) -> None:
+        """Clean up and quit the application."""
         self._main_window._cleanup_before_quit()
         QApplication.quit()
