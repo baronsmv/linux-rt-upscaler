@@ -730,7 +730,7 @@ Larger values produce coarser, more visible grain.</source>
       <source>Upscaling SRCNN model to use.
 All models upscale to 2x, and are ordered from lowest to highest quality.
 Rightmost models are deeper and slower, but produce better results.
-The value 'none' disables SRCNN processing and uses only the selected scaler.</source>
+The value 'none' disables SRCNN processing and uses only the selected scaler (upsampler/downsampler).</source>
       <comment>Description of a setting (tooltip). Do not translate 'none', since it's a model identifier.</comment>
       <translation type="unfinished" />
     </message>
@@ -749,63 +749,63 @@ Uses more GPU power.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="69" />
+      <location filename="../sidebars/tabs/general.py" line="70" />
       <source>Focus Tracking</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="71" />
+      <location filename="../sidebars/tabs/general.py" line="72" />
       <source>Follow Focus</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="75" />
+      <location filename="../sidebars/tabs/general.py" line="76" />
       <source>Automatically upscale the window that currently has focus.
 Useful when working with multiple windows.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="82" />
+      <location filename="../sidebars/tabs/general.py" line="83" />
       <source>Pause on Focus Loss</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="86" />
+      <location filename="../sidebars/tabs/general.py" line="87" />
       <source>Hide the upscaled overlay when the target window loses focus, and show it again when focus returns.
 Turn off to keep the overlay always visible.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="94" />
+      <location filename="../sidebars/tabs/general.py" line="95" />
       <source>Automatic Upscaling</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="97" />
+      <location filename="../sidebars/tabs/general.py" line="98" />
       <source>Exclude from Daemon Mode</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="101" />
+      <location filename="../sidebars/tabs/general.py" line="102" />
       <source>When Daemon Mode is active, this profile will not be used to automatically upscale matching windows.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="109" />
+      <location filename="../sidebars/tabs/general.py" line="110" />
       <source>Daemon Mode</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/general.py" line="113" />
+      <location filename="../sidebars/tabs/general.py" line="114" />
       <source>When enabled, a background process automatically upscales any window that matches a profile.
 Turn off to manually select a window from the grid.</source>
       <comment>Description of a setting (tooltip)</comment>
