@@ -92,7 +92,6 @@ class DaemonController:
             profiles=self._config_manager.profiles,
             on_exit=self.shutdown,
         )
-        self._session.overlay.closed.connect(self.stop)
 
         # Wire pipeline signals
         self._session.pipeline.daemon_target_acquired.connect(self._on_target_acquired)
@@ -113,16 +112,24 @@ class DaemonController:
         self._show_gui()
 
     def shutdown(self) -> None:
-        """Tear down the daemon pipeline and quit the application immediately."""
-        if self._active:
-            self._active = False
-            if self._session:
-                try:
-                    self._session.shutdown()
-                except Exception:
-                    logger.exception("Error shutting down daemon session")
-                self._session = None
-        QApplication.instance().quit()
+        """Tear down the daemon pipeline and quit the application immediately, unless tray keep-running is set."""
+        if self._main_window.settings.value(
+            "tray/enabled", False, type=bool
+        ) and self._main_window.settings.value(
+            "tray/keep_running_on_exit", False, type=bool
+        ):
+            # Stop daemon but keep app running
+            self.stop()
+        else:
+            if self._active:
+                self._active = False
+                if self._session:
+                    try:
+                        self._session.shutdown()
+                    except Exception:
+                        logger.exception("Error shutting down daemon session")
+                    self._session = None
+            QApplication.instance().quit()
 
     # ------------------------------------------------------------------
     # Pipeline signal slots
@@ -160,7 +167,7 @@ class DaemonController:
     def _show_gui(self) -> None:
         """Restore GUI visibility based on pre-upscaling state and restart grid."""
         # Determine whether to show or hide the main window
-        if self._restore_gui_visible is None and self._restore_gui_visible:
+        if self._restore_gui_visible is None or self._restore_gui_visible:
             self._main_window.show_gui()
         else:
             self._main_window.hide_gui()

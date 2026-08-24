@@ -264,7 +264,7 @@ class TrayController(QObject):
         daemon_action = self._menu.addAction(self.tr("Daemon Mode"))
         daemon_action.setCheckable(True)
         daemon_action.setChecked(daemon_active)
-        daemon_action.toggled.connect(self._daemon_ctrl.toggle)
+        daemon_action.toggled.connect(self._main_window.set_daemon_mode)
         daemon_action.toggled.connect(lambda _: self.refresh_menu())
 
         self._menu.addSeparator()
@@ -284,6 +284,19 @@ class TrayController(QObject):
         minimize_to_tray_action.setChecked(minimize_to_tray)
         minimize_to_tray_action.toggled.connect(
             lambda checked: self._settings.setValue("tray/minimize_to_tray", checked)
+        )
+
+        keep_running_action = self._menu.addAction(
+            self.tr("Keep running after Exit hotkey")
+        )
+        keep_running_action.setCheckable(True)
+        keep_running_action.setChecked(
+            self._settings.value("tray/keep_running_on_exit", False, type=bool)
+        )
+        keep_running_action.toggled.connect(
+            lambda checked: self._settings.setValue(
+                "tray/keep_running_on_exit", checked
+            )
         )
 
         self._menu.addSeparator()

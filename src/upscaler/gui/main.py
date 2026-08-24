@@ -62,11 +62,11 @@ class MainWindow(QMainWindow):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
-        self._settings = QSettings("linux-rt-upscaler")
+        self.settings = QSettings("linux-rt-upscaler")
+        self.manual_session: Optional[PipelineSession] = None
         self._config_manager = config_manager
         self._profile_name = profile_name
         self._tray_controller: Optional[TrayController] = None
-        self.manual_session: Optional[PipelineSession] = None
         self._stopping_manual_session: bool = False
         self._hide_gui_after_stop: bool = False
 
@@ -139,7 +139,7 @@ class MainWindow(QMainWindow):
         self.tray_toggle_btn = QToolButton()
         self.tray_toggle_btn.setCheckable(True)
         self.tray_toggle_btn.setChecked(
-            self._settings.value("tray/enabled", False, type=bool)
+            self.settings.value("tray/enabled", False, type=bool)
         )
         self.tray_toggle_btn.setIconSize(QSize(36, 36))
         self.tray_toggle_btn.setFixedSize(36, 36)
@@ -243,14 +243,11 @@ class MainWindow(QMainWindow):
         self.left_sidebar.move_up_requested.connect(self.profile_act.move_up)
         self.left_sidebar.move_down_requested.connect(self.profile_act.move_down)
 
-        # Daemon
-        self.right_sidebar.daemon_toggled.connect(self.daemon_ctrl.toggle)
-
         # ------------------------------------------------------------------
         # Background tasks
         # ------------------------------------------------------------------
         QTimer.singleShot(0, self.grid_mgr.start)
-        geometry = self._settings.value("mainwindow/geometry")
+        geometry = self.settings.value("mainwindow/geometry")
         if geometry is not None:
             self.restoreGeometry(geometry)
         else:
@@ -266,8 +263,8 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(0, self.daemon_ctrl.start)
 
         # Restore sidebar visibility from previous session
-        left_hidden = self._settings.value("gui/left_sidebar_hidden", False)
-        right_hidden = self._settings.value("gui/right_sidebar_hidden", False)
+        left_hidden = self.settings.value("gui/left_sidebar_hidden", False)
+        right_hidden = self.settings.value("gui/right_sidebar_hidden", False)
         if isinstance(left_hidden, str):
             left_hidden = left_hidden.lower() == "true"
         if isinstance(right_hidden, str):
@@ -318,12 +315,12 @@ class MainWindow(QMainWindow):
         # If a sidebar's width is less than 10 pixels, consider it hidden.
         left_hidden = sizes[0] < 10
         right_hidden = sizes[2] < 10
-        self._settings.setValue("gui/left_sidebar_hidden", left_hidden)
-        self._settings.setValue("gui/right_sidebar_hidden", right_hidden)
+        self.settings.setValue("gui/left_sidebar_hidden", left_hidden)
+        self.settings.setValue("gui/right_sidebar_hidden", right_hidden)
 
     def _on_manual_overlay_closed(self) -> None:
         """Called when the overlay of a manual session is closed."""
-        if self._settings.value("tray/enabled", False, type=bool):
+        if self.settings.value("tray/enabled", False, type=bool):
             self.stop_manual_session()
         else:
             if self.manual_session:
@@ -366,6 +363,7 @@ class MainWindow(QMainWindow):
                 base_config=clean_base,
                 profiles=profiles,
                 profile_name=profile_name_arg,
+                on_exit=self._on_exit_hotkey_pressed,
             )
             self.manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
             self.manual_session.pipeline.finished.connect(
@@ -395,7 +393,7 @@ class MainWindow(QMainWindow):
             profile_has_options=self._active_profile_has_options(),
         )
         # Daemon checkbox is inside the sidebar
-        sidebar.daemon_toggled.connect(self.daemon_ctrl.toggle)
+        sidebar.daemon_toggled.connect(self.set_daemon_mode)
         return sidebar
 
     def _active_profile_has_options(self) -> bool:
@@ -405,6 +403,17 @@ class MainWindow(QMainWindow):
             return False
         profile_data = self._config_manager.profiles.get(name, {})
         return bool(profile_data.get("options", {}))
+
+    def _on_exit_hotkey_pressed(self) -> None:
+        """Handle exit hotkey. If tray is active and keep_running is set, stop session; otherwise quit."""
+        if (
+            self.settings.value("tray/enabled", False, type=bool)
+            and self.settings.value("tray/keep_running_on_exit", False, type=bool)
+            and self.manual_session is not None
+        ):
+            self.stop_manual_session()
+        else:
+            QApplication.instance().quit()
 
     def _on_config_changed(self) -> None:
         """
@@ -526,7 +535,7 @@ class MainWindow(QMainWindow):
 
     def _on_tray_toggled(self, enabled: bool) -> None:
         """Enable or disable the system tray."""
-        self._settings.setValue("tray/enabled", enabled)
+        self.settings.setValue("tray/enabled", enabled)
         self._update_tray_toggle_icon()
 
         if enabled:
@@ -543,7 +552,7 @@ class MainWindow(QMainWindow):
         # Ignore if already stopped the session (manual_session is None)
         if self.manual_session is None:
             return
-        if self._settings.value("tray/enabled", False, type=bool):
+        if self.settings.value("tray/enabled", False, type=bool):
             self.stop_manual_session()
         else:
             QApplication.instance().quit()
@@ -569,6 +578,12 @@ class MainWindow(QMainWindow):
             self._hide_gui_after_stop = False
         finally:
             self._stopping_manual_session = False
+
+    def set_daemon_mode(self, enabled: bool) -> None:
+        """Enable or disable daemon mode, updating config and GUI."""
+        self._config_manager.persistent_config.daemon = enabled
+        self.daemon_ctrl.toggle(enabled)
+        self._on_config_changed()
 
     # ------------------------------------------------------------------
     # About dialog
@@ -603,17 +618,17 @@ class MainWindow(QMainWindow):
 
     def changeEvent(self, event) -> None:
         if event.type() == QEvent.WindowStateChange and self.isMinimized():
-            if self._settings.value(
+            if self.settings.value(
                 "tray/enabled", False, type=bool
-            ) and self._settings.value("tray/minimize_to_tray", False, type=bool):
+            ) and self.settings.value("tray/minimize_to_tray", False, type=bool):
                 QTimer.singleShot(0, self.hide)
                 QTimer.singleShot(0, self._tray_controller.refresh_menu)
         super().changeEvent(event)
 
     def closeEvent(self, event) -> None:
         if (
-            self._settings.value("tray/enabled", False, type=bool)
-            and self._settings.value("tray/close_to_tray", False, type=bool)
+            self.settings.value("tray/enabled", False, type=bool)
+            and self.settings.value("tray/close_to_tray", False, type=bool)
             and self._tray_controller is not None
         ):
             self.hide()
@@ -624,5 +639,5 @@ class MainWindow(QMainWindow):
         self.grid_mgr.stop()
         self.daemon_ctrl.stop()
         self._cleanup_before_quit()
-        self._settings.setValue("mainwindow/geometry", self.saveGeometry())
+        self.settings.setValue("mainwindow/geometry", self.saveGeometry())
         super().closeEvent(event)
