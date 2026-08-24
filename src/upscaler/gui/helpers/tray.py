@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QSettings, QTimer
-from PySide6.QtGui import QKeySequence
+from PySide6.QtGui import QKeySequence, QIcon, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from ..icons import load_icon
-from ...window import list_windows, WindowInfo
+from ...window import get_window_icon, list_windows, WindowInfo
 
 if TYPE_CHECKING:
     from .daemon import DaemonController
@@ -39,6 +39,7 @@ class TrayController(QObject):
 
         # Cache used for change detection
         self._cached_signature: Optional[Tuple] = None
+        self._icon_cache: Dict[int, QIcon] = {}
 
         # Create the tray icon
         self.tray_icon = QSystemTrayIcon(load_icon("app/app", 64, 64), self)
@@ -200,6 +201,7 @@ class TrayController(QObject):
             for win in windows:
                 title = win.title or "Unknown"
                 action = self._menu.addAction(title)
+                action.setIcon(self._get_window_icon(win.handle))
                 action.setData(win)
                 action.triggered.connect(
                     lambda checked=False, w=win: self._start_upscaling(w)
@@ -223,17 +225,25 @@ class TrayController(QObject):
             stop_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
             stop_action.triggered.connect(self._stop_upscaling)
         else:
-            show_action = self._menu.addAction(self.tr("Show"))
-            show_action.setIcon(
+            if self._is_main_window_visible():
+                label = self.tr("Hide")
+                icon_name = "actions/hide"
+                shortcut = QKeySequence("Ctrl+Shift+H")
+                handler = self._hide_main_window
+            else:
+                label = self.tr("Show")
+                icon_name = "actions/show"
+                shortcut = QKeySequence("Ctrl+Shift+O")
+                handler = self._show_main_window
+
+            action = self._menu.addAction(label)
+            action.setIcon(
                 load_icon(
-                    "actions/show",
-                    16,
-                    16,
-                    color=self._main_window.gui_config.palette.icon,
+                    icon_name, 16, 16, color=self._main_window.gui_config.palette.icon
                 )
             )
-            show_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
-            show_action.triggered.connect(self._show_main_window)
+            action.setShortcut(shortcut)
+            action.triggered.connect(handler)
 
         # --------------------------------------------------------------
         # Daemon Mode toggle
@@ -280,13 +290,26 @@ class TrayController(QObject):
         exit_action.setShortcut(QKeySequence("Ctrl+Q"))
         exit_action.triggered.connect(self._quit_app)
 
+    def _get_window_icon(self, handle: int) -> QIcon:
+        """Return a cached QIcon for the given window, fetching it if needed."""
+        if handle not in self._icon_cache:
+            img = get_window_icon(handle, size=16)
+            if img is not None and not img.isNull():
+                self._icon_cache[handle] = QIcon(QPixmap.fromImage(img))
+            else:
+                self._icon_cache[handle] = QIcon()  # empty icon
+        return self._icon_cache[handle]
+
     # ------------------------------------------------------------------
     #  Slots / action handlers
     # ------------------------------------------------------------------
     def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         """Handle double‑click (or platform equivalent) to show the window."""
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
-            self._show_main_window()
+            if self._is_main_window_visible():
+                self._hide_main_window()
+            else:
+                self._show_main_window()
 
     def _start_upscaling(self, win_info: WindowInfo) -> None:
         """Start a manual upscaling session for the given window."""
@@ -298,6 +321,14 @@ class TrayController(QObject):
         """Stop the active manual session."""
         self._main_window.stop_manual_session()
         self._maybe_rebuild_menu()
+
+    def _is_main_window_visible(self) -> bool:
+        """Check if the main window is visible."""
+        return self._main_window.isVisible() and not self._main_window.isMinimized()
+
+    def _hide_main_window(self) -> None:
+        """Hide the main window."""
+        self._main_window.hide()
 
     def _show_main_window(self) -> None:
         """Show, raise, and focus the main window."""

@@ -160,6 +160,5 @@ class DaemonController:
         self._main_window.show()
         self._main_window.raise_()
         self._main_window.activateWindow()
+        QTimer.singleShot(0, self._grid_mgr.start)
         QTimer.singleShot(0, self._main_window.scene.schedule_relayout)
-        if self._active:
-            QTimer.singleShot(0, self._grid_mgr.start)
