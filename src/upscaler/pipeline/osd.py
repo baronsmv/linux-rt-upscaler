@@ -336,6 +336,13 @@ class OSDManager:
         self._compute_cache.clear()
         logger.debug("OSD compute cache cleared")
 
-    def shutdown(self) -> None:
+    def close(self) -> None:
         """Clean up background executor."""
-        self._render_executor.shutdown(wait=False)
+        if hasattr(self, "_render_executor") and self._render_executor is not None:
+            self._render_executor.shutdown(wait=True, cancel_futures=True)
+            self._render_executor = None
+
+        # Release CPU and GPU image/texture caches
+        self._images.clear()
+        self._texture_cache.clear()
+        self._compute_cache.clear()

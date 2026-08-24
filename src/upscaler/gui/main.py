@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import gc
 import logging
 import os
 from dataclasses import fields
@@ -547,12 +548,12 @@ class MainWindow(QMainWindow):
         self.manual_session = None
         if session:
             session.shutdown()
+        gc.collect()
 
         self.show()
         self.raise_()
         self.activateWindow()
         QTimer.singleShot(0, self.scene.schedule_relayout)
-
         self.grid_mgr.start()
 
     # ------------------------------------------------------------------

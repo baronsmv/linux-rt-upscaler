@@ -222,23 +222,35 @@ class Pipeline(QObject):
 
     def stop(self) -> None:
         """Stop the pipeline thread and release resources."""
-        if not self._running:
-            return
-
         logger.debug("Stopping pipeline thread")
+
+        # Signal the thread to stop
         self._running = False
         self._wake_event.set()
-        if self._thread is not None:
+
+        # Wait for the thread to finish
+        if self._thread is not None and self._thread.is_alive():
             self._thread.join(timeout=2.0)
+
+        # Release resources unconditionally
         if self._grabber:
             self._grabber.close()
+            self._grabber = None
         if self._window_tracker is not None:
             self._window_tracker.close()
+            self._window_tracker = None
         if self.upscaler_mgr is not None:
             self.upscaler_mgr.close()
+            self.upscaler_mgr = None
         if self.presenter is not None:
             self.presenter.close()
-        self._swapchain_manager.close()
+            self.presenter = None
+        if self.osd is not None:
+            self.osd.close()
+            self.osd = None
+        if self._swapchain_manager is not None:
+            self._swapchain_manager.close()
+            self._swapchain_manager = None
 
     def update_base_config(self, new_base: Config) -> None:
         """Update the base configuration used for future window matches."""
