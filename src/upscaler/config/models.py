@@ -8,6 +8,7 @@ from PySide6.QtCore import QStandardPaths
 from ..utils import color_string_to_float4, color_tuple_to_string
 
 UPSCALING_MODELS = (
+    "none",
     "veryfast",
     "faster",
     "fast",

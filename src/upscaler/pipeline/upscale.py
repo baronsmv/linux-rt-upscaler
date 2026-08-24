@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Protocol, Tuple
 
 from .tile import TileProcessor
 from .utils import DamageRects, DirtyTiles, collect_uav_names, expand_damage_rects
@@ -13,9 +13,32 @@ logger = logging.getLogger(__name__)
 
 
 # ======================================================================
+#  UpscalerLike interface
+# ======================================================================
+class UpscalerLike(Protocol):
+    use_tile: bool
+    scale: int
+
+    def upload_full_frame(
+        self,
+        frame: memoryview,
+        rects: DamageRects,
+        use_damage_tracking: bool,
+        margin: int,
+    ) -> None: ...
+    def process_full_frame(self) -> None: ...
+    def should_use_tile_mode(self, rects: DamageRects) -> bool: ...
+    def process_tile_frame(
+        self, dirty_tiles: DirtyTiles, rects: DamageRects, frame_data: memoryview
+    ) -> None: ...
+    def get_output_texture(self) -> Texture2D: ...
+    def close(self) -> None: ...
+
+
+# ======================================================================
 #  UpscalerManager
 # ======================================================================
-class UpscalerManager:
+class UpscalerManager(UpscalerLike):
     """
     Orchestrates full-frame or tile-based SRCNN upscaling for a single
     standard depth-to-space model.
@@ -476,3 +499,66 @@ class UpscalerManager:
         self.output = None
         self._residual_dst_tex = None
         self._residual_upscale_groups = None
+
+
+# ======================================================================
+#  PassthroughUpscaler
+# ======================================================================
+class PassthroughUpscaler(UpscalerLike):
+    """
+    Minimal upscaler that performs no SRCNN processing.
+
+    It simply uploads the captured frame into a texture that the
+    Presenter can then scale using the selected upsampler/downsampler.
+    """
+
+    def __init__(self, crop_width: int, crop_height: int) -> None:
+        self.crop_width = crop_width
+        self.crop_height = crop_height
+        self.use_tile = False  # always full-frame
+        self.scale = 1  # output is same size as input
+        self.input = self.output = Texture2D(crop_width, crop_height)
+        self.staging = Buffer(self.input.size, heap_type=HEAP_UPLOAD)
+
+    def upload_full_frame(
+        self,
+        frame: memoryview,
+        rects: DamageRects,
+        use_damage_tracking: bool,
+        margin: int,
+    ) -> None:
+        self.staging.upload(frame)
+        self.staging.copy_to(self.input)
+
+    def process_full_frame(self) -> None:
+        pass
+
+    def should_use_tile_mode(self, rects: DamageRects) -> bool:
+        return False
+
+    def process_tile_frame(
+        self,
+        dirty_tiles: DirtyTiles,
+        rects: DamageRects,
+        frame_data: memoryview,
+    ) -> None:
+        raise RuntimeError("Tile processing is unavailable in passthrough mode")
+
+    def get_output_texture(self) -> Texture2D:
+        return self.output
+
+    def close(self) -> None:
+        self.staging = None
+        self.input = None
+        self.output = None
+
+
+def create_upscaler_like(
+    config: Config, crop_width: int, crop_height: int
+) -> UpscalerLike:
+    """Factory function for creating the upscaler manager."""
+    if config.model == "none":
+        return PassthroughUpscaler(crop_width=crop_width, crop_height=crop_height)
+    return UpscalerManager(
+        config=config, crop_width=crop_width, crop_height=crop_height
+    )

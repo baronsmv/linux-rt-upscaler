@@ -279,11 +279,15 @@ Default: %(default)s.""",
         choices=UPSCALING_MODELS,
         default=DEFAULT_CONFIG.model,
         help="""Upscaling SRCNN model to use.
-Models are ordered from lower to higher quality.
-Rightmost models are deeper and slower but produce better
-results.
+Models are ordered from lowest to highest quality. Later
+models are deeper and slower but produce better results.
 
-Default: %(default)s.""",
+The value 'none' disables SRCNN processing and uses
+only the selected scaler (upsampler/downsampler).
+
+Default: %(default)s.
+
+""",
     )
     upscaling_group.add_argument(
         "-2",
@@ -408,7 +412,6 @@ Examples:
   --kernel-radius 2  - force Lanczos2 (4-tap, fastest)
   --kernel-radius 3  - force Lanczos3 (6-tap, sharper)
   --kernel-radius 4  - force Lanczos4 (8-tap, even sharper)
-
 """,
     )
 

@@ -76,8 +76,9 @@ starting_phase: 1
 # ------------------------------------------------------------------------------
 
 # Upscaling model (trade-off between visual quality and GPU load).
-# Available models, ordered from highest to lowest quality:
-#   8x32, 4x32, 4x24, 4x16, 4x12, 3x12, fast, faster, veryfast
+# Available models, ordered from lowest to highest quality:
+#   none, veryfast, faster, fast, 3x12, 4x12, 4x16, 4x24, 4x32, 8x32
+# none disables SRCNN upscaling, using only the selected scaler isntead.
 # Default: fast
 model: fast
 

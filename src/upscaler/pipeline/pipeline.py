@@ -15,7 +15,7 @@ from .controller import PipelineController
 from .osd import OSDManager
 from .presenter import Presenter
 from .swapchain import SwapchainManager
-from .upscale import UpscalerManager
+from .upscale import UpscalerLike, create_upscaler_like
 from .utils import collect_dirty_tile_coords, extract_expanded_tiles
 from ..capture import FrameGrabber
 from ..config import (
@@ -68,7 +68,7 @@ class Pipeline(QObject):
         controller (PipelineController): Handles hotkeys and user requests.
         osd (OSDManager): On-screen display manager.
         presenter (Presenter): Final scaling and presentation.
-        upscaler_mgr (UpscalerManager): SRCNN upscaling orchestration.
+        upscaler_mgr (UpscalerLike): SRCNN upscaling orchestration.
     """
 
     # Signals (emitted from pipeline thread, automatically queued to main thread)
@@ -162,9 +162,9 @@ class Pipeline(QObject):
         self._presenter_params_stale = True
 
         # Upscaler manager: full-frame or tile processing
-        self.upscaler_mgr: Optional[UpscalerManager] = None
+        self.upscaler_mgr: Optional[UpscalerLike] = None
         if win_info is not None and self.crop_width > 0 and self.crop_height > 0:
-            self.upscaler_mgr = UpscalerManager(
+            self.upscaler_mgr = create_upscaler_like(
                 config=self.config,
                 crop_width=self.crop_width,
                 crop_height=self.crop_height,
@@ -258,7 +258,7 @@ class Pipeline(QObject):
         logger.debug("Recreating upscaler manager")
         if self.upscaler_mgr is not None:
             self.upscaler_mgr.close()
-        self.upscaler_mgr = UpscalerManager(
+        self.upscaler_mgr = create_upscaler_like(
             config=self.config,
             crop_width=self.crop_width,
             crop_height=self.crop_height,

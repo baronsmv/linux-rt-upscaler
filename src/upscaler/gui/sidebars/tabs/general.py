@@ -45,9 +45,11 @@ class GeneralTab(SettingsTab):
             baseline=self.baseline_config.model,
             help=self.tr(
                 "Upscaling SRCNN model to use.\n"
-                "All models upscale to 2x, and are ordered from lower to higher quality.\n"
-                "Rightmost models are deeper and slower, but produce better results.",
-                "Description of a setting (tooltip)",
+                "All models upscale to 2x, and are ordered from lowest to highest quality.\n"
+                "Rightmost models are deeper and slower, but produce better results.\n"
+                "The value 'none' disables SRCNN processing and uses only the selected scaler.",
+                "Description of a setting (tooltip). "
+                "Do not translate 'none', since it's a model identifier.",
             ),
         )
         self._double_cb = self._add_cb(
