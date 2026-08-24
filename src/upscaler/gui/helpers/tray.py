@@ -385,5 +385,6 @@ class TrayController(QObject):
 
     def _quit_app(self) -> None:
         """Clean up and quit the application."""
-        self._main_window._cleanup_before_quit()
+        self._main_window.force_exit = True
+        self._main_window.cleanup_before_quit()
         QApplication.quit()

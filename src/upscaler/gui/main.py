@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
         # Setup UI
         self._setup_ui()
         self._config_manager.config_changed.connect(self._on_config_changed)
-        QApplication.instance().aboutToQuit.connect(self._cleanup_before_quit)
+        QApplication.instance().aboutToQuit.connect(self.cleanup_before_quit)
 
     def _setup_ui(self):
         """Create the entire UI from scratch, using self.gui_config."""
@@ -684,7 +684,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Window close
     # ------------------------------------------------------------------
-    def _cleanup_before_quit(self) -> None:
+    def cleanup_before_quit(self) -> None:
         session = self.manual_session
         self.manual_session = None
         if session is not None:
@@ -713,6 +713,6 @@ class MainWindow(QMainWindow):
 
         self.grid_mgr.stop()
         self.daemon_ctrl.stop()
-        self._cleanup_before_quit()
+        self.cleanup_before_quit()
         self.settings.setValue("mainwindow/geometry", self.saveGeometry())
         super().closeEvent(event)
