@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
         self._profile_name = profile_name
         self._tray_controller: Optional[TrayController] = None
         self.force_exit: bool = False
+        self._auto_applied_profile: Optional[str] = None
         self._stopping_manual_session: bool = False
         self._hide_gui_after_stop: bool = False
 
@@ -309,6 +310,7 @@ class MainWindow(QMainWindow):
             if profile_name:
                 if not self.profile_act.maybe_save_before_switch():
                     return
+                self._auto_applied_profile = profile_name
                 self._config_manager.set_active_profile(profile_name)
                 self.left_sidebar.set_active_item(profile_name)
                 logger.info("Auto-applied profile '%s'.", profile_name)
@@ -612,6 +614,12 @@ class MainWindow(QMainWindow):
             if session:
                 session.shutdown()
             gc.collect()
+
+            # If a profile was auto-applied for this session, revert to Global
+            if self._auto_applied_profile is not None:
+                self._config_manager.set_active_profile(None)
+                self.left_sidebar.set_active_item(None)
+                self._auto_applied_profile = None
 
             # Restore the visibility state that existed before the session
             if self._hide_gui_after_stop:
