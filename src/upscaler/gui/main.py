@@ -639,6 +639,27 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Show / Hide
     # ------------------------------------------------------------------
+    def activate_from_second_instance(self) -> None:
+        """
+        Handle a request from a second instance to show the GUI.
+
+        If a manual session is active, show a tray notification (if tray exists)
+        instead of opening the window. Otherwise, bring the window to front.
+        """
+        if self.manual_session is not None:
+            if (
+                self._tray_controller is not None
+                and self._tray_controller.tray_icon.isVisible()
+            ):
+                self._tray_controller.show_upscaling_message()
+            return
+
+        if self.isVisible() and not self.isMinimized():
+            self.raise_()
+            self.activateWindow()
+        else:
+            self.show_gui()
+
     def show_gui(self) -> None:
         """Show the main window and ensure the window grid is running."""
         self.show()

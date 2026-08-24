@@ -9,10 +9,11 @@ import signal
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QLibraryInfo, QLocale, QSharedMemory, QTranslator
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
+from PySide6.QtWidgets import QApplication
 
 from .config import ConfigManager, GUIConfig, GUIPalette, PRESETS, load_gui_style
+from .helpers import InstanceManager
 from .icons import load_icon
 from .main import MainWindow
 from .styles import message_box_style
@@ -50,25 +51,9 @@ def _install_translators(app: QApplication) -> None:
 def main() -> None:
     """Start the upscaler GUI application."""
     # Single-instance guard
-    shared = QSharedMemory("linux-rt-upscaler")
-    if not shared.create(1):
+    manager = InstanceManager("linux-rt-upscaler-gui")
+    if not manager.is_primary:
         # Another instance is already running
-        print("Another instance of upscale-gui is already running.")
-
-        # Dialog
-        tmp_app = QApplication(sys.argv)
-        palette = load_gui_style() or PRESETS["Auto"]
-        gui_config = GUIConfig(palette=palette)
-        tmp_app.setStyleSheet(message_box_style(gui_config))
-        tmp_app.setWindowIcon(load_icon("app/app", 256, 256))
-        tmp_app.setApplicationName("upscale-gui")
-        tmp_app.setDesktopFileName("io.github.baronsmv.linux-rt-upscaler")
-        QMessageBox.warning(
-            None,
-            "Already Running",
-            "Real-Time Upscaler is already running.\n\n"
-            "Only one instance of the GUI can be open at a time.",
-        )
         sys.exit(0)
 
     # Parse CLI arguments (the GUI accepts the same options as the non-GUI version)
@@ -96,6 +81,7 @@ def main() -> None:
 
     # Main window
     window = MainWindow(config_manager, profile_name=profile_name)
+    manager.show_requested.connect(window.activate_from_second_instance)
     window.show()
 
     # Ctrl+C behave as expected

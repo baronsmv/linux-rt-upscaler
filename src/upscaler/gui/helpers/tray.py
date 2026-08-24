@@ -363,15 +363,19 @@ class TrayController(QObject):
         self._main_window.hide_gui()
         self.refresh_menu()
 
+    def show_upscaling_message(self):
+        """Show a message, informing upscaling is in progress."""
+        self.tray_icon.showMessage(
+            "Real-Time Upscaler",
+            "Upscaling in progress.\n\nUse Stop from the tray menu to return.",
+            QSystemTrayIcon.MessageIcon.Information,
+            5000,
+        )
+
     def _show_main_window(self) -> None:
         """Show the main window, unless a manual session is active."""
         if self._main_window.manual_session is not None:
-            self.tray_icon.showMessage(
-                "Real-Time Upscaler",
-                "Upscaling in progress.\n\nUse Stop from the tray menu to return.",
-                QSystemTrayIcon.MessageIcon.Information,
-                5000,
-            )
+            self.show_upscaling_message()
             return
         self._main_window.show_gui()
         self.refresh_menu()
