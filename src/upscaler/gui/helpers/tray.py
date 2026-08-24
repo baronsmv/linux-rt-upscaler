@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QSettings, QTimer
 from PySide6.QtGui import QKeySequence, QIcon, QPixmap
@@ -24,7 +24,7 @@ class TrayController(QObject):
         self,
         main_window: MainWindow,
         daemon_ctrl: DaemonController,
-        parent: QObject = None,
+        parent: Optional[QObject] = None,
     ) -> None:
         """
         Args:
@@ -92,12 +92,16 @@ class TrayController(QObject):
             return []
         return [w for w in windows if w.handle != gui_handle]
 
-    def _get_tray_option_states(self) -> Tuple[bool, bool]:
+    def _get_tray_option_states(self) -> Tuple[Any, Any]:
         """Return current (close_to_tray, minimize_to_tray) settings."""
         return (
             self._settings.value("tray/close_to_tray", False, type=bool),
             self._settings.value("tray/minimize_to_tray", False, type=bool),
         )
+
+    def _is_main_window_visible(self) -> bool:
+        """Check if the main window is visible."""
+        return self._main_window.isVisible() and not self._main_window.isMinimized()
 
     def _get_signature(
         self,
@@ -106,6 +110,7 @@ class TrayController(QObject):
         daemon_active: bool,
         close_to_tray: bool,
         minimize_to_tray: bool,
+        main_window_visible: bool,
     ) -> Tuple:
         """
         Build a hashable signature representing the current menu state.
@@ -120,6 +125,7 @@ class TrayController(QObject):
             daemon_active,
             close_to_tray,
             minimize_to_tray,
+            main_window_visible,
         )
 
     def _maybe_rebuild_menu(self) -> None:
@@ -136,6 +142,7 @@ class TrayController(QObject):
         session_active = self._main_window.manual_session is not None
         daemon_active = self._daemon_ctrl.active
         close_to_tray, minimize_to_tray = self._get_tray_option_states()
+        main_window_visible = self._is_main_window_visible()
 
         new_signature = self._get_signature(
             windows,
@@ -143,6 +150,7 @@ class TrayController(QObject):
             daemon_active,
             close_to_tray,
             minimize_to_tray,
+            main_window_visible,
         )
 
         if new_signature != self._cached_signature:
@@ -153,6 +161,7 @@ class TrayController(QObject):
                 daemon_active=daemon_active,
                 close_to_tray=close_to_tray,
                 minimize_to_tray=minimize_to_tray,
+                main_window_visible=main_window_visible,
             )
 
     # ------------------------------------------------------------------
@@ -165,6 +174,7 @@ class TrayController(QObject):
         daemon_active: Optional[bool] = None,
         close_to_tray: Optional[bool] = None,
         minimize_to_tray: Optional[bool] = None,
+        main_window_visible: Optional[bool] = None,
     ) -> None:
         """
         Rebuild the entire tray menu from scratch.
@@ -181,6 +191,8 @@ class TrayController(QObject):
             daemon_active = self._daemon_ctrl.active
         if close_to_tray is None or minimize_to_tray is None:
             close_to_tray, minimize_to_tray = self._get_tray_option_states()
+        if main_window_visible is None:
+            main_window_visible = self._is_main_window_visible()
 
         # Update the cached signature for consistency
         self._cached_signature = self._get_signature(
@@ -189,6 +201,7 @@ class TrayController(QObject):
             daemon_active,
             close_to_tray,
             minimize_to_tray,
+            main_window_visible,
         )
 
         # Clear and rebuild the menu
@@ -225,7 +238,7 @@ class TrayController(QObject):
             stop_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
             stop_action.triggered.connect(self._stop_upscaling)
         else:
-            if self._is_main_window_visible():
+            if main_window_visible:
                 label = self.tr("Hide")
                 icon_name = "actions/hide"
                 shortcut = QKeySequence("Ctrl+Shift+H")
@@ -321,10 +334,6 @@ class TrayController(QObject):
         """Stop the active manual session."""
         self._main_window.stop_manual_session()
         self._maybe_rebuild_menu()
-
-    def _is_main_window_visible(self) -> bool:
-        """Check if the main window is visible."""
-        return self._main_window.isVisible() and not self._main_window.isMinimized()
 
     def _hide_main_window(self) -> None:
         """Hide the main window."""
