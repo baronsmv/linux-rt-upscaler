@@ -278,7 +278,11 @@ Default: %(default)s.""",
         "--model",
         choices=UPSCALING_MODELS,
         default=DEFAULT_CONFIG.model,
-        help="""Upscaling model to use (ordered from worst to best quality).
+        help="""Upscaling SRCNN model to use.
+Models are ordered from lower to higher quality.
+Rightmost models are deeper and slower but produce better
+results.
+
 Default: %(default)s.""",
     )
     upscaling_group.add_argument(
@@ -301,13 +305,14 @@ screens (4k, 1440p) or low-resolution sources.""",
         help="""Spatial upscaler used when the output is larger than the
 input. Default: %(default)s.
 
-  lanczos  - Fixed Lanczos-2 (hardware gather, linear-
-             light). Best for 2D art and clean edges.
-  fsr      - AMD FidelityFX Super Resolution 1.0
-             (edge-adaptive, linear-light, fast).
-             Better for 3D/photographic content.
-  nis      - NVIDIA Image Scaling (directional sharpening,
-             works in sRGB). May look oversharpened.
+  lanczos  - Fixed Lanczos-2.
+             Sharp, best for 2D art and text (recommended).
+  fsr      - AMD FidelityFX Super Resolution 1.0.
+             Fast, best for 3D but may introduce artifacts
+             on fine details.
+  nis      - NVIDIA Image Scaling.
+             Oversharpens and introduces ringing,
+             not recommended.
 
 """,
     )
@@ -319,12 +324,12 @@ input. Default: %(default)s.
         help="""Spatial downscaler used when the output is smaller than the
 input. Default: %(default)s.
 
-  catmull  - Catmull-Rom bicubic (9-tap, linear-light).
-             Sharper and faster than Lanczos for mild
-             downscales, excellent for 2D art.
-  lanczos  - Adaptive Lanczos (variable radius, linear-
-             light). High quality for any ratio.
-             Better than catmull for extreme downscales.
+  catmull  - Catmull-Rom bicubic.
+             Sharp and fast, excellent tradeoff for most
+             cases (recommended).
+  lanczos  - Adaptive Lanczos (variable radius).
+             Slower, best overall quality, handles extreme
+             downscaling well.
 """,
     )
 
