@@ -173,7 +173,8 @@ class DaemonController(QObject):
     # ------------------------------------------------------------------
     def _show_gui(self) -> None:
         """Restore GUI visibility based on pre-upscaling state and restart grid."""
-        # Determine whether to show or hide the main window
+        if self._main_window.force_exit:
+            return
         if self._restore_gui_visible is None or self._restore_gui_visible:
             self._main_window.show_gui()
         else:

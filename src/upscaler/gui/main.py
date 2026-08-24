@@ -324,6 +324,8 @@ class MainWindow(QMainWindow):
 
     def _on_manual_overlay_closed(self) -> None:
         """Called when the overlay of a manual session is closed."""
+        if self.force_exit:
+            return
         if self.settings.value("tray/enabled", False, type=bool):
             self.stop_manual_session()
         else:
@@ -568,8 +570,7 @@ class MainWindow(QMainWindow):
                 self._tray_controller = None
 
     def _on_manual_pipeline_finished(self) -> None:
-        # Ignore if already stopped the session (manual_session is None)
-        if self.manual_session is None:
+        if self.force_exit or self.manual_session is None:
             return
         if self.settings.value("tray/enabled", False, type=bool):
             self.stop_manual_session()
