@@ -64,6 +64,7 @@ class GeneralTab(SettingsTab):
                 "Description of a setting (tooltip)",
             ),
         )
+        self._double_cb.setEnabled(self._config.model != "none")
 
         # ---- Focus Tracking ----
         self._add_section(self.tr("Focus Tracking", "Settings section"))
@@ -120,6 +121,9 @@ class GeneralTab(SettingsTab):
 
     def _on_model_changed(self, text: str) -> None:
         self._config.model = text
+        self._double_cb.setEnabled(text != "none")
+        if text == "none":
+            self._double_cb.setChecked(False)
         self.config_changed.emit()
 
     def _on_double_changed(self, state: int) -> None:
