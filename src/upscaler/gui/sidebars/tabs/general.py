@@ -49,7 +49,7 @@ class GeneralTab(SettingsTab):
                 "Rightmost models are deeper and slower, but produce better results.\n"
                 "The value 'none' disables SRCNN processing and uses only the selected scaler (upsampler/downsampler).",
                 "Description of a setting (tooltip). "
-                "Do not translate 'none', since it's a model identifier.",
+                "Do not translate 'none', since it's a model identifier",
             ),
         )
         self._double_cb = self._add_cb(
