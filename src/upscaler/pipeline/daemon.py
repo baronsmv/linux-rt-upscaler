@@ -78,26 +78,37 @@ class DaemonMonitor(QObject):
             while self._running:
                 try:
                     windows = list_windows(conn=conn)
-                    for win in windows:
+                    for profile_name, profile_data in self._profiles.items():
                         if not self._running:
                             break
-                        name, data = find_matching_profile(self._profiles, win)
-                        if data is not None:
-                            # Per-profile daemon exclusion (daemon_exclude=True)
-                            if data.get("options", {}).get("daemon_exclude", False):
-                                logger.debug(
-                                    "Skipping profile '%s' (daemon_exclude=True)", name
-                                )
-                                continue
-                            logger.info(
-                                "Daemon: Matched window '%s' with profile '%s'",
-                                win.title,
-                                name,
+
+                        # Skip daemon-excluded profiles entirely
+                        if profile_data.get("options", {}).get("daemon_exclude", False):
+                            logger.debug(
+                                "Skipping profile '%s' (daemon_exclude=True)",
+                                profile_name,
                             )
-                            activate_window(win.handle)
-                            self.match_found.emit(win)
-                            self._running = False  # stop polling
-                            return
+                            continue
+
+                        # Check windows for this profile, using the existing
+                        # find_matching_profile with a single-profile dict
+                        for win in windows:
+                            if not self._running:
+                                break
+
+                            matched_name, _ = find_matching_profile(
+                                {profile_name: profile_data}, win
+                            )
+                            if matched_name is not None:
+                                logger.info(
+                                    "Daemon: Matched window '%s' with profile '%s'",
+                                    win.title,
+                                    profile_name,
+                                )
+                                activate_window(win.handle)
+                                self.match_found.emit(win)
+                                self._running = False  # stop polling
+                                return
                 except Exception as e:
                     logger.error(f"Daemon: Polling error: {e}", exc_info=True)
 
