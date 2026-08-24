@@ -337,14 +337,12 @@ class TrayController(QObject):
 
     def _hide_main_window(self) -> None:
         """Hide the main window."""
-        self._main_window.hide()
+        self._main_window.hide_gui()
         self.refresh_menu()
 
     def _show_main_window(self) -> None:
         """Show, raise, and focus the main window."""
-        self._main_window.show()
-        self._main_window.raise_()
-        self._main_window.activateWindow()
+        self._main_window.show_gui()
         self.refresh_menu()
 
     def _quit_app(self) -> None:

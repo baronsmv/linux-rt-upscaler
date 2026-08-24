@@ -4,7 +4,6 @@ import copy
 import logging
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 from ...config import apply_overrides, parse_config
@@ -46,6 +45,7 @@ class DaemonController:
         self._grid_mgr = grid_mgr
         self._active: bool = False
         self._session: Optional[PipelineSession] = None
+        self._restore_gui_visible: Optional[bool] = None
 
     @property
     def active(self) -> bool:
@@ -129,8 +129,10 @@ class DaemonController:
     # ------------------------------------------------------------------
     def _on_target_acquired(self) -> None:
         """Daemon matched a window, stop GUI resources and hide."""
-        self._grid_mgr.stop()
-        self._main_window.hide()
+        self._restore_gui_visible = (
+            self._main_window.isVisible() and not self._main_window.isMinimized()
+        )
+        self._main_window.hide_gui()
 
     def _on_scan_start(self) -> None:
         """Daemon returned to scanning, show GUI and restart grid."""
@@ -156,9 +158,11 @@ class DaemonController:
     # Helpers
     # ------------------------------------------------------------------
     def _show_gui(self) -> None:
-        """Show the main window and restart grid refreshes (if daemon active)."""
-        self._main_window.show()
-        self._main_window.raise_()
-        self._main_window.activateWindow()
-        QTimer.singleShot(0, self._grid_mgr.start)
-        QTimer.singleShot(0, self._main_window.scene.schedule_relayout)
+        """Restore GUI visibility based on pre-upscaling state and restart grid."""
+        # Determine whether to show or hide the main window
+        if self._restore_gui_visible is None and self._restore_gui_visible:
+            self._main_window.show_gui()
+        else:
+            self._main_window.hide_gui()
+
+        self._restore_gui_visible = None

@@ -67,6 +67,8 @@ class MainWindow(QMainWindow):
         self._profile_name = profile_name
         self._tray_controller: Optional[TrayController] = None
         self.manual_session: Optional[PipelineSession] = None
+        self._stopping_manual_session: bool = False
+        self._hide_gui_after_stop: bool = False
 
         # GUI Palette
         palette = load_gui_style() or PRESETS["Auto"]
@@ -332,6 +334,7 @@ class MainWindow(QMainWindow):
     def _start_pipeline(self, win_info: WindowInfo) -> None:
         """Create a temporary pipeline session for the given window."""
         logger.info("Starting upscale for: '%s'", win_info.title)
+        self._hide_gui_after_stop = not (self.isVisible() and not self.isMinimized())
         self.grid_mgr.stop()
         activate_window(win_info.handle)
         self.hide()
@@ -537,24 +540,35 @@ class MainWindow(QMainWindow):
                 self._tray_controller = None
 
     def _on_manual_pipeline_finished(self) -> None:
+        # Ignore if already stopped the session (manual_session is None)
+        if self.manual_session is None:
+            return
         if self._settings.value("tray/enabled", False, type=bool):
             self.stop_manual_session()
         else:
             QApplication.instance().quit()
 
     def stop_manual_session(self) -> None:
-        """Stop the active manual session and return to the main window."""
-        session = self.manual_session
-        self.manual_session = None
-        if session:
-            session.shutdown()
-        gc.collect()
+        """Stop the active manual session and restore GUI visibility."""
+        if self._stopping_manual_session:
+            return
+        self._stopping_manual_session = True
+        try:
+            session = self.manual_session
+            self.manual_session = None
+            if session:
+                session.shutdown()
+            gc.collect()
 
-        self.show()
-        self.raise_()
-        self.activateWindow()
-        QTimer.singleShot(0, self.scene.schedule_relayout)
-        self.grid_mgr.start()
+            # Restore the visibility state that existed before the session
+            if self._hide_gui_after_stop:
+                self.hide_gui()
+            else:
+                self.show_gui()
+
+            self._hide_gui_after_stop = False
+        finally:
+            self._stopping_manual_session = False
 
     # ------------------------------------------------------------------
     # About dialog
@@ -562,6 +576,22 @@ class MainWindow(QMainWindow):
     def _show_about_dialog(self) -> None:
         dlg = AboutDialog(self.gui_config, self)
         dlg.exec()
+
+    # ------------------------------------------------------------------
+    # Show / Hide
+    # ------------------------------------------------------------------
+    def show_gui(self) -> None:
+        """Show the main window and ensure the window grid is running."""
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        QTimer.singleShot(0, self.scene.schedule_relayout)
+        self.grid_mgr.start()
+
+    def hide_gui(self) -> None:
+        """Hide the main window and stop the window grid to save resources."""
+        self.hide()
+        self.grid_mgr.stop()
 
     # ------------------------------------------------------------------
     # Window close
