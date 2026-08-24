@@ -7,7 +7,7 @@ import shutil
 import struct
 import subprocess
 import time
-from typing import List, Optional, Tuple, Set, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, Tuple, Set, TYPE_CHECKING
 
 import xcffib
 from xcffib.xproto import Window
@@ -32,7 +32,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def list_windows(conn: Optional[xcffib.Connection] = None) -> List[WindowInfo]:
+def list_windows(
+    conn: Optional[xcffib.Connection] = None,
+    sort_by: Optional[Callable[[WindowInfo], Any]] = lambda w: (w.title or "").lower(),
+) -> List[WindowInfo]:
     """
     Enumerate all visible application windows using _NET_CLIENT_LIST.
 
@@ -92,6 +95,10 @@ def list_windows(conn: Optional[xcffib.Connection] = None) -> List[WindowInfo]:
 
     if own_conn:
         close_xcb_connection(conn)
+
+    if sort_by:
+        result.sort(key=sort_by)
+
     logger.debug(f"Enumeration complete, found {len(result)} windows")
     return result
 
