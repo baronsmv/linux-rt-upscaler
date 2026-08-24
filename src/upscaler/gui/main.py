@@ -677,9 +677,10 @@ class MainWindow(QMainWindow):
     # Window close
     # ------------------------------------------------------------------
     def _cleanup_before_quit(self) -> None:
-        if self.manual_session is not None:
-            self.manual_session.shutdown()
-            self.manual_session = None
+        session = self.manual_session
+        self.manual_session = None
+        if session is not None:
+            session.shutdown()
 
     def changeEvent(self, event) -> None:
         if event.type() == QEvent.WindowStateChange and self.isMinimized():

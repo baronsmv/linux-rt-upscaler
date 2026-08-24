@@ -1,6 +1,6 @@
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtGui import QWindow
@@ -26,35 +26,34 @@ class PipelineSession:
     monitor: Optional[FocusMonitor] = None
     daemon_monitor: Optional[DaemonMonitor] = None
     hotkey_manager: Optional[HotkeyManager] = None
+    _shutting_down: bool = field(default=False, init=False, repr=False)
 
     def shutdown(self):
         """Stop all resources before interpreter exit."""
-        if self.pipeline is None:
+        if self._shutting_down:
             return
-
-        # Stop monitors
-        if self.monitor:
-            self.monitor.stop()
-        if self.daemon_monitor:
-            self.daemon_monitor.stop()
-        if self.hotkey_manager:
-            self.hotkey_manager.stop()
-
-        # Stop pipeline
-        self.pipeline.stop()
-
-        # Close overlay
-        self.overlay.close()
-        QApplication.processEvents()
-        self.overlay.deleteLater()
-        QApplication.processEvents()
-
-        # Clear references
-        self.monitor = None
-        self.daemon_monitor = None
-        self.hotkey_manager = None
-        self.pipeline = None
-        self.overlay = None
+        self._shutting_down = True
+        try:
+            if self.monitor:
+                self.monitor.stop()
+            if self.daemon_monitor:
+                self.daemon_monitor.stop()
+            if self.hotkey_manager:
+                self.hotkey_manager.stop()
+            if self.pipeline:
+                self.pipeline.stop()
+            if self.overlay:
+                self.overlay.close()
+                QApplication.processEvents()
+                self.overlay.deleteLater()
+                QApplication.processEvents()
+            self.monitor = None
+            self.daemon_monitor = None
+            self.hotkey_manager = None
+            self.pipeline = None
+            self.overlay = None
+        finally:
+            self._shutting_down = False
 
 
 def create_pipeline_session(
