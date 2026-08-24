@@ -28,7 +28,7 @@ from .config import (
 )
 from .dialogs import AboutDialog
 from .grid import FilterBar, WindowGridScene, WindowGridView
-from .helpers import DaemonController, ProfileActions, WindowGridManager
+from .helpers import DaemonController, ProfileActions, TrayController, WindowGridManager
 from .icons import load_icon
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .styles import circular_button_style, tooltip_style
@@ -64,6 +64,7 @@ class MainWindow(QMainWindow):
         self._settings = QSettings("linux-rt-upscaler")
         self._config_manager = config_manager
         self._profile_name = profile_name
+        self._tray_controller: Optional[TrayController] = None
         self.manual_session: Optional[PipelineSession] = None
 
         # GUI Palette
@@ -131,20 +132,41 @@ class MainWindow(QMainWindow):
         self.filter_bar = FilterBar(self.gui_config)
         filter_row.addWidget(self.filter_bar, 1)
 
+        # System tray toggle
+        self.tray_toggle_btn = QToolButton()
+        self.tray_toggle_btn.setCheckable(True)
+        self.tray_toggle_btn.setChecked(
+            self._settings.value("tray/enabled", False, type=bool)
+        )
+        self.tray_toggle_btn.setIconSize(QSize(36, 36))
+        self.tray_toggle_btn.setFixedSize(36, 36)
+        self.tray_toggle_btn.setCursor(Qt.PointingHandCursor)
+        self.tray_toggle_btn.setToolTip(
+            self.tr("Enable/Disable System Tray", "Tray toggle button")
+        )
+        self.tray_toggle_btn.setAutoRaise(True)
+        self.tray_toggle_btn.setStyleSheet(
+            circular_button_style(self.gui_config, icon_size=36)
+        )
+        self.tray_toggle_btn.toggled.connect(self._on_tray_toggled)
+        self._update_tray_toggle_icon()
+        filter_row.addWidget(self.tray_toggle_btn)
+        filter_row.addSpacing(round(self.gui_config.filter.horizontal_margin / 2))
+
         # About button
         self.about_btn = QToolButton()
         self.about_btn.setIcon(
-            load_icon("actions/about", 20, 20, color=self.gui_config.palette.icon)
+            load_icon("actions/about", 24, 24, color=self.gui_config.palette.icon)
         )
-        self.about_btn.setIconSize(QSize(20, 20))
-        self.about_btn.setFixedSize(32, 32)
+        self.about_btn.setIconSize(QSize(36, 36))
+        self.about_btn.setFixedSize(36, 36)
         self.about_btn.setCursor(Qt.PointingHandCursor)
         self.about_btn.setToolTip(
             self.tr("About Real-Time Upscaler.", "About dialog button")
         )
         self.about_btn.setAutoRaise(True)
         self.about_btn.setStyleSheet(
-            circular_button_style(self.gui_config, icon_size=32)
+            circular_button_style(self.gui_config, icon_size=36)
         )
         self.about_btn.clicked.connect(self._show_about_dialog)
         filter_row.addWidget(self.about_btn)
@@ -168,6 +190,10 @@ class MainWindow(QMainWindow):
             self, self._config_manager, self.left_sidebar, self._icons_dir
         )
         self.daemon_ctrl = DaemonController(self, self._config_manager, self.grid_mgr)
+
+        # Restore tray state if enabled
+        if self.tray_toggle_btn.isChecked():
+            QTimer.singleShot(0, lambda: self._on_tray_toggled(True))
 
         # ------------------------------------------------------------------
         # Right sidebar: Settings
@@ -294,10 +320,13 @@ class MainWindow(QMainWindow):
 
     def _on_manual_overlay_closed(self) -> None:
         """Called when the overlay of a manual session is closed."""
-        if self.manual_session:
-            self.manual_session.shutdown()
-            self.manual_session = None
-        QApplication.instance().quit()
+        if self._settings.value("tray/enabled", False, type=bool):
+            self.stop_manual_session()
+        else:
+            if self.manual_session:
+                self.manual_session.shutdown()
+                self.manual_session = None
+            QApplication.instance().quit()
 
     def _start_pipeline(self, win_info: WindowInfo) -> None:
         """Create a temporary pipeline session for the given window."""
@@ -335,6 +364,9 @@ class MainWindow(QMainWindow):
                 profile_name=profile_name_arg,
             )
             self.manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
+            self.manual_session.pipeline.finished.connect(
+                self._on_manual_pipeline_finished
+            )
         except Exception as e:
             logger.exception("Failed to start pipeline")
             QMessageBox.critical(
@@ -476,6 +508,51 @@ class MainWindow(QMainWindow):
         self.left_sidebar.set_active_item(self._config_manager.active_profile_name)
 
     # ------------------------------------------------------------------
+    # Tray
+    # ------------------------------------------------------------------
+    def _update_tray_toggle_icon(self) -> None:
+        """Update the tray toggle button icon based on current state."""
+        if self.tray_toggle_btn.isChecked():
+            icon_name = "actions/tray_enabled"
+        else:
+            icon_name = "actions/tray_disabled"
+        self.tray_toggle_btn.setIcon(
+            load_icon(icon_name, 24, 24, color=self.gui_config.palette.icon)
+        )
+
+    def _on_tray_toggled(self, enabled: bool) -> None:
+        """Enable or disable the system tray."""
+        self._settings.setValue("tray/enabled", enabled)
+        self._update_tray_toggle_icon()
+
+        if enabled:
+            if not hasattr(self, "_tray_controller") or self._tray_controller is None:
+                self._tray_controller = TrayController(self, self.daemon_ctrl, self)
+                self._tray_controller.show()
+        else:
+            if hasattr(self, "_tray_controller") and self._tray_controller is not None:
+                self._tray_controller.hide()
+                self._tray_controller.deleteLater()
+                self._tray_controller = None
+
+    def _on_manual_pipeline_finished(self) -> None:
+        if self._settings.value("tray/enabled", False, type=bool):
+            self.stop_manual_session()
+        else:
+            QApplication.instance().quit()
+
+    def stop_manual_session(self) -> None:
+        """Stop the active manual session and return to the main window."""
+        if self.manual_session:
+            self.manual_session.shutdown()
+            self.manual_session = None
+
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        self.grid_mgr.start()
+
+    # ------------------------------------------------------------------
     # About dialog
     # ------------------------------------------------------------------
     def _show_about_dialog(self) -> None:
@@ -491,7 +568,16 @@ class MainWindow(QMainWindow):
             self.manual_session = None
 
     def closeEvent(self, event) -> None:
-        """Stop all background activity before closing."""
+        if (
+            self._settings.value("tray/enabled", False, type=bool)
+            and self._settings.value("tray/close_to_tray", False, type=bool)
+            and hasattr(self, "_tray_controller")
+            and self._tray_controller is not None
+        ):
+            self.hide()
+            event.ignore()
+            return
+
         self.grid_mgr.stop()
         self.daemon_ctrl.stop()
         self._cleanup_before_quit()
