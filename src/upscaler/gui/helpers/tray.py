@@ -360,10 +360,17 @@ class TrayController(QObject):
         self.refresh_menu()
 
     def show_upscaling_message(self):
-        """Show a message, informing upscaling is in progress."""
+        """Show a message, informing upscaling is in progress and which window."""
+        session = self._main_window.manual_session
+        if session is not None and session.window_info is not None:
+            title = session.window_info.title
+            message = f"Upscaling: {title}\n\nUse Stop from the tray menu to return."
+        else:
+            message = "Upscaling in progress.\n\nUse Stop from the tray menu to return."
+
         self.tray_icon.showMessage(
             "Real-Time Upscaler",
-            "Upscaling in progress.\n\nUse Stop from the tray menu to return.",
+            message,
             QSystemTrayIcon.MessageIcon.Information,
             5000,
         )
