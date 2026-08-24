@@ -65,6 +65,10 @@ class TrayController(QObject):
                 logger.exception("Failed to list windows for tray menu")
                 windows = []
 
+            # Exclude the GUI window itself
+            gui_handle = self._main_window.winId()
+            windows = [w for w in windows if w.handle != gui_handle]
+
             for win in windows:
                 title = win.title or "Unknown"
                 action = self._menu.addAction(title)

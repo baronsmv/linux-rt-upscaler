@@ -543,9 +543,10 @@ class MainWindow(QMainWindow):
 
     def stop_manual_session(self) -> None:
         """Stop the active manual session and return to the main window."""
-        if self.manual_session:
-            self.manual_session.shutdown()
-            self.manual_session = None
+        session = self.manual_session
+        self.manual_session = None
+        if session:
+            session.shutdown()
 
         self.show()
         self.raise_()
