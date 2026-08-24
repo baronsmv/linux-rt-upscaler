@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QObject, QSettings
+from PySide6.QtCore import QObject, QSettings, QTimer
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
@@ -35,45 +35,53 @@ class TrayController(QObject):
         self.tray_icon = QSystemTrayIcon(load_icon("app/app", 64, 64), self)
         self.tray_icon.setToolTip("Real-Time Upscaler")
 
-        # Dynamic menu
+        # Persistent menu – its content is refreshed by a timer
         self._menu = QMenu()
-        self._menu.aboutToShow.connect(self._rebuild_menu)
         self.tray_icon.setContextMenu(self._menu)
 
-        # Double-click opens main window
+        # Tray icon activation
         self.tray_icon.activated.connect(self._on_tray_activated)
+
+        # Periodic refresh (like the window grid)
+        self._refresh_timer = QTimer(self)
+        self._refresh_timer.setInterval(3000)  # 3 seconds
+        self._refresh_timer.timeout.connect(self._rebuild_menu)
+
+        # Build initial content
+        self._rebuild_menu()
 
     def show(self) -> None:
         self.tray_icon.show()
+        self._refresh_timer.start()
 
     def hide(self) -> None:
         self.tray_icon.hide()
+        self._refresh_timer.stop()
 
     # ------------------------------------------------------------------
-    #  Menu construction (dynamic)
+    #  Full menu rebuild
     # ------------------------------------------------------------------
     def _rebuild_menu(self) -> None:
-        self._menu.clear()
+        if self._menu.isVisible():
+            return
 
         session_active = self._main_window.manual_session is not None
+        self._menu.clear()
 
-        # Window list (only when no manual session is active)
+        # Window list
         if not session_active:
             try:
                 windows = list_windows()
+                gui_handle = self._main_window.winId()
+                windows = [w for w in windows if w.handle != gui_handle]
             except Exception:
                 logger.exception("Failed to list windows for tray menu")
                 windows = []
-
-            # Exclude the GUI window itself
-            gui_handle = self._main_window.winId()
-            windows = [w for w in windows if w.handle != gui_handle]
 
             for win in windows:
                 title = win.title or "Unknown"
                 action = self._menu.addAction(title)
                 action.setData(win)
-                # Use default argument to avoid late binding
                 action.triggered.connect(
                     lambda checked=False, w=win: self._start_upscaling(w)
                 )
@@ -157,11 +165,12 @@ class TrayController(QObject):
             self._show_main_window()
 
     def _start_upscaling(self, win_info) -> None:
-        # Reuse the same logic as the grid
         self._main_window._on_window_selected(win_info)
+        self._rebuild_menu()
 
     def _stop_upscaling(self) -> None:
         self._main_window.stop_manual_session()
+        self._rebuild_menu()
 
     def _show_main_window(self) -> None:
         self._main_window.show()
