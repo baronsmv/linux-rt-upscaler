@@ -285,12 +285,21 @@ class TrayController(QObject):
             lambda checked: self._settings.setValue("tray/minimize_to_tray", checked)
         )
 
+        start_hidden_action = self._menu.addAction(self.tr("Start Hidden"))
+        start_hidden_action.setCheckable(True)
+        start_hidden_action.setChecked(
+            bool(self._settings.value("tray/start_hidden", False, type=bool))
+        )
+        start_hidden_action.toggled.connect(
+            lambda checked: self._settings.setValue("tray/start_hidden", checked)
+        )
+
         keep_running_action = self._menu.addAction(
             self.tr("Keep running after Exit hotkey")
         )
         keep_running_action.setCheckable(True)
         keep_running_action.setChecked(
-            self._settings.value("tray/keep_running_on_exit", False, type=bool)
+            bool(self._settings.value("tray/keep_running_on_exit", False, type=bool))
         )
         keep_running_action.toggled.connect(
             lambda checked: self._settings.setValue(

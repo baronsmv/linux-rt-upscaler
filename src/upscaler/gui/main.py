@@ -74,6 +74,9 @@ class MainWindow(QMainWindow):
         self._auto_applied_profile: Optional[str] = None
         self._stopping_manual_session: bool = False
         self._hide_gui_after_stop: bool = False
+        self._start_hidden: bool = bool(
+            self.settings.value("tray/enabled", False, type=bool)
+        ) and bool(self.settings.value("tray/start_hidden", False, type=bool))
 
         # GUI Palette
         palette = load_gui_style() or PRESETS["Auto"]
@@ -96,6 +99,11 @@ class MainWindow(QMainWindow):
 
         # Setup UI
         self._setup_ui()
+
+        # If tray is enabled and start_hidden is set, hide the main window at startup
+        if self._start_hidden:
+            self.hide_gui()
+
         self._config_manager.config_changed.connect(self._on_config_changed)
         QApplication.instance().aboutToQuit.connect(self.cleanup_before_quit)
 
@@ -252,11 +260,12 @@ class MainWindow(QMainWindow):
         # ------------------------------------------------------------------
         # Background tasks
         # ------------------------------------------------------------------
-        QTimer.singleShot(0, self.grid_mgr.start)
+        if not self._start_hidden:
+            QTimer.singleShot(0, self.grid_mgr.start)
         geometry = self.settings.value("mainwindow/geometry")
         if geometry is not None:
             self.restoreGeometry(geometry)
-        else:
+        elif not self._start_hidden:
             self.showMaximized()
 
         # Activate initial profile if given on command line

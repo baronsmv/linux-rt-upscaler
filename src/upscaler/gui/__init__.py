@@ -82,7 +82,11 @@ def main() -> None:
     # Main window
     window = MainWindow(config_manager, profile_name=profile_name)
     manager.show_requested.connect(window.activate_from_second_instance)
-    window.show()
+    if not (
+        window.settings.value("tray/enabled", False, type=bool)
+        and window.settings.value("tray/start_hidden", False, type=bool)
+    ):
+        window.show()
 
     # Ctrl+C behave as expected
     signal.signal(signal.SIGINT, signal.SIG_DFL)
