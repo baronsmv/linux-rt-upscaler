@@ -237,18 +237,15 @@ class TrayController(QObject):
                     color=self._main_window.gui_config.palette.icon,
                 )
             )
-            stop_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
             stop_action.triggered.connect(self._stop_upscaling)
         else:
             if main_window_visible:
                 label = self.tr("Hide")
                 icon_name = "actions/hide"
-                shortcut = QKeySequence("Ctrl+Shift+H")
                 handler = self._hide_main_window
             else:
                 label = self.tr("Show")
                 icon_name = "actions/show"
-                shortcut = QKeySequence("Ctrl+Shift+O")
                 handler = self._show_main_window
 
             action = self._menu.addAction(label)
@@ -257,7 +254,6 @@ class TrayController(QObject):
                     icon_name, 16, 16, color=self._main_window.gui_config.palette.icon
                 )
             )
-            action.setShortcut(shortcut)
             action.triggered.connect(handler)
 
         # --------------------------------------------------------------
