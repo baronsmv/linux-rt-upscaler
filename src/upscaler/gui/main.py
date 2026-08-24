@@ -224,8 +224,9 @@ class MainWindow(QMainWindow):
         self.splitter.splitterMoved.connect(self._on_splitter_moved)
         main_layout.addWidget(self.splitter)
 
-        # Ctrl+F shortcut
+        # Shortcuts
         QShortcut(QKeySequence("Ctrl+F"), self, self.filter_bar.set_focus)
+        QShortcut(QKeySequence("Ctrl+Q"), self, self._force_quit)
 
         # ------------------------------------------------------------------
         # Signals
@@ -286,6 +287,12 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _on_window_selected(self, win_info: WindowInfo) -> None:
         """Auto-apply a matching profile, then start a one-shot pipeline."""
+        if self.manual_session is not None:
+            logger.warning(
+                "A manual session is already active; ignoring new selection."
+            )
+            return
+
         # Daemon mode: always auto-matches
         if self.daemon_ctrl.active:
             self.grid_mgr.stop()
@@ -495,6 +502,23 @@ class MainWindow(QMainWindow):
             self.left_sidebar.set_active_item(active_profile)
         if daemon_was_active:
             QTimer.singleShot(0, self.daemon_ctrl.start)
+
+    def _force_quit(self) -> None:
+        """Immediately shut down the application, ignoring tray preferences."""
+        self.force_exit = True
+
+        # Stop any active manual session
+        if self.manual_session is not None:
+            self.manual_session.shutdown()
+            self.manual_session = None
+
+        # Stop the daemon if it is running
+        if self.daemon_ctrl.active:
+            self.daemon_ctrl.stop()
+
+        # Close the main window
+        self.close()
+        QApplication.instance().quit()
 
     def _on_style_applied(self, new_palette: GUIPalette) -> None:
         """Save the new palette to disk and rebuild the GUI with it."""
