@@ -123,8 +123,8 @@ class DaemonController(QObject):
         ) and self._main_window.settings.value(
             "tray/keep_running_on_exit", False, type=bool
         ):
-            # Stop daemon but keep app running
-            self.stop()
+            # Keep app running: stop daemon and update GUI state
+            self._main_window.set_daemon_mode(False)
         else:
             self._main_window.force_exit = True
             session = self._session

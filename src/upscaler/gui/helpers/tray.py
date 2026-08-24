@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QSettings, QTimer
-from PySide6.QtGui import QKeySequence, QIcon, QPixmap
+from PySide6.QtGui import QAction, QKeySequence, QIcon, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from ..icons import load_icon
@@ -38,6 +38,7 @@ class TrayController(QObject):
         self._settings = QSettings("linux-rt-upscaler")
 
         # Cache used for change detection
+        self._daemon_action: Optional[QAction] = None
         self._cached_signature: Optional[Tuple] = None
         self._icon_cache: Dict[int, QIcon] = {}
 
@@ -47,6 +48,7 @@ class TrayController(QObject):
 
         # Build a persistent QMenu; its contents are refreshed as needed
         self._menu = QMenu()
+        self._menu.aboutToShow.connect(self._update_daemon_check_state)
         self.tray_icon.setContextMenu(self._menu)
 
         # Tray icon activation
@@ -266,6 +268,7 @@ class TrayController(QObject):
         daemon_action.setChecked(daemon_active)
         daemon_action.toggled.connect(self._main_window.set_daemon_mode)
         daemon_action.toggled.connect(lambda _: self.refresh_menu())
+        self._daemon_action = daemon_action
 
         self._menu.addSeparator()
 
@@ -316,6 +319,24 @@ class TrayController(QObject):
         exit_action.setShortcut(QKeySequence("Ctrl+Q"))
         exit_action.triggered.connect(self._quit_app)
 
+    # ------------------------------------------------------------------
+    #  Slots / helpers
+    # ------------------------------------------------------------------
+    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+        """Handle double‑click (or platform equivalent) to show the window."""
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            if self._is_main_window_visible():
+                self._hide_main_window()
+            else:
+                self._show_main_window()
+
+    def _update_daemon_check_state(self) -> None:
+        """Update the state of the daemon checkbox."""
+        if self._daemon_action is not None:
+            self._daemon_action.blockSignals(True)
+            self._daemon_action.setChecked(self._daemon_ctrl.active)
+            self._daemon_action.blockSignals(False)
+
     def _get_window_icon(self, handle: int) -> QIcon:
         """Return a cached QIcon for the given window, fetching it if needed."""
         if handle not in self._icon_cache:
@@ -325,17 +346,6 @@ class TrayController(QObject):
             else:
                 self._icon_cache[handle] = QIcon()  # empty icon
         return self._icon_cache[handle]
-
-    # ------------------------------------------------------------------
-    #  Slots / action handlers
-    # ------------------------------------------------------------------
-    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
-        """Handle double‑click (or platform equivalent) to show the window."""
-        if reason == QSystemTrayIcon.ActivationReason.Trigger:
-            if self._is_main_window_visible():
-                self._hide_main_window()
-            else:
-                self._show_main_window()
 
     def _start_upscaling(self, win_info: WindowInfo) -> None:
         """Start a manual upscaling session for the given window."""
