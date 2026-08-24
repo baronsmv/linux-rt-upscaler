@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Optional
 
 from PySide6.QtCore import QObject, Signal
@@ -31,30 +30,24 @@ class InstanceManager(QObject):
 
         # Try to connect to an existing server (secondary instance)
         socket = QLocalSocket()
-        for _ in range(30):  # up to 3 seconds, 100ms each
-            socket.connectToServer(self._key)
-            if socket.waitForConnected(100):
-                # We are a secondary instance
-                socket.write(b"show")
-                socket.flush()
-                socket.waitForBytesWritten(100)
-                socket.disconnectFromServer()
-                socket.deleteLater()
-                self._is_primary = False
-                return
+        socket.connectToServer(self._key)
+        if socket.waitForConnected(300):
+            # Secondary instance
+            socket.write(b"show")
+            socket.flush()
+            socket.waitForBytesWritten(100)
             socket.disconnectFromServer()
-            socket.abort()
-            time.sleep(0.1)
+            self._is_primary = False
+            return
 
-        # No server found -> become primary
-        QLocalServer.removeServer(self._key)  # clear any stale server
+        # No existing server, become primary
+        socket.abort()
+        socket.deleteLater()
+        QLocalServer.removeServer(self._key)
         self._server = QLocalServer(self)
-        if not self._server.listen(self._key):
-            # If listen fails, fall back to primary anyway
-            self._is_primary = True
-        else:
-            self._server.newConnection.connect(self._on_new_connection)
-            self._is_primary = True
+        self._server.listen(self._key)
+        self._server.newConnection.connect(self._on_new_connection)
+        self._is_primary = True
 
     @property
     def is_primary(self) -> bool:

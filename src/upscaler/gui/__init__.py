@@ -50,12 +50,6 @@ def _install_translators(app: QApplication) -> None:
 
 def main() -> None:
     """Start the upscaler GUI application."""
-    # Single-instance guard
-    manager = InstanceManager("linux-rt-upscaler-gui")
-    if not manager.is_primary:
-        # Another instance is already running
-        sys.exit(0)
-
     # Parse CLI arguments (the GUI accepts the same options as the non-GUI version)
     try:
         overrides, profile_name, config_path = parse_args()
@@ -78,6 +72,12 @@ def main() -> None:
     app.setWindowIcon(load_icon("app/app", 256, 256))
     app.setApplicationName("upscale-gui")
     app.setDesktopFileName("io.github.baronsmv.linux-rt-upscaler")
+
+    # Single-instance manager
+    manager = InstanceManager("linux-rt-upscaler-gui")
+    if not manager.is_primary:
+        # Another instance is already running
+        sys.exit(0)
 
     # Main window
     window = MainWindow(config_manager, profile_name=profile_name)
