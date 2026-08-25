@@ -44,7 +44,7 @@ class TrayController(QObject):
 
         # Create the tray icon
         self.tray_icon = QSystemTrayIcon(load_icon("app/app", 64, 64), self)
-        self.tray_icon.setToolTip("Real-Time Upscaler")
+        self.tray_icon.setToolTip(self.tr("Real-Time Upscaler", "Tray icon tooltip"))
 
         # Build a persistent QMenu; its contents are refreshed as needed
         self._menu = QMenu()
@@ -214,7 +214,9 @@ class TrayController(QObject):
         # --------------------------------------------------------------
         if not session_active:
             for win in windows:
-                title = win.title or "Unknown"
+                title = win.title or self.tr(
+                    "Unknown", "Fallback if no window title was found"
+                )
                 action = self._menu.addAction(title)
                 action.setIcon(self._get_window_icon(win.handle))
                 action.setData(win)
@@ -228,7 +230,9 @@ class TrayController(QObject):
         # Show / Stop action (single action whose text/icon changes)
         # --------------------------------------------------------------
         if session_active:
-            stop_action = self._menu.addAction(self.tr("Stop"))
+            stop_action = self._menu.addAction(
+                self.tr("Stop", "Stop action for tray icon menu")
+            )
             stop_action.setIcon(
                 load_icon(
                     "actions/stop",
@@ -240,11 +244,11 @@ class TrayController(QObject):
             stop_action.triggered.connect(self._stop_upscaling)
         else:
             if main_window_visible:
-                label = self.tr("Hide")
+                label = self.tr("Hide", "Hide action for tray icon menu")
                 icon_name = "actions/hide"
                 handler = self._hide_main_window
             else:
-                label = self.tr("Show")
+                label = self.tr("Show", "Show action for tray icon menu")
                 icon_name = "actions/show"
                 handler = self._show_main_window
 
@@ -259,7 +263,9 @@ class TrayController(QObject):
         # --------------------------------------------------------------
         # Daemon Mode toggle
         # --------------------------------------------------------------
-        daemon_action = self._menu.addAction(self.tr("Daemon Mode"))
+        daemon_action = self._menu.addAction(
+            self.tr("Daemon Mode", "Daemon mode toggle for tray icon menu")
+        )
         daemon_action.setCheckable(True)
         daemon_action.setChecked(daemon_active)
         daemon_action.toggled.connect(self._main_window.set_daemon_mode)
@@ -271,21 +277,27 @@ class TrayController(QObject):
         # --------------------------------------------------------------
         # Tray options
         # --------------------------------------------------------------
-        close_to_tray_action = self._menu.addAction(self.tr("Close to Tray"))
+        close_to_tray_action = self._menu.addAction(
+            self.tr("Close to Tray", "Tray menu option")
+        )
         close_to_tray_action.setCheckable(True)
         close_to_tray_action.setChecked(close_to_tray)
         close_to_tray_action.toggled.connect(
             lambda checked: self._settings.setValue("tray/close_to_tray", checked)
         )
 
-        minimize_to_tray_action = self._menu.addAction(self.tr("Minimize to Tray"))
+        minimize_to_tray_action = self._menu.addAction(
+            self.tr("Minimize to Tray", "Tray menu option")
+        )
         minimize_to_tray_action.setCheckable(True)
         minimize_to_tray_action.setChecked(minimize_to_tray)
         minimize_to_tray_action.toggled.connect(
             lambda checked: self._settings.setValue("tray/minimize_to_tray", checked)
         )
 
-        start_hidden_action = self._menu.addAction(self.tr("Start Hidden"))
+        start_hidden_action = self._menu.addAction(
+            self.tr("Start Hidden", "Tray menu option")
+        )
         start_hidden_action.setCheckable(True)
         start_hidden_action.setChecked(
             bool(self._settings.value("tray/start_hidden", False, type=bool))
@@ -295,7 +307,7 @@ class TrayController(QObject):
         )
 
         keep_running_action = self._menu.addAction(
-            self.tr("Keep running after Exit hotkey")
+            self.tr("Keep running after Exit hotkey", "Tray menu option")
         )
         keep_running_action.setCheckable(True)
         keep_running_action.setChecked(
@@ -373,12 +385,20 @@ class TrayController(QObject):
         session = self._main_window.manual_session
         if session is not None and session.window_info is not None:
             title = session.window_info.title
-            message = f"Upscaling: {title}\n\nUse Stop from the tray menu to return."
+            message = self.tr(
+                "Upscaling: '{0}'.\nUse Stop from the tray menu to return.",
+                "Tray message if a window was already being upscaled. "
+                "{0} is the window title placeholder.",
+            ).format(title)
         else:
-            message = "Upscaling in progress.\n\nUse Stop from the tray menu to return."
+            message = self.tr(
+                "Upscaling in progress.\nUse Stop from the tray menu to return.",
+                "Tray message if a window was already being upscaled "
+                "and no window title was available to show.",
+            )
 
         self.tray_icon.showMessage(
-            "Real-Time Upscaler",
+            self.tr("Real-Time Upscaler", "Tray message title."),
             message,
             QSystemTrayIcon.MessageIcon.Information,
             5000,

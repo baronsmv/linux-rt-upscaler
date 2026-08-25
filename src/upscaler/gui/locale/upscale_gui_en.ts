@@ -38,52 +38,18 @@
     </message>
     <message>
       <location filename="../sidebars/tabs/advanced.py" line="33" />
-      <source>Vulkan Rendering</source>
-      <comment>Settings section</comment>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <location filename="../sidebars/tabs/advanced.py" line="35" />
-      <source>Buffer Pool Size</source>
-      <comment>Label of setting (must be short)</comment>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <location filename="../sidebars/tabs/advanced.py" line="41" />
-      <source>Number of buffers prepared in advance for updating the frame.
-Increase this if you see stuttering when many small areas change quickly.
-Recommended range: 2 - 16.</source>
-      <comment>Description of a setting (tooltip)</comment>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <location filename="../sidebars/tabs/advanced.py" line="49" />
-      <source>Frame Timeout (ms)</source>
-      <comment>Label of setting (must be short)</comment>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <location filename="../sidebars/tabs/advanced.py" line="55" />
-      <source>Maximum time to wait for the GPU to finish the previous frame.
-Lower values reduce waiting time but may cause dropped frames.
-Recommended range: 17 (1/60 s) - 1000 (1 s).</source>
-      <comment>Description of a setting (tooltip)</comment>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <location filename="../sidebars/tabs/advanced.py" line="64" />
       <source>Tile-Based Processing</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="66" />
+      <location filename="../sidebars/tabs/advanced.py" line="35" />
       <source>Enable Tile Mode</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="70" />
+      <location filename="../sidebars/tabs/advanced.py" line="39" />
       <source>Process only the parts of the frame that have changed, using small tiles.
 Best for mostly static content, such as text editors or visual novels.
 When disabled, the entire frame is processed at once, better for video or fast-moving content.</source>
@@ -91,40 +57,41 @@ When disabled, the entire frame is processed at once, better for video or fast-m
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="78" />
+      <location filename="../sidebars/tabs/advanced.py" line="47" />
       <source>Damage Tracking</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="82" />
+      <location filename="../sidebars/tabs/advanced.py" line="51" />
       <source>Send only the changed parts of the frame to the GPU, instead of the whole image.
 Disable this if you see glitches that may be caused by missed updates.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="89" />
+      <location filename="../sidebars/tabs/advanced.py" line="58" />
       <source>Tile Size</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="95" />
+      <location filename="../sidebars/tabs/advanced.py" line="64" />
       <source>Size of each tile in pixels.
-Smaller tiles update more precisely but use more CPU. Values that are multiples of 32 usually perform best.
+Smaller tiles update more precisely but use more CPU.
+Values that are multiples of 32 usually perform best.
 Recommended range: 32 - 128.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="103" />
+      <location filename="../sidebars/tabs/advanced.py" line="73" />
       <source>Context Margin</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="109" />
+      <location filename="../sidebars/tabs/advanced.py" line="79" />
       <source>Extra pixels added around each tile to give the neural network more context.
 Larger margins can improve quality at tile edges but increase processing.
 Recommended range: 4 - 24.</source>
@@ -132,13 +99,13 @@ Recommended range: 4 - 24.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="117" />
+      <location filename="../sidebars/tabs/advanced.py" line="87" />
       <source>Max Tiles per Frame</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="123" />
+      <location filename="../sidebars/tabs/advanced.py" line="93" />
       <source>Maximum number of changed tiles to process per frame.
 If more tiles than this need updating, the whole frame will be processed instead.
 Recommended range: 4 - 32.</source>
@@ -146,13 +113,13 @@ Recommended range: 4 - 32.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="131" />
+      <location filename="../sidebars/tabs/advanced.py" line="101" />
       <source>Area Threshold %</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="138" />
+      <location filename="../sidebars/tabs/advanced.py" line="108" />
       <source>If more than this percentage of the frame has changed, the whole frame will be processed instead of individual tiles.
 Lower values switch to full-frame processing sooner.
 Recommended range: 15% - 50%.</source>
@@ -160,84 +127,98 @@ Recommended range: 15% - 50%.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="148" />
+      <location filename="../sidebars/tabs/advanced.py" line="118" />
       <source>Timing</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="150" />
+      <location filename="../sidebars/tabs/advanced.py" line="120" />
+      <source>Frame Timeout (ms)</source>
+      <comment>Label of setting (must be short)</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../sidebars/tabs/advanced.py" line="126" />
+      <source>Maximum time to wait for the GPU to finish the previous frame.
+Lower values reduce waiting time but may cause dropped frames.
+Recommended range: 17 (1/60 s) - 1000 (1 s).</source>
+      <comment>Description of a setting (tooltip)</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../sidebars/tabs/advanced.py" line="134" />
       <source>Daemon Poll (s)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="157" />
+      <location filename="../sidebars/tabs/advanced.py" line="141" />
       <source>How often the background service checks for matching windows.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="163" />
+      <location filename="../sidebars/tabs/advanced.py" line="147" />
       <source>Focus Poll (s)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="170" />
+      <location filename="../sidebars/tabs/advanced.py" line="154" />
       <source>How often the program checks which window is currently active.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="176" />
+      <location filename="../sidebars/tabs/advanced.py" line="160" />
       <source>Pipeline Idle (s)</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="183" />
+      <location filename="../sidebars/tabs/advanced.py" line="167" />
       <source>How often the program checks its internal state when no changes are detected.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="190" />
+      <location filename="../sidebars/tabs/advanced.py" line="174" />
       <source>Error Recovery</source>
       <comment>Settings section</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="192" />
+      <location filename="../sidebars/tabs/advanced.py" line="176" />
       <source>Max Capture Failures</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="199" />
+      <location filename="../sidebars/tabs/advanced.py" line="183" />
       <source>Number of consecutive frame capture failures before the program stops.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="205" />
+      <location filename="../sidebars/tabs/advanced.py" line="189" />
       <source>Capture Failure Delay (s)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="212" />
+      <location filename="../sidebars/tabs/advanced.py" line="196" />
       <source>Delay after a capture failure before trying again.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="218" />
+      <location filename="../sidebars/tabs/advanced.py" line="202" />
       <source>Swapchain Debounce (s)</source>
       <comment>Label of setting (must be short)</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../sidebars/tabs/advanced.py" line="225" />
+      <location filename="../sidebars/tabs/advanced.py" line="209" />
       <source>Minimum time between two Vulkan swapchain recreations.
 This prevents unnecessary rebuilds of the rendering pipeline.</source>
       <comment>Description of a setting (tooltip)</comment>
@@ -731,7 +712,7 @@ Larger values produce coarser, more visible grain.</source>
 All models upscale to 2x, and are ordered from lowest to highest quality.
 Rightmost models are deeper and slower, but produce better results.
 The value 'none' disables SRCNN processing and uses only the selected scaler (upsampler/downsampler).</source>
-      <comment>Description of a setting (tooltip). Do not translate 'none', since it's a model identifier.</comment>
+      <comment>Description of a setting (tooltip). Do not translate 'none', since it's a model identifier</comment>
       <translation type="unfinished" />
     </message>
     <message>
@@ -815,38 +796,44 @@ Turn off to manually select a window from the grid.</source>
   <context>
     <name>MainWindow</name>
     <message>
-      <location filename="../main.py" line="84" />
+      <location filename="../main.py" line="96" />
       <source>Real-Time Upscaler</source>
       <comment>Localized name of the application</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="143" />
+      <location filename="../main.py" line="161" />
+      <source>Enable/Disable System Tray</source>
+      <comment>Tray toggle button</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../main.py" line="181" />
       <source>About Real-Time Upscaler.</source>
       <comment>About dialog button</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="342" />
+      <location filename="../main.py" line="400" />
       <source>Error</source>
       <comment>Error starting pipeline</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="343" />
+      <location filename="../main.py" line="401" />
       <source>Could not start pipeline:
 {0}</source>
       <comment>Error starting pipeline</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="463" />
+      <location filename="../main.py" line="564" />
       <source>Save Error</source>
       <comment>Error while saving configuration</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="464" />
+      <location filename="../main.py" line="565" />
       <source>Could not save:
 {0}</source>
       <comment>Error while saving configuration</comment>
@@ -1946,6 +1933,94 @@ Higher radii reduce aliasing but increase GPU load.</source>
       <location filename="../sidebars/tabs/style.py" line="261" />
       <source>Select a pre-built color scheme for the GUI.</source>
       <comment>Description of a setting (tooltip). Preset names are not translated.</comment>
+      <translation type="unfinished" />
+    </message>
+  </context>
+  <context>
+    <name>TrayController</name>
+    <message>
+      <location filename="../helpers/tray.py" line="47" />
+      <source>Real-Time Upscaler</source>
+      <comment>Tray icon tooltip</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="217" />
+      <source>Unknown</source>
+      <comment>Fallback if no window title was found</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="234" />
+      <source>Stop</source>
+      <comment>Stop action for tray icon menu</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="247" />
+      <source>Hide</source>
+      <comment>Hide action for tray icon menu</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="251" />
+      <source>Show</source>
+      <comment>Show action for tray icon menu</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="267" />
+      <source>Daemon Mode</source>
+      <comment>Daemon mode toggle for tray icon menu</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="281" />
+      <source>Close to Tray</source>
+      <comment>Tray menu option</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="290" />
+      <source>Minimize to Tray</source>
+      <comment>Tray menu option</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="299" />
+      <source>Start Hidden</source>
+      <comment>Tray menu option</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="310" />
+      <source>Keep running after Exit hotkey</source>
+      <comment>Tray menu option</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="327" />
+      <source>Exit</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="388" />
+      <source>Upscaling: '{0}'.
+Use Stop from the tray menu to return.</source>
+      <comment>Tray message if a window was already being upscaled. {0} is the window title placeholder.</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="394" />
+      <source>Upscaling in progress.
+Use Stop from the tray menu to return.</source>
+      <comment>Tray message if a window was already being upscaled and no window title was available to show.</comment>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../helpers/tray.py" line="401" />
+      <source>Real-Time Upscaler</source>
+      <comment>Tray message title.</comment>
       <translation type="unfinished" />
     </message>
   </context>
