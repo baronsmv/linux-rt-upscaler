@@ -17,6 +17,31 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _get_signature(
+    windows: List[WindowInfo],
+    session_active: bool,
+    daemon_active: bool,
+    close_to_tray: bool,
+    minimize_to_tray: bool,
+    main_window_visible: bool,
+) -> Tuple:
+    """
+    Build a hashable signature representing the current menu state.
+
+    The window list is sorted by (handle, title) to ensure a stable
+    order and to detect any change in the set of visible windows.
+    """
+    window_sig = tuple(sorted((w.handle, w.title or "") for w in windows))
+    return (
+        window_sig,
+        session_active,
+        daemon_active,
+        close_to_tray,
+        minimize_to_tray,
+        main_window_visible,
+    )
+
+
 class TrayController(QObject):
     """Manages the system tray icon and its context menu."""
 
@@ -107,31 +132,6 @@ class TrayController(QObject):
         """Check if the main window is visible."""
         return self._main_window.isVisible() and not self._main_window.isMinimized()
 
-    def _get_signature(
-        self,
-        windows: List[WindowInfo],
-        session_active: bool,
-        daemon_active: bool,
-        close_to_tray: bool,
-        minimize_to_tray: bool,
-        main_window_visible: bool,
-    ) -> Tuple:
-        """
-        Build a hashable signature representing the current menu state.
-
-        The window list is sorted by (handle, title) to ensure a stable
-        order and to detect any change in the set of visible windows.
-        """
-        window_sig = tuple(sorted((w.handle, w.title or "") for w in windows))
-        return (
-            window_sig,
-            session_active,
-            daemon_active,
-            close_to_tray,
-            minimize_to_tray,
-            main_window_visible,
-        )
-
     def refresh_menu(self) -> None:
         """
         Rebuild the menu only if the cached signature differs from the
@@ -148,7 +148,7 @@ class TrayController(QObject):
         close_to_tray, minimize_to_tray = self._get_tray_option_states()
         main_window_visible = self._is_main_window_visible()
 
-        new_signature = self._get_signature(
+        new_signature = _get_signature(
             windows,
             session_active,
             daemon_active,
@@ -199,7 +199,7 @@ class TrayController(QObject):
             main_window_visible = self._is_main_window_visible()
 
         # Update the cached signature for consistency
-        self._cached_signature = self._get_signature(
+        self._cached_signature = _get_signature(
             windows,
             session_active,
             daemon_active,
