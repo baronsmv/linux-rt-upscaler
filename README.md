@@ -62,7 +62,6 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 ## Roadmap
 
 - [ ] GUI Profiles operations (drag & drop, duplicate)
-- [ ] GUI System Tray
 - [ ] Complete GUI Style settings (font size, spacing, etc.)
 - [ ] More SRCNN models ([FSRCNNX](https://github.com/igv/FSRCNN-TensorFlow/releases/tag/1.1) planned)
 - [ ] ~~Native Wayland upscaling~~ (not planned: see [Architecture Limitations](https://baronsmv.github.io/linux-rt-upscaler/developer/architecture/limitations/#native-wayland-is-not-supported))
