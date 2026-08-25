@@ -44,7 +44,9 @@ class TrayController(QObject):
 
         # Create the tray icon
         self.tray_icon = QSystemTrayIcon(load_icon("app/app", 64, 64), self)
-        self.tray_icon.setToolTip(self.tr("Real-Time Upscaler", "Tray icon tooltip"))
+        self.tray_icon.setToolTip(
+            self.tr("Real-Time Upscaler", "Name of the application")
+        )
 
         # Build a persistent QMenu; its contents are refreshed as needed
         self._menu = QMenu()
@@ -398,7 +400,7 @@ class TrayController(QObject):
             )
 
         self.tray_icon.showMessage(
-            self.tr("Real-Time Upscaler", "Tray message title."),
+            self.tr("Real-Time Upscaler", "Name of the application"),
             message,
             QSystemTrayIcon.MessageIcon.Information,
             5000,

@@ -92,7 +92,7 @@ class AboutDialog(QDialog):
         layout.addLayout(icon_container)
 
         # App name
-        name = QLabel(self.tr("Real-Time Upscaler", "Localized application name"))
+        name = QLabel(self.tr("Real-Time Upscaler", "Name of the application"))
         name.setAlignment(Qt.AlignCenter)
         name.setStyleSheet(about_dialog_name_style(gui_config))
         layout.addWidget(name)

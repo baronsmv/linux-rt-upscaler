@@ -92,9 +92,7 @@ class MainWindow(QMainWindow):
         os.makedirs(self._icons_dir, exist_ok=True)
 
         # Window properties
-        self.setWindowTitle(
-            self.tr("Real-Time Upscaler", "Localized name of the application")
-        )
+        self.setWindowTitle(self.tr("Real-Time Upscaler", "Name of the application"))
         self.setMinimumSize(1200, 600)
 
         # Setup UI

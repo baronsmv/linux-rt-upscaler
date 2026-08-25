@@ -6,7 +6,7 @@
     <message>
       <location filename="../dialogs/about.py" line="95" />
       <source>Real-Time Upscaler</source>
-      <comment>Localized application name</comment>
+      <comment>Name of the application</comment>
       <translation type="unfinished" />
     </message>
     <message>
@@ -796,44 +796,44 @@ Turn off to manually select a window from the grid.</source>
   <context>
     <name>MainWindow</name>
     <message>
-      <location filename="../main.py" line="96" />
+      <location filename="../main.py" line="95" />
       <source>Real-Time Upscaler</source>
-      <comment>Localized name of the application</comment>
+      <comment>Name of the application</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="161" />
+      <location filename="../main.py" line="159" />
       <source>Enable/Disable System Tray</source>
       <comment>Tray toggle button</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="181" />
+      <location filename="../main.py" line="179" />
       <source>About Real-Time Upscaler.</source>
       <comment>About dialog button</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="400" />
+      <location filename="../main.py" line="398" />
       <source>Error</source>
       <comment>Error starting pipeline</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="401" />
+      <location filename="../main.py" line="399" />
       <source>Could not start pipeline:
 {0}</source>
       <comment>Error starting pipeline</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="564" />
+      <location filename="../main.py" line="562" />
       <source>Save Error</source>
       <comment>Error while saving configuration</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../main.py" line="565" />
+      <location filename="../main.py" line="563" />
       <source>Could not save:
 {0}</source>
       <comment>Error while saving configuration</comment>
@@ -1939,88 +1939,83 @@ Higher radii reduce aliasing but increase GPU load.</source>
   <context>
     <name>TrayController</name>
     <message>
-      <location filename="../helpers/tray.py" line="47" />
+      <location filename="../helpers/tray.py" line="403" />
+      <location filename="../helpers/tray.py" line="48" />
       <source>Real-Time Upscaler</source>
-      <comment>Tray icon tooltip</comment>
+      <comment>Name of the application</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="217" />
+      <location filename="../helpers/tray.py" line="219" />
       <source>Unknown</source>
       <comment>Fallback if no window title was found</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="234" />
+      <location filename="../helpers/tray.py" line="236" />
       <source>Stop</source>
       <comment>Stop action for tray icon menu</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="247" />
+      <location filename="../helpers/tray.py" line="249" />
       <source>Hide</source>
       <comment>Hide action for tray icon menu</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="251" />
+      <location filename="../helpers/tray.py" line="253" />
       <source>Show</source>
       <comment>Show action for tray icon menu</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="267" />
+      <location filename="../helpers/tray.py" line="269" />
       <source>Daemon Mode</source>
       <comment>Daemon mode toggle for tray icon menu</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="281" />
+      <location filename="../helpers/tray.py" line="283" />
       <source>Close to Tray</source>
       <comment>Tray menu option</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="290" />
+      <location filename="../helpers/tray.py" line="292" />
       <source>Minimize to Tray</source>
       <comment>Tray menu option</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="299" />
+      <location filename="../helpers/tray.py" line="301" />
       <source>Start Hidden</source>
       <comment>Tray menu option</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="310" />
+      <location filename="../helpers/tray.py" line="312" />
       <source>Keep running after Exit hotkey</source>
       <comment>Tray menu option</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="327" />
+      <location filename="../helpers/tray.py" line="329" />
       <source>Exit</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="388" />
+      <location filename="../helpers/tray.py" line="390" />
       <source>Upscaling: '{0}'.
 Use Stop from the tray menu to return.</source>
       <comment>Tray message if a window was already being upscaled. {0} is the window title placeholder.</comment>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../helpers/tray.py" line="394" />
+      <location filename="../helpers/tray.py" line="396" />
       <source>Upscaling in progress.
 Use Stop from the tray menu to return.</source>
       <comment>Tray message if a window was already being upscaled and no window title was available to show.</comment>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <location filename="../helpers/tray.py" line="401" />
-      <source>Real-Time Upscaler</source>
-      <comment>Tray message title.</comment>
       <translation type="unfinished" />
     </message>
   </context>
