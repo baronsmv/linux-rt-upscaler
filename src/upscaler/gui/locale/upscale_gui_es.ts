@@ -40,13 +40,13 @@
         <location filename="../sidebars/tabs/advanced.py" line="33"/>
         <source>Tile-Based Processing</source>
         <comment>Settings section</comment>
-        <translation>Procesamiento basado en bloques</translation>
+        <translation>Procesamiento por bloques</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="35"/>
         <source>Enable Tile Mode</source>
         <comment>Label of setting (must be short)</comment>
-        <translation>Habilitar Procesamiento basado en bloques</translation>
+        <translation>Habilitar Procesamiento por bloques</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="39"/>
@@ -217,7 +217,7 @@ Rango recomendado: 17 (1/60 s) - 1000 (1 s).</translation>
         <location filename="../sidebars/tabs/advanced.py" line="189"/>
         <source>Capture Failure Delay (s)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation>Retardo de fallo de captura (s)</translation>
+        <translation>Retardo de fallos (s)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="196"/>
@@ -278,7 +278,7 @@ Esto evita reconstrucciones innecesarias del pipeline de renderizado.</translati
         <location filename="../sidebars/tabs/display.py" line="50"/>
         <source>Monitor used for upscaling: the primary monitor, multi-monitor, or a specific output name (for example, HDMI-1).</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation>Monitor utilizada para el escalado: el monitor primario, multi-monitor, o un nombre específico (por ejemplo, HDMI-1).</translation>
+        <translation>Monitor utilizado para el escalado: el monitor primario, multi-monitor, o un nombre específico (por ejemplo, HDMI-1).</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/display.py" line="63"/>
@@ -304,7 +304,7 @@ Selecciona &apos;{0}&apos; para utilizar automáticamente la GPU disponible más
         <location filename="../sidebars/tabs/display.py" line="82"/>
         <source>Present Mode</source>
         <comment>Label of setting (must be short)</comment>
-        <translation>Mode de presentación</translation>
+        <translation>Modo de presentación</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/display.py" line="87"/>
@@ -395,7 +395,7 @@ Solo disponible cuando Auto-escala está desactivada.</translation>
         <location filename="../sidebars/tabs/effects.py" line="35"/>
         <source>Enable Deband</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished">Habilitar Supresión de bandas</translation>
+        <translation>Habilitar Supresión de bandas</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="39"/>
@@ -459,7 +459,7 @@ Rango recomendado: 0.20 - 0.50.</translation>
         <location filename="../sidebars/tabs/effects.py" line="90"/>
         <source>Enable Bloom</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished">Habilitar Resplandor</translation>
+        <translation>Habilitar Resplandor</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="94"/>
@@ -474,7 +474,7 @@ Puede generar halos, especialmente con texto blanco.</translation>
         <source>Bloom intensity.
 Recommended range: 0.02 - 0.06.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished">Intensidad del resplandor.
+        <translation>Intensidad del resplandor.
 Rango recomendado: 0.02 - 0.06.</translation>
     </message>
     <message>
@@ -567,69 +567,71 @@ Valores bajos lo hacen más suave, mientras que valores altos lo definen con má
         <location filename="../sidebars/tabs/effects.py" line="211"/>
         <source>Simulated film grain look.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Apariencia de grano de película.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="224"/>
         <source>Grain intensity.
 Recommended range: 0.10 - 0.20.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Intensidad del grano de película.
+Rango recomendado: 0.10 - 0.20.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="232"/>
         <source>Size</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Tamaño</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="239"/>
         <source>Particle size of the grain.
 Larger values produce coarser, more visible grain.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Tamaño de partícula del grano de película.
+Valores más altos producen un grano más grueso y visible.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="248"/>
         <source>Color Grading (3D LUT)</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ajuste de color (3D LUT)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="250"/>
         <source>Enable LUT</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Habilitar LUT</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="254"/>
         <source>Apply a color grading preset (LUT) to change the look of the window.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Aplica un ajuste preestablecido de gradación de color (LUT) para cambiar el aspecto de la ventana.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="260"/>
         <source>Preset</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ajuste preestablecido</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="265"/>
         <source>Built-in color grading preset (warm, cool, film, sepia, etc.).</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ajuste preestablecido de gradación de color integrado (cálido (warm, frío (cool), cine (film), sepia, etc.).</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="273"/>
         <source>Intensity</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Intensidad</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="280"/>
         <source>Blend between original and graded image.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Mezcla entre la imagen original y la gradación de color.</translation>
     </message>
 </context>
 <context>
@@ -638,31 +640,31 @@ Larger values produce coarser, more visible grain.</source>
         <location filename="../sidebars/tabs/extras.py" line="25"/>
         <source>Extras</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Extras</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="32"/>
         <source>Screenshot Location</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Capturas de pantalla</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="34"/>
         <source>Directory</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Directorio</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="38"/>
         <source>Folder where screenshots are saved.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Directorio donde las capturas de pantalla son guardadas.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="44"/>
         <source>Template</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Plantilla</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="48"/>
@@ -674,37 +676,43 @@ Larger values produce coarser, more visible grain.</source>
 • {width}: upscaled image width
 • {height}: upscaled image height</source>
         <comment>Description of a setting (tooltip). Keep all placeholders exactly as they are, including braces, for example {timestamp} and the strftime format inside it.</comment>
-        <translation type="unfinished"></translation>
+        <translation>Plantilla de nombre de archivo para capturas de pantalla. Puedes utilizar estos marcadores de posición:
+• {timestamp}: hora de la captura (admite strftime; por ejemplo, {timestamp:%Y-%m-%d-%H-%M-%S})
+• {title}: título de la ventana actual
+• {profile}: nombre del perfil activo (o el título de la ventana si no hay perfil)
+• {model}: modelo de escalado activo
+• {width}: anchura de la imagen escalada
+• {height}: altura de la imagen escalada</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="64"/>
         <source>On-Screen Display</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Mensajes en pantalla</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="66"/>
         <source>Show OSD</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Mostrar OSD</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="70"/>
         <source>Show on-screen messages when the model, window geometry, or zoom changes, or after taking a screenshot.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Muestra mensajes en pantalla cuando se cambia el modelo, la geometría de la ventana o el zoom, o al realizar una captura de pantalla.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="77"/>
         <source>Duration (s)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Duración (s)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/extras.py" line="84"/>
         <source>How many seconds on-screen messages remain visible before fading out.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Cuántos segundos permanecen visibles los mensajes en pantalla antes de desvanecerse.</translation>
     </message>
 </context>
 <context>
@@ -713,7 +721,7 @@ Larger values produce coarser, more visible grain.</source>
         <location filename="../grid/filter.py" line="35"/>
         <source>Filter windows</source>
         <comment>Filter windows search bar placeholder</comment>
-        <translation type="unfinished"></translation>
+        <translation>Filtrar ventanas</translation>
     </message>
 </context>
 <context>
@@ -722,19 +730,19 @@ Larger values produce coarser, more visible grain.</source>
         <location filename="../sidebars/tabs/general.py" line="32"/>
         <source>General</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>General</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="39"/>
         <source>Upscaling Model</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Modelo de escalado</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="41"/>
         <source>Model</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Modelo</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="46"/>
@@ -743,13 +751,16 @@ All models upscale to 2x, and are ordered from lowest to highest quality.
 Rightmost models are deeper and slower, but produce better results.
 The value &apos;none&apos; disables SRCNN processing and uses only the selected scaler (upsampler/downsampler).</source>
         <comment>Description of a setting (tooltip). Do not translate &apos;none&apos;, since it&apos;s a model identifier</comment>
-        <translation type="unfinished"></translation>
+        <translation>Modelo SRCNN de escalado a utilizar.
+Todos los modelos realizan un escalado 2x y están ordenados de menor a mayor calidad.
+Los modelos más a la derecha son más profundos y lentos, pero ofrecen mejores resultados.
+El valor &apos;none&apos; desactiva el procesamiento SRCNN y utiliza únicamente el remuestrador seleccionado (sobremuestrador/submuestrador).</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="56"/>
         <source>Double Upscale (4x)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escalado doble (4x)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="60"/>
@@ -757,70 +768,75 @@ The value &apos;none&apos; disables SRCNN processing and uses only the selected 
 Useful for high-resolution screens (4K) and low-resolution sources.
 Uses more GPU power.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Realiza dos escalados 2x consecutivos para obtener un total de 4x (por ejemplo, de 720p a 2880p).
+Útil para pantallas de alta resolución (4K) y fuentes de baja resolución.
+Consume más recursos de la GPU.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="70"/>
         <source>Focus Tracking</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Seguimiento del enfoque</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="72"/>
         <source>Follow Focus</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Seguir enfoque</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="76"/>
         <source>Automatically upscale the window that currently has focus.
 Useful when working with multiple windows.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escala automáticamente la ventana que tenga el foco actualmente.
+Útil al trabajar con varias ventanas.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="83"/>
         <source>Pause on Focus Loss</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Pausa al perder foco</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="87"/>
         <source>Hide the upscaled overlay when the target window loses focus, and show it again when focus returns.
 Turn off to keep the overlay always visible.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Oculta la ventana de escalado cuando la ventana original pierde el foco, y vuelve a mostrarla cuando lo recupere.
+Desactive esta opción para mantener la ventana de escalado siempre visible.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="95"/>
         <source>Automatic Upscaling</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escalado Automático</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="98"/>
         <source>Exclude from Daemon Mode</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Excluir de Modo Demonio</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="102"/>
         <source>When Daemon Mode is active, this profile will not be used to automatically upscale matching windows.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Cuando el Modo Demonio está activo, este perfil no se utilizará para escalar automáticamente las ventanas que coincidan.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="110"/>
         <source>Daemon Mode</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Modo Demonio</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="114"/>
         <source>When enabled, a background process automatically upscales any window that matches a profile.
 Turn off to manually select a window from the grid.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Si esta opción está habilitada, un proceso en segundo plano escalará automáticamente cualquier ventana que coincida con un perfil.
+Desactive esta opción para seleccionar manualmente una ventana de la cuadrícula.</translation>
     </message>
 </context>
 <context>
@@ -829,45 +845,47 @@ Turn off to manually select a window from the grid.</source>
         <location filename="../main.py" line="95"/>
         <source>Real-Time Upscaler</source>
         <comment>Name of the application</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escalador en Tiempo Real</translation>
     </message>
     <message>
         <location filename="../main.py" line="159"/>
         <source>Enable/Disable System Tray</source>
         <comment>Tray toggle button</comment>
-        <translation type="unfinished"></translation>
+        <translation>Habilitar/Deshabilitar la bandeja del sistema</translation>
     </message>
     <message>
         <location filename="../main.py" line="179"/>
         <source>About Real-Time Upscaler.</source>
         <comment>About dialog button</comment>
-        <translation type="unfinished"></translation>
+        <translation>Acerca de Escalador en Tiempo Real.</translation>
     </message>
     <message>
         <location filename="../main.py" line="398"/>
         <source>Error</source>
         <comment>Error starting pipeline</comment>
-        <translation type="unfinished"></translation>
+        <translation>Error</translation>
     </message>
     <message>
         <location filename="../main.py" line="399"/>
         <source>Could not start pipeline:
 {0}</source>
         <comment>Error starting pipeline</comment>
-        <translation type="unfinished"></translation>
+        <translation>No se pudo inicializar el programa:
+{0}</translation>
     </message>
     <message>
         <location filename="../main.py" line="562"/>
         <source>Save Error</source>
         <comment>Error while saving configuration</comment>
-        <translation type="unfinished"></translation>
+        <translation>Error al guardar</translation>
     </message>
     <message>
         <location filename="../main.py" line="563"/>
         <source>Could not save:
 {0}</source>
         <comment>Error while saving configuration</comment>
-        <translation type="unfinished"></translation>
+        <translation>No se pudo guardar:
+{0}</translation>
     </message>
 </context>
 <context>
@@ -876,19 +894,19 @@ Turn off to manually select a window from the grid.</source>
         <location filename="../sidebars/controls/path.py" line="52"/>
         <source>Select directory</source>
         <comment>Path selector placeholder</comment>
-        <translation type="unfinished"></translation>
+        <translation>Seleccionar un directorio</translation>
     </message>
     <message>
         <location filename="../sidebars/controls/path.py" line="64"/>
         <source>Browse for directory.</source>
         <comment>Path selector placeholder</comment>
-        <translation type="unfinished"></translation>
+        <translation>Buscar directorio.</translation>
     </message>
     <message>
         <location filename="../sidebars/controls/path.py" line="113"/>
         <source>Choose screenshot directory</source>
         <comment>Screenshot directory dialog title</comment>
-        <translation type="unfinished"></translation>
+        <translation>Elegir directorio de capturas de pantalla</translation>
     </message>
 </context>
 <context>
@@ -897,19 +915,19 @@ Turn off to manually select a window from the grid.</source>
         <location filename="../sidebars/tabs/presentation.py" line="27"/>
         <source>Presentation</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Presentación</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="34"/>
         <source>Overlay</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ventana de escalado</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="36"/>
         <source>Overlay Mode</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Modo de ventana</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="41"/>
@@ -919,13 +937,17 @@ Turn off to manually select a window from the grid.</source>
 • fullscreen: covers entire monitor, keyboard may not reach the target window
 • windowed: normal window with decorations, keyboard may not reach the target window</source>
         <comment>Description of a setting (tooltip). Do not translate &apos;always-on-top&apos;, &apos;top-transparent&apos;, &apos;fullscreen&apos;, &apos;windowed&apos;: they are internal overlay mode identifiers.</comment>
-        <translation type="unfinished"></translation>
+        <translation>Comportamiento de la ventana de escalado:
+• &apos;always-on-top&apos;: siempre visible encima de otras ventanas, mantiene el foco en la ventana de destino (recomendado)
+• &apos;top-transparent&apos;: igual que &apos;always-on-top&apos;, pero los clicks del mouse pasan a la ventana debajo
+• &apos;fullscreen&apos;: cubre todo el monitor, es posible que los eventos de teclado no lleguen a la ventana de destino
+• &apos;windowed&apos;: ventana normal con decoraciones, es posible que los eventos de teclado no lleguen a la ventana de destino</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="53"/>
         <source>Output Geometry</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Geometría de salida</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="58"/>
@@ -934,141 +956,146 @@ Turn off to manually select a window from the grid.</source>
 • stretch: fill the whole area, aspect ratio may be distorted
 • cover: fill the whole area and crop any excess</source>
         <comment>Description of a setting (tooltip). Do not translate &apos;fit&apos;, &apos;stretch&apos;, &apos;cover&apos;: they are internal output geometry identifiers.</comment>
-        <translation type="unfinished"></translation>
+        <translation>Cómo se ajusta el contenido a la ventana de escalado:
+• ajustar (&apos;fit&apos;): mostrar la imagen completa, añadiendo franjas negras si es necesario
+• estirar (&apos;stretch&apos;): llenar toda el área; aunque la relación de aspecto pueda verse distorsionada
+• cubrir (&apos;cover&apos;): llenar toda el área y recortar el exceso</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="70"/>
         <source>Cursor</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Cursor</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="72"/>
         <source>Hide cursor</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Esconder cursor</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="76"/>
         <source>Automatically hide the mouse cursor after a period of inactivity.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ocultar automáticamente el cursor del ratón tras un periodo de inactividad.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="89"/>
         <source>Hide Timeout (s)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Periodo de inactividad (s)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="96"/>
         <source>Time in seconds after which the cursor disappears.
 Set to 0.00 to always hide the cursor.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Tiempo en segundos tras el cual desaparece el cursor.
+Un valor de 0.00 mantiene el cursor siempre oculto.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="105"/>
         <source>Crop</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Recorte de bordes</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="107"/>
         <source>Left</source>
         <comment>Crop border label</comment>
-        <translation type="unfinished"></translation>
+        <translation>Izquierdo</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="113"/>
         <source>Pixels to crop from the left border of the target window.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Píxeles a recortar desde el borde izquierdo de la ventana de destino.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="119"/>
         <source>Top</source>
         <comment>Crop border label</comment>
-        <translation type="unfinished"></translation>
+        <translation>Superior</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="125"/>
         <source>Pixels to crop from the top border of the target window.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Píxeles a recortar desde el borde superior de la ventana de destino.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="131"/>
         <source>Right</source>
         <comment>Crop border label</comment>
-        <translation type="unfinished"></translation>
+        <translation>Derecho</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="137"/>
         <source>Pixels to crop from the right border of the target window.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Píxeles a recortar desde el borde derecho de la ventana de destino.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="143"/>
         <source>Bottom</source>
         <comment>Crop border label</comment>
-        <translation type="unfinished"></translation>
+        <translation>Inferior</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="149"/>
         <source>Pixels to crop from the bottom border of the target window.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Píxeles a recortar desde el borde inferior de la ventana de destino.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="156"/>
         <source>Offset</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Desplazamiento</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="159"/>
         <source>X Offset</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Desplazamiento X</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="164"/>
         <source>Y Offset</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Desplazamiento Y</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="177"/>
         <source>Horizontal offset in pixels (positive moves right, negative moves left).</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Desplazamiento horizontal en píxeles (positivo mueve a la derecha, negativo mueve a la izquierda).</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="182"/>
         <source>Vertical offset in pixels (positive moves down, negative moves up).</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Desplazamiento vertical en píxeles (positivo mueve hacia abajo, negativo mueve hacia arriba).</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="190"/>
         <source>Background Color</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de Fondo</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="194"/>
         <source>Color</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="198"/>
         <source>Background color behind the upscaled image (letterbox bars).
 Supports transparency.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de fondo detrás de la imagen escalada (franjas tipo &quot;letterbox&quot;).
+Admite transparencia.</translation>
     </message>
 </context>
 <context>
@@ -1973,80 +2000,82 @@ Higher radii reduce aliasing but increase GPU load.</source>
         <location filename="../helpers/tray.py" line="73"/>
         <source>Real-Time Upscaler</source>
         <comment>Name of the application</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escalador en Tiempo Real</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="219"/>
         <source>Unknown</source>
         <comment>Fallback if no window title was found</comment>
-        <translation type="unfinished"></translation>
+        <translation>Desconocido</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="236"/>
         <source>Stop</source>
         <comment>Stop action for tray icon menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Detener</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="249"/>
         <source>Hide</source>
         <comment>Hide action for tray icon menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Esconder</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="253"/>
         <source>Show</source>
         <comment>Show action for tray icon menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Mostrar</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="269"/>
         <source>Daemon Mode</source>
         <comment>Daemon mode toggle for tray icon menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Modo Demonio</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="283"/>
         <source>Close to Tray</source>
         <comment>Tray menu option</comment>
-        <translation type="unfinished"></translation>
+        <translation>Cerrar a la bandeja</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="292"/>
         <source>Minimize to Tray</source>
         <comment>Tray menu option</comment>
-        <translation type="unfinished"></translation>
+        <translation>Minimizar a la bandeja</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="301"/>
         <source>Start Hidden</source>
         <comment>Tray menu option</comment>
-        <translation type="unfinished"></translation>
+        <translation>Empezar oculto</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="312"/>
         <source>Keep running after Exit hotkey</source>
         <comment>Tray menu option</comment>
-        <translation type="unfinished"></translation>
+        <translation>Seguir ejecutándose tras la tecla de salida</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="329"/>
         <source>Exit</source>
-        <translation type="unfinished"></translation>
+        <translation>Salir</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="390"/>
         <source>Upscaling: &apos;{0}&apos;.
 Use Stop from the tray menu to return.</source>
         <comment>Tray message if a window was already being upscaled. {0} is the window title placeholder.</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escalando: &apos;{0}&apos;.
+Utilice «Detener» en el menú de la bandeja para volver.</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="396"/>
         <source>Upscaling in progress.
 Use Stop from the tray menu to return.</source>
         <comment>Tray message if a window was already being upscaled and no window title was available to show.</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escalado en curso.
+Utilice «Detener» en el menú de la bandeja para volver.</translation>
     </message>
 </context>
 <context>
@@ -2055,13 +2084,13 @@ Use Stop from the tray menu to return.</source>
         <location filename="../helpers/grid.py" line="128"/>
         <source>Error</source>
         <comment>Error warning while enumerating windows</comment>
-        <translation type="unfinished"></translation>
+        <translation>Error</translation>
     </message>
     <message>
         <location filename="../helpers/grid.py" line="133"/>
         <source>Could not enumerate windows.</source>
         <comment>Error warning while enumerating windows</comment>
-        <translation type="unfinished"></translation>
+        <translation>No se pudieron enumerar las ventanas.</translation>
     </message>
 </context>
 <context>
@@ -2070,37 +2099,37 @@ Use Stop from the tray menu to return.</source>
         <location filename="../dialogs/window.py" line="39"/>
         <source>Select Window</source>
         <comment>Select Window dialog title</comment>
-        <translation type="unfinished"></translation>
+        <translation>Selección de ventana</translation>
     </message>
     <message>
         <location filename="../dialogs/window.py" line="52"/>
         <source>Filter windows</source>
         <comment>Filter windows placeholder</comment>
-        <translation type="unfinished"></translation>
+        <translation>Filtrar ventanas</translation>
     </message>
     <message>
         <location filename="../dialogs/window.py" line="96"/>
         <source>Error</source>
         <comment>Could not list windows error</comment>
-        <translation type="unfinished"></translation>
+        <translation>Error</translation>
     </message>
     <message>
         <location filename="../dialogs/window.py" line="97"/>
         <source>Could not list windows.</source>
         <comment>Could not list windows error</comment>
-        <translation type="unfinished"></translation>
+        <translation>No se pudieron listar ventanas.</translation>
     </message>
     <message>
         <location filename="../dialogs/window.py" line="148"/>
         <source>No selection</source>
         <comment>No window selected warning title</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ventana no seleccionada</translation>
     </message>
     <message>
         <location filename="../dialogs/window.py" line="149"/>
         <source>Select a window first.</source>
         <comment>No window selected warning</comment>
-        <translation type="unfinished"></translation>
+        <translation>Seleccione una ventana primero.</translation>
     </message>
 </context>
 </TS>
