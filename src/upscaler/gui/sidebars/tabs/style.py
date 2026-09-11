@@ -259,7 +259,7 @@ class StyleTab(SettingsTab):
         self._zoom_slider = self._add_slider(
             self.tr("Zoom (%)", "Label of setting (must be short)"),
             50,
-            400,
+            200,
             self._zoom,
             self._on_zoom_changed,
             baseline=self._saved_zoom,
