@@ -17,7 +17,6 @@ from .models import (
     UPSCALING_MODELS,
 )
 from ..shaders import LUT_PRESETS
-from ..utils import merge_hotkeys
 
 logger = logging.getLogger(__name__)
 
@@ -1241,7 +1240,7 @@ def apply_overrides(config: Config, overrides: Dict[str, Any]) -> None:
             continue  # skip None values
 
         if key == "hotkeys" and isinstance(value, dict):
-            config.hotkeys = merge_hotkeys(value)
+            config.hotkeys = {**config.hotkeys, **value}
             logger.debug("Applied hotkeys override")
         else:
             setattr(config, key, value)

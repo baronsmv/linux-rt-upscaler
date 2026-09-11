@@ -129,11 +129,15 @@ def format_hotkey(modifiers: Iterable[str], key: str) -> str:
     return "+".join(ordered + [key])
 
 
-def merge_hotkeys(overrides: Dict[str, str]) -> Dict[str, str]:
+def diff_hotkeys(
+    hotkeys: Dict[str, str], baseline: Optional[Dict[str, str]] = None
+) -> Dict[str, str]:
     """
-    Overlay *overrides* on top of :data:`DEFAULT_HOTKEYS`.
+    Return only the entries of *hotkeys* that differ from *baseline*.
 
-    An empty string in *overrides* explicitly disables an action, and is
-    preserved by the merge (the manager skips empty entries).
+    ``baseline`` defaults to :data:`DEFAULT_HOTKEYS`, matching the top-level
+    YAML use. Callers diffing a profile against a global baseline pass the
+    baseline's own hotkeys mapping.
     """
-    return {**DEFAULT_HOTKEYS, **overrides}
+    base = baseline if baseline is not None else DEFAULT_HOTKEYS
+    return {k: v for k, v in hotkeys.items() if base.get(k) != v}

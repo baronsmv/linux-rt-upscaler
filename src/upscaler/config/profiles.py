@@ -8,12 +8,31 @@ from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 from .args import apply_overrides
 from .parsers import parse_interval
 from .yaml import load_yaml_config, save_yaml_config
+from ..utils import diff_hotkeys
 
 if TYPE_CHECKING:
     from .models import Config
     from ..window import WindowInfo
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_profile_options(options: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Return a shallow copy of *options* with the ``hotkeys`` entry diffed
+    against the defaults. If nothing differs, the key is dropped entirely
+    so the YAML does not grow an empty mapping.
+    """
+    if "hotkeys" not in options:
+        return dict(options)
+
+    normalized = dict(options)
+    hotkey_diff = diff_hotkeys(normalized["hotkeys"])
+    if hotkey_diff:
+        normalized["hotkeys"] = hotkey_diff
+    else:
+        del normalized["hotkeys"]
+    return normalized
 
 
 def add_or_update_profile(
@@ -45,10 +64,11 @@ def add_or_update_profile(
         The absolute path of the file that was written.
     """
     general, profiles = load_yaml_config(config_path)
-    profile = {}
+    profile: Dict[str, Any] = {}
     if match:
         profile["match"] = match
     if options:
+        options = _normalize_profile_options(options)
         profile["options"] = options
     profiles[name] = profile
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass, field, fields
 from enum import Enum
@@ -5,7 +7,12 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from PySide6.QtCore import QStandardPaths
 
-from ..utils import DEFAULT_HOTKEYS, color_string_to_float4, color_tuple_to_string
+from ..utils import (
+    DEFAULT_HOTKEYS,
+    color_string_to_float4,
+    color_tuple_to_string,
+    diff_hotkeys,
+)
 
 UPSCALING_MODELS = (
     "none",
@@ -301,11 +308,7 @@ class Config:
 
         # Hotkeys
         if diff_only:
-            hotkey_diff = {
-                action: seq
-                for action, seq in self.hotkeys.items()
-                if DEFAULT_HOTKEYS.get(action) != seq
-            }
+            hotkey_diff = diff_hotkeys(self.hotkeys)
             if hotkey_diff:
                 result["hotkeys"] = hotkey_diff
         else:

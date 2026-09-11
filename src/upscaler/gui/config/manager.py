@@ -17,6 +17,7 @@ from ...config import (
     parse_config,
     save_yaml_config,
 )
+from ...utils import diff_hotkeys
 
 logger = logging.getLogger(__name__)
 
@@ -347,13 +348,20 @@ class ConfigManager(QObject):
         Return only the options that the active profile overrides compared
         to the global baseline.
         """
-        diff = {}
+        diff: Dict[str, Any] = {}
         for field in fields(self.persistent_config):
             name = field.name
             if name in ("log_level", "log_file", "program", "config_file"):
                 continue
             value = getattr(self.persistent_config, name)
             baseline = getattr(self.global_baseline, name)
+
+            if name == "hotkeys":
+                hotkey_diff = diff_hotkeys(value, baseline)
+                if hotkey_diff:
+                    diff[name] = hotkey_diff
+                continue
+
             if value != baseline:
                 diff[name] = value
         return diff
