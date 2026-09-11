@@ -77,10 +77,16 @@ class SettingsTab(QWidget):
         scroll.setStyleSheet(scroll_area_style(self._gui_config))
 
         # ---- Inner content widget and its layout ----------------------------
+        s = gui_config.sidebar
         content = QWidget()
         self.content_layout = QVBoxLayout(content)
-        self.content_layout.setContentsMargins(16, 8, 16, 8)
-        self.content_layout.setSpacing(16)
+        self.content_layout.setContentsMargins(
+            s.content_margin_h,
+            s.content_margin_v,
+            s.content_margin_h,
+            s.content_margin_v,
+        )
+        self.content_layout.setSpacing(s.content_spacing)
 
         self._build_content()
         self.content_layout.addStretch()

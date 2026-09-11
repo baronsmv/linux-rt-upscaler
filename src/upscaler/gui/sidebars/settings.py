@@ -209,6 +209,7 @@ class SettingsSidebar(IconSidebarBase):
         - _on_footer_reset: dispatches to StyleTab._reset_style()   or reset_settings
         """
         cfg = self.gui_config
+        f = cfg.footer
 
         outer = QWidget()
         outer_layout = QVBoxLayout(outer)
@@ -217,8 +218,8 @@ class SettingsSidebar(IconSidebarBase):
 
         button_widget = QWidget()
         button_layout = QHBoxLayout(button_widget)
-        button_layout.setContentsMargins(8, 8, 8, 8)
-        button_layout.setSpacing(8)
+        button_layout.setContentsMargins(f.margin, f.margin, f.margin, f.margin)
+        button_layout.setSpacing(f.spacing)
 
         # ---- Save button ----
         self._save_btn = QPushButton(

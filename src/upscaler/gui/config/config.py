@@ -128,6 +128,9 @@ class SidebarLayout:
     settings_width: int = 420
     profiles_width: int = 340
     padding: int = 8
+    content_margin_h: int = 16
+    content_margin_v: int = 8
+    content_spacing: int = 16
     tab_font_size: int = 18
     section_title_size: int = 18
     section_title_padding_top: int = 12
@@ -275,6 +278,8 @@ class FooterLayout:
     button_padding_h: int = 18
     button_padding_v: int = 6
     button_radius: int = 8
+    margin: int = 8
+    spacing: int = 8
     menu_button_width: int = 20
     menu_arrow_size: int = 12
     menu_padding: int = 4
