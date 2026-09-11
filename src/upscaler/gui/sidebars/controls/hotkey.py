@@ -83,8 +83,10 @@ class HotkeyCaptureButton(QPushButton):
         self._cfg = cfg
         self._sequence = sequence
         self._recording = False
+        self._conflict = False
 
         self.setCursor(Qt.PointingHandCursor)
+        self.setFocusPolicy(Qt.StrongFocus)
         self.setFixedHeight(cfg.sidebar.row_height)
         self.setStyleSheet(hotkey_button_style(cfg))
         self._refresh_text()
@@ -101,6 +103,13 @@ class HotkeyCaptureButton(QPushButton):
             return
         self._sequence = sequence
         self._refresh_text()
+
+    def set_conflict(self, conflict: bool) -> None:
+        """Toggle the duplicate-binding visual warning."""
+        if conflict == self._conflict:
+            return
+        self._conflict = conflict
+        self.setStyleSheet(hotkey_button_style(self._cfg, conflict=conflict))
 
     # ------------------------------------------------------------------
     #  Recording lifecycle
@@ -120,6 +129,7 @@ class HotkeyCaptureButton(QPushButton):
     def _start_recording(self) -> None:
         self._recording = True
         self.setText(self.tr("Press keys…", "Hotkey recording prompt"))
+        self.setFocus(Qt.MouseFocusReason)
         QApplication.instance().installEventFilter(self)
 
     def _stop_recording(self) -> None:
@@ -253,6 +263,10 @@ class HotkeyRow(BaseRow):
         """Set the value without emitting (used by reset / restore flows)."""
         self._button.set_sequence(sequence)
         self._update_highlight()
+
+    def set_conflict(self, conflict: bool) -> None:
+        """Highlight this row as having a duplicate binding."""
+        self._button.set_conflict(conflict)
 
     # ------------------------------------------------------------------
     #  BaseRow hooks
