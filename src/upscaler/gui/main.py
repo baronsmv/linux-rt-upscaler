@@ -103,6 +103,10 @@ class MainWindow(QMainWindow):
         if self._start_hidden:
             self.hide_gui()
 
+        # Shortcuts
+        QShortcut(QKeySequence("Ctrl+F"), self, lambda: self.filter_bar.set_focus())
+        QShortcut(QKeySequence("Ctrl+Q"), self, self._force_quit)
+
         self._config_manager.config_changed.connect(self._on_config_changed)
         QApplication.instance().aboutToQuit.connect(self.cleanup_before_quit)
 
@@ -216,10 +220,6 @@ class MainWindow(QMainWindow):
         self.splitter.setCollapsible(2, True)  # right sidebar can collapse
         self.splitter.splitterMoved.connect(self._on_splitter_moved)
         main_layout.addWidget(self.splitter)
-
-        # Shortcuts
-        QShortcut(QKeySequence("Ctrl+F"), self, self.filter_bar.set_focus)
-        QShortcut(QKeySequence("Ctrl+Q"), self, self._force_quit)
 
         # ------------------------------------------------------------------
         # Signals
