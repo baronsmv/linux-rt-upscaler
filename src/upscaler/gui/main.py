@@ -31,6 +31,7 @@ from .helpers import DaemonController, ProfileActions, TrayController, WindowGri
 from .icons import load_icon
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .styles import circular_button_style, tooltip_style
+from .utils import background_rule
 from .widgets import StyledSplitter
 from ..config import apply_overrides, find_matching_profile, parse_config
 from ..pipeline import create_pipeline_session
@@ -114,9 +115,7 @@ class MainWindow(QMainWindow):
         # Central layout
         # ------------------------------------------------------------------
         central = QWidget()
-        central.setStyleSheet(
-            f"background-color: {self.gui_config.palette.background};"
-        )
+        central.setStyleSheet(background_rule(self.gui_config.palette.background))
         self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
         main_layout.setContentsMargins(0, 0, 0, 0)

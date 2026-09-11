@@ -1,8 +1,18 @@
-from typing import List, Set, Tuple, Union
+from typing import List, Tuple, Union
 
 from PySide6.QtGui import QColor
 
-_NON_COLOR_KEYWORDS: Set[str] = {"", "none", "transparent"}
+_NON_COLOR_KEYWORDS = frozenset[str]({"", "none", "transparent"})
+
+
+def background_rule(color: str) -> str:
+    """
+    Return a CSS background-color declaration, or an empty string when the
+    value is a keyword Qt cannot parse as a color.
+    """
+    if color.lower() in _NON_COLOR_KEYWORDS:
+        return ""
+    return f"background-color: {color};"
 
 
 def qcolor_to_rgba_hex(q_color: QColor) -> str:

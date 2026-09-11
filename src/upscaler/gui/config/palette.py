@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields, replace
-from typing import Dict, Set
+from typing import Dict
 
 from ..utils import (
     normalized_color,
@@ -9,8 +9,6 @@ from ..utils import (
     scheme_is_light,
     to_stylesheet_color,
 )
-
-_NON_COLOR_KEYWORDS: Set[str] = {"", "none", "transparent"}
 
 
 @dataclass

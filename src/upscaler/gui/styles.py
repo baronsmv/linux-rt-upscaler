@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .utils import background_rule
+
 if TYPE_CHECKING:
     from .config import GUIConfig
 
@@ -70,7 +72,7 @@ def tooltip_style(cfg: GUIConfig) -> str:
     return f"""
     QToolTip {{
         color: {cfg.palette.text_hover};
-        background-color: {cfg.palette.background};
+        {background_rule(cfg.palette.background)}
         border: 1px solid {cfg.palette.border};
         padding: 4px;
         border-radius: 4px;
@@ -122,7 +124,7 @@ def scrollbar_style(cfg: GUIConfig) -> str:
     QScrollBar::sub-page:vertical,
     QScrollBar::add-page:horizontal,
     QScrollBar::sub-page:horizontal {{
-        background-color: none;
+        background: transparent;
     }}
     """
 
@@ -342,7 +344,7 @@ def color_dialog_style(cfg: GUIConfig) -> str:
     """Style the QColorDialog."""
     return f"""
     QColorDialog {{
-        background-color: {cfg.palette.background};
+        {background_rule(cfg.palette.background)}
     }}
     QColorDialog QLabel {{
         color: {cfg.palette.text};
@@ -431,7 +433,7 @@ def file_dialog_style(cfg: GUIConfig) -> str:
     """Style every relevant widget inside a QFileDialog."""
     return f"""
     QFileDialog {{
-        background-color: {cfg.palette.background};
+        {background_rule(cfg.palette.background)}
         color: {cfg.palette.text};
         font-size: {cfg.dialog.label_font_size}px;
     }}
@@ -681,7 +683,7 @@ def dialog_style(cfg: GUIConfig) -> str:
     """Full stylesheet for QDialog used by ProfileDialog and WindowPickerDialog."""
     return f"""
     QDialog {{
-        background-color: {cfg.palette.background};
+        {background_rule(cfg.palette.background)}
         color: {cfg.palette.text};
     }}
     QLabel {{

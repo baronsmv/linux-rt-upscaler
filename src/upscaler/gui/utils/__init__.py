@@ -1,6 +1,7 @@
 """GUI utility modules."""
 
 from .color import (
+    background_rule,
     normalized_color,
     normalize_to_hex,
     preset_color_to_internal,
@@ -11,6 +12,7 @@ from .color import (
 from .scheme import scheme_is_light
 
 __all__ = [
+    "background_rule",
     "normalized_color",
     "normalize_to_hex",
     "preset_color_to_internal",
