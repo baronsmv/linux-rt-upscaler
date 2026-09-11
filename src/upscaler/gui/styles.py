@@ -377,26 +377,30 @@ def slider_style(cfg: GUIConfig, enabled: bool = True) -> str:
     """Style for a horizontal QSlider."""
     palette = _control_palette(cfg=cfg, enabled=enabled)
     s = cfg.slider
+    groove_radius = s.groove_height // 2
+    handle_radius = s.handle_size // 2
+    handle_inset = max(0, (s.handle_size - s.groove_height) // 2)
+
     return f"""
     QSlider::groove:horizontal {{
         border: none;
         height: {s.groove_height}px;
         background-color: {palette.border};
-        border-radius: {s.groove_radius}px;
+        border-radius: {groove_radius}px;
     }}
     QSlider::handle:horizontal {{
         background-color: {palette.action};
         width: {s.handle_size}px;
         height: {s.handle_size}px;
-        margin: -{s.handle_inset}px 0;
-        border-radius: {s.handle_radius}px;
+        margin: -{handle_inset}px 0;
+        border-radius: {handle_radius}px;
     }}
     QSlider::handle:horizontal:hover {{
         background-color: {palette.action_hover};
     }}
     QSlider::sub-page:horizontal {{
         background-color: {palette.action};
-        border-radius: {s.groove_radius}px;
+        border-radius: {groove_radius}px;
     }}
     {tooltip_style(cfg)}
     """

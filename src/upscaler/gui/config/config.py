@@ -200,7 +200,6 @@ class SliderLayout:
 
     value_edit_width: int = 72
     groove_height: int = 4
-    groove_radius: int = 2
     handle_size: int = 16
     handle_inset: int = 6
     handle_radius: int = 8
