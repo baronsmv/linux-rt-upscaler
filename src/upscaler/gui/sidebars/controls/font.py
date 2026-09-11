@@ -48,12 +48,12 @@ class FontPickerRow(BaseRow):
         self._content_layout.setStretchFactor(self._label, 1)
 
         self._combo = QFontComboBox()
+        self._combo.setEditable(False)
         self._combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
         self._combo.setMinimumContentsLength(12)
         self._combo.setStyleSheet(combo_box_style(cfg))
         self._combo.setFixedHeight(cfg.sidebar.row_height)
         self._combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._combo.setCursor(Qt.PointingHandCursor)
 
         if tooltip:
             self._combo.setToolTip(tooltip)
