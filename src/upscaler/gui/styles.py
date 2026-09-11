@@ -576,6 +576,38 @@ def path_browse_button_style(cfg: GUIConfig, enabled: bool = True) -> str:
 
 
 # ---------------------------------------------------------------------------
+#  Control: hotkey button
+# ---------------------------------------------------------------------------
+def hotkey_button_style(cfg: GUIConfig, enabled: bool = True) -> str:
+    """Style for the QPushButton that captures a hotkey sequence."""
+    palette = _control_palette(cfg=cfg, enabled=enabled)
+    return f"""
+    QPushButton {{
+        background-color: {palette.input};
+        border: 1px solid {palette.border};
+        border-radius: {cfg.edit_field.border_radius}px;
+        padding: {cfg.edit_field.padding_v}px {cfg.edit_field.padding_h}px;
+        color: {palette.text};
+        font-size: {cfg.sidebar.tab_font_size}px;
+        text-align: center;
+        min-width: 160px;
+    }}
+    QPushButton:hover {{
+        border-color: {palette.border_hover};
+    }}
+    QPushButton:focus {{
+        border-color: {palette.action};
+        color: {palette.text_hover};
+    }}
+    QPushButton:disabled {{
+        background-color: {cfg.palette.input_disabled};
+        color: {cfg.palette.text_subtle};
+    }}
+    {tooltip_style(cfg)}
+    """
+
+
+# ---------------------------------------------------------------------------
 #  Dialog
 # ---------------------------------------------------------------------------
 def dialog_style(cfg: GUIConfig) -> str:
