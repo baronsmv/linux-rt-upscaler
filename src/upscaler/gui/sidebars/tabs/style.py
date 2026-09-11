@@ -8,13 +8,15 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget
 
 from ..sidebar import SettingsTab
-from ...config import GUIPalette, PRESETS
-from ...utils import (
+from ...config import (
+    GUIPalette,
+    GUIStyleOverrides,
+    PRESETS,
     find_matching_preset,
-    normalize_to_hex,
     palette_to_internal,
     palette_to_stylesheet,
 )
+from ...utils import normalize_to_hex
 
 if TYPE_CHECKING:
     from ..controls import ColorPickerRow
@@ -29,15 +31,16 @@ class StyleTab(SettingsTab):
     def __init__(
         self,
         gui_config: GUIConfig,
-        initial_palette: GUIPalette,
-        on_apply: Callable[[GUIPalette, float], None],
-        initial_zoom: int = 100,
+        initial: GUIStyleOverrides,
+        on_apply: Callable[[GUIStyleOverrides], None],
+        system_font_family: str = "",
         parent: Optional[QWidget] = None,
     ) -> None:
-        self._palette = palette_to_internal(initial_palette)
-        self._saved_palette = copy.deepcopy(self._palette)
-        self._zoom = initial_zoom
-        self._saved_zoom = initial_zoom
+        self._saved = initial
+        self._palette = palette_to_internal(initial.palette)
+        self._zoom = initial.zoom
+        self._font_family = initial.font_family
+        self._system_font_family = system_font_family
         self._on_apply = on_apply
         self._updating_from_preset = False
         super().__init__(
@@ -259,12 +262,27 @@ class StyleTab(SettingsTab):
         self._zoom_slider = self._add_slider(
             self.tr("Zoom (%)", "Label of setting (must be short)"),
             50,
-            200,
+            400,
             self._zoom,
             self._on_zoom_changed,
             baseline=self._saved_zoom,
             help=self.tr(
                 "Scales the entire interface.",
+                "Description of a setting (tooltip)",
+            ),
+        )
+
+        # ── Typography ────────────────────────────────────────────
+        self._add_section(self.tr("Typography", "Settings section"))
+        self._font_row = self._add_font_picker(
+            self.tr("Font family", "Label of setting (must be short)"),
+            self._font_family,
+            self._system_font_family,
+            self._on_font_changed,
+            baseline=self._saved_font_family,
+            help=self.tr(
+                "Interface font. Leave at the system default for the best "
+                "integration with your desktop.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -310,11 +328,16 @@ class StyleTab(SettingsTab):
         self._zoom = value
         self._notify_dirty()
 
+    def _on_font_changed(self, family: str) -> None:
+        if family == self._font_family:
+            return
+        self._font_family = family
+        self._notify_dirty()
+
     def _on_preset_changed(self, text: str) -> None:
         if text == "Custom" or self._updating_from_preset:
             return
-        preset_name = text if text != "Auto" else "Auto"
-        preset = PRESETS.get(preset_name, PRESETS["Auto"])
+        preset = PRESETS.get(text, PRESETS["Auto"])
         self._updating_from_preset = True
         self._palette = palette_to_internal(preset)
 
@@ -338,48 +361,42 @@ class StyleTab(SettingsTab):
         return slot
 
     def is_dirty(self) -> bool:
-        """Return True if palette or zoom differs from the last applied state."""
-        if self._zoom != self._saved_zoom:
-            return True
-        for field in fields(GUIPalette):
-            if getattr(self._palette, field.name) != getattr(
-                self._saved_palette, field.name
-            ):
-                return True
-        return False
+        """Return True if any GUI value differs from the last applied state."""
+        return self._current_overrides() != self._saved
 
     def is_default(self) -> bool:
-        """Return True if the palette is Auto and zoom is at 100%."""
-        if self._zoom != 100:
-            return False
-        return find_matching_preset(palette_to_stylesheet(self._palette)) == "Auto"
+        """Return False if any GUI value differs from the default ones."""
+        return self._current_overrides() == GUIStyleOverrides(palette=PRESETS["Auto"])
 
     def _refresh_baselines(self) -> None:
         """Update every picker's baseline to the current saved state."""
         self._zoom_slider.set_baseline(self._saved_zoom)
+        self._font_row.set_baseline(self._saved_font_family)
         for field in fields(GUIPalette):
             name = field.name
             baseline_hex = normalize_to_hex(getattr(self._saved_palette, name))
             self._picker_widgets[name].set_baseline(baseline_hex)
 
     def apply_clicked(self) -> None:
-        """Persist the palette and zoom, then rebuild the GUI."""
-        self._saved_palette = copy.deepcopy(self._palette)
-        self._saved_zoom = self._zoom
+        """Persist the style attributes, then rebuild the GUI."""
+        overrides = self._current_overrides()
+        self._saved = overrides
         self._refresh_baselines()
-        self._on_apply(palette_to_stylesheet(self._palette), self._zoom)
+        self._on_apply(overrides)
         self._notify_dirty()
 
     def reset_style(self) -> None:
-        """Revert palette and zoom to the last applied state."""
+        """Revert the style attributes to the last applied state."""
         self._palette = copy.deepcopy(self._saved_palette)
         self._zoom = self._saved_zoom
+        self._font_family = self._saved_font_family
         self._updating_from_preset = True
         for field in fields(GUIPalette):
             hex_color = normalize_to_hex(getattr(self._palette, field.name))
             self._picker_widgets[field.name].set_color(hex_color)
         self._updating_from_preset = False
         self._zoom_slider.setValue(self._saved_zoom)
+        self._font_row.set_font_family(self._saved_font_family)
         self._preset_combo.setCurrentText(
             find_matching_preset(palette_to_stylesheet(self._palette))
         )
@@ -391,6 +408,7 @@ class StyleTab(SettingsTab):
         preset = PRESETS["Auto"]
         self._palette = palette_to_internal(preset)
         self._zoom = 100
+        self._font_family = ""
         self._updating_from_preset = True
         for field in fields(GUIPalette):
             self._picker_widgets[field.name].set_color(
@@ -399,8 +417,40 @@ class StyleTab(SettingsTab):
         self._updating_from_preset = False
         self._preset_combo.setCurrentText("Auto")
         self._zoom_slider.setValue(100)
+        self._font_row.set_font_family("")
         self._notify_dirty()
 
     def _notify_dirty(self) -> None:
         """Emit the current dirty state (call after any change)."""
         self.style_dirty_changed.emit(self.is_dirty())
+
+    def _current_overrides(self) -> GUIStyleOverrides:
+        """Build a GUIStyleOverrides from the tab's current editing state."""
+        return GUIStyleOverrides(
+            palette=palette_to_stylesheet(self._palette),
+            zoom=self._zoom,
+            font_family=self._font_family,
+            profiles_width=self._saved.profiles_width,
+            settings_width=self._saved.settings_width,
+            tile_columns=self._saved.tile_columns,
+            tile_aspect_ratio=self._saved.tile_aspect_ratio,
+            tile_spacing_ratio=self._saved.tile_spacing_ratio,
+            icon_columns=self._saved.icon_columns,
+            tile_pop_scale=self._saved.tile_pop_scale,
+            tile_pop_duration=self._saved.tile_pop_duration,
+            auto_refresh_ms=self._saved.auto_refresh_ms,
+            tile_preview_interval_ms=self._saved.tile_preview_interval_ms,
+        )
+
+    @property
+    def _saved_palette(self) -> GUIPalette:
+        """Return the last applied palette, decoupled from the live one."""
+        return palette_to_internal(self._saved.palette)
+
+    @property
+    def _saved_zoom(self) -> int:
+        return self._saved.zoom
+
+    @property
+    def _saved_font_family(self) -> str:
+        return self._saved.font_family

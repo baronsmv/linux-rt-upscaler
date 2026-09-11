@@ -1,10 +1,79 @@
 from __future__ import annotations
 
-from copy import copy
-from typing import Dict
+from dataclasses import dataclass, fields, replace
+from typing import Dict, Set
 
-from .config import GUIPalette
-from ...utils import scheme_is_light
+from ..utils import (
+    normalized_color,
+    preset_color_to_internal,
+    scheme_is_light,
+    to_stylesheet_color,
+)
+
+_NON_COLOR_KEYWORDS: Set[str] = {"", "none", "transparent"}
+
+
+@dataclass
+class GUIPalette:
+    """Semantic color tokens for the entire GUI."""
+
+    # Background
+    background: str
+    caption_background: str
+
+    # Text
+    text: str
+    text_hover: str
+    text_subtle: str
+
+    # Icons
+    icon: str
+
+    # Borders
+    border: str
+    border_hover: str
+
+    # Input
+    input: str
+    input_hover: str
+    input_disabled: str
+
+    # Controls
+    control: str
+    control_hover: str
+    handle: str
+    handle_hover: str
+
+    # Buttons
+    button: str
+    button_hover: str
+    reset: str
+    reset_hover: str
+
+
+def palette_to_internal(pal: GUIPalette) -> GUIPalette:
+    """Convert a whole stylesheet palette to internal #RRGGBBAA format."""
+    return GUIPalette(
+        **{
+            f.name: preset_color_to_internal(getattr(pal, f.name))
+            for f in fields(GUIPalette)
+        }
+    )
+
+
+def palette_to_stylesheet(palette: GUIPalette) -> GUIPalette:
+    """Convert a whole internal palette to stylesheet format."""
+    return GUIPalette(
+        **{
+            f.name: to_stylesheet_color(getattr(palette, f.name))
+            for f in fields(GUIPalette)
+        }
+    )
+
+
+# ------------------------------------------------------------------
+#  Presets
+# ------------------------------------------------------------------
 
 LIGHT = GUIPalette(
     background="#f5f5f5",
@@ -50,8 +119,7 @@ DARK = GUIPalette(
     reset_hover="#b55a5a",
 )
 
-AUTO = copy(LIGHT if scheme_is_light() else DARK)
-AUTO.background = "none"  # Using "transparent" doesn't work for dialogs
+AUTO = replace(LIGHT if scheme_is_light() else DARK, background="none")
 
 AYU_LIGHT = GUIPalette(
     background="#fafafa",
@@ -566,3 +634,17 @@ PRESETS: Dict[str, GUIPalette] = {
     "Tokyo Night": TOKYO_NIGHT,
 }
 # PRESETS["Random"] = random.choice(tuple[GUIPalette](PRESETS.values()))
+
+
+def find_matching_preset(palette: GUIPalette) -> str:
+    """Compare a stylesheet palette against all built-in presets.
+    Returns the preset name if an exact match is found, otherwise 'Custom'.
+    """
+    for preset_name, preset_palette in PRESETS.items():
+        if all(
+            normalized_color(getattr(preset_palette, f.name))
+            == normalized_color(getattr(palette, f.name))
+            for f in fields(GUIPalette)
+        ):
+            return preset_name
+    return "Custom"

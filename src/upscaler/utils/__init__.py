@@ -26,7 +26,6 @@ from .hotkeys import (
     parse_hotkey,
 )
 from .screen import get_base_geometry, list_monitors
-from .settings import scheme_is_light
 
 __all__ = [
     "ConfigError",
@@ -50,6 +49,5 @@ __all__ = [
     "get_base_geometry",
     "list_monitors",
     "parse_hotkey",
-    "scheme_is_light",
     "parse_output_geometry",
 ]

@@ -31,7 +31,7 @@ from ..styles import reset_button_style, reset_submenu_style, save_button_style
 from ...config import Config, parse_config
 
 if TYPE_CHECKING:
-    from ..config import GUIConfig, GUIPalette
+    from ..config import GUIConfig, GUIStyleOverrides
 
 
 class SettingsSidebar(IconSidebarBase):
@@ -41,14 +41,15 @@ class SettingsSidebar(IconSidebarBase):
     reset_settings = Signal()
     restore_defaults = Signal()
     daemon_toggled = Signal(bool)
-    style_applied = Signal(object, int)
+    style_applied = Signal(object)
 
     def __init__(
         self,
         gui_config: GUIConfig,
         config: Config,
         baseline_config: Config,
-        initial_zoom: int = 100,
+        initial_overrides: GUIStyleOverrides,
+        system_font_family: str = "",
         profile_active: bool = False,
         profile_has_options: bool = False,
         parent: Optional[QWidget] = None,
@@ -63,15 +64,13 @@ class SettingsSidebar(IconSidebarBase):
         self._config = config
         self._bc = copy.deepcopy(baseline_config)
         self._system_defaults = Config()
-        parse_config(self._system_defaults)
         self._dirty = False
+        self._style_tab: Optional[StyleTab] = None
 
+        parse_config(self._system_defaults)
         tab_args = gui_config, config, self._bc
-        style_tab_args = gui_config, gui_config.palette, self._on_style_apply
-
         general_tab = GeneralTab(*tab_args, profile_active=profile_active)
         general_tab.daemon_toggled.connect(self.daemon_toggled)
-        self._style_tab: Optional[StyleTab] = None
 
         tabs = [
             (
@@ -115,7 +114,12 @@ class SettingsSidebar(IconSidebarBase):
                 self.tr("Hotkeys", "Name of a settings tab"),
             ),
             (
-                StyleTab(*style_tab_args, initial_zoom=initial_zoom),
+                StyleTab(
+                    gui_config,
+                    initial_overrides,
+                    self._on_style_apply,
+                    system_font_family=system_font_family,
+                ),
                 "style",
                 self.tr("GUI Style", "Name of a settings tab"),
             ),
@@ -145,8 +149,8 @@ class SettingsSidebar(IconSidebarBase):
         """Any setting was modified; re-evaluate dirty state."""
         self._check_dirty()
 
-    def _on_style_apply(self, new_palette: GUIPalette, zoom: int) -> None:
-        self.style_applied.emit(new_palette, zoom)
+    def _on_style_apply(self, overrides: GUIStyleOverrides) -> None:
+        self.style_applied.emit(overrides)
 
     # ------------------------------------------------------------------
     #  Dirty-state logic

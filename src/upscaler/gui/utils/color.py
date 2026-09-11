@@ -1,9 +1,6 @@
-from dataclasses import fields
 from typing import List, Set, Tuple, Union
 
 from PySide6.QtGui import QColor
-
-from ..config import GUIPalette, PRESETS
 
 _NON_COLOR_KEYWORDS: Set[str] = {"", "none", "transparent"}
 
@@ -40,7 +37,7 @@ def normalize_to_hex(color_data: Union[str, Tuple, List]) -> str:
     return qcolor_to_rgba_hex(qc) if qc.isValid() else "#000000ff"
 
 
-def _to_stylesheet_color(internal_color: str) -> str:
+def to_stylesheet_color(internal_color: str) -> str:
     """Convert an internal #RRGGBBAA color to a Qt-stylesheet-compatible string."""
     if internal_color.lower() in _NON_COLOR_KEYWORDS:
         return internal_color
@@ -53,7 +50,7 @@ def _to_stylesheet_color(internal_color: str) -> str:
         return qc.name(QColor.HexArgb)  # "#AARRGGBB"
 
 
-def _preset_color_to_internal(stylesheet_color: str) -> str:
+def preset_color_to_internal(stylesheet_color: str) -> str:
     """Convert a stylesheet color (preset or saved YAML) to internal #RRGGBBAA."""
     if stylesheet_color.lower() in _NON_COLOR_KEYWORDS:
         return stylesheet_color
@@ -63,27 +60,7 @@ def _preset_color_to_internal(stylesheet_color: str) -> str:
     return qcolor_to_rgba_hex(qc)
 
 
-def palette_to_internal(pal: GUIPalette) -> GUIPalette:
-    """Convert a whole stylesheet palette to internal #RRGGBBAA format."""
-    return GUIPalette(
-        **{
-            f.name: _preset_color_to_internal(getattr(pal, f.name))
-            for f in fields(GUIPalette)
-        }
-    )
-
-
-def palette_to_stylesheet(palette: GUIPalette) -> GUIPalette:
-    """Convert a whole internal palette to stylesheet format."""
-    return GUIPalette(
-        **{
-            f.name: _to_stylesheet_color(getattr(palette, f.name))
-            for f in fields(GUIPalette)
-        }
-    )
-
-
-def _normalized_color(color: str) -> str:
+def normalized_color(color: str) -> str:
     """Canonical lowercase hex representation for comparison (#rrggbb or #aarrggbb)."""
     qc = QColor(color)
     if not qc.isValid():
@@ -92,17 +69,3 @@ def _normalized_color(color: str) -> str:
         return qc.name(QColor.HexRgb).lower()
     else:
         return qc.name(QColor.HexArgb).lower()
-
-
-def find_matching_preset(palette: GUIPalette) -> str:
-    """Compare a stylesheet palette against all built-in presets.
-    Returns the preset name if an exact match is found, otherwise 'Custom'.
-    """
-    for preset_name, preset_palette in PRESETS.items():
-        if all(
-            _normalized_color(getattr(preset_palette, f.name))
-            == _normalized_color(getattr(palette, f.name))
-            for f in fields(GUIPalette)
-        ):
-            return preset_name
-    return "Custom"

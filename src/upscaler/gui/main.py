@@ -4,7 +4,6 @@ import copy
 import gc
 import logging
 import os
-from dataclasses import fields
 from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, Qt, QTimer, QSettings, QSize, QStandardPaths, Signal
@@ -21,11 +20,10 @@ from PySide6.QtWidgets import (
 
 from .config import (
     ConfigManager,
-    GUIConfig,
-    GUIPalette,
+    GUIStyleOverrides,
     load_gui_style,
     save_gui_style,
-    scale_gui_config,
+    resolve_gui_config,
 )
 from .dialogs import AboutDialog
 from .grid import FilterBar, WindowGridScene, WindowGridView
@@ -33,7 +31,6 @@ from .helpers import DaemonController, ProfileActions, TrayController, WindowGri
 from .icons import load_icon
 from .sidebars import ProfilesSidebar, SettingsSidebar
 from .styles import circular_button_style, tooltip_style
-from .utils import find_matching_preset
 from .widgets import StyledSplitter
 from ..config import apply_overrides, find_matching_profile, parse_config
 from ..pipeline import create_pipeline_session
@@ -79,9 +76,10 @@ class MainWindow(QMainWindow):
         ) and bool(self.settings.value("tray/start_hidden", False, type=bool))
 
         # GUI Palette
-        palette, self._zoom = load_gui_style()
-        base_config = GUIConfig(palette=palette)
-        self.gui_config = scale_gui_config(base_config, self._zoom)
+        self._system_font_family = QApplication.font().family()
+        self._style_overrides = load_gui_style()
+        self.gui_config = resolve_gui_config(self._style_overrides)
+        self._apply_font()
         QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))
 
         # Icon directory
@@ -407,9 +405,10 @@ class MainWindow(QMainWindow):
             self.gui_config,
             self._config_manager.persistent_config,
             baseline_config=self._config_manager.saved_persistent_config,
+            initial_overrides=self._style_overrides,
+            system_font_family=self._system_font_family,
             profile_active=self._config_manager.active_profile_name is not None,
             profile_has_options=self._active_profile_has_options(),
-            initial_zoom=self._zoom,
         )
         # Daemon checkbox is inside the sidebar
         sidebar.daemon_toggled.connect(self.set_daemon_mode)
@@ -552,22 +551,22 @@ class MainWindow(QMainWindow):
         self.close()
         QApplication.instance().quit()
 
-    def _on_style_applied(self, new_palette: GUIPalette, zoom: int) -> None:
-        """Save the palette and zoom, then rebuild the GUI with them applied."""
-        palette_dict = {
-            field.name: getattr(new_palette, field.name) for field in fields(GUIPalette)
-        }
-        preset_name = find_matching_preset(new_palette)
-        save_gui_style(palette_dict, preset=preset_name, zoom=zoom)
+    def _on_style_applied(self, overrides: GUIStyleOverrides) -> None:
+        """Persist the new style, apply it, and rebuild the GUI."""
+        save_gui_style(overrides)
 
-        # Build a completely new GUIConfig (same layout constants, new palette)
-        self._zoom = zoom
-        base_config = GUIConfig(palette=new_palette)
-        self.gui_config = scale_gui_config(base_config, self._zoom)
+        self._style_overrides = overrides
+        self.gui_config = resolve_gui_config(overrides)
+        self._apply_font()
         QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))
 
-        # Rebuild the entire central area, keeping the active profile / daemon state
         self._rebuild_ui()
+
+    def _apply_font(self) -> None:
+        family = self.gui_config.font_family or self._system_font_family
+        font = QApplication.font()
+        font.setFamily(family)
+        QApplication.setFont(font)
 
     # ------------------------------------------------------------------
     # Save / Reset / Restore

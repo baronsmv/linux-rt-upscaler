@@ -1,42 +1,6 @@
 from dataclasses import dataclass, field
 
-
-@dataclass
-class GUIPalette:
-    """Semantic color tokens for the entire GUI."""
-
-    # Background
-    background: str
-    caption_background: str
-
-    # Text
-    text: str
-    text_hover: str
-    text_subtle: str
-
-    # Icons
-    icon: str
-
-    # Borders
-    border: str
-    border_hover: str
-
-    # Input
-    input: str
-    input_hover: str
-    input_disabled: str
-
-    # Controls
-    control: str
-    control_hover: str
-    handle: str
-    handle_hover: str
-
-    # Buttons
-    button: str
-    button_hover: str
-    reset: str
-    reset_hover: str
+from .palette import GUIPalette
 
 
 @dataclass(frozen=True)
@@ -495,3 +459,41 @@ class GUIConfig:
 
     highlight_border_width: int = 4
     highlight_indicator_gap: int = 8
+
+
+@dataclass(frozen=True)
+class GUIStyleOverrides:
+    """User-configurable GUI style attributes.
+
+    Attributes:
+        palette: The active color palette.
+        zoom: Interface zoom percentage (100 = native size).
+        font_family: Interface font family. Empty string means the
+            platform default.
+        profiles_width: Logical width of the profiles sidebar (left),
+            before zoom scaling.
+        settings_width: Logical width of the settings sidebar (right),
+            before zoom scaling.
+        tile_columns: Number of columns in the window grid.
+        tile_aspect_ratio: Tile aspect ratio (width / height).
+        tile_spacing_ratio: Gap between tiles as a fraction of tile width.
+        icon_columns: Number of columns in the icon tab bar.
+        tile_pop_scale: Scale factor applied on tile hover / selection.
+        tile_pop_duration: Duration of the tile pop animation (ms).
+        auto_refresh_ms: Window list refresh interval (ms).
+        tile_preview_interval_ms: Tile thumbnail update interval (ms).
+    """
+
+    palette: GUIPalette
+    zoom: int = 100
+    font_family: str = ""
+    profiles_width: int = 380
+    settings_width: int = 420
+    tile_columns: int = 3
+    tile_aspect_ratio: float = 4 / 3
+    tile_spacing_ratio: float = 0.075
+    icon_columns: int = 9
+    tile_pop_scale: float = 1.05
+    tile_pop_duration: int = 200
+    auto_refresh_ms: int = 2000
+    tile_preview_interval_ms: int = 60

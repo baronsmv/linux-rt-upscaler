@@ -1,19 +1,21 @@
 """GUI utility modules."""
 
-from .palette import (
-    find_matching_preset,
+from .color import (
+    normalized_color,
     normalize_to_hex,
-    palette_to_internal,
-    palette_to_stylesheet,
+    preset_color_to_internal,
     qcolor_to_rgba_hex,
     rgba_hex_to_qcolor,
+    to_stylesheet_color,
 )
+from .scheme import scheme_is_light
 
 __all__ = [
-    "find_matching_preset",
+    "normalized_color",
     "normalize_to_hex",
-    "palette_to_internal",
-    "palette_to_stylesheet",
+    "preset_color_to_internal",
     "qcolor_to_rgba_hex",
     "rgba_hex_to_qcolor",
+    "scheme_is_light",
+    "to_stylesheet_color",
 ]
