@@ -19,6 +19,7 @@ from .geometry import (
 from .hotkeys import (
     DEFAULT_HOTKEYS,
     KEYSYM_MAP,
+    HOTKEY_GROUPS,
     MODIFIER_MAP,
     format_hotkey,
     merge_hotkeys,
@@ -35,6 +36,7 @@ __all__ = [
     "SessionError",
     "UpscalerError",
     "WindowNotFound",
+    "HOTKEY_GROUPS",
     "DEFAULT_HOTKEYS",
     "KEYSYM_MAP",
     "MODIFIER_MAP",
