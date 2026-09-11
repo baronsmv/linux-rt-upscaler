@@ -32,8 +32,9 @@ class HotkeyCaptureButton(QPushButton):
     - Modifier-only presses are previewed but do not commit.
     - A binding must contain at least one modifier; bare keys are rejected
       because XCB would grab them system-wide.
-    - ``Escape`` cancels, ``Backspace``/``Delete`` clear the binding.
-    - Losing focus cancels silently (the previous value is kept).
+    - ``Escape`` cancels; losing focus cancels silently (the previous value
+      is kept).
+    - To clear a binding, use the row's clear button.
 
     Signals
     -------
@@ -161,10 +162,6 @@ class HotkeyCaptureButton(QPushButton):
 
         if key == Qt.Key_Escape:
             self._cancel_recording()
-            return
-
-        if key in (Qt.Key_Backspace, Qt.Key_Delete):
-            self._commit("")
             return
 
         if key in self._MODIFIER_KEYS:
