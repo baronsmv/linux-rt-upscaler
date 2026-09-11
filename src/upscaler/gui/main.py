@@ -706,7 +706,7 @@ class MainWindow(QMainWindow):
         self.raise_()
         self.activateWindow()
         QTimer.singleShot(0, self.scene.schedule_relayout)
-        QTimer.singleShot(0, self._view.setFocus)
+        QTimer.singleShot(0, self._focus_grid)
         self.grid_mgr.start()
 
     def hide_gui(self) -> None:
