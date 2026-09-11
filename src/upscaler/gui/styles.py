@@ -890,14 +890,15 @@ def toolbar_button_style(cfg: GUIConfig) -> str:
 # ---------------------------------------------------------------------------
 def close_dialog_button_style(cfg: GUIConfig) -> str:
     """Style for the 'Close' button in the About dialog."""
+    a = cfg.about
     return f"""
     QPushButton {{
         background-color: {cfg.palette.button};
         border: 1px solid {cfg.palette.border};
-        border-radius: 8px;
-        padding: 6px 18px;
+        border-radius: {a.close_button_radius}px;
+        padding: {a.close_button_padding_v}px {a.close_button_padding_h}px;
         color: {cfg.palette.text};
-        font-size: 14px;
+        font-size: {a.close_button_font_size}px;
     }}
     QPushButton:hover {{
         background-color: {cfg.palette.button_hover};
@@ -1043,22 +1044,40 @@ def reset_submenu_style(cfg: GUIConfig) -> str:
 # ---------------------------------------------------------------------------
 def about_dialog_name_style(cfg: GUIConfig) -> str:
     """Style for the application name in the About dialog."""
-    return f"color: {cfg.palette.text_hover}; font-size: 24px; font-weight: bold; margin-top: 16px;"
+    a = cfg.about
+    return (
+        f"color: {cfg.palette.text_hover}; "
+        f"font-size: {a.name_font_size}px; "
+        "font-weight: bold; "
+        f"margin-top: {a.name_margin_top}px;"
+    )
 
 
 def about_dialog_version_style(cfg: GUIConfig) -> str:
     """Style for the version string in the About dialog."""
-    return f"color: {cfg.palette.text}; font-size: 20px; margin-top: 4px;"
+    a = cfg.about
+    return (
+        f"color: {cfg.palette.text}; "
+        f"font-size: {a.version_font_size}px; "
+        f"margin-top: {a.version_margin_top}px;"
+    )
 
 
 def about_dialog_description_style(cfg: GUIConfig) -> str:
     """Style for the description text in the About dialog."""
-    return f"color: {cfg.palette.text_subtle}; font-size: 18px; margin-top: 18px; padding: 0 24px;"
+    a = cfg.about
+    return (
+        f"color: {cfg.palette.text_subtle}; "
+        f"font-size: {a.body_font_size}px; "
+        f"margin-top: {a.description_margin_top}px; "
+        f"padding: 0 {a.description_padding_h}px;"
+    )
 
 
-def about_dialog_link_style(_: GUIConfig) -> str:
-    """Style for the GitHub link in the About dialog."""
-    return f"font-size: 18px; margin-top: 10px;"
+def about_dialog_link_style(cfg: GUIConfig) -> str:
+    """Style for the links in the About dialog."""
+    a = cfg.about
+    return f"font-size: {a.body_font_size}px; " f"margin-top: {a.link_margin_top}px;"
 
 
 # ---------------------------------------------------------------------------

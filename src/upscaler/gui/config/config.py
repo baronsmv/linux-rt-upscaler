@@ -122,6 +122,7 @@ class SidebarLayout:
         icon_columns: Number of columns in the icon picker grid.
         icon_size: Icon size inside the icon picker.
         row_spacing: Spacing between consecutive settings rows.
+        padding: Spacing between the rows and their borders.
     """
 
     settings_width: int = 420
@@ -132,6 +133,7 @@ class SidebarLayout:
     icon_columns: int = 9
     icon_size: int = 28
     row_spacing: int = 6
+    padding: int = 8
 
 
 @dataclass(frozen=True)
@@ -301,6 +303,61 @@ class DialogLayout:
     list_border_radius: int = 6
 
 
+@dataclass(frozen=True)
+class AboutLayout:
+    """Dimensions of the About dialog.
+
+    Attributes:
+        width: Dialog width in pixels.
+        height: Dialog height in pixels.
+        padding_h: Horizontal padding inside the dialog.
+        padding_top: Top padding inside the dialog.
+        padding_bottom: Bottom padding inside the dialog.
+        icon_size: Application icon size at the top of the dialog.
+        name_font_size: Font size for the application name.
+        name_margin_top: Gap above the application name.
+        version_font_size: Font size for the version line.
+        version_margin_top: Gap above the version line.
+        body_font_size: Font size for description and link labels.
+        description_margin_top: Gap above the description paragraph.
+        description_padding_h: Horizontal inset of the description text.
+        link_margin_top: Gap above the links row.
+        link_spacing: Gap between individual links in the row.
+        close_button_width: Width of the Close button.
+        close_button_height: Height of the Close button.
+        close_button_font_size: Font size of the Close button label.
+        close_button_padding_h: Horizontal padding inside the Close button.
+        close_button_padding_v: Vertical padding inside the Close button.
+        close_button_radius: Corner radius of the Close button.
+    """
+
+    width: int = 480
+    height: int = 400
+    padding_h: int = 32
+    padding_top: int = 28
+    padding_bottom: int = 24
+
+    icon_size: int = 96
+
+    name_font_size: int = 24
+    name_margin_top: int = 16
+    version_font_size: int = 20
+    version_margin_top: int = 4
+
+    body_font_size: int = 18
+    description_margin_top: int = 18
+    description_padding_h: int = 24
+    link_margin_top: int = 10
+    link_spacing: int = 6
+
+    close_button_width: int = 120
+    close_button_height: int = 36
+    close_button_font_size: int = 14
+    close_button_padding_h: int = 18
+    close_button_padding_v: int = 6
+    close_button_radius: int = 8
+
+
 # ---------------------------------------------------------------------------
 #  GUIConfig, the top-level configuration
 # ---------------------------------------------------------------------------
@@ -347,6 +404,7 @@ class GUIConfig:
     footer: FooterLayout = field(default_factory=FooterLayout)
     profile: ProfileLayout = field(default_factory=ProfileLayout)
     dialog: DialogLayout = field(default_factory=DialogLayout)
+    about: AboutLayout = field(default_factory=AboutLayout)
 
     auto_refresh_ms: int = 2000
     tile_preview_interval_ms: int = 60

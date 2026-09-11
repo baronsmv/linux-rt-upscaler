@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-from typing import Dict, List, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ..icons import load_icon
 from ..styles import (
@@ -58,7 +65,7 @@ def _links_layout(links: Dict[str, str], gui_config: GUIConfig) -> QHBoxLayout:
     links_layout = QHBoxLayout()
     for label in _separate_labels(label_list, sep):
         links_layout.addWidget(label)
-    links_layout.setSpacing(6)
+    links_layout.setSpacing(gui_config.about.link_spacing)
     links_layout.setAlignment(Qt.AlignCenter)
 
     return links_layout
@@ -67,23 +74,28 @@ def _links_layout(links: Dict[str, str], gui_config: GUIConfig) -> QHBoxLayout:
 class AboutDialog(QDialog):
     """Modal dialog displaying application information."""
 
-    def __init__(self, gui_config, parent=None):
+    def __init__(self, gui_config: GUIConfig, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("About")
-        self.setFixedSize(480, 400)
-        self.setStyleSheet(dialog_style(gui_config))
+        cfg = gui_config
+        a = cfg.about
+
+        self.setWindowTitle(self.tr("About"))
+        self.setFixedSize(a.width, a.height)
+        self.setStyleSheet(dialog_style(cfg))
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 24)
+        layout.setContentsMargins(
+            a.padding_h, a.padding_top, a.padding_h, a.padding_bottom
+        )
         layout.setSpacing(0)
 
         # App icon
         icon = QLabel()
-        pixmap = load_icon("app/app", 96, 96, color=gui_config.palette.control).pixmap(
-            96, 96
-        )
+        pixmap = load_icon(
+            "app/app", a.icon_size, a.icon_size, color=cfg.palette.control
+        ).pixmap(a.icon_size, a.icon_size)
         icon.setPixmap(pixmap)
-        icon.setFixedSize(96, 96)
+        icon.setFixedSize(a.icon_size, a.icon_size)
 
         icon_container = QVBoxLayout()
         icon_container.addStretch()
@@ -123,7 +135,7 @@ class AboutDialog(QDialog):
 
         # Close button
         close_btn = QPushButton(self.tr("Close", "Close button"))
-        close_btn.setFixedSize(120, 36)
+        close_btn.setFixedSize(a.close_button_width, a.close_button_height)
         close_btn.setCursor(Qt.PointingHandCursor)
         close_btn.clicked.connect(self.accept)
         close_btn.setStyleSheet(close_dialog_button_style(gui_config))

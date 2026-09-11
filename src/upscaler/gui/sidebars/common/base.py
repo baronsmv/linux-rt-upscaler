@@ -40,7 +40,7 @@ class SidebarBase(QWidget):
 
         # ---- Main layout (nothing but the tab widget) -----------------------
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setContentsMargins(*([gui_config.sidebar.padding] * 4))
         layout.setSpacing(0)
 
         self.tab_widget = QTabWidget()

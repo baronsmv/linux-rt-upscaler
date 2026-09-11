@@ -73,7 +73,7 @@ class ProfilesSidebar(QWidget):
 
         # ---- Layout ----
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setContentsMargins(*([gui_config.sidebar.padding] * 4))
         layout.setSpacing(0)
 
         # Title
