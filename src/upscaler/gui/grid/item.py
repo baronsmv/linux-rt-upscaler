@@ -23,6 +23,7 @@ from PySide6.QtGui import (
     QKeyEvent,
 )
 from PySide6.QtWidgets import (
+    QApplication,
     QGraphicsObject,
     QGraphicsItem,
     QStyleOptionGraphicsItem,
@@ -339,10 +340,9 @@ class WindowTileItem(QGraphicsObject):
 
         # Title
         title = self._win_info.title
-        font = QFont(
-            self._gui_config.tile.title_font_family,
-            self._gui_config.tile.title_font_size,
-        )
+        family = self._gui_config.font_family
+        font = QFont(family) if family else QFont(QApplication.font())
+        font.setPointSize(self._gui_config.tile.title_font_size)
         font.setBold(self._gui_config.tile.title_font_bold)
         font.setHintingPreference(QFont.PreferFullHinting)
         painter.setFont(font)

@@ -56,7 +56,6 @@ class TileLayout:
         pop_duration: Duration of the pop animation in milliseconds.
         selection_border_width: Border width (px) when the tile is selected.
         hover_border_width: Border width (px) when the tile is hovered.
-        title_font_family: Font family used for the title.
         title_font_size: Font size for the tile title.
         title_font_bold: Whether the title is rendered in bold.
     """
@@ -73,7 +72,6 @@ class TileLayout:
     pop_duration: int = 200
     selection_border_width: int = 3
     hover_border_width: int = 2
-    title_font_family: str = "Segoe UI"
     title_font_size: int = 12
     title_font_bold: bool = True
 
@@ -466,6 +464,7 @@ class GUIConfig:
         profile: Profile sidebar item and toolbar dimensions.
         dialog: Dialog sizes, spacing, and padding strings.
         about: About dialog dimensions.
+        font_family: Font family used for the interface.
         auto_refresh_ms: Window list refresh interval (ms).
         tile_preview_interval_ms: Tile thumbnail update interval (ms).
         highlight_border_width: Width of the highlight indicator bar in settings rows.
@@ -488,6 +487,8 @@ class GUIConfig:
     profile: ProfileLayout = field(default_factory=ProfileLayout)
     dialog: DialogLayout = field(default_factory=DialogLayout)
     about: AboutLayout = field(default_factory=AboutLayout)
+
+    font_family: str = ""
 
     auto_refresh_ms: int = 2000
     tile_preview_interval_ms: int = 60
