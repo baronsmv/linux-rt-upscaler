@@ -24,13 +24,21 @@ class IconTabBar(QWidget):
     def __init__(self, gui_config: GUIConfig, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._gui_config = gui_config
-        self._columns = gui_config.sidebar.icon_columns
-        self._icon_size = gui_config.sidebar.icon_size
+        s = gui_config.sidebar
+
+        self._columns = s.icon_columns
+        self._icon_size = s.icon_size
+        self._button_padding = s.tab_button_padding
 
         layout = QGridLayout(self)
-        layout.setContentsMargins(4, 8, 4, 8)
-        layout.setHorizontalSpacing(6)
-        layout.setVerticalSpacing(6)
+        layout.setContentsMargins(
+            s.tab_bar_padding_h,
+            s.tab_bar_padding_v,
+            s.tab_bar_padding_h,
+            s.tab_bar_padding_v,
+        )
+        layout.setHorizontalSpacing(s.tab_bar_spacing)
+        layout.setVerticalSpacing(s.tab_bar_spacing)
 
         self._grid = layout
         self._button_group = QButtonGroup(self)
@@ -61,6 +69,7 @@ class IconTabBar(QWidget):
         row = index // self._columns
         col = index % self._columns
 
+        side = self._icon_size + 2 * self._button_padding
         btn = QPushButton()
         btn.setIcon(self._load_icon(icon_name, self._icon_size))
         btn.setIconSize(QSize(self._icon_size, self._icon_size))
@@ -68,7 +77,7 @@ class IconTabBar(QWidget):
         btn.setCheckable(True)
         btn.setFlat(True)
         btn.setCursor(Qt.PointingHandCursor)
-        btn.setFixedSize(self._icon_size + 12, self._icon_size + 12)
+        btn.setFixedSize(side, side)
         btn.setStyleSheet(icon_tab_button_style(self._gui_config))
 
         self._grid.addWidget(btn, row, col)

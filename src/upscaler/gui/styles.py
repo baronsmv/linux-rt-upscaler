@@ -83,16 +83,17 @@ def tooltip_style(cfg: GUIConfig) -> str:
 #  Scrollbar
 # ---------------------------------------------------------------------------
 def scrollbar_style(cfg: GUIConfig) -> str:
-    """Custom vertical scrollbar for sidebars."""
+    """Custom vertical scrollbar for sidebars and lists."""
+    s = cfg.scrollbar
     return f"""
     QScrollBar:vertical {{
-        width: 8px;
+        width: {s.width}px;
         margin: 0;
     }}
     QScrollBar::handle:vertical {{
         background-color: {cfg.palette.handle};
-        border-radius: 4px;
-        min-height: 30px;
+        border-radius: {s.radius}px;
+        min-height: {s.handle_min_length}px;
     }}
     QScrollBar::handle:vertical:hover {{
         background-color: {cfg.palette.handle_hover};
@@ -156,13 +157,14 @@ def filter_bar_style(cfg: GUIConfig, hover: bool = False) -> str:
 # ---------------------------------------------------------------------------
 def section_title_style(cfg: GUIConfig) -> str:
     """Uppercase section title inside a settings tab."""
+    s = cfg.sidebar
     return f"""
-    font-size: {cfg.sidebar.section_title_size}px;
+    font-size: {s.section_title_size}px;
     font-weight: bold;
     color: {cfg.palette.text_subtle};
     text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 12px 0px 4px 0px;
+    letter-spacing: {s.section_title_letter_spacing}px;
+    padding: {s.section_title_padding_top}px 0px {s.section_title_padding_bottom}px 0px;
     """
 
 
@@ -187,7 +189,8 @@ def setting_highlight_bar_style(cfg: GUIConfig) -> str:
 def setting_highlight_background_style(cfg: GUIConfig, highlighted: bool) -> str:
     """Background style for the content container of a BaseRow."""
     if highlighted:
-        return f"background-color: {cfg.palette.input}; border-radius: 4px;"
+        r = cfg.sidebar.row_border_radius
+        return f"background-color: {cfg.palette.input}; border-radius: {r}px;"
     return "background-color: transparent;"
 
 
@@ -284,7 +287,7 @@ def checkbox_style(
     QCheckBox::indicator {{
         width: {cfg.checkbox.indicator_size}px;
         height: {cfg.checkbox.indicator_size}px;
-        border: 2px solid {palette.action};
+        border: {cfg.checkbox.indicator_border_width}px solid {palette.action};
         border-radius: {cfg.checkbox.indicator_radius}px;
         background-color: transparent;
     }}
@@ -308,7 +311,7 @@ def color_swatch_style(
     QPushButton {{
         background-color: {current_color};
         border: 1px solid {palette.border};
-        border-radius: 4px;
+        border-radius: {cfg.swatch.radius}px;
     }}
     QPushButton:hover {{
         border-color: {palette.border_hover};
@@ -373,26 +376,27 @@ def color_dialog_style(cfg: GUIConfig) -> str:
 def slider_style(cfg: GUIConfig, enabled: bool = True) -> str:
     """Style for a horizontal QSlider."""
     palette = _control_palette(cfg=cfg, enabled=enabled)
+    s = cfg.slider
     return f"""
     QSlider::groove:horizontal {{
         border: none;
-        height: 4px;
+        height: {s.groove_height}px;
         background-color: {palette.border};
-        border-radius: 2px;
+        border-radius: {s.groove_radius}px;
     }}
     QSlider::handle:horizontal {{
         background-color: {palette.action};
-        width: 16px;
-        height: 16px;
-        margin: -6px 0;
-        border-radius: 8px;
+        width: {s.handle_size}px;
+        height: {s.handle_size}px;
+        margin: -{s.handle_inset}px 0;
+        border-radius: {s.handle_radius}px;
     }}
     QSlider::handle:horizontal:hover {{
         background-color: {palette.action_hover};
     }}
     QSlider::sub-page:horizontal {{
         background-color: {palette.action};
-        border-radius: 2px;
+        border-radius: {s.groove_radius}px;
     }}
     {tooltip_style(cfg)}
     """
@@ -491,26 +495,26 @@ def file_dialog_style(cfg: GUIConfig) -> str:
     }}
     QFileDialog QScrollBar:vertical {{
         background: transparent;
-        width: 10px;
+        width: {cfg.scrollbar.width}px;
         margin: 0;
     }}
     QFileDialog QScrollBar::handle:vertical {{
         background-color: {cfg.palette.handle};
-        border-radius: 5px;
-        min-height: 30px;
+        border-radius: {cfg.scrollbar.radius}px;
+        min-height: {cfg.scrollbar.handle_min_length}px;
     }}
-    QFileDialog QScrollBar::handle:vertical:hover {{
+    QFileDialog QScrollBar:handle:vertical:hover {{
         background-color: {cfg.palette.handle_hover};
     }}
     QFileDialog QScrollBar:horizontal {{
         background: transparent;
-        height: 10px;
+        height: {cfg.scrollbar.width}px;
         margin: 0;
     }}
     QFileDialog QScrollBar::handle:horizontal {{
         background-color: {cfg.palette.handle};
-        border-radius: 5px;
-        min-width: 30px;
+        border-radius: {cfg.scrollbar.radius}px;
+        min-width: {cfg.scrollbar.handle_min_length}px;
     }}
     QFileDialog QScrollBar::handle:horizontal:hover {{
         background-color: {cfg.palette.handle_hover};
@@ -845,7 +849,7 @@ def profile_list_style(cfg: GUIConfig) -> str:
         font-size: {cfg.sidebar.tab_font_size}px;
         background-color: transparent;
         border-radius: {cfg.profile.profile_border_radius}px;
-        padding: 4px 8px;
+        padding: {cfg.profile.profile_item_padding_v}px {cfg.profile.profile_item_padding_h}px;
         border-left: {cfg.profile.profile_border_left}px solid transparent;
     }}
     QListWidget::item:hover {{
@@ -925,11 +929,12 @@ def circular_button_style(cfg: GUIConfig, icon_size: int) -> str:
 
 def icon_tab_button_style(cfg: GUIConfig) -> str:
     """Style for individual icon buttons inside the IconTabBar."""
+    s = cfg.sidebar
     return f"""
     QPushButton {{
         background-color: transparent;
-        border: 2px solid transparent;
-        border-radius: 8px;
+        border: {s.tab_button_border_width}px solid transparent;
+        border-radius: {s.tab_button_radius}px;
     }}
     QPushButton:hover {{
         background-color: {cfg.palette.button_hover};
@@ -1009,27 +1014,28 @@ def reset_button_style(cfg: GUIConfig, active: bool) -> str:
         background-color: transparent;
         border: none;
         border-left: 1px solid {split_color};
-        width: 20px;
+        width: {cfg.footer.menu_button_width}px;
     }}
     QToolButton::menu-arrow {{
-        width: 12px;
-        height: 12px;
+        width: {cfg.footer.menu_arrow_size}px;
+        height: {cfg.footer.menu_arrow_size}px;
     }}
     """
 
 
 def reset_submenu_style(cfg: GUIConfig) -> str:
     """Style for the dropdown menu of the Reset button."""
+    f = cfg.footer
     return f"""
     QMenu {{
         background-color: {cfg.palette.input};
         border: 1px solid {cfg.palette.border};
         border-radius: 4px;
-        padding: 4px;
+        padding: {f.menu_padding}px;
     }}
     QMenu::item {{
         color: {cfg.palette.text};
-        padding: 6px 24px;
+        padding: {f.menu_item_padding_v}px {f.menu_item_padding_h}px;
         font-size: {cfg.sidebar.tab_font_size}px;
     }}
     QMenu::item:selected {{

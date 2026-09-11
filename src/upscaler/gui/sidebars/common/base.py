@@ -33,9 +33,9 @@ class SidebarBase(QWidget):
 
         # ---- Visual identity ------------------------------------------------
         shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(20)
+        shadow.setBlurRadius(gui_config.sidebar.shadow_blur)
         shadow.setColor(Qt.gray)
-        shadow.setOffset(0, 2)
+        shadow.setOffset(0, gui_config.sidebar.shadow_offset_y)
         self.setGraphicsEffect(shadow)
 
         # ---- Main layout (nothing but the tab widget) -----------------------

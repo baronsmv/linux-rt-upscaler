@@ -126,14 +126,26 @@ class SidebarLayout:
     """
 
     settings_width: int = 420
-    profiles_width: int = 360
+    profiles_width: int = 340
+    padding: int = 8
     tab_font_size: int = 18
     section_title_size: int = 18
+    section_title_padding_top: int = 12
+    section_title_padding_bottom: int = 4
+    section_title_letter_spacing: int = 1
     row_height: int = 32
+    row_border_radius: int = 4
     icon_columns: int = 9
     icon_size: int = 28
     row_spacing: int = 6
-    padding: int = 8
+    tab_button_border_width: int = 2
+    tab_button_radius: int = 8
+    tab_button_padding: int = 6
+    tab_bar_padding_h: int = 4
+    tab_bar_padding_v: int = 8
+    tab_bar_spacing: int = 6
+    shadow_blur: int = 20
+    shadow_offset_y: int = 2
 
 
 @dataclass(frozen=True)
@@ -149,6 +161,7 @@ class CheckBoxLayout:
 
     indicator_size: int = 18
     indicator_radius: int = 4
+    indicator_border_width: int = 2
     spacing: int = 8
     padding_v: int = 4
 
@@ -170,13 +183,24 @@ class ComboBoxLayout:
 
 @dataclass(frozen=True)
 class SliderLayout:
-    """Slider-related numbers.
+    """Slider dimensions.
 
     Attributes:
         value_edit_width: Width of the editable value field next to the slider.
+        groove_height: Thickness of the slider track.
+        groove_radius: Corner radius of the track.
+        handle_size: Width and height of the handle (circle).
+        handle_inset: Vertical extension of the handle beyond the track,
+            on each side. Stored positive; applied as a negative margin.
+        handle_radius: Corner radius of the handle (typically half its size).
     """
 
     value_edit_width: int = 72
+    groove_height: int = 4
+    groove_radius: int = 2
+    handle_size: int = 16
+    handle_inset: int = 6
+    handle_radius: int = 8
 
 
 @dataclass(frozen=True)
@@ -207,6 +231,7 @@ class ColorSwatchLayout:
     swatch_width: int = 36
     swatch_height: int = 24
     browse_button_width: int = 32
+    radius: int = 4
 
 
 @dataclass(frozen=True)
@@ -218,6 +243,21 @@ class SplitterLayout:
     """
 
     handle_width: int = 3
+
+
+@dataclass(frozen=True)
+class ScrollbarLayout:
+    """Dimensions of scrollbars across the GUI.
+
+    Attributes:
+        width: Thickness of the scrollbar track (vertical or horizontal).
+        radius: Corner radius of the handle.
+        handle_min_length: Minimum handle length along the scroll axis.
+    """
+
+    width: int = 8
+    radius: int = 4
+    handle_min_length: int = 30
 
 
 @dataclass(frozen=True)
@@ -235,6 +275,11 @@ class FooterLayout:
     button_padding_h: int = 18
     button_padding_v: int = 6
     button_radius: int = 8
+    menu_button_width: int = 20
+    menu_arrow_size: int = 12
+    menu_padding: int = 4
+    menu_item_padding_v: int = 6
+    menu_item_padding_h: int = 24
 
 
 @dataclass(frozen=True)
@@ -259,6 +304,8 @@ class ProfileLayout:
     profile_icon_size: int = 32
     profile_border_left: int = 3
     profile_border_radius: int = 6
+    profile_item_padding_h: int = 8
+    profile_item_padding_v: int = 4
     profile_spacing: int = 4
     toolbar_button_size: int = 36
     toolbar_button_icon_size: int = 24
@@ -401,6 +448,7 @@ class GUIConfig:
     edit_field: EditFieldLayout = field(default_factory=EditFieldLayout)
     swatch: ColorSwatchLayout = field(default_factory=ColorSwatchLayout)
     splitter: SplitterLayout = field(default_factory=SplitterLayout)
+    scrollbar: ScrollbarLayout = field(default_factory=ScrollbarLayout)
     footer: FooterLayout = field(default_factory=FooterLayout)
     profile: ProfileLayout = field(default_factory=ProfileLayout)
     dialog: DialogLayout = field(default_factory=DialogLayout)
