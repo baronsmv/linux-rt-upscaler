@@ -40,12 +40,11 @@ class SettingsTab(QWidget):
     """
     A scrollable, styled tab page to be placed inside a ``SidebarBase``.
 
-    Subclasses override :meth:`_build_content` to populate the page.
-    A ``config_changed`` signal is available to notify the sidebar that
-    a setting has been modified (optional, depending on concrete tab).
-
-    The class provides convenience methods for adding rows with labels,
-    section headers, and separators: all styled consistently.
+    Subclasses override :meth:`_build_content` to populate the page. Building
+    is deferred until the tab is first shown (see :meth:`ensure_built`),
+    because constructing every tab up front costs ~500 ms at startup, mostly
+    in stylesheet parsing and font enumeration. A ``config_changed`` signal
+    is available to notify the sidebar that a setting has been modified.
     """
 
     config_changed = Signal()
@@ -63,6 +62,7 @@ class SettingsTab(QWidget):
             baseline_config if baseline_config is not None else DEFAULT_CONFIG
         )
         self.title = title
+        self._built = False
 
         self.setContentsMargins(0, 0, 0, 0)
 
@@ -89,11 +89,24 @@ class SettingsTab(QWidget):
         )
         self.content_layout.setSpacing(s.content_spacing)
 
-        self._build_content()
-        self.content_layout.addStretch()
-
         scroll.setWidget(content)
         main_layout.addWidget(scroll)
+
+    def ensure_built(self) -> None:
+        """Populate the tab's content on first use."""
+        if self._built:
+            return
+        self._built = True
+        try:
+            self._build_content()
+        except Exception:
+            self._built = False
+            raise
+        self.content_layout.addStretch()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self.ensure_built()
 
     # ------------------------------------------------------------------
     #  Subclass hook

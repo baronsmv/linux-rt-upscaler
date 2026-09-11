@@ -313,6 +313,7 @@ class SettingsSidebar(IconSidebarBase):
         """
         if self._is_style_tab_active():
             # === Style tab active ===
+            self._style_tab.ensure_built()
             self._save_btn.setText(self.tr("Apply Style", "Apply button"))
             self._reset_btn.setText(self.tr("Reset Style", "Reset button"))
             # Swap menu
