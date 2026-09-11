@@ -30,11 +30,14 @@ class StyleTab(SettingsTab):
         self,
         gui_config: GUIConfig,
         initial_palette: GUIPalette,
-        on_apply: Callable[[GUIPalette], None],
+        on_apply: Callable[[GUIPalette, float], None],
+        initial_zoom: float = 1.0,
         parent: Optional[QWidget] = None,
     ) -> None:
         self._palette = palette_to_internal(initial_palette)
         self._saved_palette = copy.deepcopy(self._palette)
+        self._zoom = float(initial_zoom)
+        self._saved_zoom = float(initial_zoom)
         self._on_apply = on_apply
         self._updating_from_preset = False
         super().__init__(
@@ -251,6 +254,22 @@ class StyleTab(SettingsTab):
     def _build_content(self) -> None:
         self._picker_widgets: Dict[str, ColorPickerRow] = {}
 
+        # ── Interface scale ───────────────────────────────────────
+        self._add_section(self.tr("Interface Scale", "Settings section"))
+        self._zoom_slider = self._add_slider(
+            self.tr("Zoom (%)", "Label of setting (must be short)"),
+            50,
+            400,
+            int(self._zoom * 100),
+            scale_factor=100,
+            float_slot=self._on_zoom_changed,
+            baseline=self._saved_zoom,
+            help=self.tr(
+                "Scales the entire interface.",
+                "Description of a setting (tooltip)",
+            ),
+        )
+
         # ── Preset selector ───────────────────────────────────────
         self._add_section(self.tr("Palette Preset", "Settings section"))
         self._preset_combo = self._add_combo(
@@ -286,6 +305,12 @@ class StyleTab(SettingsTab):
     # ------------------------------------------------------------------
     #  Slots
     # ------------------------------------------------------------------
+    def _on_zoom_changed(self, value: float) -> None:
+        if abs(value - self._zoom) < 1e-6:
+            return
+        self._zoom = value
+        self._notify_dirty()
+
     def _on_preset_changed(self, text: str) -> None:
         if text == "Custom" or self._updating_from_preset:
             return
@@ -314,7 +339,9 @@ class StyleTab(SettingsTab):
         return slot
 
     def is_dirty(self) -> bool:
-        """Return True if the current palette differs from the last applied one."""
+        """Return True if palette or zoom differs from the last applied state."""
+        if abs(self._zoom - self._saved_zoom) > 1e-6:
+            return True
         for field in fields(GUIPalette):
             if getattr(self._palette, field.name) != getattr(
                 self._saved_palette, field.name
@@ -323,31 +350,37 @@ class StyleTab(SettingsTab):
         return False
 
     def is_default(self) -> bool:
-        """Return True if the current palette matches the Auto preset."""
+        """Return True if the palette is Auto and zoom is at 100%."""
+        if abs(self._zoom - 1.0) > 1e-6:
+            return False
         return find_matching_preset(palette_to_stylesheet(self._palette)) == "Auto"
 
     def _refresh_baselines(self) -> None:
-        """Update every picker’s baseline to the current saved palette."""
+        """Update every picker's baseline to the current saved state."""
+        self._zoom_slider.set_baseline(self._saved_zoom)
         for field in fields(GUIPalette):
             name = field.name
             baseline_hex = normalize_to_hex(getattr(self._saved_palette, name))
             self._picker_widgets[name].set_baseline(baseline_hex)
 
     def apply_clicked(self) -> None:
-        """Persist the palette and rebuild the GUI."""
+        """Persist the palette and zoom, then rebuild the GUI."""
         self._saved_palette = copy.deepcopy(self._palette)
+        self._saved_zoom = self._zoom
         self._refresh_baselines()
-        self._on_apply(palette_to_stylesheet(self._palette))
+        self._on_apply(palette_to_stylesheet(self._palette), self._zoom)
         self._notify_dirty()
 
     def reset_style(self) -> None:
-        """Revert all fields to the last applied palette."""
+        """Revert palette and zoom to the last applied state."""
         self._palette = copy.deepcopy(self._saved_palette)
+        self._zoom = self._saved_zoom
         self._updating_from_preset = True
         for field in fields(GUIPalette):
             hex_color = normalize_to_hex(getattr(self._palette, field.name))
             self._picker_widgets[field.name].set_color(hex_color)
         self._updating_from_preset = False
+        self._zoom_slider.set_value(int(self._saved_zoom * 100))
         self._preset_combo.setCurrentText(
             find_matching_preset(palette_to_stylesheet(self._palette))
         )
@@ -355,9 +388,10 @@ class StyleTab(SettingsTab):
         self._notify_dirty()
 
     def restore_auto_preset(self) -> None:
-        """Load the Auto preset without applying."""
+        """Load the Auto preset and 100% zoom without applying."""
         preset = PRESETS["Auto"]
         self._palette = palette_to_internal(preset)
+        self._zoom = 1.0
         self._updating_from_preset = True
         for field in fields(GUIPalette):
             self._picker_widgets[field.name].set_color(
@@ -365,6 +399,7 @@ class StyleTab(SettingsTab):
             )
         self._updating_from_preset = False
         self._preset_combo.setCurrentText("Auto")
+        self._zoom_slider.set_value(100)
         self._notify_dirty()
 
     def _notify_dirty(self) -> None:

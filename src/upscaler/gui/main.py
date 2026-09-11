@@ -23,9 +23,9 @@ from .config import (
     ConfigManager,
     GUIConfig,
     GUIPalette,
-    PRESETS,
     load_gui_style,
     save_gui_style,
+    scale_gui_config,
 )
 from .dialogs import AboutDialog
 from .grid import FilterBar, WindowGridScene, WindowGridView
@@ -79,8 +79,9 @@ class MainWindow(QMainWindow):
         ) and bool(self.settings.value("tray/start_hidden", False, type=bool))
 
         # GUI Palette
-        palette = load_gui_style() or PRESETS["Auto"]
-        self.gui_config = GUIConfig(palette=palette)
+        palette, self._zoom = load_gui_style()
+        base_config = GUIConfig(palette=palette)
+        self.gui_config = scale_gui_config(base_config, self._zoom)
         QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))
 
         # Icon directory
@@ -417,6 +418,7 @@ class MainWindow(QMainWindow):
             baseline_config=self._config_manager.saved_persistent_config,
             profile_active=self._config_manager.active_profile_name is not None,
             profile_has_options=self._active_profile_has_options(),
+            initial_zoom=self._zoom,
         )
         # Daemon checkbox is inside the sidebar
         sidebar.daemon_toggled.connect(self.set_daemon_mode)
@@ -533,21 +535,19 @@ class MainWindow(QMainWindow):
         self.close()
         QApplication.instance().quit()
 
-    def _on_style_applied(self, new_palette: GUIPalette) -> None:
-        """Save the new palette to disk and rebuild the GUI with it."""
+    def _on_style_applied(self, new_palette: GUIPalette, zoom: float) -> None:
+        """Save the palette and zoom, then rebuild the GUI with them applied."""
         palette_dict = {
             field.name: getattr(new_palette, field.name) for field in fields(GUIPalette)
         }
         preset_name = find_matching_preset(new_palette)
-        if preset_name:
-            save_gui_style(palette_dict, preset=preset_name)
-        else:
-            save_gui_style(palette_dict)
+        save_gui_style(palette_dict, preset=preset_name, zoom=zoom)
 
         # Build a completely new GUIConfig (same layout constants, new palette)
-        new_gui_config = GUIConfig(palette=new_palette)
-        self.gui_config = new_gui_config
-        QApplication.instance().setStyleSheet(tooltip_style(new_gui_config))
+        self._zoom = float(zoom)
+        base_config = GUIConfig(palette=new_palette)
+        self.gui_config = scale_gui_config(base_config, self._zoom)
+        QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))
 
         # Rebuild the entire central area, keeping the active profile / daemon state
         self._rebuild_ui()

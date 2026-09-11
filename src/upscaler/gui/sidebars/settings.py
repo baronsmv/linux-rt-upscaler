@@ -41,13 +41,14 @@ class SettingsSidebar(IconSidebarBase):
     reset_settings = Signal()
     restore_defaults = Signal()
     daemon_toggled = Signal(bool)
-    style_applied = Signal(object)
+    style_applied = Signal(object, float)
 
     def __init__(
         self,
         gui_config: GUIConfig,
         config: Config,
         baseline_config: Config,
+        initial_zoom: float = 1.0,
         profile_active: bool = False,
         profile_has_options: bool = False,
         parent: Optional[QWidget] = None,
@@ -114,7 +115,7 @@ class SettingsSidebar(IconSidebarBase):
                 self.tr("Hotkeys", "Name of a settings tab"),
             ),
             (
-                StyleTab(*style_tab_args),
+                StyleTab(*style_tab_args, initial_zoom=initial_zoom),
                 "style",
                 self.tr("GUI Style", "Name of a settings tab"),
             ),
@@ -144,8 +145,8 @@ class SettingsSidebar(IconSidebarBase):
         """Any setting was modified; re-evaluate dirty state."""
         self._check_dirty()
 
-    def _on_style_apply(self, new_palette: GUIPalette) -> None:
-        self.style_applied.emit(new_palette)
+    def _on_style_apply(self, new_palette: GUIPalette, zoom: float) -> None:
+        self.style_applied.emit(new_palette, zoom)
 
     # ------------------------------------------------------------------
     #  Dirty-state logic
