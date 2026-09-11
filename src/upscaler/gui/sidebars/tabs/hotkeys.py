@@ -33,10 +33,10 @@ class HotkeysTab(SettingsTab):
     def _hotkey_group_titles(self) -> Dict[str, str]:
         """Return translated titles for each hotkey group key."""
         return {
-            "session": self.tr("Session Hotkeys", "Hotkey group title"),
-            "view": self.tr("View Hotkeys", "Hotkey group title"),
-            "zooming": self.tr("Zooming Hotkeys", "Hotkey group title"),
-            "panning": self.tr("Panning Hotkeys", "Hotkey group title"),
+            "session": self.tr("Session", "Hotkey group title"),
+            "view": self.tr("View", "Hotkey group title"),
+            "zooming": self.tr("Zooming", "Hotkey group title"),
+            "panning": self.tr("Panning", "Hotkey group title"),
         }
 
     def _hotkey_action_labels(self) -> Dict[str, Tuple[str, str]]:
