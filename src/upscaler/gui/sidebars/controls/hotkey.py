@@ -5,6 +5,7 @@ from typing import Dict, Optional, TYPE_CHECKING
 from PySide6.QtCore import QEvent, Qt, Signal
 from PySide6.QtWidgets import (
     QApplication,
+    QHBoxLayout,
     QPushButton,
     QToolButton,
     QSizePolicy,
@@ -250,14 +251,13 @@ class HotkeyRow(BaseRow):
             parent=parent,
         )
         self._init_label(label)
-        self._label.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self._content_layout.setStretchFactor(self._label, 1)
 
         self._button = HotkeyCaptureButton(cfg, sequence=sequence)
         self._button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         if tooltip:
             self._button.setToolTip(tooltip)
         self._button.sequenceChanged.connect(self._on_sequence_changed)
-        self._content_layout.addWidget(self._button, 1)
 
         self._clear_btn = QToolButton()
         self._clear_btn.setText("\u00d7")
@@ -268,7 +268,15 @@ class HotkeyRow(BaseRow):
         self._clear_btn.setFixedSize(cfg.sidebar.row_height, cfg.sidebar.row_height)
         self._clear_btn.setStyleSheet(hotkey_clear_button_style(cfg))
         self._clear_btn.clicked.connect(self._on_clear_clicked)
-        self._content_layout.addWidget(self._clear_btn)
+
+        control = QWidget()
+        control_layout = QHBoxLayout(control)
+        control_layout.setContentsMargins(0, 0, 0, 0)
+        control_layout.setSpacing(cfg.sidebar.row_spacing)
+        control_layout.addWidget(self._button, 1)
+        control_layout.addWidget(self._clear_btn)
+
+        self._content_layout.addWidget(control, 1)
 
         self._refresh_clear_state()
         self._update_highlight()
