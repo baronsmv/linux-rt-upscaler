@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .common import IconSidebarBase
+from .sidebar import IconSidebarBase
 from .tabs import (
     AdvancedTab,
     DisplayTab,

@@ -5,7 +5,7 @@ from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget
 
-from ..common import SettingsTab
+from ..sidebar import SettingsTab
 from ....config import UPSCALING_MODELS
 
 if TYPE_CHECKING:

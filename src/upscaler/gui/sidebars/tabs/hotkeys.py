@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget
 
-from ..common import SettingsTab
+from ..sidebar import SettingsTab
 from ....utils import HOTKEY_GROUPS
 
 if TYPE_CHECKING:

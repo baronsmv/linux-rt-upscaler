@@ -5,7 +5,7 @@ from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QCheckBox, QWidget
 
-from ._base import BaseRow
+from .base import BaseRow
 from ...styles import checkbox_style
 
 if TYPE_CHECKING:

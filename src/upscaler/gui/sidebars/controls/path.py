@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ._base import BaseRow
+from .base import BaseRow
 from ...styles import file_dialog_style, line_edit_style, path_browse_button_style
 
 if TYPE_CHECKING:

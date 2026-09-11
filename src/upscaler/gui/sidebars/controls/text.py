@@ -5,7 +5,7 @@ from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QLineEdit, QWidget
 
-from ._base import BaseRow
+from .base import BaseRow
 from ...styles import line_edit_style
 
 if TYPE_CHECKING:

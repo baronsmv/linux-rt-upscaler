@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QColorDialog, QPushButton, QWidget
 
-from ._base import BaseRow
+from .base import BaseRow
 from ...styles import color_dialog_style, color_swatch_style
 from ...utils import qcolor_to_rgba_hex, rgba_hex_to_qcolor
 

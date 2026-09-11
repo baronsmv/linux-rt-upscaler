@@ -5,7 +5,7 @@ from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget
 
-from ..common import SettingsTab
+from ..sidebar import SettingsTab
 from ....config import VulkanPresentMode
 from ....utils import list_monitors
 from ....vulkan import get_discovered_devices

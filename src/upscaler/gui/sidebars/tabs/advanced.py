@@ -4,7 +4,7 @@ from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget
 
-from ..common import SettingsTab
+from ..sidebar import SettingsTab
 
 if TYPE_CHECKING:
     from ...config import GUIConfig

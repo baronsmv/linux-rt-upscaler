@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ._base import BaseRow
+from .base import BaseRow
 from ...styles import hotkey_button_style, hotkey_clear_button_style
 from ....utils import KEYSYM_MAP, format_hotkey
 

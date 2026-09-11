@@ -5,7 +5,7 @@ from typing import List, Optional, TYPE_CHECKING
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QComboBox, QWidget
 
-from ._base import BaseRow
+from .base import BaseRow
 from ...styles import combo_box_style
 
 if TYPE_CHECKING:

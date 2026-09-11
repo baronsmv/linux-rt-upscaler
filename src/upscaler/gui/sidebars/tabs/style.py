@@ -7,7 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget
 
-from ..common import SettingsTab
+from ..sidebar import SettingsTab
 from ...config import GUIPalette, PRESETS
 from ...utils import (
     find_matching_preset,
