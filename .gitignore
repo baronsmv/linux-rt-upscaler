@@ -53,6 +53,7 @@ coverage.xml
 cover/
 
 # Translations
+*.qm
 *.mo
 *.pot
 
