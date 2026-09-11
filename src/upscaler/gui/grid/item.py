@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, TYPE_CHECKING
 
 from PySide6.QtCore import (
     Qt,
@@ -32,6 +32,9 @@ from PySide6.QtWidgets import (
 from ...capture import FrameGrabber
 from ...window import WindowInfo
 
+if TYPE_CHECKING:
+    from ..config import GUIConfig
+
 logger = logging.getLogger(__name__)
 
 
@@ -60,12 +63,13 @@ class WindowTileItem(QGraphicsObject):
     def __init__(
         self,
         win_info: WindowInfo,
-        gui_config,
+        gui_config: GUIConfig,
         parent: Optional[QGraphicsItem] = None,
     ) -> None:
         super().__init__(parent)
-        self._win_info = win_info
-        self._gui_config = gui_config
+        self._win_info: WindowInfo = win_info
+        self._gui_config: GUIConfig = gui_config
+        self._grid_focused: bool = True
 
         # --- Geometry -------------------------------------------------------
         self._half_w = gui_config.tile.width / 2.0
@@ -84,7 +88,6 @@ class WindowTileItem(QGraphicsObject):
         self._anim = QPropertyAnimation(self, b"scale", self)
         self._anim.setDuration(gui_config.tile.pop_duration)
         self._anim.setEasingCurve(QEasingCurve.OutCubic)
-        self._anim.finished.connect(self._on_animation_finished)
 
         # --- Capture --------------------------------------------------------
         self._grabber: Optional[FrameGrabber] = None
@@ -153,9 +156,32 @@ class WindowTileItem(QGraphicsObject):
     #  Animation target (unified for hover & selection)
     # ------------------------------------------------------------------
 
+    def set_hover(self, hover: bool) -> None:
+        """Programmatically set the hover state (used when focus leaves the grid)."""
+        if self._hover == hover:
+            return
+        self._hover = hover
+        self.setZValue(1 if hover else 0)
+        self.update()
+        self._update_animation_target()
+
+    def set_grid_focused(self, focused: bool) -> None:
+        """Tell the tile whether the owning grid currently has focus."""
+        if self._grid_focused == focused:
+            return
+        self._grid_focused = focused
+        self.update()
+        self._update_animation_target()
+
     def _should_pop(self) -> bool:
         """Return True if the tile should appear popped out."""
+        if not self._grid_focused:
+            return False
         return self._hover or self._selected
+
+    def _show_hover(self) -> bool:
+        """Return True if the hover border should be rendered."""
+        return self._grid_focused and self._hover
 
     def _update_animation_target(self) -> None:
         """
@@ -170,10 +196,6 @@ class WindowTileItem(QGraphicsObject):
         self._anim.setStartValue(self._scale)
         self._anim.setEndValue(target)
         self._anim.start()
-
-    def _on_animation_finished(self) -> None:
-        """Called when the pop-in / pop-out animation completes."""
-        pass  # nothing needed; target already reached
 
     # ------------------------------------------------------------------
     #  Selection state (managed by WindowGridScene)
@@ -195,17 +217,11 @@ class WindowTileItem(QGraphicsObject):
     # ------------------------------------------------------------------
 
     def hoverEnterEvent(self, event) -> None:
-        self.setZValue(1)
-        self._hover = True
-        self.update()
-        self._update_animation_target()
+        self.set_hover(True)
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event) -> None:
-        self.setZValue(0)
-        self._hover = False
-        self.update()
-        self._update_animation_target()
+        self.set_hover(False)
         super().hoverLeaveEvent(event)
 
     def mousePressEvent(self, event) -> None:
@@ -362,7 +378,7 @@ class WindowTileItem(QGraphicsObject):
                 QColor(self._gui_config.palette.control),
                 self._gui_config.tile.selection_border_width,
             )
-        elif self._hover:
+        elif self._show_hover():
             pen = QPen(
                 QColor(self._gui_config.palette.control_hover),
                 self._gui_config.tile.hover_border_width,

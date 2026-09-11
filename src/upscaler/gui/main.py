@@ -276,6 +276,19 @@ class MainWindow(QMainWindow):
                 sizes[2] = 0
             self.splitter.setSizes(sizes)
 
+        if not self._start_hidden:
+            QTimer.singleShot(0, self._focus_grid)
+
+    def _focus_grid(self) -> None:
+        """
+        Give focus to the window grid and select the first tile if none is
+        selected. Called once after startup so keyboard navigation works
+        without an initial click.
+        """
+        if self.scene.selected_window() is None:
+            self.scene.focus_first_tile()
+        self._view.setFocus()
+
     # ------------------------------------------------------------------
     # Pipeline launch
     # ------------------------------------------------------------------
@@ -693,6 +706,7 @@ class MainWindow(QMainWindow):
         self.raise_()
         self.activateWindow()
         QTimer.singleShot(0, self.scene.schedule_relayout)
+        QTimer.singleShot(0, self._view.setFocus)
         self.grid_mgr.start()
 
     def hide_gui(self) -> None:

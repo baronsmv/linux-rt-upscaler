@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal, QRectF
-from PySide6.QtGui import QKeyEvent, QPainter, QKeySequence
-from PySide6.QtWidgets import QGraphicsView
+from PySide6.QtGui import QKeyEvent, QPainter
+from PySide6.QtWidgets import QApplication, QGraphicsView
 
 from .scene import WindowGridScene
 from ..styles import graphics_view_style, scrollbar_style
@@ -52,12 +52,17 @@ class WindowGridView(QGraphicsView):
 
         # Accept focus (needed for keyboard navigation)
         self.setFocusPolicy(Qt.StrongFocus)
+        QApplication.instance().focusChanged.connect(self._on_app_focus_changed)
 
         # Attach scene to this view so the scene can access viewport dimensions
         scene.attach_view(self)
 
         # Debounced relayout on resize
         self._resize_timer_id = -1
+
+    def _on_app_focus_changed(self, old_widget, new_widget) -> None:
+        grid_focused = new_widget is self or new_widget is self.viewport()
+        self._scene.set_interactive(grid_focused)
 
     # ------------------------------------------------------------------
     #  View resize -> scene relayout
@@ -94,11 +99,5 @@ class WindowGridView(QGraphicsView):
     # ------------------------------------------------------------------
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        # Ctrl+F -> request focus on filter bar
-        if event.matches(QKeySequence.Find):
-            self.focus_filter_requested.emit()
-            event.accept()
-            return
-
-        # All other keys are forwarded to the scene
+        # All keys are forwarded to the scene for navigation
         self._scene.keyPressEvent(event)

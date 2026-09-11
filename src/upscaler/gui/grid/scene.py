@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal, QRectF, QTimer
 from PySide6.QtGui import QKeyEvent
@@ -10,6 +10,9 @@ from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
 
 from .item import WindowTileItem
 from ...window import WindowInfo
+
+if TYPE_CHECKING:
+    from ..config import GUIConfig
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +50,7 @@ class WindowGridScene(QGraphicsScene):
 
     def __init__(
         self,
-        gui_config,
+        gui_config: GUIConfig,
         parent: Optional[QGraphicsView] = None,
     ) -> None:
         """
@@ -62,7 +65,8 @@ class WindowGridScene(QGraphicsScene):
             The view that will display this scene.
         """
         super().__init__(parent)
-        self._gui_config = gui_config
+        self._gui_config: GUIConfig = gui_config
+        self._interactive: bool = True
 
         # --- Tile storage ----------------------------------------------------
         self._tiles: List[WindowTileItem] = []  # ordered grid order
@@ -115,6 +119,7 @@ class WindowGridScene(QGraphicsScene):
             else:
                 tile = WindowTileItem(win, self._gui_config)
                 tile.clicked.connect(self._on_tile_clicked)
+                tile.set_grid_focused(self._interactive)
                 self.addItem(tile)
                 self._tile_by_handle[win.handle] = tile
             new_tiles.append(tile)
@@ -151,6 +156,14 @@ class WindowGridScene(QGraphicsScene):
         """Set the selection to the first tile in the grid, if any."""
         if self._tiles:
             self._set_selected_handle(self._tiles[0].window_info.handle)
+
+    def set_interactive(self, interactive: bool) -> None:
+        """Called by the view when grid focus is gained or lost."""
+        if self._interactive == interactive:
+            return
+        self._interactive = interactive
+        for tile in self._tiles:
+            tile.set_grid_focused(interactive)
 
     # ------------------------------------------------------------------
     #  Layout
