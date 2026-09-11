@@ -111,18 +111,33 @@ class FilterLayout:
 
 @dataclass(frozen=True)
 class SidebarLayout:
-    """Common dimensions for left and right sidebars.
+    """Common dimensions for the left and right sidebars.
 
     Attributes:
         settings_width: Width of the settings sidebar (right).
         profiles_width: Width of the profiles sidebar (left).
+        padding: Outer padding around the sidebar contents.
+        content_margin_h: Horizontal margin inside a scrollable settings tab.
+        content_margin_v: Vertical margin inside a scrollable settings tab.
+        content_spacing: Vertical gap between sections inside a tab.
         tab_font_size: Font size for tab labels and row labels.
         section_title_size: Font size of section headings (e.g. "Overlay").
+        section_title_padding_top: Padding above a section heading.
+        section_title_padding_bottom: Padding below a section heading.
+        section_title_letter_spacing: Extra tracking applied to section titles.
         row_height: Minimum height of a settings row.
-        icon_columns: Number of columns in the icon picker grid.
-        icon_size: Icon size inside the icon picker.
+        row_border_radius: Corner radius of a highlighted row's background.
+        icon_columns: Number of columns in the icon tab bar.
+        icon_size: Icon size inside the icon tab bar.
         row_spacing: Spacing between consecutive settings rows.
-        padding: Spacing between the rows and their borders.
+        tab_button_border_width: Border thickness of a tab button.
+        tab_button_radius: Corner radius of a tab button.
+        tab_button_padding: Padding inside each tab button, per side.
+        tab_bar_padding_h: Horizontal padding of the icon tab bar container.
+        tab_bar_padding_v: Vertical padding of the icon tab bar container.
+        tab_bar_spacing: Gap between tab buttons in the grid.
+        shadow_blur: Blur radius of the sidebar drop shadow.
+        shadow_offset_y: Vertical offset of the sidebar drop shadow.
     """
 
     settings_width: int = 420
@@ -158,6 +173,7 @@ class CheckBoxLayout:
     Attributes:
         indicator_size: Width and height of the check indicator box.
         indicator_radius: Corner radius of the indicator.
+        indicator_border_width: Border thickness of the indicator.
         spacing: Space between the indicator and the label text.
         padding_v: Vertical padding around the checkbox row.
     """
@@ -222,6 +238,7 @@ class ColorSwatchLayout:
         swatch_width: Width of the color preview swatch.
         swatch_height: Height of the color preview swatch.
         browse_button_width: Width of the "Browse" button next to a path field.
+        radius: Corner radius of the color swatch.
     """
 
     swatch_width: int = 36
@@ -265,6 +282,13 @@ class FooterLayout:
         button_padding_h: Horizontal padding inside the buttons.
         button_padding_v: Vertical padding inside the buttons.
         button_radius: Corner radius of the buttons.
+        margin: Outer margin around the footer's button row.
+        spacing: Gap between the Save and Reset buttons.
+        menu_button_width: Width of the Reset button's dropdown segment.
+        menu_arrow_size: Size of the dropdown arrow glyph.
+        menu_padding: Padding inside the Reset dropdown menu.
+        menu_item_padding_v: Vertical padding of a dropdown menu item.
+        menu_item_padding_h: Horizontal padding of a dropdown menu item.
     """
 
     button_height: int = 42
@@ -290,6 +314,8 @@ class ProfileLayout:
         profile_icon_size: Icon size for profile icons.
         profile_border_left: Left border width of the active profile item.
         profile_border_radius: Corner radius of profile items.
+        profile_item_padding_h: Horizontal padding inside a profile item.
+        profile_item_padding_v: Vertical padding inside a profile item.
         profile_spacing: Vertical spacing between profile items.
         toolbar_button_size: Fixed size of the toolbar buttons (Add, Edit, etc.).
         toolbar_button_icon_size: Icon size inside the toolbar buttons.
@@ -424,29 +450,26 @@ class AboutLayout:
 # ---------------------------------------------------------------------------
 #  GUIConfig, the top-level configuration
 # ---------------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class GUIConfig:
     """Central GUI configuration.
 
-    All layout constants are grouped into frozen sub-configurations.
-    Colors, fonts, and shared spacing live exclusively in :attr:`palette`.
-
     Attributes:
-        palette: The active theme (semantic color and font tokens).
-        tile: Tile geometry, shadows, title style.
+        palette: The active theme (semantic color tokens).
+        tile: Tile geometry, animation, shadows, title style.
         filter: Filter bar dimensions.
-        sidebar: Sidebar common layout.
+        sidebar: Sidebar layout (widths, tabs, content margins).
         checkbox: Checkbox indicator dimensions.
         combo: Combo box padding and radius.
-        slider: Slider-related numbers.
+        slider: Slider track and handle dimensions.
         edit_field: Text field dimensions.
-        swatch: Color swatch button sizes.
+        swatch: Color swatch and browse button sizes.
         splitter: Splitter handle width.
-        footer: Footer button sizes.
-        profile: Profile sidebar item sizes.
-        dialog: Dialog dimensions and padding strings.
+        scrollbar: Scrollbar thickness, radius, minimum handle length.
+        footer: Save / Reset button and dropdown menu dimensions.
+        profile: Profile sidebar item and toolbar dimensions.
+        dialog: Dialog sizes, spacing, and padding strings.
+        about: About dialog dimensions.
         auto_refresh_ms: Window list refresh interval (ms).
         tile_preview_interval_ms: Tile thumbnail update interval (ms).
         highlight_border_width: Width of the highlight indicator bar in settings rows.
