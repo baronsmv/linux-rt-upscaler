@@ -31,13 +31,13 @@ class StyleTab(SettingsTab):
         gui_config: GUIConfig,
         initial_palette: GUIPalette,
         on_apply: Callable[[GUIPalette, float], None],
-        initial_zoom: float = 1.0,
+        initial_zoom: int = 100,
         parent: Optional[QWidget] = None,
     ) -> None:
         self._palette = palette_to_internal(initial_palette)
         self._saved_palette = copy.deepcopy(self._palette)
-        self._zoom = float(initial_zoom)
-        self._saved_zoom = float(initial_zoom)
+        self._zoom = initial_zoom
+        self._saved_zoom = initial_zoom
         self._on_apply = on_apply
         self._updating_from_preset = False
         super().__init__(
@@ -260,9 +260,8 @@ class StyleTab(SettingsTab):
             self.tr("Zoom (%)", "Label of setting (must be short)"),
             50,
             400,
-            int(self._zoom * 100),
-            scale_factor=100,
-            float_slot=self._on_zoom_changed,
+            self._zoom,
+            self._on_zoom_changed,
             baseline=self._saved_zoom,
             help=self.tr(
                 "Scales the entire interface.",
@@ -305,8 +304,8 @@ class StyleTab(SettingsTab):
     # ------------------------------------------------------------------
     #  Slots
     # ------------------------------------------------------------------
-    def _on_zoom_changed(self, value: float) -> None:
-        if abs(value - self._zoom) < 1e-6:
+    def _on_zoom_changed(self, value: int) -> None:
+        if value == self._zoom:
             return
         self._zoom = value
         self._notify_dirty()
@@ -340,7 +339,7 @@ class StyleTab(SettingsTab):
 
     def is_dirty(self) -> bool:
         """Return True if palette or zoom differs from the last applied state."""
-        if abs(self._zoom - self._saved_zoom) > 1e-6:
+        if self._zoom != self._saved_zoom:
             return True
         for field in fields(GUIPalette):
             if getattr(self._palette, field.name) != getattr(
@@ -351,7 +350,7 @@ class StyleTab(SettingsTab):
 
     def is_default(self) -> bool:
         """Return True if the palette is Auto and zoom is at 100%."""
-        if abs(self._zoom - 1.0) > 1e-6:
+        if self._zoom != 100:
             return False
         return find_matching_preset(palette_to_stylesheet(self._palette)) == "Auto"
 
@@ -380,7 +379,7 @@ class StyleTab(SettingsTab):
             hex_color = normalize_to_hex(getattr(self._palette, field.name))
             self._picker_widgets[field.name].set_color(hex_color)
         self._updating_from_preset = False
-        self._zoom_slider.set_value(int(self._saved_zoom * 100))
+        self._zoom_slider.setValue(self._saved_zoom)
         self._preset_combo.setCurrentText(
             find_matching_preset(palette_to_stylesheet(self._palette))
         )
@@ -391,7 +390,7 @@ class StyleTab(SettingsTab):
         """Load the Auto preset and 100% zoom without applying."""
         preset = PRESETS["Auto"]
         self._palette = palette_to_internal(preset)
-        self._zoom = 1.0
+        self._zoom = 100
         self._updating_from_preset = True
         for field in fields(GUIPalette):
             self._picker_widgets[field.name].set_color(
@@ -399,7 +398,7 @@ class StyleTab(SettingsTab):
             )
         self._updating_from_preset = False
         self._preset_combo.setCurrentText("Auto")
-        self._zoom_slider.set_value(100)
+        self._zoom_slider.setValue(100)
         self._notify_dirty()
 
     def _notify_dirty(self) -> None:

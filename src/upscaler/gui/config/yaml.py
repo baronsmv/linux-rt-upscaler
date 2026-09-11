@@ -9,17 +9,17 @@ from ...config import default_config_path, load_yaml_config, save_yaml_config
 
 logger = logging.getLogger(__name__)
 
-_ZOOM_MIN = 0.5
-_ZOOM_MAX = 4.0
+_ZOOM_MIN = 50
+_ZOOM_MAX = 400
 
 
-def load_gui_style(config_path: Optional[str] = None) -> Tuple[GUIPalette, float]:
+def load_gui_style(config_path: Optional[str] = None) -> Tuple[GUIPalette, int]:
     """Load a GUI palette, using a preset if stored."""
     config_path = config_path or default_config_path("gui-config.yaml")
 
     try:
         general, _ = load_yaml_config(config_path=config_path)
-        zoom = max(_ZOOM_MIN, min(_ZOOM_MAX, float(general.get("zoom", 1.0))))
+        zoom = max(_ZOOM_MIN, min(_ZOOM_MAX, int(general.get("zoom", 100))))
 
         # Prefer a named preset
         preset_name: Optional[str] = general.get("palette_preset")
@@ -34,21 +34,21 @@ def load_gui_style(config_path: Optional[str] = None) -> Tuple[GUIPalette, float
     except Exception:
         logger.warning("Failed to load GUI style, using defaults", exc_info=True)
 
-    return PRESETS["Auto"], 1.0
+    return PRESETS["Auto"], 100
 
 
 def save_gui_style(
     palette: Dict[str, str],
     preset: Optional[str] = None,
-    zoom: float = 1.0,
+    zoom: int = 100,
     config_path: Optional[str] = None,
 ) -> None:
     """Save the GUI style to YAML. If *preset* is given, also store its name."""
-    data: Dict[str, Union[str, float, Dict[str, str]]] = {"palette": palette}
+    data: Dict[str, Union[str, int, Dict[str, str]]] = {"palette": palette}
     if preset:
         data["palette_preset"] = preset
-    if abs(zoom - 1.0) > 1e-6:
-        data["zoom"] = round(zoom, 2)
+    if zoom != 100:
+        data["zoom"] = int(zoom)
 
     config_path = config_path or default_config_path("gui-config.yaml")
     save_yaml_config(data, config_path=config_path)

@@ -41,14 +41,14 @@ class SettingsSidebar(IconSidebarBase):
     reset_settings = Signal()
     restore_defaults = Signal()
     daemon_toggled = Signal(bool)
-    style_applied = Signal(object, float)
+    style_applied = Signal(object, int)
 
     def __init__(
         self,
         gui_config: GUIConfig,
         config: Config,
         baseline_config: Config,
-        initial_zoom: float = 1.0,
+        initial_zoom: int = 100,
         profile_active: bool = False,
         profile_has_options: bool = False,
         parent: Optional[QWidget] = None,
@@ -145,7 +145,7 @@ class SettingsSidebar(IconSidebarBase):
         """Any setting was modified; re-evaluate dirty state."""
         self._check_dirty()
 
-    def _on_style_apply(self, new_palette: GUIPalette, zoom: float) -> None:
+    def _on_style_apply(self, new_palette: GUIPalette, zoom: int) -> None:
         self.style_applied.emit(new_palette, zoom)
 
     # ------------------------------------------------------------------

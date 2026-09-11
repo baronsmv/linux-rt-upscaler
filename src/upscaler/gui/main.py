@@ -535,7 +535,7 @@ class MainWindow(QMainWindow):
         self.close()
         QApplication.instance().quit()
 
-    def _on_style_applied(self, new_palette: GUIPalette, zoom: float) -> None:
+    def _on_style_applied(self, new_palette: GUIPalette, zoom: int) -> None:
         """Save the palette and zoom, then rebuild the GUI with them applied."""
         palette_dict = {
             field.name: getattr(new_palette, field.name) for field in fields(GUIPalette)
@@ -544,7 +544,7 @@ class MainWindow(QMainWindow):
         save_gui_style(palette_dict, preset=preset_name, zoom=zoom)
 
         # Build a completely new GUIConfig (same layout constants, new palette)
-        self._zoom = float(zoom)
+        self._zoom = zoom
         base_config = GUIConfig(palette=new_palette)
         self.gui_config = scale_gui_config(base_config, self._zoom)
         QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))

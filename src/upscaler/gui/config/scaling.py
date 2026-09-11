@@ -48,18 +48,16 @@ _EXEMPT: Dict[type, frozenset] = {
 _PADDING_RE = re.compile(r"(\d+)px")
 
 
-def scale_gui_config(cfg: GUIConfig, factor: float) -> GUIConfig:
+def scale_gui_config(cfg: GUIConfig, zoom_percent: int) -> GUIConfig:
     """
-    Return a copy of *cfg* with every dimensional field multiplied by *factor*.
+    Return a copy of *cfg* with dimensional fields scaled by *zoom_percent*.
 
-    Raises
-    ------
-    ValueError
-        If *factor* is not strictly positive.
+    ``zoom_percent`` is the user-facing percentage, e.g. ``100`` for 1×,
+    ``150`` for 1.5×.
     """
-    if factor <= 0:
-        raise ValueError(f"Zoom factor must be positive, got {factor}")
-    return _scale_dataclass(cfg, factor)
+    if zoom_percent <= 0:
+        raise ValueError(f"Zoom must be positive, got {zoom_percent}")
+    return _scale_dataclass(cfg, zoom_percent / 100.0)
 
 
 def _scale_dataclass(obj: Any, factor: float) -> Any:
