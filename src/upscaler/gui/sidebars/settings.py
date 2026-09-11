@@ -22,6 +22,7 @@ from .tabs import (
     EffectsTab,
     ExtrasTab,
     GeneralTab,
+    HotkeysTab,
     PresentationTab,
     ScalingTab,
     StyleTab,
@@ -106,6 +107,11 @@ class SettingsSidebar(IconSidebarBase):
                 ExtrasTab(*tab_args),
                 "extras",
                 self.tr("Extras", "Name of a settings tab"),
+            ),
+            (
+                HotkeysTab(*tab_args),
+                "hotkeys",
+                self.tr("Hotkeys", "Name of a settings tab"),
             ),
             (
                 StyleTab(*style_tab_args),

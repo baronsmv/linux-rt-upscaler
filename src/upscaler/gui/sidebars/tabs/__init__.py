@@ -5,6 +5,7 @@ from .display import DisplayTab
 from .effects import EffectsTab
 from .extras import ExtrasTab
 from .general import GeneralTab
+from .hotkeys import HotkeysTab
 from .presentation import PresentationTab
 from .scaler import ScalingTab
 from .style import StyleTab
@@ -15,6 +16,7 @@ __all__ = [
     "EffectsTab",
     "ExtrasTab",
     "GeneralTab",
+    "HotkeysTab",
     "PresentationTab",
     "ScalingTab",
     "StyleTab",
