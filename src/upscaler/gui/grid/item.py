@@ -137,6 +137,7 @@ class WindowTileItem(QGraphicsObject):
         self._max_bounding_rect = self._compute_max_bounding_rect()
         self._scaled_pixmap = None
         self.update()
+        self._update_animation_target()
 
     # ------------------------------------------------------------------
     #  Scale property (animated)
