@@ -377,8 +377,8 @@ def slider_style(cfg: GUIConfig, enabled: bool = True) -> str:
     """Style for a horizontal QSlider."""
     palette = _control_palette(cfg=cfg, enabled=enabled)
     s = cfg.slider
-    groove_radius = s.groove_height // 2
-    handle_radius = s.handle_size // 2
+    groove_radius = max(0, (s.groove_height - 1) // 2)
+    handle_radius = max(0, (s.handle_size - 1) // 2)
     handle_inset = max(0, (s.handle_size - s.groove_height) // 2)
 
     return f"""
