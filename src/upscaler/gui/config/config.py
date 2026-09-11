@@ -92,6 +92,8 @@ class FilterLayout:
         icon_gap: Gap between the icon and the text (negative values allow overlap).
         horizontal_margin: Outer left/right margin of the filter bar.
         vertical_margin: Outer top/bottom margin of the filter bar.
+        button_size: Diameter of the circular tray / about buttons.
+        button_icon_size: Icon size rendered inside those buttons.
     """
 
     height: int = 80
@@ -103,6 +105,8 @@ class FilterLayout:
     icon_gap: int = -8
     horizontal_margin: int = 18
     vertical_margin: int = 6
+    button_size: int = 36
+    button_icon_size: int = 24
 
 
 @dataclass(frozen=True)

@@ -148,20 +148,11 @@ class MainWindow(QMainWindow):
         filter_row.addWidget(self.filter_bar, 1)
 
         # System tray toggle
-        self.tray_toggle_btn = QToolButton()
-        self.tray_toggle_btn.setCheckable(True)
-        self.tray_toggle_btn.setChecked(
-            self.settings.value("tray/enabled", False, type=bool)
-        )
-        self.tray_toggle_btn.setIconSize(QSize(36, 36))
-        self.tray_toggle_btn.setFixedSize(36, 36)
-        self.tray_toggle_btn.setCursor(Qt.PointingHandCursor)
-        self.tray_toggle_btn.setToolTip(
-            self.tr("Enable/Disable System Tray", "Tray toggle button")
-        )
-        self.tray_toggle_btn.setAutoRaise(True)
-        self.tray_toggle_btn.setStyleSheet(
-            circular_button_style(self.gui_config, icon_size=36)
+        self.tray_toggle_btn = self._make_circular_button(
+            "actions/tray_disabled",
+            self.tr("Enable/Disable System Tray", "Tray toggle button"),
+            checkable=True,
+            checked=bool(self.settings.value("tray/enabled", False, type=bool)),
         )
         self.tray_toggle_btn.toggled.connect(self._on_tray_toggled)
         self._update_tray_toggle_icon()
@@ -169,19 +160,9 @@ class MainWindow(QMainWindow):
         filter_row.addSpacing(round(self.gui_config.filter.horizontal_margin / 2))
 
         # About button
-        self.about_btn = QToolButton()
-        self.about_btn.setIcon(
-            load_icon("actions/about", 24, 24, color=self.gui_config.palette.icon)
-        )
-        self.about_btn.setIconSize(QSize(36, 36))
-        self.about_btn.setFixedSize(36, 36)
-        self.about_btn.setCursor(Qt.PointingHandCursor)
-        self.about_btn.setToolTip(
-            self.tr("About Real-Time Upscaler.", "About dialog button")
-        )
-        self.about_btn.setAutoRaise(True)
-        self.about_btn.setStyleSheet(
-            circular_button_style(self.gui_config, icon_size=36)
+        self.about_btn = self._make_circular_button(
+            "actions/about",
+            self.tr("About Real-Time Upscaler.", "About dialog button"),
         )
         self.about_btn.clicked.connect(self._show_about_dialog)
         filter_row.addWidget(self.about_btn)
@@ -407,9 +388,6 @@ class MainWindow(QMainWindow):
             )
             QApplication.instance().quit()
 
-    # ------------------------------------------------------------------
-    # Right sidebar
-    # ------------------------------------------------------------------
     def _create_right_sidebar(self) -> SettingsSidebar:
         """Build a SettingsSidebar reflecting the current config state."""
         sidebar = SettingsSidebar(
@@ -488,6 +466,32 @@ class MainWindow(QMainWindow):
             apply_overrides(merged_base, self._config_manager.cli_overrides)
             parse_config(merged_base)
             self.daemon_ctrl.update_base_config(merged_base)
+
+    def _make_circular_button(
+        self,
+        icon_name: str,
+        tooltip: str,
+        *,
+        checkable: bool = False,
+        checked: bool = False,
+    ) -> QToolButton:
+        """Build a circular icon button that matches the filter bar's visual style."""
+        cfg = self.gui_config
+        size = cfg.filter.button_size
+        icon_size = cfg.filter.button_icon_size
+
+        btn = QToolButton()
+        if checkable:
+            btn.setCheckable(True)
+            btn.setChecked(checked)
+        btn.setIcon(load_icon(icon_name, icon_size, icon_size, color=cfg.palette.icon))
+        btn.setIconSize(QSize(icon_size, icon_size))
+        btn.setFixedSize(size, size)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setToolTip(tooltip)
+        btn.setAutoRaise(True)
+        btn.setStyleSheet(circular_button_style(cfg, icon_size=size))
+        return btn
 
     def _rebuild_ui(self) -> None:
         # Save state
@@ -583,12 +587,16 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _update_tray_toggle_icon(self) -> None:
         """Update the tray toggle button icon based on current state."""
-        if self.tray_toggle_btn.isChecked():
-            icon_name = "actions/tray_enabled"
-        else:
-            icon_name = "actions/tray_disabled"
+        icon_name = (
+            "actions/tray_enabled"
+            if self.tray_toggle_btn.isChecked()
+            else "actions/tray_disabled"
+        )
+        icon_size = self.gui_config.filter.button_icon_size
         self.tray_toggle_btn.setIcon(
-            load_icon(icon_name, 24, 24, color=self.gui_config.palette.icon)
+            load_icon(
+                icon_name, icon_size, icon_size, color=self.gui_config.palette.icon
+            )
         )
 
     def _on_tray_toggled(self, enabled: bool) -> None:
