@@ -16,6 +16,7 @@ from ..controls import (
     CheckBox,
     ColorPickerRow,
     ComboRow,
+    FontPickerRow,
     HotkeyRow,
     LineEditRow,
     PathPickerRow,
@@ -310,6 +311,28 @@ class SettingsTab(QWidget):
         picker.colorChanged.connect(slot)
         self.content_layout.addWidget(picker)
         return picker
+
+    def _add_font_picker(
+        self,
+        label: str,
+        current: str,
+        system_family: str,
+        slot: Callable,
+        baseline: Optional[str] = None,
+        help: Optional[str] = None,
+    ) -> FontPickerRow:
+        """Add a labeled font-family picker row and return it."""
+        row = FontPickerRow(
+            self._gui_config,
+            label,
+            current,
+            system_family,
+            baseline=baseline,
+            tooltip=help,
+        )
+        row.fontChanged.connect(slot)
+        self.content_layout.addWidget(row)
+        return row
 
     def _add_hotkey(
         self,
