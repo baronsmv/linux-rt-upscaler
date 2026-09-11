@@ -602,7 +602,6 @@ def hotkey_button_style(
         color: {palette.text};
         font-size: {cfg.sidebar.tab_font_size}px;
         text-align: center;
-        min-width: 160px;
     }}
     QPushButton:hover {{
         border-color: {border_hover};
@@ -614,6 +613,36 @@ def hotkey_button_style(
     QPushButton:disabled {{
         background-color: {cfg.palette.input_disabled};
         color: {cfg.palette.text_subtle};
+    }}
+    {tooltip_style(cfg)}
+    """
+
+
+def hotkey_clear_button_style(cfg: GUIConfig, enabled: bool = True) -> str:
+    """Style for the small 'unbind' button next to a hotkey field."""
+    palette = _control_palette(cfg=cfg, enabled=enabled)
+    return f"""
+    QToolButton {{
+        background-color: {cfg.palette.button};
+        border: 1px solid {palette.border};
+        border-radius: {cfg.edit_field.border_radius}px;
+        color: {palette.text};
+        font-size: {cfg.sidebar.tab_font_size + 2}px;
+        font-weight: bold;
+        padding: 0px;
+    }}
+    QToolButton:hover {{
+        background-color: {cfg.palette.button_hover};
+        border-color: {palette.border_hover};
+        color: {palette.text_hover};
+    }}
+    QToolButton:pressed {{
+        background-color: {cfg.palette.button_hover};
+    }}
+    QToolButton:disabled {{
+        background-color: {cfg.palette.button};
+        color: {cfg.palette.text_subtle};
+        border-color: {palette.border};
     }}
     {tooltip_style(cfg)}
     """

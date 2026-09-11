@@ -3,10 +3,16 @@ from __future__ import annotations
 from typing import Dict, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, Qt, Signal
-from PySide6.QtWidgets import QApplication, QPushButton, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QPushButton,
+    QToolButton,
+    QSizePolicy,
+    QWidget,
+)
 
 from ._base import BaseRow
-from ...styles import hotkey_button_style
+from ...styles import hotkey_button_style, hotkey_clear_button_style
 from ....utils import KEYSYM_MAP, format_hotkey
 
 if TYPE_CHECKING:
@@ -244,13 +250,27 @@ class HotkeyRow(BaseRow):
             parent=parent,
         )
         self._init_label(label)
+        self._label.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
 
         self._button = HotkeyCaptureButton(cfg, sequence=sequence)
+        self._button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         if tooltip:
             self._button.setToolTip(tooltip)
         self._button.sequenceChanged.connect(self._on_sequence_changed)
         self._content_layout.addWidget(self._button, 1)
 
+        self._clear_btn = QToolButton()
+        self._clear_btn.setText("\u00d7")
+        self._clear_btn.setToolTip(
+            self.tr("Clear binding", "Hotkey row clear button tooltip")
+        )
+        self._clear_btn.setCursor(Qt.PointingHandCursor)
+        self._clear_btn.setFixedSize(cfg.sidebar.row_height, cfg.sidebar.row_height)
+        self._clear_btn.setStyleSheet(hotkey_clear_button_style(cfg))
+        self._clear_btn.clicked.connect(self._on_clear_clicked)
+        self._content_layout.addWidget(self._clear_btn)
+
+        self._refresh_clear_state()
         self._update_highlight()
 
     # ------------------------------------------------------------------
@@ -262,6 +282,7 @@ class HotkeyRow(BaseRow):
     def set_sequence(self, sequence: str) -> None:
         """Set the value without emitting (used by reset / restore flows)."""
         self._button.set_sequence(sequence)
+        self._refresh_clear_state()
         self._update_highlight()
 
     def set_conflict(self, conflict: bool) -> None:
@@ -275,5 +296,18 @@ class HotkeyRow(BaseRow):
         return self._button.sequence() != (self._baseline or "")
 
     def _on_sequence_changed(self, sequence: str) -> None:
+        self._refresh_clear_state()
         self._update_highlight()
         self.sequenceChanged.emit(sequence)
+
+    def _on_clear_clicked(self) -> None:
+        """Clear the binding; equivalent to pressing Backspace while recording."""
+        if not self._button.sequence():
+            return
+        self._button.set_sequence("")
+        self._update_highlight()
+        self.sequenceChanged.emit("")
+
+    def _refresh_clear_state(self) -> None:
+        """Disable the clear button when the row is already unbound."""
+        self._clear_btn.setEnabled(bool(self._button.sequence()))
