@@ -224,7 +224,11 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(central_widget)
         self.splitter.addWidget(self.right_sidebar)
         self.splitter.setSizes(
-            [self.gui_config.sidebar.width, 400, self.gui_config.sidebar.width]
+            [
+                self.gui_config.sidebar.profiles_width,
+                400,
+                self.gui_config.sidebar.settings_width,
+            ]
         )
         self.splitter.setCollapsible(0, True)  # left sidebar can collapse
         self.splitter.setCollapsible(2, True)  # right sidebar can collapse

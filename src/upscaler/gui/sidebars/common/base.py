@@ -28,7 +28,7 @@ class SidebarBase(QWidget):
     def __init__(self, gui_config: GUIConfig, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.gui_config = gui_config
-        self.setFixedWidth(gui_config.sidebar.width)
+        self.setFixedWidth(gui_config.sidebar.settings_width)
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
         # ---- Visual identity ------------------------------------------------

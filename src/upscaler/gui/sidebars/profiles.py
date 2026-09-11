@@ -69,7 +69,7 @@ class ProfilesSidebar(QWidget):
         self._profiles = profiles
 
         # ---- Visual identity ----
-        self.setFixedWidth(self._gui_config.sidebar.width)
+        self.setFixedWidth(self._gui_config.sidebar.profiles_width)
 
         # ---- Layout ----
         layout = QVBoxLayout(self)

@@ -110,7 +110,8 @@ class SidebarLayout:
     """Common dimensions for left and right sidebars.
 
     Attributes:
-        width: Default sidebar width in pixels.
+        settings_width: Width of the settings sidebar (right).
+        profiles_width: Width of the profiles sidebar (left).
         tab_font_size: Font size for tab labels and row labels.
         section_title_size: Font size of section headings (e.g. "Overlay").
         row_height: Minimum height of a settings row.
@@ -119,7 +120,8 @@ class SidebarLayout:
         row_spacing: Spacing between consecutive settings rows.
     """
 
-    width: int = 420
+    settings_width: int = 420
+    profiles_width: int = 360
     tab_font_size: int = 18
     section_title_size: int = 18
     row_height: int = 32
