@@ -6,6 +6,8 @@ import xcffib
 from PySide6.QtCore import QObject, QSocketNotifier, Signal
 from xcffib.xproto import GrabMode, KeyPressEvent, ModMask, Setup
 
+from ..utils import KEYSYM_MAP, parse_hotkey
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,94 +35,8 @@ class HotkeyManager(QObject):
     offset_up = Signal()
     offset_down = Signal()
 
-    _MODIFIER_MAP = {
-        "Ctrl": ModMask.Control,
-        "Control": ModMask.Control,
-        "Alt": ModMask._1,
-        "Shift": ModMask.Shift,
-        "Super": ModMask._4,
-        "Win": ModMask._4,
-    }
-
     # Lock masks (NumLock, CapsLock, ScrollLock)
     _LOCK_MASKS = [0, ModMask._2, ModMask.Lock, ModMask._5]
-
-    _KEYSYM_MAP = {
-        # Letters
-        "A": 0x61,
-        "B": 0x62,
-        "C": 0x63,
-        "D": 0x64,
-        "E": 0x65,
-        "F": 0x66,
-        "G": 0x67,
-        "H": 0x68,
-        "I": 0x69,
-        "J": 0x6A,
-        "K": 0x6B,
-        "L": 0x6C,
-        "M": 0x6D,
-        "N": 0x6E,
-        "O": 0x6F,
-        "P": 0x70,
-        "Q": 0x71,
-        "R": 0x72,
-        "S": 0x73,
-        "T": 0x74,
-        "U": 0x75,
-        "V": 0x76,
-        "W": 0x77,
-        "X": 0x78,
-        "Y": 0x79,
-        "Z": 0x7A,
-        # Numbers
-        "0": 0x30,
-        "1": 0x31,
-        "2": 0x32,
-        "3": 0x33,
-        "4": 0x34,
-        "5": 0x35,
-        "6": 0x36,
-        "7": 0x37,
-        "8": 0x38,
-        "9": 0x39,
-        # Arrows
-        "Left": 0xFF51,
-        "Right": 0xFF53,
-        "Up": 0xFF52,
-        "Down": 0xFF54,
-        # Function keys
-        "F1": 0xFFBE,
-        "F2": 0xFFBF,
-        "F3": 0xFFC0,
-        "F4": 0xFFC1,
-        "F5": 0xFFC2,
-        "F6": 0xFFC3,
-        "F7": 0xFFC4,
-        "F8": 0xFFC5,
-        "F9": 0xFFC6,
-        "F10": 0xFFC7,
-        "F11": 0xFFC8,
-        "F12": 0xFFC9,
-        # Symbols (US keyboard layout)
-        "LeftBracket": 0x5B,
-        "RightBracket": 0x5D,
-        "Backslash": 0x5C,
-        "Semicolon": 0x3B,
-        "Apostrophe": 0x27,
-        "Comma": 0x2C,
-        "Period": 0x2E,
-        "Slash": 0x2F,
-        "Plus": 0x2B,
-        "Minus": 0x2D,
-        "Equal": 0x3D,
-        "Grave": 0x60,
-        # Other common keys
-        "Space": 0x20,
-        "Return": 0xFF0D,
-        "Tab": 0xFF09,
-        "Escape": 0xFF1B,
-    }
 
     def __init__(self, config_hotkeys: Dict[str, str]) -> None:
         super().__init__()
@@ -174,18 +90,22 @@ class HotkeyManager(QObject):
         for action, hotkey_str in self._config_hotkeys.items():
             # Verify the action corresponds to a defined signal
             if not hasattr(self, action):
-                logger.warning(f"Unknown action '{action}'")
+                logger.warning("Unknown action '%s'", action)
+                continue
+
+            # Empty string means explicitly disabled
+            if not hotkey_str:
                 continue
 
             try:
-                mod_mask, key_name = self._parse_hotkey_string(hotkey_str)
+                mod_mask, key_name = parse_hotkey(hotkey_str)
             except ValueError as e:
-                logger.warning(f"Invalid hotkey '{hotkey_str}': {e}")
+                logger.warning("Invalid hotkey '%s': %s", hotkey_str, e)
                 continue
 
             keycode = self._key_name_to_keycode(key_name)
             if keycode is None:
-                logger.warning(f"Unknown key '{key_name}' in '{hotkey_str}'")
+                logger.warning("Unknown key '%s' in '%s'", key_name, hotkey_str)
                 continue
 
             for lock_mask in self._lock_combinations:
@@ -221,7 +141,7 @@ class HotkeyManager(QObject):
         if name in self._keycode_cache:
             return self._keycode_cache[name]
 
-        keysym = self._KEYSYM_MAP.get(name)
+        keysym = KEYSYM_MAP.get(name)
         if keysym is None:
             logger.warning(f"Unsupported key name: {name}")
             return None
@@ -243,22 +163,6 @@ class HotkeyManager(QObject):
                     self._keycode_cache[name] = kc
                     return kc
         return None
-
-    def _parse_hotkey_string(self, hotkey_str: str) -> Tuple[int, str]:
-        parts = hotkey_str.split("+")
-        modifiers = 0
-        key_name = None
-        for part in parts:
-            part = part.strip()
-            if part in self._MODIFIER_MAP:
-                modifiers |= self._MODIFIER_MAP[part]
-            else:
-                if key_name is not None:
-                    raise ValueError("Multiple key names")
-                key_name = part
-        if key_name is None:
-            raise ValueError("No key name")
-        return modifiers, key_name
 
     def _setup_event_listener(self) -> None:
         """Watch the XCB connection file descriptor using QSocketNotifier."""

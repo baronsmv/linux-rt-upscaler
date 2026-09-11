@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from PySide6.QtCore import QStandardPaths
 
-from ..utils import color_string_to_float4, color_tuple_to_string
+from ..utils import DEFAULT_HOTKEYS, color_string_to_float4, color_tuple_to_string
 
 UPSCALING_MODELS = (
     "none",
@@ -30,21 +30,6 @@ DOWNSAMPLERS: Dict[str, str] = {
 }
 OUTPUT_GEOMETRIES = ("fit", "stretch", "cover")
 ZOOM_LEVELS = tuple(f"{level}%" for level in range(50, 801, 25))
-
-DEFAULT_HOTKEYS = {
-    "toggle_scaling": "Alt+Shift+S",
-    "exit_app": "Alt+Shift+Escape",
-    "screenshot": "Alt+Shift+P",
-    "cycle_model": "Alt+Shift+M",
-    "cycle_geometry": "Alt+Shift+G",
-    "restore_view": "Alt+Shift+R",
-    "zoom_in": "Alt+Shift+Plus",
-    "zoom_out": "Alt+Shift+Minus",
-    "offset_up": "Alt+Shift+Up",
-    "offset_down": "Alt+Shift+Down",
-    "offset_left": "Alt+Shift+Left",
-    "offset_right": "Alt+Shift+Right",
-}
 
 
 class OverlayMode(str, Enum):
@@ -288,15 +273,14 @@ class Config:
     # ----------------------------------------------------------------------------------
     def to_dict(self, diff_only: bool = True) -> Dict[str, Any]:
         """Convert config to a dict suitable for YAML dump."""
-        result = {}
+        result: Dict[str, Any] = {}
         defaults = Config()
         defaults.background_color = color_string_to_float4(defaults.background_color)
         default_bg = defaults.background_color
 
         for f in fields(self):
             name = f.name
-            # Fields we never save to the YAML file
-            if name in ("config_file", "log_level", "log_file", "program"):
+            if name in ("config_file", "log_level", "log_file", "program", "hotkeys"):
                 continue
 
             value = getattr(self, name)
@@ -310,17 +294,22 @@ class Config:
                         continue
                     # Convert to hex string for YAML output
                     value = color_tuple_to_string(current_tuple)
-                else:
-                    if value == default_value:
-                        continue
+                elif value == default_value:
+                    continue
 
             result[name] = value
 
-        # Always include hotkeys if they differ from defaults
-        if diff_only and self.hotkeys == DEFAULT_CONFIG.hotkeys:
-            result.pop("hotkeys", None)
+        # Hotkeys
+        if diff_only:
+            hotkey_diff = {
+                action: seq
+                for action, seq in self.hotkeys.items()
+                if DEFAULT_HOTKEYS.get(action) != seq
+            }
+            if hotkey_diff:
+                result["hotkeys"] = hotkey_diff
         else:
-            result["hotkeys"] = self.hotkeys
+            result["hotkeys"] = dict(self.hotkeys)
 
         return result
 

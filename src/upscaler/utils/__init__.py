@@ -16,6 +16,14 @@ from .geometry import (
     compute_overlay_geometry,
     parse_output_geometry,
 )
+from .hotkeys import (
+    DEFAULT_HOTKEYS,
+    KEYSYM_MAP,
+    MODIFIER_MAP,
+    format_hotkey,
+    merge_hotkeys,
+    parse_hotkey,
+)
 from .screen import get_base_geometry, list_monitors
 from .settings import scheme_is_light
 
@@ -27,13 +35,19 @@ __all__ = [
     "SessionError",
     "UpscalerError",
     "WindowNotFound",
+    "DEFAULT_HOTKEYS",
+    "KEYSYM_MAP",
+    "MODIFIER_MAP",
     "calculate_scaling_rect",
     "color_string_to_float4",
     "color_tuple_to_string",
     "compute_overlay_geometry",
     "exceptions",
+    "format_hotkey",
     "get_base_geometry",
     "list_monitors",
+    "merge_hotkeys",
+    "parse_hotkey",
     "scheme_is_light",
     "parse_output_geometry",
 ]
