@@ -16,6 +16,7 @@ from ..controls import (
     CheckBox,
     ColorPickerRow,
     ComboRow,
+    HotkeyRow,
     LineEditRow,
     PathPickerRow,
     SectionLabel,
@@ -303,3 +304,23 @@ class SettingsTab(QWidget):
         picker.colorChanged.connect(slot)
         self.content_layout.addWidget(picker)
         return picker
+
+    def _add_hotkey(
+        self,
+        label: str,
+        sequence: str,
+        slot: Callable,
+        baseline: Optional[str] = None,
+        help: Optional[str] = None,
+    ) -> HotkeyRow:
+        """Add a labeled hotkey capture row and return it."""
+        row = HotkeyRow(
+            self._gui_config,
+            label,
+            sequence,
+            baseline=baseline,
+            tooltip=help,
+        )
+        row.sequenceChanged.connect(slot)
+        self.content_layout.addWidget(row)
+        return row
