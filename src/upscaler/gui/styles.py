@@ -83,11 +83,15 @@ def tooltip_style(cfg: GUIConfig) -> str:
 #  Scrollbar
 # ---------------------------------------------------------------------------
 def scrollbar_style(cfg: GUIConfig) -> str:
-    """Custom vertical scrollbar for sidebars and lists."""
+    """Custom scrollbars (both orientations) for sidebars and lists."""
     s = cfg.scrollbar
     return f"""
     QScrollBar:vertical {{
         width: {s.width}px;
+        margin: 0;
+    }}
+    QScrollBar:horizontal {{
+        height: {s.width}px;
         margin: 0;
     }}
     QScrollBar::handle:vertical {{
@@ -95,15 +99,29 @@ def scrollbar_style(cfg: GUIConfig) -> str:
         border-radius: {s.radius}px;
         min-height: {s.handle_min_length}px;
     }}
+    QScrollBar::handle:horizontal {{
+        background-color: {cfg.palette.handle};
+        border-radius: {s.radius}px;
+        min-width: {s.handle_min_length}px;
+    }}
     QScrollBar::handle:vertical:hover {{
+        background-color: {cfg.palette.handle_hover};
+    }}
+    QScrollBar::handle:horizontal:hover {{
         background-color: {cfg.palette.handle_hover};
     }}
     QScrollBar::add-line:vertical,
     QScrollBar::sub-line:vertical {{
         height: 0px;
     }}
+    QScrollBar::add-line:horizontal,
+    QScrollBar::sub-line:horizontal {{
+        width: 0px;
+    }}
     QScrollBar::add-page:vertical,
-    QScrollBar::sub-page:vertical {{
+    QScrollBar::sub-page:vertical,
+    QScrollBar::add-page:horizontal,
+    QScrollBar::sub-page:horizontal {{
         background-color: none;
     }}
     """
