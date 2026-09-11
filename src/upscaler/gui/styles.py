@@ -777,7 +777,7 @@ def dialog_info_label_style(cfg: GUIConfig) -> str:
     return f"""
     color: {cfg.palette.text_subtle};
     font-size: {cfg.dialog.info_font_size}px;
-    padding-top: 6px;
+    padding-top: {cfg.dialog.info_padding_top}px;
     """
 
 

@@ -342,7 +342,7 @@ class TrayController(QObject):
     #  Slots / helpers
     # ------------------------------------------------------------------
     def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
-        """Handle double‑click (or platform equivalent) to show the window."""
+        """Handle double-click (or platform equivalent) to show the window."""
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             if self._is_main_window_visible():
                 self._hide_main_window()

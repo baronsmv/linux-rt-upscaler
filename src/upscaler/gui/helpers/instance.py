@@ -8,7 +8,7 @@ from PySide6.QtNetwork import QLocalServer, QLocalSocket
 
 class InstanceManager(QObject):
     """
-    Manages single‑instance behavior using a local server.
+    Manages single-instance behavior using a local server.
 
     The first instance starts a `QLocalServer` and listens for commands.
     Any subsequent instance connects to that server, sends a "show"

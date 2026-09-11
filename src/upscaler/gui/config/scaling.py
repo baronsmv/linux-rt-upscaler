@@ -40,6 +40,7 @@ _EXEMPT: Dict[type, frozenset] = {
             "input_padding",
             "button_padding",
             "list_item_padding",
+            "info_max_lines",
         }
     ),
 }

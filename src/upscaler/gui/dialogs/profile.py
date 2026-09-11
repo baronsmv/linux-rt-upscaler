@@ -6,6 +6,7 @@ from typing import Callable, Dict, Optional, TYPE_CHECKING
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -31,6 +33,8 @@ from ..styles import (
     icon_preview_style,
     line_edit_style,
     message_box_style,
+    scroll_area_style,
+    scrollbar_style,
 )
 from ...window import get_window_icon
 
@@ -51,6 +55,7 @@ class ProfileDialog(QDialog):
     ):
         super().__init__(parent)
         self._gui_config = gui_config
+        d = self._gui_config.dialog
         self._original_name = profile_name
         self._profiles = profiles or {}
         self._match = match
@@ -60,7 +65,7 @@ class ProfileDialog(QDialog):
             if profile_name
             else self.tr("New Profile", "Window title of the profile creator")
         )
-        self.setMinimumWidth(520)
+        self.setMinimumWidth(d.min_width)
         self.setStyleSheet(dialog_style(self._gui_config))
 
         # Exclude parent window from the picker
@@ -70,12 +75,29 @@ class ProfileDialog(QDialog):
         self._captured_icon: Optional[QImage] = None
         self.icon_removed = False
 
-        layout = QVBoxLayout(self)
-        layout.setSpacing(12)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(
+            d.dialog_padding, d.dialog_padding, d.dialog_padding, d.dialog_padding
+        )
+        outer.setSpacing(d.layout_spacing)
 
-        # ── Header: Name + Icon ──────────────────────────────────────
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(d.layout_spacing)
+
+        body_scroll = QScrollArea()
+        body_scroll.setWidgetResizable(True)
+        body_scroll.setFrameShape(QScrollArea.NoFrame)
+        body_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        body_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        body_scroll.setWidget(content)
+        body_scroll.setStyleSheet(scroll_area_style(self._gui_config))
+        body_scroll.verticalScrollBar().setStyleSheet(scrollbar_style(self._gui_config))
+
+        # Header
         header = QHBoxLayout()
-        header.setSpacing(10)
+        header.setSpacing(d.header_spacing)
 
         # Name field
         name_col = QVBoxLayout()
@@ -103,7 +125,7 @@ class ProfileDialog(QDialog):
         icon_col.addWidget(icon_label)
 
         self._icon_preview = QLabel()
-        self._icon_preview.setFixedSize(32, 32)
+        self._icon_preview.setFixedSize(d.icon_preview_size, d.icon_preview_size)
         self._icon_preview.setStyleSheet(icon_preview_style(self._gui_config))
         self._icon_preview.setAlignment(Qt.AlignCenter)
 
@@ -114,7 +136,10 @@ class ProfileDialog(QDialog):
             icon_path = profile_data.get("icon", "")
             if icon_path and os.path.isfile(icon_path):
                 pix = QPixmap(icon_path).scaled(
-                    32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                    d.icon_preview_size,
+                    d.icon_preview_size,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation,
                 )
                 self._icon_preview.setPixmap(pix)
                 self._captured_icon = QImage(icon_path)
@@ -124,8 +149,8 @@ class ProfileDialog(QDialog):
             self._icon_preview.setPixmap(
                 load_pixmap(
                     "actions/profile",
-                    32,
-                    32,
+                    d.icon_preview_size,
+                    d.icon_preview_size,
                     color=self._gui_config.palette.icon,
                 )
             )
@@ -134,7 +159,7 @@ class ProfileDialog(QDialog):
         header.addLayout(icon_col)
         layout.addLayout(header)
 
-        # ── Capture / Icon buttons ────────────────────────────────────
+        # Capture / Icon buttons
         self._actions_row = QHBoxLayout()
         self._actions_row.setSpacing(6)
 
@@ -175,7 +200,7 @@ class ProfileDialog(QDialog):
         )
         layout.addLayout(self._actions_row)
 
-        # ── Match rules group ────────────────────────────────────────
+        # Match rules group
         match_group = QGroupBox(self.tr("Match rules", "Match rules group label"))
         match_group.setToolTip(
             self.tr(
@@ -284,7 +309,7 @@ class ProfileDialog(QDialog):
         # Add match group
         layout.addWidget(match_group)
 
-        # ── Dialog buttons ───────────────────────────────────────────
+        # Dialog buttons
         btn_row = QHBoxLayout()
         btn_row.addStretch()
         self._button_box = QDialogButtonBox(
@@ -293,7 +318,30 @@ class ProfileDialog(QDialog):
         self._button_box.accepted.connect(self._validate_and_accept)
         self._button_box.rejected.connect(self.reject)
         btn_row.addWidget(self._button_box)
-        layout.addLayout(btn_row)
+
+        outer.addWidget(body_scroll, 1)
+        outer.addLayout(btn_row)
+
+        # Ensure layout's size
+        # Size the dialog explicitly rather than via adjustSize()
+        layout.activate()
+        outer.activate()
+        screen = QApplication.primaryScreen().availableGeometry()
+
+        hint = self.sizeHint()
+        max_w = int(screen.width() * 0.9)
+        target_w = min(max(d.min_width, hint.width()), max_w)
+
+        inner_w = target_w - 2 * d.dialog_padding
+        content_h = content.heightForWidth(inner_w)
+        if content_h <= 0:
+            content_h = content.sizeHint().height()
+
+        button_h = self._button_box.sizeHint().height()
+        total_h = 2 * d.dialog_padding + content_h + outer.spacing() + button_h
+
+        cap_h = int(screen.height() * 0.9)
+        self.resize(target_w, min(total_h, cap_h))
 
     # ------------------------------------------------------------------
     #  Helpers
@@ -379,7 +427,10 @@ class ProfileDialog(QDialog):
             self._captured_icon = icon_img
             self.icon_removed = False
             pix = QPixmap.fromImage(icon_img).scaled(
-                32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                self._gui_config.dialog.icon_preview_size,
+                self._gui_config.dialog.icon_preview_size,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation,
             )
             self._icon_preview.setPixmap(pix)
         else:
@@ -422,7 +473,10 @@ class ProfileDialog(QDialog):
             self._captured_icon = img
             self.icon_removed = False
             pix = QPixmap.fromImage(img).scaled(
-                32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                self._gui_config.dialog.icon_preview_size,
+                self._gui_config.dialog.icon_preview_size,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation,
             )
             self._icon_preview.setPixmap(pix)
 
@@ -430,7 +484,12 @@ class ProfileDialog(QDialog):
         self._captured_icon = None
         self.icon_removed = True
         self._icon_preview.setPixmap(
-            load_pixmap("actions/profile", 32, 32, color=self._gui_config.palette.icon)
+            load_pixmap(
+                "actions/profile",
+                self._gui_config.dialog.icon_preview_size,
+                self._gui_config.dialog.icon_preview_size,
+                color=self._gui_config.palette.icon,
+            )
         )
 
     def get_captured_icon(self) -> Optional[QImage]:

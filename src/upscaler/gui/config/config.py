@@ -126,7 +126,7 @@ class SidebarLayout:
     """
 
     settings_width: int = 420
-    profiles_width: int = 340
+    profiles_width: int = 380
     padding: int = 8
     content_margin_h: int = 16
     content_margin_v: int = 8
@@ -191,18 +191,12 @@ class SliderLayout:
     Attributes:
         value_edit_width: Width of the editable value field next to the slider.
         groove_height: Thickness of the slider track.
-        groove_radius: Corner radius of the track.
         handle_size: Width and height of the handle (circle).
-        handle_inset: Vertical extension of the handle beyond the track,
-            on each side. Stored positive; applied as a negative margin.
-        handle_radius: Corner radius of the handle (typically half its size).
     """
 
     value_edit_width: int = 72
     groove_height: int = 4
     handle_size: int = 16
-    handle_inset: int = 6
-    handle_radius: int = 8
 
 
 @dataclass(frozen=True)
@@ -319,9 +313,18 @@ class ProfileLayout:
 
 @dataclass(frozen=True)
 class DialogLayout:
-    """Sizes and padding strings for dialogs.
+    """Sizes, spacing, and padding for dialogs.
 
     Attributes:
+        min_width: Minimum width of the profile editor dialog.
+        dialog_padding: Outer padding around the dialog contents.
+        layout_spacing: Vertical gap between top-level sections.
+        header_spacing: Gap between the name field and the icon column.
+        actions_spacing: Gap between action buttons in the toolbar row.
+        match_spacing: Gap between match-rule rows inside the group.
+        icon_preview_size: Side length of the square icon preview.
+        info_padding_top: Gap above the info note.
+        info_max_lines: Height cap for the info note, in font lines.
         combo_min_width: Minimum width of combo boxes inside dialogs.
         label_font_size: Default font size for dialog labels.
         input_font_size: Font size for match-criteria labels.
@@ -338,6 +341,15 @@ class DialogLayout:
         list_border_radius: Corner radius of QListWidget.
     """
 
+    min_width: int = 520
+    dialog_padding: int = 12
+    layout_spacing: int = 12
+    header_spacing: int = 10
+    actions_spacing: int = 6
+    match_spacing: int = 8
+    icon_preview_size: int = 32
+    info_padding_top: int = 6
+    info_max_lines: int = 8
     combo_min_width: int = 120
     label_font_size: int = 18
     input_font_size: int = 18
