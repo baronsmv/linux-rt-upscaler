@@ -119,11 +119,11 @@ class SidebarLayout:
         row_spacing: Spacing between consecutive settings rows.
     """
 
-    width: int = 400
+    width: int = 420
     tab_font_size: int = 18
     section_title_size: int = 18
     row_height: int = 32
-    icon_columns: int = 8
+    icon_columns: int = 9
     icon_size: int = 28
     row_spacing: int = 6
 
