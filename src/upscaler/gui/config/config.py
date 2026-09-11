@@ -136,8 +136,6 @@ class SidebarLayout:
         tab_bar_padding_h: Horizontal padding of the icon tab bar container.
         tab_bar_padding_v: Vertical padding of the icon tab bar container.
         tab_bar_spacing: Gap between tab buttons in the grid.
-        shadow_blur: Blur radius of the sidebar drop shadow.
-        shadow_offset_y: Vertical offset of the sidebar drop shadow.
     """
 
     settings_width: int = 420
@@ -162,8 +160,6 @@ class SidebarLayout:
     tab_bar_padding_h: int = 4
     tab_bar_padding_v: int = 8
     tab_bar_spacing: int = 6
-    shadow_blur: int = 20
-    shadow_offset_y: int = 2
 
 
 @dataclass(frozen=True)
