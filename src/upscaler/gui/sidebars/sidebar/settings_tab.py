@@ -57,6 +57,7 @@ class SettingsTab(QWidget):
         title: str,
         config: Optional[Config] = None,
         baseline_config: Optional[Config] = None,
+        global_baseline: Optional[Config] = None,
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
@@ -65,6 +66,7 @@ class SettingsTab(QWidget):
         self.baseline_config = (
             baseline_config if baseline_config is not None else DEFAULT_CONFIG
         )
+        self._global_baseline = global_baseline
         self.title = title
         self._built = False
         self._owned_fields: Set[str] = set()
@@ -157,16 +159,42 @@ class SettingsTab(QWidget):
         self.config_changed.emit()
 
     def tab_has_changes(self) -> bool:
-        """True if any field owned by this tab differs from the saved baseline."""
+        """Return True if any field owned by this tab differs from the saved baseline."""
         for name in self._owned_fields:
             if getattr(self._config, name) != getattr(self.baseline_config, name):
                 return True
         return False
 
     def tab_differs_from_defaults(self) -> bool:
-        """True if any field owned by this tab differs from system defaults."""
+        """Return True if any field owned by this tab differs from system defaults."""
         for name in self._owned_fields:
             if getattr(self._config, name) != getattr(_SYSTEM_DEFAULTS, name):
+                return True
+        return False
+
+    def clear_overrides(self) -> None:
+        """Set this tab's fields to the global baseline."""
+        if not self._owned_fields:
+            return
+        if self._global_baseline is None:
+            raise RuntimeError(
+                f"{type(self).__name__} declares owned fields but did not "
+                "receive a global_baseline Config."
+            )
+        for name in self._owned_fields:
+            setattr(
+                self._config,
+                name,
+                copy.deepcopy(getattr(self._global_baseline, name)),
+            )
+        self.config_changed.emit()
+
+    def tab_overrides_baseline(self) -> bool:
+        """Return True if any field owned by this tab differs from the global baseline."""
+        if self._global_baseline is None:
+            return False
+        for name in self._owned_fields:
+            if getattr(self._config, name) != getattr(self._global_baseline, name):
                 return True
         return False
 

@@ -405,6 +405,7 @@ class MainWindow(QMainWindow):
             self.gui_config,
             self._config_manager.persistent_config,
             baseline_config=self._config_manager.saved_persistent_config,
+            global_baseline=self._config_manager.global_baseline,
             initial_overrides=self._style_overrides,
             system_font_family=self._system_font_family,
             profile_active=self._config_manager.active_profile_name is not None,

@@ -49,6 +49,7 @@ class SettingsSidebar(IconSidebarBase):
         gui_config: GUIConfig,
         config: Config,
         baseline_config: Config,
+        global_baseline: Config,
         initial_overrides: GUIStyleOverrides,
         system_font_family: str = "",
         profile_active: bool = False,
@@ -69,7 +70,7 @@ class SettingsSidebar(IconSidebarBase):
         self._style_tab: Optional[StyleTab] = None
 
         parse_config(self._system_defaults)
-        tab_args = gui_config, config, self._bc
+        tab_args = gui_config, config, self._bc, global_baseline
         general_tab = GeneralTab(*tab_args, profile_active=profile_active)
         general_tab.daemon_toggled.connect(self.daemon_toggled)
 
@@ -192,12 +193,15 @@ class SettingsSidebar(IconSidebarBase):
 
     def _update_tab_menu_actions(self) -> None:
         tab = self._stack.currentWidget()
-        if isinstance(tab, SettingsTab) and tab._owned_fields:
-            self._tab_revert_action.setEnabled(tab.tab_has_changes())
-            self._tab_defaults_action.setEnabled(tab.tab_differs_from_defaults())
-        else:
+        if not isinstance(tab, SettingsTab) or not tab._owned_fields:
             self._tab_revert_action.setEnabled(False)
             self._tab_defaults_action.setEnabled(False)
+            return
+        self._tab_revert_action.setEnabled(tab.tab_has_changes())
+        if self._profile_active:
+            self._tab_defaults_action.setEnabled(tab.tab_overrides_baseline())
+        else:
+            self._tab_defaults_action.setEnabled(tab.tab_differs_from_defaults())
 
     def _has_changes(self, baseline: Config) -> bool:
         """Compare the current config with the baseline config field by field."""
@@ -265,11 +269,13 @@ class SettingsSidebar(IconSidebarBase):
             self.tr("Revert this tab", "Reset menu")
         )
         self._tab_defaults_action = self._config_reset_menu.addAction(
-            self.tr("Restore tab defaults", "Reset menu")
+            self.tr("Clear this tab profile overrides", "Reset menu")
+            if self._profile_active
+            else self.tr("Restore this tab defaults", "Reset menu")
         )
         self._config_reset_menu.addSeparator()
         restore_text = (
-            self.tr("Clear profile overrides", "Reset menu")
+            self.tr("Clear all profile overrides", "Reset menu")
             if self._profile_active
             else self.tr("Restore all to system defaults", "Reset menu")
         )
@@ -332,7 +338,10 @@ class SettingsSidebar(IconSidebarBase):
         tab = self._stack.currentWidget()
         if not isinstance(tab, SettingsTab):
             return
-        tab.reset_to_defaults()
+        if self._profile_active:
+            tab.clear_overrides()
+        else:
+            tab.reset_to_defaults()
         QTimer.singleShot(0, self.config_invalidated.emit)
 
     def _on_footer_save(self):

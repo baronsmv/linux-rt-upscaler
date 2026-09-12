@@ -22,6 +22,7 @@ class ScalingTab(SettingsTab):
         gui_config: GUIConfig,
         config: Config,
         baseline_config: Config,
+        global_baseline: Config,
         profile_active: bool = False,
         parent: Optional[QWidget] = None,
     ) -> None:
@@ -31,6 +32,7 @@ class ScalingTab(SettingsTab):
             title=self.tr("Scaling", "Name of a settings tab"),
             config=config,
             baseline_config=baseline_config,
+            global_baseline=global_baseline,
             parent=parent,
         )
 

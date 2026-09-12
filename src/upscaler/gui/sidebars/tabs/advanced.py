@@ -18,6 +18,7 @@ class AdvancedTab(SettingsTab):
         gui_config: GUIConfig,
         config: Config,
         baseline_config: Config,
+        global_baseline: Config,
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(
@@ -25,6 +26,7 @@ class AdvancedTab(SettingsTab):
             title=self.tr("Advanced", "Name of a settings tab"),
             config=config,
             baseline_config=baseline_config,
+            global_baseline=global_baseline,
             parent=parent,
         )
 

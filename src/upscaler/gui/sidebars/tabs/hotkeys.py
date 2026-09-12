@@ -19,6 +19,7 @@ class HotkeysTab(SettingsTab):
         gui_config: GUIConfig,
         config: Config,
         baseline_config: Config,
+        global_baseline: Config,
         parent: Optional[QWidget] = None,
     ) -> None:
         self._hotkey_rows: Dict[str, HotkeyRow] = {}
@@ -27,6 +28,7 @@ class HotkeysTab(SettingsTab):
             title=self.tr("Hotkeys", "Name of a settings tab"),
             config=config,
             baseline_config=baseline_config,
+            global_baseline=global_baseline,
             parent=parent,
         )
 
