@@ -4,6 +4,9 @@ import re
 from dataclasses import fields, is_dataclass, replace
 from typing import Any, Dict
 
+from PySide6.QtGui import QPalette
+from PySide6.QtWidgets import QApplication
+
 from .config import (
     GUIConfig,
     GUIPalette,
@@ -13,6 +16,8 @@ from .config import (
     SidebarLayout,
     TileLayout,
 )
+from .palette import DARK, LIGHT
+from ..utils import NON_COLOR_KEYWORDS, scheme_is_light
 
 #: Field names that must NOT be scaled, keyed by dataclass.
 _EXEMPT: Dict[type, frozenset[str]] = {
@@ -118,8 +123,30 @@ def _scale_dataclass(obj: Any, factor: float) -> Any:
     return replace(obj, **updates)
 
 
+def _resolve_auto_background(cfg: GUIConfig) -> GUIConfig:
+    """Replace the Auto 'none' background with a concrete session color."""
+    if cfg.palette.background.lower() not in NON_COLOR_KEYWORDS:
+        return cfg
+
+    is_light = scheme_is_light()
+
+    app = QApplication.instance()
+    if app is not None:
+        color = app.palette().color(QPalette.ColorRole.Window)
+        expected_dark = not is_light
+        if (color.lightness() < 128) == expected_dark:
+            return replace(
+                cfg,
+                palette=replace(cfg.palette, background=color.name()),
+            )
+
+    fallback = LIGHT.background if is_light else DARK.background
+    return replace(cfg, palette=replace(cfg.palette, background=fallback))
+
+
 def resolve_gui_config(overrides: GUIStyleOverrides) -> GUIConfig:
     """Build the effective GUIConfig from a set of style overrides."""
     base = GUIConfig(palette=overrides.palette)
     with_overrides = _apply_style_overrides(base, overrides)
-    return _scale_gui_config(with_overrides, overrides.zoom)
+    scaled = _scale_gui_config(with_overrides, overrides.zoom)
+    return _resolve_auto_background(scaled)

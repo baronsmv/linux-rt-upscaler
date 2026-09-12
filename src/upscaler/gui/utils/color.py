@@ -2,7 +2,7 @@ from typing import List, Tuple, Union
 
 from PySide6.QtGui import QColor
 
-_NON_COLOR_KEYWORDS = frozenset[str]({"", "none", "transparent"})
+NON_COLOR_KEYWORDS = frozenset[str]({"", "none", "transparent"})
 
 
 def background_rule(color: str) -> str:
@@ -10,7 +10,7 @@ def background_rule(color: str) -> str:
     Return a CSS background-color declaration, or an empty string when the
     value is a keyword Qt cannot parse as a color.
     """
-    if color.lower() in _NON_COLOR_KEYWORDS:
+    if color.lower() in NON_COLOR_KEYWORDS:
         return ""
     return f"background-color: {color};"
 
@@ -33,7 +33,7 @@ def rgba_hex_to_qcolor(hex_str: str) -> QColor:
 
 def normalize_to_hex(color_data: Union[str, Tuple, List]) -> str:
     """Converts strings or (B, G, R, A) tuples to #RRGGBBAA."""
-    if isinstance(color_data, str) and color_data.lower() in _NON_COLOR_KEYWORDS:
+    if isinstance(color_data, str) and color_data.lower() in NON_COLOR_KEYWORDS:
         return color_data
     if isinstance(color_data, (tuple, list)):
         b, g, r, a = color_data[0], color_data[1], color_data[2], color_data[3]
@@ -49,7 +49,7 @@ def normalize_to_hex(color_data: Union[str, Tuple, List]) -> str:
 
 def to_stylesheet_color(internal_color: str) -> str:
     """Convert an internal #RRGGBBAA color to a Qt-stylesheet-compatible string."""
-    if internal_color.lower() in _NON_COLOR_KEYWORDS:
+    if internal_color.lower() in NON_COLOR_KEYWORDS:
         return internal_color
     qc = rgba_hex_to_qcolor(internal_color)
     if not qc.isValid():
@@ -62,7 +62,7 @@ def to_stylesheet_color(internal_color: str) -> str:
 
 def preset_color_to_internal(stylesheet_color: str) -> str:
     """Convert a stylesheet color (preset or saved YAML) to internal #RRGGBBAA."""
-    if stylesheet_color.lower() in _NON_COLOR_KEYWORDS:
+    if stylesheet_color.lower() in NON_COLOR_KEYWORDS:
         return stylesheet_color
     qc = QColor(stylesheet_color)
     if not qc.isValid():
