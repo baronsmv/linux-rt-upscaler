@@ -16,10 +16,6 @@ _OVERRIDE_BOUNDS: Dict[str, Tuple[float, float]] = {
     "settings_width": (240, 800),
     "tile_columns": (1, 8),
     "tile_aspect_ratio": (0.5, 3.0),
-    "tile_spacing_ratio": (0.0, 0.30),
-    "icon_columns": (4, 12),
-    "tile_pop_scale": (1.0, 1.30),
-    "tile_pop_duration": (0, 1000),
     "auto_refresh_ms": (250, 30_000),
     "tile_preview_interval_ms": (16, 1000),
 }
@@ -62,22 +58,6 @@ def load_gui_style(
             "tile_aspect_ratio",
             general.get("tile_aspect_ratio"),
             defaults.tile_aspect_ratio,
-        ),
-        tile_spacing_ratio=_load_numeric(
-            "tile_spacing_ratio",
-            general.get("tile_spacing_ratio"),
-            defaults.tile_spacing_ratio,
-        ),
-        icon_columns=_load_numeric(
-            "icon_columns", general.get("icon_columns"), defaults.icon_columns
-        ),
-        tile_pop_scale=_load_numeric(
-            "tile_pop_scale", general.get("tile_pop_scale"), defaults.tile_pop_scale
-        ),
-        tile_pop_duration=_load_numeric(
-            "tile_pop_duration",
-            general.get("tile_pop_duration"),
-            defaults.tile_pop_duration,
         ),
         auto_refresh_ms=_load_numeric(
             "auto_refresh_ms", general.get("auto_refresh_ms"), defaults.auto_refresh_ms

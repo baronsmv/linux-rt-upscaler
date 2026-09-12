@@ -476,10 +476,6 @@ class GUIStyleOverrides:
             before zoom scaling.
         tile_columns: Number of columns in the window grid.
         tile_aspect_ratio: Tile aspect ratio (width / height).
-        tile_spacing_ratio: Gap between tiles as a fraction of tile width.
-        icon_columns: Number of columns in the icon tab bar.
-        tile_pop_scale: Scale factor applied on tile hover / selection.
-        tile_pop_duration: Duration of the tile pop animation (ms).
         auto_refresh_ms: Window list refresh interval (ms).
         tile_preview_interval_ms: Tile thumbnail update interval (ms).
     """
@@ -491,9 +487,5 @@ class GUIStyleOverrides:
     settings_width: int = 420
     tile_columns: int = 3
     tile_aspect_ratio: float = 4 / 3
-    tile_spacing_ratio: float = 0.075
-    icon_columns: int = 9
-    tile_pop_scale: float = 1.05
-    tile_pop_duration: int = 200
     auto_refresh_ms: int = 2000
     tile_preview_interval_ms: int = 60
