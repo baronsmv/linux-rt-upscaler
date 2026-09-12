@@ -100,8 +100,8 @@ class SidebarLayout:
         tab_bar_spacing: Gap between tab buttons in the grid.
     """
 
-    settings_width: int = 420
-    profiles_width: int = 380
+    settings_width: int = 440
+    profiles_width: int = 360
     padding: int = 8
     content_margin_h: int = 16
     content_margin_v: int = 8
@@ -485,8 +485,8 @@ class GUIStyleOverrides:
     zoom: int = 100
     font_scale: int = 100
     font_family: str = ""
-    profiles_width: int = 380
-    settings_width: int = 420
+    profiles_width: int = 360
+    settings_width: int = 440
     tile_columns: int = 3
     tile_aspect_ratio: float = 4 / 3
     auto_refresh_ms: int = 2000
