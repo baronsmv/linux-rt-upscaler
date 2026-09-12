@@ -198,25 +198,22 @@ class WindowGridScene(QGraphicsScene):
         margin = cfg.tile.margin
         target_cols = cfg.tile.columns
 
-        # ---- 1. Determine actual column count (never more than tiles) -------
+        # Determine actual column count (never more than tiles)
         cols = min(target_cols, len(tiles))
         self._columns = cols
         self._rows = math.ceil(len(tiles) / cols)
 
-        # ---- 2. Compute tile width (fixed to full row, not per row) --------
+        # Compute tile width (fixed to full row, not per row)
         avail_w = vp_w - 2 * margin
-        if target_cols > 1:
-            # We'll first estimate tile width without spacing, then loop once
-            # to settle proportional spacing if needed
-            tile_w = avail_w / target_cols
+        tile_w = avail_w / max(1, target_cols)
 
-        # ---- 3. Compute actual spacing (proportional or fixed) -------------
+        # Compute actual spacing (proportional or fixed)
         if cfg.tile.spacing_ratio > 0:
             spacing = max(cfg.tile.spacing, int(tile_w * cfg.tile.spacing_ratio))
         else:
             spacing = cfg.tile.spacing
 
-        # ---- 4. Recompute tile width with spacing --------------------------
+        # Recompute tile width with spacing
         if target_cols > 1:
             total_spacing = (target_cols - 1) * spacing
             tile_w = max(100.0, (avail_w - total_spacing) / target_cols)
@@ -229,20 +226,20 @@ class WindowGridScene(QGraphicsScene):
             # Single column - spacing is irrelevant
             tile_w = max(100.0, avail_w)
 
-        # ---- 5. Tile height from aspect ratio ------------------------------
+        # Tile height from aspect ratio
         if cfg.tile.aspect_ratio > 0:
             aspect = cfg.tile.aspect_ratio
         else:
             aspect = cfg.tile.width / cfg.tile.height if cfg.tile.height else 1.0
         tile_h = tile_w / aspect
 
-        # ---- 6. Update tile sizes (resize if changed) ----------------------
+        # Update tile sizes (resize if changed)
         for tile in tiles:
             cur_w, cur_h = tile.tile_size()
             if abs(cur_w - tile_w) > 1 or abs(cur_h - tile_h) > 1:
                 tile.set_tile_size(tile_w, tile_h)
 
-        # ---- 7. Position tiles ---------------------------------------------
+        # Position tiles
         start_y = margin + tile_h / 2.0
         for i, tile in enumerate(tiles):
             row = i // cols
@@ -255,13 +252,13 @@ class WindowGridScene(QGraphicsScene):
             cy = start_y + row * (tile_h + spacing)
             tile.setPos(cx, cy)
 
-        # ---- 8. Set scene rect to exactly contain the grid + margins --------
+        # Set scene rect to exactly contain the grid + margins
         total_h = margin * 2 + self._rows * tile_h + (self._rows - 1) * spacing
         self.setSceneRect(
             0, -self._SCENE_MARGIN, vp_w, total_h + 2 * self._SCENE_MARGIN
         )
 
-        # ---- 9. Keep selected tile in view ---------------------------------
+        # Keep selected tile in view
         self._ensure_selected_visible()
 
     def _needs_relayout(self, new_handles: Set[int]) -> bool:
