@@ -9,8 +9,7 @@ from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QMessageBox, QDialog
 
-from ..dialogs import ProfileDialog
-from ..styles import message_box_style
+from ..dialogs import ProfileDialog, confirm_pending_changes
 
 if TYPE_CHECKING:
     from ..config import ConfigManager
@@ -52,92 +51,14 @@ class ProfileActions:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-    def confirm_pending_changes(self, closing: bool = False) -> bool:
-        """
-        Show the unsaved-changes dialog and act on the user's choice.
-
-        Parameters
-        ----------
-        closing: bool
-            True when the changes would be lost to application closure,
-            False when they would be lost to a profile switch. Affects
-            only the wording of the buttons and the informational text.
-
-        Returns
-        -------
-        bool
-            True if the caller should proceed (Save or Discard chosen),
-            False if the user canceled.
-        """
-        if not self._config_manager.is_dirty():
-            return True
-
-        if closing:
-            informative = QCoreApplication.translate(
-                "ProfileActions",
-                "Save them before closing, discard them, or cancel to stay.",
-                "Dialog secondary text",
-            )
-            save_label = QCoreApplication.translate(
-                "ProfileActions", "Save and close", "Dialog button"
-            )
-            discard_label = QCoreApplication.translate(
-                "ProfileActions", "Discard and close", "Dialog button"
-            )
-        else:
-            informative = QCoreApplication.translate(
-                "ProfileActions",
-                "Save them before switching, discard them, or cancel to stay.",
-                "Dialog secondary text",
-            )
-            save_label = QCoreApplication.translate(
-                "ProfileActions", "Save and switch", "Dialog button"
-            )
-            discard_label = QCoreApplication.translate(
-                "ProfileActions", "Discard and switch", "Dialog button"
-            )
-
-        box = QMessageBox(self._main_window)
-        box.setIcon(QMessageBox.Question)
-        box.setWindowTitle(
-            QCoreApplication.translate(
-                "ProfileActions", "Unsaved changes", "Dialog title"
-            )
-        )
-        box.setText(
-            QCoreApplication.translate(
-                "ProfileActions",
-                "You have unsaved changes in the current configuration.",
-                "Dialog main text",
-            )
-        )
-        box.setInformativeText(informative)
-
-        save_btn = box.addButton(save_label, QMessageBox.AcceptRole)
-        discard_btn = box.addButton(discard_label, QMessageBox.DestructiveRole)
-        cancel_btn = box.addButton(
-            QCoreApplication.translate("ProfileActions", "Cancel", "Dialog button"),
-            QMessageBox.RejectRole,
-        )
-        box.setDefaultButton(save_btn)
-        box.setEscapeButton(cancel_btn)
-        box.setStyleSheet(message_box_style(self._main_window.gui_config))
-
-        box.exec()
-        clicked = box.clickedButton()
-        if clicked is save_btn:
-            self._config_manager.save()
-            return True
-        if clicked is discard_btn:
-            return True
-        return False
-
     def select_profile(self, name: str) -> None:
         """Activate a different profile (from sidebar click)."""
         current = self._config_manager.active_profile_name or ""
         if name == current:
             return
-        if not self.confirm_pending_changes():
+        if not confirm_pending_changes(
+            self._main_window, self._main_window.gui_config, self._config_manager
+        ):
             QTimer.singleShot(0, lambda n=current: self._sidebar.set_active_item(n))
             return
 

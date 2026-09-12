@@ -25,7 +25,7 @@ from .config import (
     save_gui_style,
     resolve_gui_config,
 )
-from .dialogs import AboutDialog
+from .dialogs import AboutDialog, confirm_pending_changes
 from .grid import FilterBar, WindowGridScene, WindowGridView
 from .helpers import DaemonController, ProfileActions, TrayController, WindowGridManager
 from .icons import load_icon
@@ -316,7 +316,9 @@ class MainWindow(QMainWindow):
                 self._config_manager.profiles, win_info
             )
             if profile_name:
-                if not self.profile_act.confirm_pending_changes():
+                if not confirm_pending_changes(
+                    self, self.gui_config, self._config_manager, closing=True
+                ):
                     return
                 self._auto_applied_profile = profile_name
                 self._config_manager.set_active_profile(profile_name)
@@ -702,7 +704,9 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def request_quit(self) -> None:
         """Quit the application, prompting if there are unsaved changes."""
-        if not self.profile_act.confirm_pending_changes(closing=True):
+        if not confirm_pending_changes(
+            self, self.gui_config, self._config_manager, closing=True
+        ):
             return
         self._force_quit()
 
@@ -751,10 +755,11 @@ class MainWindow(QMainWindow):
                 return
 
             # Unsaved changes
-            if self._config_manager.is_dirty():
-                if not self.profile_act.confirm_pending_changes(closing=True):
-                    event.ignore()
-                    return
+            if not confirm_pending_changes(
+                self, self.gui_config, self._config_manager, closing=True
+            ):
+                event.ignore()
+                return
 
         self.grid_mgr.stop()
         self.daemon_ctrl.stop()
