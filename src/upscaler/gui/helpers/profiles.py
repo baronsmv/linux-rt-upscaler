@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional, Dict, Any
 
 from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtGui import QImage
@@ -159,6 +159,79 @@ class ProfileActions:
                     "Error while adding profile",
                 ),
             )
+
+    def duplicate_profile(self, name: str) -> None:
+        """Open a new-profile dialog pre-filled from *name*'s data."""
+        try:
+            source: Optional[Dict[str, Any]] = self._config_manager.profiles.get(name)
+            if source is None:
+                return
+
+            source_match = source.get("match", {})
+            suggested_name = self._suggest_duplicate_name(name)
+
+            dlg = ProfileDialog(
+                self._main_window.gui_config,
+                profile_name=suggested_name,
+                match=source_match,
+                profiles=self._config_manager.profiles,
+                source_profile=name,
+                parent=self._main_window,
+            )
+            if dlg.exec() != QDialog.Accepted:
+                return
+
+            new_name = dlg.profile_name()
+            new_match = dlg.match_criteria()
+            source_options = source.get("options", {})
+
+            self._config_manager.add_profile(
+                new_name, new_match, options=source_options
+            )
+
+            # The dialog carried the source's icon (if any)
+            if not dlg.icon_removed:
+                icon = dlg.get_captured_icon()
+                if icon:
+                    self._save_icon(new_name, icon)
+
+            self._config_manager.set_active_profile(new_name)
+            self._sidebar.update_profiles(self._config_manager.profiles)
+            self._sidebar.populate_list(active_name=new_name)
+        except Exception:
+            logger.exception("Failed to duplicate profile")
+            QMessageBox.critical(
+                self._main_window,
+                QCoreApplication.translate(
+                    "ProfileActions", "Error", "Error dialog title"
+                ),
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "Could not duplicate profile.",
+                    "Error while duplicating profile",
+                ),
+            )
+
+    def _suggest_duplicate_name(self, name: str) -> str:
+        """Return a 'Name (copy)' variant that is not already taken."""
+        base = QCoreApplication.translate(
+            "ProfileActions",
+            "{0} (copy)",
+            "Suggested name for a duplicated profile. {0} is the source name.",
+        ).format(name)
+        if base not in self._config_manager.profiles:
+            return base
+        counter = 2
+        while True:
+            candidate = QCoreApplication.translate(
+                "ProfileActions",
+                "{0} (copy {1})",
+                "Suggested name for a duplicated profile when the plain "
+                "'copy' name is taken. {0} is the source name, {1} is a counter.",
+            ).format(name, counter)
+            if candidate not in self._config_manager.profiles:
+                return candidate
+            counter += 1
 
     def edit_profile(self, name: str) -> None:
         """Open the Edit Profile dialog for an existing profile."""

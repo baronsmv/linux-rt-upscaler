@@ -51,6 +51,7 @@ class ProfileDialog(QDialog):
         profile_name: str = "",
         match: Optional[Dict[str, str]] = None,
         profiles: Optional[Dict[str, dict]] = None,
+        source_profile: Optional[str] = None,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
@@ -60,10 +61,11 @@ class ProfileDialog(QDialog):
         self._profiles = profiles or {}
         self._match = match
 
+        is_duplicate = source_profile is not None
         self.setWindowTitle(
-            self.tr("Profile Editor", "Window title of the profile editor")
-            if profile_name
-            else self.tr("New Profile", "Window title of the profile creator")
+            self.tr("New Profile", "Window title of the profile creator")
+            if is_duplicate or not profile_name
+            else self.tr("Profile Editor", "Window title of the profile editor")
         )
         self.setMinimumWidth(d.min_width)
         self.setStyleSheet(dialog_style(self._gui_config))
@@ -130,9 +132,10 @@ class ProfileDialog(QDialog):
         self._icon_preview.setAlignment(Qt.AlignCenter)
 
         # Load existing icon
+        icon_source = source_profile if is_duplicate else profile_name
         existing_icon_loaded = False
-        if profile_name and self._profiles:
-            profile_data = self._profiles.get(profile_name, {})
+        if icon_source and self._profiles:
+            profile_data = self._profiles.get(icon_source, {})
             icon_path = profile_data.get("icon", "")
             if icon_path and os.path.isfile(icon_path):
                 pix = QPixmap(icon_path).scaled(
@@ -342,6 +345,10 @@ class ProfileDialog(QDialog):
 
         cap_h = int(screen.height() * 0.9)
         self.resize(target_w, min(total_h, cap_h))
+
+        if is_duplicate or not profile_name:
+            self._name_edit.selectAll()
+            self._name_edit.setFocus()
 
     # ------------------------------------------------------------------
     #  Helpers

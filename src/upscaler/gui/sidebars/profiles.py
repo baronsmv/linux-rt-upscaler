@@ -77,6 +77,7 @@ class ProfilesSidebar(QWidget):
         The payload is the profile name (or "" for the default entry).
     add_profile_requested()
         Emitted when the user clicks the Add button.
+    duplicate_profile_requested(str)
     edit_profile_requested(str)
         Emitted after a profile is selected, either by clicking the Edit
         button or by double-clicking the profile entry.
@@ -88,6 +89,7 @@ class ProfilesSidebar(QWidget):
 
     profile_selected = Signal(str)
     add_profile_requested = Signal()
+    duplicate_profile_requested = Signal(str)
     edit_profile_requested = Signal(str)
     delete_profile_requested = Signal(str)
     move_up_requested = Signal(str)
@@ -179,6 +181,13 @@ class ProfilesSidebar(QWidget):
             self.add_profile_requested.emit,
             btn_gui_config,
         )
+        self._duplicate_btn = self._make_tool_button(
+            "actions/duplicate",
+            self.tr("Duplicate profile (Ctrl+D)", "Profile duplicate action tooltip"),
+            self._emit_duplicate,
+            btn_gui_config,
+            enabled=False,
+        )
         self._edit_btn = self._make_tool_button(
             "actions/edit",
             self.tr("Edit match criteria (Enter/F2)", "Profile edit action tooltip"),
@@ -210,6 +219,7 @@ class ProfilesSidebar(QWidget):
         )
 
         toolbar.addWidget(self._add_btn)
+        toolbar.addWidget(self._duplicate_btn)
         toolbar.addWidget(self._edit_btn)
         toolbar.addWidget(self._delete_btn)
         toolbar.addStretch()
@@ -254,21 +264,26 @@ class ProfilesSidebar(QWidget):
             item = self._list.currentItem()
             has_profile = item and item.data(Qt.UserRole) != ""
 
-            # Delete, triggers the existing confirmation dialog
-            if key == Qt.Key_Delete and has_profile:
-                self.delete_profile_requested.emit(item.data(Qt.UserRole))
+            # Add new profile: Ctrl+N
+            if key == Qt.Key_N and mods == Qt.ControlModifier:
+                self.add_profile_requested.emit()
                 return True
 
-            # Edit: Enter / Return or F2 (standard for rename)
+            # Duplicate: Ctrl+D
+            if key == Qt.Key_D and mods == Qt.ControlModifier and has_profile:
+                self.duplicate_profile_requested.emit(item.data(Qt.UserRole))
+                return True
+
+            # Edit: Enter / Return or F2
             if (
                 key == Qt.Key_Return or key == Qt.Key_Enter or key == Qt.Key_F2
             ) and has_profile:
                 self.edit_profile_requested.emit(item.data(Qt.UserRole))
                 return True
 
-            # Add new profile: Ctrl+N (common shortcut)
-            if key == Qt.Key_N and mods == Qt.ControlModifier:
-                self.add_profile_requested.emit()
+            # Delete, triggers the existing confirmation dialog
+            if key == Qt.Key_Delete and has_profile:
+                self.delete_profile_requested.emit(item.data(Qt.UserRole))
                 return True
 
             # Move up: Ctrl+Shift+Up  (using Shift to avoid conflict with text navigation)
@@ -477,6 +492,7 @@ class ProfilesSidebar(QWidget):
 
         name = current.data(Qt.UserRole)
 
+        self._duplicate_btn.setEnabled(name != "")
         self._edit_btn.setEnabled(name != "")
         self._delete_btn.setEnabled(name != "")
         self._up_btn.setEnabled(name != "" and self._list.row(current) > 1)
@@ -503,6 +519,11 @@ class ProfilesSidebar(QWidget):
     def _on_reordered(self, order: List[str]) -> None:
         """Forward a drop-induced reorder to the owner."""
         QTimer.singleShot(0, lambda o=order: self.profiles_reordered.emit(o))
+
+    def _emit_duplicate(self):
+        item = self._list.currentItem()
+        if item and item.data(Qt.UserRole):
+            self.duplicate_profile_requested.emit(item.data(Qt.UserRole))
 
     def _emit_edit(self):
         item = self._list.currentItem()

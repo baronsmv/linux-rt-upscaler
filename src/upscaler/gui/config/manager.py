@@ -124,18 +124,25 @@ class ConfigManager(QObject):
         self.saved_persistent_config = copy.deepcopy(self.persistent_config)
         self.config_changed.emit()
 
-    def add_profile(self, name: str, match: Dict[str, Any]) -> None:
+    def add_profile(
+        self, name: str, match: Dict[str, Any], options: Optional[Dict[str, Any]] = None
+    ) -> None:
         """
-        Add a new profile with the given match criteria and empty options.
+        Add a new profile.
 
-        Raises `ValueError` if a profile with *name* already exists.
+        If *options* is None, the profile is created with no overrides.
+        Otherwise, the dict is deep-copied into the profile so later edits
+        to the source do not leak into the copy.
         """
         if name in self.profiles:
             raise ValueError(f"Profile '{name}' already exists")
-        self.profiles[name] = {"match": match, "options": {}}
+        self.profiles[name] = {
+            "match": match,
+            "options": copy.deepcopy(options) if options else {},
+        }
         save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
         self.profile_list_changed.emit()
-        logger.debug(f"Added profile '{name}'")
+        logger.debug("Added profile '%s'", name)
 
     def delete_profile(self, name: str) -> None:
         """Remove the profile *name*.  Does nothing if the profile doesn't exist."""

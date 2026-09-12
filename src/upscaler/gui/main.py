@@ -232,6 +232,9 @@ class MainWindow(QMainWindow):
         # Profile
         self.left_sidebar.profile_selected.connect(self.profile_act.select_profile)
         self.left_sidebar.add_profile_requested.connect(self.profile_act.add_profile)
+        self.left_sidebar.duplicate_profile_requested.connect(
+            self.profile_act.duplicate_profile
+        )
         self.left_sidebar.edit_profile_requested.connect(self.profile_act.edit_profile)
         self.left_sidebar.delete_profile_requested.connect(
             self.profile_act.delete_profile
