@@ -25,11 +25,11 @@ class GeneralTab(SettingsTab):
         profile_active: bool = False,
         parent: Optional[QWidget] = None,
     ) -> None:
-        self._config = config
         self._profile_active = profile_active
         super().__init__(
             gui_config,
             title=self.tr("General", "Name of a settings tab"),
+            config=config,
             baseline_config=baseline_config,
             parent=parent,
         )
@@ -43,6 +43,7 @@ class GeneralTab(SettingsTab):
             self._config.model,
             self._on_model_changed,
             baseline=self.baseline_config.model,
+            field="model",
             help=self.tr(
                 "Upscaling SRCNN model to use.\n"
                 "All models upscale to 2x, and are ordered from lowest to highest quality.\n"
@@ -57,6 +58,7 @@ class GeneralTab(SettingsTab):
             self._config.double_upscale,
             self._on_double_changed,
             baseline=self.baseline_config.double_upscale,
+            field="double_upscale",
             help=self.tr(
                 "Perform two 2x upscales in a row for a total of 4x (for example, 720p to 2880p).\n"
                 "Useful for high-resolution screens (4K) and low-resolution sources.\n"
@@ -68,22 +70,24 @@ class GeneralTab(SettingsTab):
 
         # ---- Focus Tracking ----
         self._add_section(self.tr("Focus tracking", "Settings section"))
-        self._follow_focus_cb = self._add_cb(
+        self._add_cb(
             self.tr("Follow focus", "Label of setting (must be short)"),
             self._config.follow_focus,
             self._on_follow_focus,
             baseline=self.baseline_config.follow_focus,
+            field="follow_focus",
             help=self.tr(
                 "Automatically upscale the window that currently has focus.\n"
                 "Useful when working with multiple windows.",
                 "Description of a setting (tooltip)",
             ),
         )
-        self._pause_focus_loss_cb = self._add_cb(
+        self._add_cb(
             self.tr("Pause on focus loss", "Label of setting (must be short)"),
             self._config.pause_on_focus_loss,
             self._on_pause_focus_loss,
             baseline=self.baseline_config.pause_on_focus_loss,
+            field="pause_on_focus_loss",
             help=self.tr(
                 "Hide the upscaled overlay when the target window loses focus, and show it again when focus returns.\n"
                 "Turn off to keep the overlay always visible.",
@@ -94,11 +98,12 @@ class GeneralTab(SettingsTab):
         # ---- Daemon ----
         self._add_section(self.tr("Automatic Upscaling", "Settings section"))
         if self._profile_active:
-            self._auto_cb = self._add_cb(
+            self._add_cb(
                 self.tr("Exclude from daemon mode", "Label of setting (must be short)"),
                 self._config.daemon_exclude,
                 self._on_daemon_exclude_changed,
                 baseline=self.baseline_config.daemon_exclude,
+                field="daemon_exclude",
                 help=self.tr(
                     "When daemon mode is active, "
                     "this profile will not be used to automatically upscale matching windows.",
@@ -106,11 +111,12 @@ class GeneralTab(SettingsTab):
                 ),
             )
         else:
-            self._daemon_cb = self._add_cb(
+            self._add_cb(
                 self.tr("Daemon mode", "Label of setting (must be short)"),
                 self._config.daemon,
                 self._on_daemon_changed,
                 baseline=self.baseline_config.daemon,
+                field="daemon",
                 help=self.tr(
                     "When enabled, a background process automatically upscales "
                     "any window that matches a profile.\n"

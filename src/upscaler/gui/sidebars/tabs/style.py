@@ -89,7 +89,6 @@ class StyleTab(SettingsTab):
         super().__init__(
             gui_config,
             title=self.tr("GUI Style", "Name of a settings tab"),
-            baseline_config=None,
             parent=parent,
         )
 

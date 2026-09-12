@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, List, Optional, TYPE_CHECKING
+from typing import Callable, List, Optional, Set, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -53,16 +53,19 @@ class SettingsTab(QWidget):
         self,
         gui_config: GUIConfig,
         title: str,
+        config: Optional[Config] = None,
         baseline_config: Optional[Config] = None,
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
         self._gui_config = gui_config
+        self._config = config if config is not None else DEFAULT_CONFIG
         self.baseline_config = (
             baseline_config if baseline_config is not None else DEFAULT_CONFIG
         )
         self.title = title
         self._built = False
+        self._owned_fields: Set[str] = set()
 
         self.setContentsMargins(0, 0, 0, 0)
 
@@ -156,6 +159,7 @@ class SettingsTab(QWidget):
         checked: bool,
         slot: Callable,
         baseline: Optional[bool] = None,
+        field: Optional[str] = None,
         help: Optional[str] = None,
     ) -> CheckBox:
         cb = CheckBox(
@@ -167,6 +171,8 @@ class SettingsTab(QWidget):
         )
         cb.stateChanged.connect(slot)
         self.content_layout.addWidget(cb)
+        if field is not None:
+            self._owned_fields.add(field)
         return cb
 
     def _add_slider(
@@ -181,6 +187,7 @@ class SettingsTab(QWidget):
         scale_factor: int = 1,
         float_slot: Optional[Callable] = None,
         baseline: Optional[float] = None,
+        field: Optional[str] = None,
         help: Optional[str] = None,
     ) -> SliderRow:
         """Add a slider row, optionally with float output and editable field."""
@@ -200,6 +207,8 @@ class SettingsTab(QWidget):
         if float_slot is not None:
             slider.floatValueChanged.connect(float_slot)
         self.content_layout.addWidget(slider)
+        if field is not None:
+            self._owned_fields.add(field)
         return slider
 
     def _add_named_slider(
@@ -210,6 +219,7 @@ class SettingsTab(QWidget):
         slot: Callable,
         editable: bool = False,
         baseline: Optional[str] = None,
+        field: Optional[str] = None,
         help: Optional[str] = None,
     ) -> SliderRow:
         """Add a slider that displays a name from a list instead of a number."""
@@ -242,6 +252,8 @@ class SettingsTab(QWidget):
         )
         slider.valueChanged.connect(lambda val: slot(names[val]))
         self.content_layout.addWidget(slider)
+        if field is not None:
+            self._owned_fields.add(field)
         return slider
 
     def _add_combo(
@@ -251,6 +263,7 @@ class SettingsTab(QWidget):
         current: Optional[str],
         slot: Callable,
         baseline: Optional[str] = None,
+        field: Optional[str] = None,
         help: Optional[str] = None,
     ) -> ComboRow:
         """Add a labeled combo box row and return it."""
@@ -264,6 +277,8 @@ class SettingsTab(QWidget):
         )
         combo.currentTextChanged.connect(slot)
         self.content_layout.addWidget(combo)
+        if field is not None:
+            self._owned_fields.add(field)
         return combo
 
     def _add_text(
@@ -272,6 +287,7 @@ class SettingsTab(QWidget):
         text: str,
         slot: Callable,
         baseline: Optional[str] = None,
+        field: Optional[str] = None,
         help: Optional[str] = None,
     ) -> LineEditRow:
         """Add a labeled single-line text edit and return it."""
@@ -284,6 +300,8 @@ class SettingsTab(QWidget):
         )
         editor.textChanged.connect(slot)
         self.content_layout.addWidget(editor)
+        if field is not None:
+            self._owned_fields.add(field)
         return editor
 
     def _add_path_picker(
@@ -292,6 +310,7 @@ class SettingsTab(QWidget):
         initial_path: str,
         slot: Callable,
         baseline: Optional[str] = None,
+        field: Optional[str] = None,
         help: Optional[str] = None,
     ) -> PathPickerRow:
         """Add a directory picker row (line edit + browse) and return it."""
@@ -304,6 +323,8 @@ class SettingsTab(QWidget):
         )
         picker.pathChanged.connect(slot)
         self.content_layout.addWidget(picker)
+        if field is not None:
+            self._owned_fields.add(field)
         return picker
 
     def _add_color_picker(
@@ -312,6 +333,7 @@ class SettingsTab(QWidget):
         initial_color: str,
         slot: Callable,
         baseline: Optional[str] = None,
+        field: Optional[str] = None,
         help: Optional[str] = None,
     ) -> ColorPickerRow:
         """Add a color picker row (swatch + dialog) and return it."""
@@ -324,6 +346,8 @@ class SettingsTab(QWidget):
         )
         picker.colorChanged.connect(slot)
         self.content_layout.addWidget(picker)
+        if field is not None:
+            self._owned_fields.add(field)
         return picker
 
     def _add_font_picker(
@@ -333,6 +357,7 @@ class SettingsTab(QWidget):
         system_family: str,
         slot: Callable,
         baseline: Optional[str] = None,
+        field: Optional[str] = None,
         help: Optional[str] = None,
     ) -> FontPickerRow:
         """Add a labeled font-family picker row and return it."""
@@ -346,6 +371,8 @@ class SettingsTab(QWidget):
         )
         row.fontChanged.connect(slot)
         self.content_layout.addWidget(row)
+        if field is not None:
+            self._owned_fields.add(field)
         return row
 
     def _add_hotkey(
@@ -366,4 +393,5 @@ class SettingsTab(QWidget):
         )
         row.sequenceChanged.connect(slot)
         self.content_layout.addWidget(row)
+        self._owned_fields.add("hotkeys")
         return row

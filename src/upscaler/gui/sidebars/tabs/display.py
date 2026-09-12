@@ -29,11 +29,11 @@ class DisplayTab(SettingsTab):
         baseline_config: Config,
         parent: Optional[QWidget] = None,
     ) -> None:
-        self._config = config
         self._auto_device = self.tr("Auto (best)", "GPU automatic device option")
         super().__init__(
             gui_config,
             title=self.tr("Display", "Name of a settings tab"),
+            config=config,
             baseline_config=baseline_config,
             parent=parent,
         )
@@ -47,6 +47,7 @@ class DisplayTab(SettingsTab):
             self._config.monitor,
             self._on_monitor_changed,
             baseline=self.baseline_config.monitor,
+            field="monitor",
             help=self.tr(
                 "Monitor used for upscaling: the primary monitor, multi-monitor, "
                 "or a specific output name (for example, HDMI-1).",
@@ -69,6 +70,7 @@ class DisplayTab(SettingsTab):
                 if self.baseline_config.gpu
                 else self._auto_device
             ),
+            field="gpu",
             help=self.tr(
                 "GPU used for upscaling.\n"
                 "Select '{0}' to automatically use the most powerful available GPU.",
@@ -84,6 +86,7 @@ class DisplayTab(SettingsTab):
             self._config.vulkan_present_mode,
             self._on_present_mode,
             baseline=self.baseline_config.vulkan_present_mode,
+            field="vulkan_present_mode",
             help=self.tr(
                 "Vulkan presentation mode:\n"
                 "• fifo: VSync on, lowest power, no tearing\n"
@@ -99,6 +102,7 @@ class DisplayTab(SettingsTab):
             self._config.max_fps is not None,
             self._on_fps_cap_toggle,
             baseline=self.baseline_config.max_fps is not None,
+            field="max_fps",
             help=self.tr(
                 "Enable a maximum frame rate.\n"
                 "For best results, use the 'mailbox' presentation mode when limiting FPS.",
@@ -116,6 +120,7 @@ class DisplayTab(SettingsTab):
                 if self.baseline_config.max_fps is not None
                 else 60
             ),
+            field="max_fps",
             help=self.tr(
                 "Target maximum frames per second.",
                 "Description of a setting (tooltip)",
@@ -130,6 +135,7 @@ class DisplayTab(SettingsTab):
             self._config.scale_factor is None,
             self._on_auto_scale_changed,
             baseline=self.baseline_config.scale_factor is None,
+            field="scale_factor",
             help=self.tr(
                 "Automatically detect the correct scale factor based on the physical monitor resolution.",
                 "Description of a setting (tooltip)",
@@ -147,6 +153,7 @@ class DisplayTab(SettingsTab):
                 if self.baseline_config.scale_factor is not None
                 else 1.0
             ),
+            field="scale_factor",
             help=self.tr(
                 "Set the scale factor manually as a percentage (for example, 1.50 for 150% scaling).\n"
                 "Only available when Auto Scale is off.",

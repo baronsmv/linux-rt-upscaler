@@ -21,11 +21,11 @@ class HotkeysTab(SettingsTab):
         baseline_config: Config,
         parent: Optional[QWidget] = None,
     ) -> None:
-        self._config = config
         self._hotkey_rows: Dict[str, HotkeyRow] = {}
         super().__init__(
             gui_config,
             title=self.tr("Hotkeys", "Name of a settings tab"),
+            config=config,
             baseline_config=baseline_config,
             parent=parent,
         )

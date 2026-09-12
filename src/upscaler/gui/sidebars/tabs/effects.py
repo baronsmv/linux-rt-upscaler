@@ -20,10 +20,10 @@ class EffectsTab(SettingsTab):
         baseline_config: Config,
         parent: Optional[QWidget] = None,
     ) -> None:
-        self._config = config
         super().__init__(
             gui_config,
             title=self.tr("Effects", "Name of a settings tab"),
+            config=config,
             baseline_config=baseline_config,
             parent=parent,
         )
@@ -31,11 +31,12 @@ class EffectsTab(SettingsTab):
     def _build_content(self) -> None:
         # ---- Debanding ----
         self._add_section(self.tr("Debanding", "Settings section"))
-        self._deband_cb = self._add_cb(
+        self._add_cb(
             self.tr("Enable deband", "Label of setting (must be short)"),
             self._config.deband_enabled,
             self._on_deband_enabled,
             baseline=self.baseline_config.deband_enabled,
+            field="deband_enabled",
             help=self.tr(
                 "Reduce banding in smooth gradients before upscaling.\n"
                 "Only useful if you notice banding in skies, fog, and other large smooth areas.",
@@ -50,6 +51,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_deband_strength,
             baseline=self.baseline_config.deband_strength,
+            field="deband_strength",
             help=self.tr(
                 "Debanding intensity.\nRecommended range: 0.10 - 0.30.",
                 "Description of a setting (tooltip)",
@@ -59,11 +61,12 @@ class EffectsTab(SettingsTab):
 
         # ---- CAS ----
         self._add_section(self.tr("CAS sharpening", "Settings section"))
-        self._cas_cb = self._add_cb(
+        self._add_cb(
             self.tr("Enable CAS", "Label of setting (must be short)"),
             self._config.cas_enabled,
             self._on_cas_enabled,
             baseline=self.baseline_config.cas_enabled,
+            field="cas_enabled",
             help=self.tr(
                 "Contrast Adaptive Sharpening: enhances text and line art contrast.",
                 "Description of a setting (tooltip)",
@@ -77,6 +80,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_cas_strength,
             baseline=self.baseline_config.cas_strength,
+            field="cas_strength",
             help=self.tr(
                 "Sharpening amount.\nRecommended range: 0.20 - 0.50.",
                 "Description of a setting (tooltip)",
@@ -86,11 +90,12 @@ class EffectsTab(SettingsTab):
 
         # ---- Bloom ----
         self._add_section(self.tr("Bloom (glow)", "Settings section"))
-        self._bloom_cb = self._add_cb(
+        self._add_cb(
             self.tr("Enable bloom", "Label of setting (must be short)"),
             self._config.bloom_enabled,
             self._on_bloom_enabled,
             baseline=self.baseline_config.bloom_enabled,
+            field="bloom_enabled",
             help=self.tr(
                 "Soft glow around bright areas, for a cinematic look.\n"
                 "May introduce halos, especially with white text.",
@@ -105,6 +110,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_bloom_strength,
             baseline=self.baseline_config.bloom_strength,
+            field="bloom_strength",
             help=self.tr(
                 "Bloom intensity.\nRecommended range: 0.02 - 0.06.",
                 "Description of a setting (tooltip)",
@@ -120,6 +126,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_bloom_threshold,
             baseline=self.baseline_config.bloom_threshold,
+            field="bloom_threshold",
             help=self.tr(
                 "Brightness cutoff for bloom.\n"
                 "Only pixels brighter than this value will glow.",
@@ -135,6 +142,7 @@ class EffectsTab(SettingsTab):
             self._config.bloom_radius,
             self._on_bloom_radius,
             baseline=self.baseline_config.bloom_radius,
+            field="bloom_radius",
             help=self.tr(
                 "Blur radius in pixels. Larger radii spread the glow further.",
                 "Description of a setting (tooltip)",
@@ -144,11 +152,12 @@ class EffectsTab(SettingsTab):
 
         # ---- Vignette ----
         self._add_section(self.tr("Vignette", "Settings section"))
-        self._vignette_cb = self._add_cb(
+        self._add_cb(
             self.tr("Enable vignette", "Label of setting (must be short)"),
             self._config.vignette_enabled,
             self._on_vignette_enabled,
             baseline=self.baseline_config.vignette_enabled,
+            field="vignette_enabled",
             help=self.tr(
                 "Radial darkening of screen edges, drawing focus to the center.",
                 "Description of a setting (tooltip)",
@@ -162,6 +171,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_vignette_strength,
             baseline=self.baseline_config.vignette_strength,
+            field="vignette_strength",
             help=self.tr(
                 "Edge darkening intensity.\nRecommended range: 0.30 - 0.60.",
                 "Description of a setting (tooltip)",
@@ -177,6 +187,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_vignette_radius,
             baseline=self.baseline_config.vignette_radius,
+            field="vignette_radius",
             help=self.tr(
                 "Distance from center where darkening begins.\n"
                 "Higher values keep the center brighter.",
@@ -193,6 +204,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_vignette_falloff,
             baseline=self.baseline_config.vignette_falloff,
+            field="vignette_falloff",
             help=self.tr(
                 "Softness of the vignette transition. Low values = gentle, "
                 "high values = sharp ring.",
@@ -203,11 +215,12 @@ class EffectsTab(SettingsTab):
 
         # ---- Film Grain ----
         self._add_section(self.tr("Film grain", "Settings section"))
-        self._grain_cb = self._add_cb(
+        self._add_cb(
             self.tr("Enable grain", "Label of setting (must be short)"),
             self._config.grain_enabled,
             self._on_grain_enabled,
             baseline=self.baseline_config.grain_enabled,
+            field="grain_enabled",
             help=self.tr(
                 "Simulated film grain look.",
                 "Description of a setting (tooltip)",
@@ -221,6 +234,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_grain_strength,
             baseline=self.baseline_config.grain_strength,
+            field="grain_strength",
             help=self.tr(
                 "Grain intensity.\nRecommended range: 0.10 - 0.20.",
                 "Description of a setting (tooltip)",
@@ -236,6 +250,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_grain_size_changed,
             baseline=self.baseline_config.grain_size,
+            field="grain_size",
             help=self.tr(
                 "Particle size of the grain.\n"
                 "Larger values produce coarser, more visible grain.",
@@ -246,11 +261,12 @@ class EffectsTab(SettingsTab):
 
         # ---- Color Grading (LUT) ----
         self._add_section(self.tr("Color grading", "Settings section"))
-        self._lut_cb = self._add_cb(
+        self._add_cb(
             self.tr("Enable LUT", "Label of setting (must be short)"),
             self._config.lut_enabled,
             self._on_lut_enabled,
             baseline=self.baseline_config.lut_enabled,
+            field="lut_enabled",
             help=self.tr(
                 "Apply a color grading preset (LUT) to change the look of the window.",
                 "Description of a setting (tooltip)",
@@ -262,6 +278,7 @@ class EffectsTab(SettingsTab):
             self._config.lut_preset,
             self._on_lut_preset,
             baseline=self.baseline_config.lut_preset,
+            field="lut_preset",
             help=self.tr(
                 "Built-in color grading preset (warm, cool, film, sepia, etc.).",
                 "Description of a setting (tooltip)",
@@ -277,6 +294,7 @@ class EffectsTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_lut_intensity,
             baseline=self.baseline_config.lut_intensity,
+            field="lut_intensity",
             help=self.tr(
                 "Blend between original and graded image.",
                 "Description of a setting (tooltip)",

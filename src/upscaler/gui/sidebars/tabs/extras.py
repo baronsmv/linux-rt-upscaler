@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget
 
@@ -19,11 +19,10 @@ class ExtrasTab(SettingsTab):
         baseline_config: Config,
         parent: Optional[QWidget] = None,
     ) -> None:
-        self._config = config
-        self._hotkey_rows: Dict[str, HotkeyRow] = {}
         super().__init__(
             gui_config,
             title=self.tr("Extras", "Name of a settings tab"),
+            config=config,
             baseline_config=baseline_config,
             parent=parent,
         )
@@ -31,21 +30,23 @@ class ExtrasTab(SettingsTab):
     def _build_content(self) -> None:
         # ---- Screenshot Location ----
         self._add_section(self.tr("Screenshot location", "Settings section"))
-        self._dir_picker = self._add_path_picker(
+        self._add_path_picker(
             self.tr("Directory", "Label of setting (must be short)"),
             self._config.screenshot_dir,
             self._on_dir_changed,
             baseline=self.baseline_config.screenshot_dir,
+            field="screenshot_dir",
             help=self.tr(
                 "Folder where screenshots are saved.",
                 "Description of a setting (tooltip)",
             ),
         )
-        self._file_input = self._add_text(
+        self._add_text(
             self.tr("Template", "Label of setting (must be short)"),
             self._config.screenshot_filename,
             self._on_file_changed,
             baseline=self.baseline_config.screenshot_filename,
+            field="screenshot_filename",
             help=self.tr(
                 "Filename template for screenshots. You can use these placeholders:\n"
                 "• {timestamp}: capture time (supports strftime, for example "
@@ -63,11 +64,12 @@ class ExtrasTab(SettingsTab):
 
         # ---- On-Screen Display ----
         self._add_section(self.tr("On-Screen Display", "Settings section"))
-        self._osd_enabled = self._add_cb(
+        self._add_cb(
             self.tr("Show OSD", "Label of setting (must be short)"),
             self._config.show_osd,
             self._on_osd_enabled,
             baseline=self.baseline_config.show_osd,
+            field="show_osd",
             help=self.tr(
                 "Show on-screen messages when the model, window geometry, or zoom changes, "
                 "or after taking a screenshot.",
@@ -82,6 +84,7 @@ class ExtrasTab(SettingsTab):
             scale_factor=100,
             float_slot=self._on_osd_duration,
             baseline=self.baseline_config.osd_duration,
+            field="osd_duration",
             help=self.tr(
                 "How many seconds on-screen messages remain visible before fading out.",
                 "Description of a setting (tooltip)",

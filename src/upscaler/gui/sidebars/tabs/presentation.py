@@ -21,10 +21,10 @@ class PresentationTab(SettingsTab):
         baseline_config: Config,
         parent: Optional[QWidget] = None,
     ) -> None:
-        self._config = config
         super().__init__(
             gui_config,
             title=self.tr("Presentation", "Name of a settings tab"),
+            config=config,
             baseline_config=baseline_config,
             parent=parent,
         )
@@ -32,12 +32,13 @@ class PresentationTab(SettingsTab):
     def _build_content(self) -> None:
         # ---- Overlay ----
         self._add_section(self.tr("Overlay", "Settings section"))
-        self._overlay_combo = self._add_combo(
+        self._add_combo(
             self.tr("Overlay mode", "Label of setting (must be short)"),
             [e.value for e in OverlayMode],
             self._config.overlay_mode,
             self._on_overlay_mode,
             baseline=self.baseline_config.overlay_mode,
+            field="overlay_mode",
             help=self.tr(
                 "Overlay window behaviour:\n"
                 "• always-on-top: always visible above other windows, keeps focus on the target window (recommended)\n"
@@ -49,12 +50,13 @@ class PresentationTab(SettingsTab):
                 "they are internal overlay mode identifiers.",
             ),
         )
-        self._geom_combo = self._add_combo(
+        self._add_combo(
             self.tr("Output geometry", "Label of setting (must be short)"),
             ["fit", "stretch", "cover"],
             self._config.output_geometry,
             self._on_geometry_changed,
             baseline=self.baseline_config.output_geometry,
+            field="output_geometry",
             help=self.tr(
                 "How the upscaled content fits the overlay:\n"
                 "• fit: show the entire image, adding black bars if necessary\n"
@@ -68,11 +70,12 @@ class PresentationTab(SettingsTab):
 
         # ---- Cursor ----
         self._add_section(self.tr("Cursor", "Settings section"))
-        self._hide_cursor_cb = self._add_cb(
+        self._add_cb(
             self.tr("Hide cursor", "Label of setting (must be short)"),
             self._config.hide_cursor is not None,
             self._on_hide_cursor_toggle,
             baseline=self.baseline_config.hide_cursor is not None,
+            field="hide_cursor",
             help=self.tr(
                 "Automatically hide the mouse cursor after a period of inactivity.",
                 "Description of a setting (tooltip)",
@@ -93,6 +96,7 @@ class PresentationTab(SettingsTab):
             scale_factor=1000,
             float_slot=self._on_hide_cursor_timeout,
             baseline=bl_seconds,
+            field="hide_cursor",
             help=self.tr(
                 "Time in seconds after which the cursor disappears.\n"
                 "Set to 0.00 to always hide the cursor.",
@@ -110,6 +114,7 @@ class PresentationTab(SettingsTab):
             self._config.crop_left,
             self._on_crop_left,
             baseline=self.baseline_config.crop_left,
+            field="crop_left",
             help=self.tr(
                 "Pixels to crop from the left border of the target window.",
                 "Description of a setting (tooltip)",
@@ -122,6 +127,7 @@ class PresentationTab(SettingsTab):
             self._config.crop_top,
             self._on_crop_top,
             baseline=self.baseline_config.crop_top,
+            field="crop_top",
             help=self.tr(
                 "Pixels to crop from the top border of the target window.",
                 "Description of a setting (tooltip)",
@@ -134,6 +140,7 @@ class PresentationTab(SettingsTab):
             self._config.crop_right,
             self._on_crop_right,
             baseline=self.baseline_config.crop_right,
+            field="crop_right",
             help=self.tr(
                 "Pixels to crop from the right border of the target window.",
                 "Description of a setting (tooltip)",
@@ -146,6 +153,7 @@ class PresentationTab(SettingsTab):
             self._config.crop_bottom,
             self._on_crop_bottom,
             baseline=self.baseline_config.crop_bottom,
+            field="crop_bottom",
             help=self.tr(
                 "Pixels to crop from the bottom border of the target window.",
                 "Description of a setting (tooltip)",
@@ -173,6 +181,7 @@ class PresentationTab(SettingsTab):
                 getattr(self._config, field),
                 slot,
                 baseline=getattr(self.baseline_config, field),
+                field=field,
                 help=(
                     self.tr(
                         "Horizontal offset in pixels (positive moves right, negative moves left).",
@@ -190,11 +199,12 @@ class PresentationTab(SettingsTab):
         self._add_section(self.tr("Background color", "Settings section"))
         bg = normalize_to_hex(self._config.background_color)
         baseline_bg = normalize_to_hex(self.baseline_config.background_color)
-        self._bg_picker = self._add_color_picker(
+        self._add_color_picker(
             self.tr("Color", "Label of setting (must be short)"),
             bg,
             self._on_bg_color,
             baseline=baseline_bg,
+            field="background_color",
             help=self.tr(
                 "Background color behind the upscaled image (letterbox bars).\n"
                 "Supports transparency.",
