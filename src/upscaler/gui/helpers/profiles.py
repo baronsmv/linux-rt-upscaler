@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from typing import TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 
 from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtGui import QImage
@@ -286,6 +286,30 @@ class ProfileActions:
             self._sidebar.populate_list(active_name=name)
         except Exception:
             logger.exception("Failed to move profile down")
+            QMessageBox.critical(
+                self._main_window,
+                QCoreApplication.translate(
+                    "ProfileActions", "Error", "Error window title"
+                ),
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "Could not reorder profiles.",
+                    "Error while reordering profiles",
+                ),
+            )
+
+    def reorder_profiles(self, order: List[str]) -> None:
+        """Apply a new profile order (from drag-and-drop in the sidebar)."""
+        if not order:
+            return
+        try:
+            self._config_manager.reorder_profiles(order)
+            self._sidebar.update_profiles(self._config_manager.profiles)
+            self._sidebar.populate_list(
+                active_name=self._config_manager.active_profile_name
+            )
+        except Exception:
+            logger.exception("Failed to reorder profiles")
             QMessageBox.critical(
                 self._main_window,
                 QCoreApplication.translate(

@@ -4,7 +4,7 @@ import copy
 import logging
 from collections import OrderedDict
 from dataclasses import fields
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal
 
@@ -15,6 +15,7 @@ from ...config import (
     move_profile_down,
     move_profile_up,
     parse_config,
+    reorder_profiles,
     save_yaml_config,
 )
 from ...utils import diff_hotkeys
@@ -66,7 +67,7 @@ class ConfigManager(QObject):
 
         # ---- Load frozen data from disk -----------------------------------
         self._general_opts: Dict[str, Any] = {}
-        self.profiles: OrderedDict[str, Dict] = OrderedDict()
+        self.profiles: Dict[str, Any] = OrderedDict()
         self._load_from_disk()
 
         # ---- Compute the immutable layering bases ------------------------
@@ -188,6 +189,14 @@ class ConfigManager(QObject):
     def move_profile_down(self, name: str) -> None:
         """Reorder the profile one position down."""
         self.profiles = move_profile_down(self.profiles, name)
+        save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
+        self.profile_list_changed.emit()
+
+    def reorder_profiles(self, order: List[str]) -> None:
+        """Reorder profiles to match *order*."""
+        if not order:
+            return
+        self.profiles = reorder_profiles(self.profiles, order)
         save_yaml_config(self._general_opts, dict(self.profiles), self._config_path)
         self.profile_list_changed.emit()
 

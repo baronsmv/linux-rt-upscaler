@@ -238,6 +238,7 @@ class MainWindow(QMainWindow):
         )
         self.left_sidebar.move_up_requested.connect(self.profile_act.move_up)
         self.left_sidebar.move_down_requested.connect(self.profile_act.move_down)
+        self.left_sidebar.profiles_reordered.connect(self.profile_act.reorder_profiles)
 
         # ------------------------------------------------------------------
         # Background tasks

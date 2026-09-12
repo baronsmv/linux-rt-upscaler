@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import os
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
-from PySide6.QtCore import QEvent, Qt, QSize, Signal
+from PySide6.QtCore import QEvent, Qt, QSize, QTimer, Signal
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QFrame,
@@ -28,6 +28,41 @@ from ..styles import (
 )
 
 
+class _ProfileListWidget(QListWidget):
+    """QListWidget that supports internal drag-and-drop reordering."""
+
+    reordered = Signal(list)
+
+    def dropEvent(self, event) -> None:
+        # Reject drops originating outside the list
+        if event.source() is not self:
+            event.ignore()
+            return
+
+        # Suppress signals while Qt moves rows internally
+        self.blockSignals(True)
+        super().dropEvent(event)
+
+        # Pin Global to row 0
+        for i in range(1, self.count()):
+            item = self.item(i)
+            if item is not None and item.data(Qt.UserRole) == "":
+                self.insertItem(0, self.takeItem(i))
+                break
+
+        order = []
+        for i in range(self.count()):
+            item = self.item(i)
+            if item is None:
+                continue
+            name = item.data(Qt.UserRole)
+            if name:
+                order.append(name)
+
+        self.blockSignals(False)
+        self.reordered.emit(order)
+
+
 class ProfilesSidebar(QWidget):
     """
     Left sidebar panel for managing named profiles.
@@ -48,6 +83,7 @@ class ProfilesSidebar(QWidget):
     delete_profile_requested(str)
     move_up_requested(str)
     move_down_requested(str)
+    profiles_reordered(list)
     """
 
     profile_selected = Signal(str)
@@ -56,6 +92,7 @@ class ProfilesSidebar(QWidget):
     delete_profile_requested = Signal(str)
     move_up_requested = Signal(str)
     move_down_requested = Signal(str)
+    profiles_reordered = Signal(list)
 
     def __init__(
         self,
@@ -93,7 +130,7 @@ class ProfilesSidebar(QWidget):
         # Profile list
         self._hint_item: Optional[QListWidgetItem] = None
         self._hint_label: Optional[QLabel] = None
-        self._list = QListWidget()
+        self._list = _ProfileListWidget()
         self._list.setMouseTracking(True)
         self._list.viewport().installEventFilter(self)
         self._list.installEventFilter(self)
@@ -107,9 +144,15 @@ class ProfilesSidebar(QWidget):
         self._list.setSpacing(gui_config.profile.profile_spacing)
         self._list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._list.verticalScrollBar().setStyleSheet(scrollbar_style(gui_config))
-        self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._list.setDragEnabled(True)
+        self._list.setAcceptDrops(True)
+        self._list.setDropIndicatorShown(True)
+        self._list.setDragDropMode(QListWidget.InternalMove)
+        self._list.setDefaultDropAction(Qt.MoveAction)
+        self._list.setDragDropOverwriteMode(False)
         self._list.currentItemChanged.connect(self._on_current_item_changed)
         self._list.itemDoubleClicked.connect(self._on_item_double_clicked)
+        self._list.reordered.connect(self._on_reordered)
         layout.addWidget(self._list, stretch=1)
 
         # Toolbar separator
@@ -280,6 +323,7 @@ class ProfilesSidebar(QWidget):
             default_icon, "  " + self.tr("Global", "Global entry profile name")
         )
         default_item.setData(Qt.UserRole, "")
+        default_item.setFlags(default_item.flags() & ~Qt.ItemIsDragEnabled)
         default_item.setSizeHint(QSize(0, self._gui_config.profile.profile_height))
         default_item.setToolTip(
             self.tr(
@@ -455,6 +499,10 @@ class ProfilesSidebar(QWidget):
         if not name:  # ignore default
             return
         self.edit_profile_requested.emit(name)
+
+    def _on_reordered(self, order: List[str]) -> None:
+        """Forward a drop-induced reorder to the owner."""
+        QTimer.singleShot(0, lambda o=order: self.profiles_reordered.emit(o))
 
     def _emit_edit(self):
         item = self._list.currentItem()

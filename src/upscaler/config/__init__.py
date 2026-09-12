@@ -20,6 +20,7 @@ from .profiles import (
     find_profile,
     move_profile_down,
     move_profile_up,
+    reorder_profiles,
 )
 from .setup import finalize_config, load_config, setup_config
 from .validators import validate_config, validate_overrides
@@ -48,6 +49,7 @@ __all__ = [
     "move_profile_up",
     "parse_args",
     "parse_config",
+    "reorder_profiles",
     "validate_config",
     "validate_overrides",
     "save_yaml_config",
