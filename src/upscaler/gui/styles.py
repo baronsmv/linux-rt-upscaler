@@ -937,11 +937,12 @@ def close_dialog_button_style(cfg: GUIConfig) -> str:
 
 def circular_button_style(cfg: GUIConfig, icon_size: int) -> str:
     """Style for small circular icon buttons."""
+    radius = max(0, (icon_size - 1) // 2)
     return f"""
     QToolButton {{
         height: {icon_size}px;
         width: {icon_size}px;
-        border-radius: {round(icon_size / 2)}px;
+        border-radius: {radius}px;
         border: none;
         background-color: transparent;
     }}
