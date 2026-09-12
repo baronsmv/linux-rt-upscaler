@@ -196,6 +196,7 @@ class MainWindow(QMainWindow):
         # Right sidebar: Settings
         # ------------------------------------------------------------------
         self.right_sidebar = self._create_right_sidebar()
+        self.right_sidebar.config_invalidated.connect(self._on_config_changed)
         self.right_sidebar.save_settings.connect(self._on_save_settings)
         self.right_sidebar.reset_settings.connect(self._on_reset_settings)
         self.right_sidebar.restore_defaults.connect(self._on_restore_defaults)
@@ -458,6 +459,7 @@ class MainWindow(QMainWindow):
         tab_index = old.current_tab_index
         idx = self.splitter.indexOf(old)
         new_sidebar = self._create_right_sidebar()
+        new_sidebar.config_invalidated.connect(self._on_config_changed)
         new_sidebar.save_settings.connect(self._on_save_settings)
         new_sidebar.reset_settings.connect(self._on_reset_settings)
         new_sidebar.restore_defaults.connect(self._on_restore_defaults)

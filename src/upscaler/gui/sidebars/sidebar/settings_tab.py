@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from typing import Callable, List, Optional, Set, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
@@ -29,11 +30,12 @@ from ...styles import (
     section_title_style,
     section_underline_style,
 )
-from ....config import DEFAULT_CONFIG
+from ....config import Config, DEFAULT_CONFIG
 
 if TYPE_CHECKING:
     from ...config import GUIConfig
-    from ....config import Config
+
+_SYSTEM_DEFAULTS = Config()
 
 
 class SettingsTab(QWidget):
@@ -118,6 +120,55 @@ class SettingsTab(QWidget):
     def _build_content(self) -> None:
         """Override to add widgets to :attr:`content_layout`."""
         pass
+
+    # ------------------------------------------------------------------
+    #  Revert methods
+    # ------------------------------------------------------------------
+    def revert_to_baseline(self) -> None:
+        """Revert every field owned by this tab to the saved state."""
+        if not self._owned_fields:
+            return
+        if self._config is DEFAULT_CONFIG:
+            raise RuntimeError(
+                f"{type(self).__name__} declares owned fields but received "
+                "DEFAULT_CONFIG instead of the live Config instance. "
+                "Pass config=config to super().__init__()."
+            )
+        for name in self._owned_fields:
+            setattr(
+                self._config,
+                name,
+                copy.deepcopy(getattr(self.baseline_config, name)),
+            )
+        self.config_changed.emit()
+
+    def reset_to_defaults(self) -> None:
+        """Reset every field owned by this tab to its shipped default."""
+        if not self._owned_fields:
+            return
+        if self._config is DEFAULT_CONFIG:
+            raise RuntimeError(
+                f"{type(self).__name__} declares owned fields but received "
+                "DEFAULT_CONFIG instead of the live Config instance. "
+                "Pass config=config to super().__init__()."
+            )
+        for name in self._owned_fields:
+            setattr(self._config, name, copy.deepcopy(getattr(_SYSTEM_DEFAULTS, name)))
+        self.config_changed.emit()
+
+    def tab_has_changes(self) -> bool:
+        """True if any field owned by this tab differs from the saved baseline."""
+        for name in self._owned_fields:
+            if getattr(self._config, name) != getattr(self.baseline_config, name):
+                return True
+        return False
+
+    def tab_differs_from_defaults(self) -> bool:
+        """True if any field owned by this tab differs from system defaults."""
+        for name in self._owned_fields:
+            if getattr(self._config, name) != getattr(_SYSTEM_DEFAULTS, name):
+                return True
+        return False
 
     # ------------------------------------------------------------------
     #  Layout helpers (used by subclasses and external controls)

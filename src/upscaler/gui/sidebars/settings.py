@@ -4,7 +4,7 @@ import copy
 import dataclasses
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QMenu,
@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .sidebar import IconSidebarBase
+from .sidebar import IconSidebarBase, SettingsTab
 from .tabs import (
     AdvancedTab,
     DisplayTab,
@@ -42,6 +42,7 @@ class SettingsSidebar(IconSidebarBase):
     restore_defaults = Signal()
     daemon_toggled = Signal(bool)
     style_applied = Signal(object)
+    config_invalidated = Signal()
 
     def __init__(
         self,
@@ -187,6 +188,16 @@ class SettingsSidebar(IconSidebarBase):
         self._reset_btn.setStyleSheet(
             reset_button_style(self.gui_config, active=self._dirty_yaml)
         )
+        self._update_tab_menu_actions()
+
+    def _update_tab_menu_actions(self) -> None:
+        tab = self._stack.currentWidget()
+        if isinstance(tab, SettingsTab) and tab._owned_fields:
+            self._tab_revert_action.setEnabled(tab.tab_has_changes())
+            self._tab_defaults_action.setEnabled(tab.tab_differs_from_defaults())
+        else:
+            self._tab_revert_action.setEnabled(False)
+            self._tab_defaults_action.setEnabled(False)
 
     def _has_changes(self, baseline: Config) -> bool:
         """Compare the current config with the baseline config field by field."""
@@ -250,14 +261,23 @@ class SettingsSidebar(IconSidebarBase):
 
         # Drop-down menu
         self._config_reset_menu = QMenu(self._reset_btn)
+        self._tab_revert_action = self._config_reset_menu.addAction(
+            self.tr("Revert this tab", "Reset menu")
+        )
+        self._tab_defaults_action = self._config_reset_menu.addAction(
+            self.tr("Restore tab defaults", "Reset menu")
+        )
+        self._config_reset_menu.addSeparator()
         restore_text = (
-            self.tr("Clear profile overrides", "Reset button")
+            self.tr("Clear profile overrides", "Reset menu")
             if self._profile_active
-            else self.tr("Restore system defaults", "Reset button")
+            else self.tr("Restore all to system defaults", "Reset menu")
         )
         self._restore_action = self._config_reset_menu.addAction(restore_text)
         self._restore_action.triggered.connect(self.restore_defaults.emit)
         self._config_reset_menu.setStyleSheet(reset_submenu_style(cfg))
+        self._tab_revert_action.triggered.connect(self._on_tab_revert)
+        self._tab_defaults_action.triggered.connect(self._on_tab_defaults)
 
         self._style_reset_menu = QMenu(self._reset_btn)
         self._style_reset_palette_action = self._style_reset_menu.addAction(
@@ -301,6 +321,20 @@ class SettingsSidebar(IconSidebarBase):
 
         return outer
 
+    def _on_tab_revert(self) -> None:
+        tab = self._stack.currentWidget()
+        if not isinstance(tab, SettingsTab):
+            return
+        tab.revert_to_baseline()
+        QTimer.singleShot(0, self.config_invalidated.emit)
+
+    def _on_tab_defaults(self) -> None:
+        tab = self._stack.currentWidget()
+        if not isinstance(tab, SettingsTab):
+            return
+        tab.reset_to_defaults()
+        QTimer.singleShot(0, self.config_invalidated.emit)
+
     def _on_footer_save(self):
         """If the Style tab is active, apply style; otherwise save config."""
         if self._is_style_tab_active():
@@ -333,15 +367,16 @@ class SettingsSidebar(IconSidebarBase):
           - Restore the normal labels and config reset menu
           - Refresh the normal dirty-state tracking
         """
+        current = self._stack.currentWidget()
+        if isinstance(current, SettingsTab):
+            current.ensure_built()
+
         if self._is_style_tab_active():
-            # === Style tab active ===
-            self._style_tab.ensure_built()
             self._save_btn.setText(self.tr("Apply style", "Apply button"))
             self._reset_btn.setText(self.tr("Reset style", "Reset button"))
             self._reset_btn.setMenu(self._style_reset_menu)
             self._update_style_footer_state()
         else:
-            # === Normal config tab ===
             self._save_btn.setText(
                 self.tr("Save profile", "Save button")
                 if self._profile_active
