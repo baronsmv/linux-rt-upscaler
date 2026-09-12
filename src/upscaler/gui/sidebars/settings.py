@@ -227,7 +227,7 @@ class SettingsSidebar(IconSidebarBase):
 
         # ---- Save button ----
         self._save_btn = QPushButton(
-            self.tr("Save Profile", "Save button")
+            self.tr("Save profile", "Save button")
             if self._profile_active
             else self.tr("Save", "Save button")
         )
@@ -304,7 +304,7 @@ class SettingsSidebar(IconSidebarBase):
         When the user clicks a tab icon, adjust the footer buttons.
 
         If the new tab is the Style tab:
-          - Change labels to "Apply Style" / "Reset Style"
+          - Change labels to "Apply style" / "Reset style"
           - Replace the Reset button's dropdown with style-specific actions
           - Update enabled states based on the style's dirty flag
         Otherwise:
@@ -314,8 +314,8 @@ class SettingsSidebar(IconSidebarBase):
         if self._is_style_tab_active():
             # === Style tab active ===
             self._style_tab.ensure_built()
-            self._save_btn.setText(self.tr("Apply Style", "Apply button"))
-            self._reset_btn.setText(self.tr("Reset Style", "Reset button"))
+            self._save_btn.setText(self.tr("Apply style", "Apply button"))
+            self._reset_btn.setText(self.tr("Reset style", "Reset button"))
             # Swap menu
             self._reset_btn.setMenu(self._style_reset_menu)
             # Connect style menu actions
@@ -334,7 +334,7 @@ class SettingsSidebar(IconSidebarBase):
         else:
             # === Normal config tab ===
             self._save_btn.setText(
-                self.tr("Save Profile", "Save button")
+                self.tr("Save profile", "Save button")
                 if self._profile_active
                 else self.tr("Save", "Save button")
             )
