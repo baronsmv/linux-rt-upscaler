@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, Set, TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, Qt, Signal
+from PySide6.QtGui import QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -102,6 +103,7 @@ class HotkeyCaptureButton(QPushButton):
         self._sequence = sequence
         self._recording = False
         self._conflict = False
+        self._disabled_shortcuts: List[QShortcut] = []
 
         self.setCursor(Qt.PointingHandCursor)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -144,15 +146,38 @@ class HotkeyCaptureButton(QPushButton):
             self._cancel_recording()
         super().focusOutEvent(event)
 
+    def _suspend_app_shortcuts(self) -> None:
+        self._disabled_shortcuts = []
+        app = QApplication.instance()
+        if app is None:
+            return
+
+        seen: Set[int] = set()
+        for top_level in app.topLevelWidgets():
+            for shortcut in top_level.findChildren(QShortcut):
+                if id(shortcut) in seen:
+                    continue
+                seen.add(id(shortcut))
+                if shortcut.isEnabled():
+                    shortcut.setEnabled(False)
+                    self._disabled_shortcuts.append(shortcut)
+
+    def _restore_app_shortcuts(self) -> None:
+        for shortcut in self._disabled_shortcuts:
+            shortcut.setEnabled(True)
+        self._disabled_shortcuts = []
+
     def _start_recording(self) -> None:
         self._recording = True
         self.setText(self.tr("Press keys…", "Hotkey recording prompt"))
         self.setFocus(Qt.MouseFocusReason)
+        self._suspend_app_shortcuts()
         QApplication.instance().installEventFilter(self)
 
     def _stop_recording(self) -> None:
         self._recording = False
         QApplication.instance().removeEventFilter(self)
+        self._restore_app_shortcuts()
         self._refresh_text()
 
     def _cancel_recording(self) -> None:
@@ -170,7 +195,7 @@ class HotkeyCaptureButton(QPushButton):
     def _handle_recording_key(self, event) -> None:
         key = event.key()
 
-        if key == Qt.Key_Escape:
+        if key == Qt.Key_Escape and not event.modifiers():
             self._cancel_recording()
             return
 
