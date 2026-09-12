@@ -5,11 +5,12 @@ import os
 import re
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QMessageBox, QDialog
 
 from ..dialogs import ProfileDialog
+from ..styles import message_box_style
 
 if TYPE_CHECKING:
     from ..config import ConfigManager
@@ -53,33 +54,67 @@ class ProfileActions:
     # ------------------------------------------------------------------
     def maybe_save_before_switch(self) -> bool:
         """Return False if the user cancels an unsaved-changes dialog."""
-        if self._config_manager.is_dirty():
-            reply = QMessageBox.question(
-                self._main_window,
-                QCoreApplication.translate(
-                    "ProfileActions", "Unsaved changes", "Warning dialog title"
-                ),
-                QCoreApplication.translate(
-                    "ProfileActions",
-                    "Save changes before switching profile?",
-                    "Warning dialog",
-                ),
-                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+        if not self._config_manager.is_dirty():
+            return True
+
+        box = QMessageBox(self._main_window)
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle(
+            QCoreApplication.translate(
+                "ProfileActions", "Unsaved changes", "Dialog title"
             )
-            if reply == QMessageBox.Save:
-                self._config_manager.save()
-                return True
-            elif reply == QMessageBox.Discard:
-                return True
-            else:
-                return False
-        return True
+        )
+        box.setText(
+            QCoreApplication.translate(
+                "ProfileActions",
+                "You have unsaved changes in the current profile.",
+                "Dialog main text",
+            )
+        )
+        box.setInformativeText(
+            QCoreApplication.translate(
+                "ProfileActions",
+                "Save them before switching, discard them, or cancel to stay.",
+                "Dialog secondary text",
+            )
+        )
+
+        save_btn = box.addButton(
+            QCoreApplication.translate(
+                "ProfileActions", "Save and switch", "Dialog button"
+            ),
+            QMessageBox.AcceptRole,
+        )
+        discard_btn = box.addButton(
+            QCoreApplication.translate(
+                "ProfileActions", "Discard and switch", "Dialog button"
+            ),
+            QMessageBox.DestructiveRole,
+        )
+        cancel_btn = box.addButton(
+            QCoreApplication.translate("ProfileActions", "Cancel", "Dialog button"),
+            QMessageBox.RejectRole,
+        )
+        box.setDefaultButton(save_btn)
+        box.setEscapeButton(cancel_btn)
+        box.setStyleSheet(message_box_style(self._main_window.gui_config))
+
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is save_btn:
+            self._config_manager.save()
+            return True
+        if clicked is discard_btn:
+            return True
+        return False
 
     def select_profile(self, name: str) -> None:
         """Activate a different profile (from sidebar click)."""
-        if name == (self._config_manager.active_profile_name or ""):
+        current = self._config_manager.active_profile_name or ""
+        if name == current:
             return
         if not self.maybe_save_before_switch():
+            QTimer.singleShot(0, lambda n=current: self._sidebar.set_active_item(n))
             return
 
         self._config_manager.set_active_profile(name)
