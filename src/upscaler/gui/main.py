@@ -317,7 +317,7 @@ class MainWindow(QMainWindow):
             )
             if profile_name:
                 if not confirm_pending_changes(
-                    self, self.gui_config, self._config_manager, closing=True
+                    self, self.gui_config, self._config_manager
                 ):
                     return
                 self._auto_applied_profile = profile_name
