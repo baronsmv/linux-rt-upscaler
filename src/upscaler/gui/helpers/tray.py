@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QSettings, QTimer
 from PySide6.QtGui import QAction, QKeySequence, QIcon, QPixmap
-from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
 from ..icons import load_icon
 from ...window import get_window_icon, list_windows, WindowInfo
@@ -416,6 +416,4 @@ class TrayController(QObject):
 
     def _quit_app(self) -> None:
         """Clean up and quit the application."""
-        self._main_window.force_exit = True
-        self._main_window.cleanup_before_quit()
-        QApplication.quit()
+        self._main_window.request_quit()

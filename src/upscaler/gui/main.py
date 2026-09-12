@@ -104,10 +104,10 @@ class MainWindow(QMainWindow):
 
         # Shortcuts
         QShortcut(QKeySequence("Ctrl+F"), self, lambda: self.filter_bar.set_focus())
-        QShortcut(QKeySequence("Ctrl+Q"), self, self._force_quit)
+        QShortcut(QKeySequence("Ctrl+Q"), self, self.request_quit)
 
         self._config_manager.config_changed.connect(self._on_config_changed)
-        QApplication.instance().aboutToQuit.connect(self.cleanup_before_quit)
+        QApplication.instance().aboutToQuit.connect(self._cleanup_before_quit)
 
     def _setup_ui(self):
         """Create the entire UI from scratch, using self.gui_config."""
@@ -316,7 +316,7 @@ class MainWindow(QMainWindow):
                 self._config_manager.profiles, win_info
             )
             if profile_name:
-                if not self.profile_act.maybe_save_before_switch():
+                if not self.profile_act.confirm_pending_changes():
                     return
                 self._auto_applied_profile = profile_name
                 self._config_manager.set_active_profile(profile_name)
@@ -440,14 +440,9 @@ class MainWindow(QMainWindow):
             and self.manual_session is not None
         ):
             self.stop_manual_session()
-        else:
-            self.force_exit = True
-            session = self.manual_session
-            self.manual_session = None
-            if session is not None:
-                session.shutdown()
-            self.close()
-            QApplication.instance().quit()
+            return
+
+        self.request_quit()
 
     def _on_exit_hotkey_pressed(self) -> None:
         """Handle exit hotkey via signal."""
@@ -539,23 +534,6 @@ class MainWindow(QMainWindow):
             self.left_sidebar.set_active_item(active_profile)
         if daemon_was_active:
             QTimer.singleShot(0, self.daemon_ctrl.start)
-
-    def _force_quit(self) -> None:
-        """Immediately shut down the application, ignoring tray preferences."""
-        self.force_exit = True
-
-        # Stop any active manual session
-        if self.manual_session is not None:
-            self.manual_session.shutdown()
-            self.manual_session = None
-
-        # Stop the daemon if it is running
-        if self.daemon_ctrl.active:
-            self.daemon_ctrl.stop()
-
-        # Close the main window
-        self.close()
-        QApplication.instance().quit()
 
     def _on_style_applied(self, overrides: GUIStyleOverrides) -> None:
         """Persist the new style, apply it, and rebuild the GUI."""
@@ -722,7 +700,30 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Window close
     # ------------------------------------------------------------------
-    def cleanup_before_quit(self) -> None:
+    def request_quit(self) -> None:
+        """Quit the application, prompting if there are unsaved changes."""
+        if not self.profile_act.confirm_pending_changes(closing=True):
+            return
+        self._force_quit()
+
+    def _force_quit(self) -> None:
+        """Immediately shut down the application, ignoring tray preferences."""
+        self.force_exit = True
+
+        # Stop any active manual session
+        if self.manual_session is not None:
+            self.manual_session.shutdown()
+            self.manual_session = None
+
+        # Stop the daemon if it is running
+        if self.daemon_ctrl.active:
+            self.daemon_ctrl.stop()
+
+        # Close the main window
+        self.close()
+        QApplication.instance().quit()
+
+    def _cleanup_before_quit(self) -> None:
         session = self.manual_session
         self.manual_session = None
         if session is not None:
@@ -749,8 +750,14 @@ class MainWindow(QMainWindow):
                 event.ignore()
                 return
 
+            # Unsaved changes
+            if self._config_manager.is_dirty():
+                if not self.profile_act.confirm_pending_changes(closing=True):
+                    event.ignore()
+                    return
+
         self.grid_mgr.stop()
         self.daemon_ctrl.stop()
-        self.cleanup_before_quit()
+        self._cleanup_before_quit()
         self.settings.setValue("mainwindow/geometry", self.saveGeometry())
         super().closeEvent(event)
