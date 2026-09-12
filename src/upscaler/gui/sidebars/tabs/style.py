@@ -301,7 +301,7 @@ class StyleTab(SettingsTab):
         self._picker_widgets: Dict[str, ColorPickerRow] = {}
 
         # ── Interface scale ───────────────────────────────────────
-        self._add_section(self.tr("Interface scale", "Settings section"))
+        self._add_section(self.tr("Interface", "Settings section"))
         self._zoom_slider = self._add_slider(
             self.tr("Zoom (%)", "Label of setting (must be short)"),
             50,
@@ -311,21 +311,6 @@ class StyleTab(SettingsTab):
             baseline=self._saved_zoom,
             help=self.tr(
                 "Scales the entire interface.",
-                "Description of a setting (tooltip)",
-            ),
-        )
-
-        # ── Typography ────────────────────────────────────────────
-        self._add_section(self.tr("Typography", "Settings section"))
-        self._font_row = self._add_font_picker(
-            self.tr("Font family", "Label of setting (must be short)"),
-            self._font_family,
-            self._system_font_family,
-            self._on_font_changed,
-            baseline=self._saved_font_family,
-            help=self.tr(
-                "Interface font. Leave at the system default for the best "
-                "integration with your desktop.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -339,6 +324,18 @@ class StyleTab(SettingsTab):
             help=self.tr(
                 "Multiplies every text size in the interface. "
                 "Unlike zoom, this affects only fonts, not layout.",
+                "Description of a setting (tooltip)",
+            ),
+        )
+        self._font_row = self._add_font_picker(
+            self.tr("Font family", "Label of setting (must be short)"),
+            self._font_family,
+            self._system_font_family,
+            self._on_font_changed,
+            baseline=self._saved_font_family,
+            help=self.tr(
+                "Interface font. Leave at the system default for the best "
+                "integration with your desktop.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -427,6 +424,9 @@ class StyleTab(SettingsTab):
                 "Description of a setting (tooltip)",
             ),
         )
+
+        # ── Performance ────────────────────────────────────
+        self._add_section(self.tr("Performance", "Settings section"))
         self._refresh_slider = self._add_slider(
             self.tr("Refresh (ms)", "Label of setting (must be short)"),
             250,
@@ -470,7 +470,7 @@ class StyleTab(SettingsTab):
         self._notify_dirty()
 
     def _on_font_scale_changed(self, value: int) -> None:
-        if abs(value - self._font_scale) < 1e-6:
+        if value == self._font_scale:
             return
         self._font_scale = value
         self._notify_dirty()
