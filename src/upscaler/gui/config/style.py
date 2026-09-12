@@ -119,6 +119,26 @@ def _scale_dataclass(obj: Any, factor: float) -> Any:
     return replace(obj, **updates)
 
 
+def _scale_fonts(obj: Any, factor: float) -> Any:
+    """Recursively scale font-size fields, leaving everything else alone."""
+    if not is_dataclass(obj):
+        return obj
+
+    updates: Dict[str, Any] = {}
+    for f in fields(obj):
+        value = getattr(obj, f.name)
+        if (
+            f.name.endswith("font_size")
+            and isinstance(value, (int, float))
+            and not isinstance(value, bool)
+        ):
+            updates[f.name] = max(1, round(value * factor))
+        elif is_dataclass(value) and not isinstance(value, type):
+            updates[f.name] = _scale_fonts(value, factor)
+
+    return replace(obj, **updates)
+
+
 def _resolve_auto_background(cfg: GUIConfig) -> GUIConfig:
     """Replace the Auto 'none' background with a concrete session color."""
     if cfg.palette.background.lower() not in NON_COLOR_KEYWORDS:
@@ -145,4 +165,5 @@ def resolve_gui_config(overrides: GUIStyleOverrides) -> GUIConfig:
     base = GUIConfig(palette=overrides.palette)
     with_overrides = _apply_style_overrides(base, overrides)
     scaled = _scale_gui_config(with_overrides, overrides.zoom)
-    return _resolve_auto_background(scaled)
+    font_scaled = _scale_fonts(scaled, overrides.font_scale / 100.0)
+    return _resolve_auto_background(font_scaled)

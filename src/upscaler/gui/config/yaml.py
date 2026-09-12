@@ -11,7 +11,8 @@ from ...config import default_config_path, load_yaml_config, save_yaml_config
 logger = logging.getLogger(__name__)
 
 _OVERRIDE_BOUNDS: Dict[str, Tuple[float, float]] = {
-    "zoom": (50, 400),
+    "zoom": (50, 250),
+    "font_scale": (80, 150),
     "profiles_width": (240, 800),
     "settings_width": (240, 800),
     "tile_columns": (1, 8),
@@ -44,6 +45,9 @@ def load_gui_style(
     return GUIStyleOverrides(
         palette=_resolve_palette(general, defaults.palette),
         zoom=_load_numeric("zoom", general.get("zoom"), defaults.zoom),
+        font_scale=_load_numeric(
+            "font_scale", general.get("font_scale"), defaults.font_scale
+        ),
         font_family=str(general.get("font_family") or defaults.font_family),
         profiles_width=_load_numeric(
             "profiles_width", general.get("profiles_width"), defaults.profiles_width

@@ -56,6 +56,7 @@ class StyleTab(SettingsTab):
         self._updating_from_preset = False
 
         self._zoom = initial.zoom
+        self._font_scale = initial.font_scale
         self._font_family = initial.font_family
         self._profiles_width = initial.profiles_width
         self._settings_width = initial.settings_width
@@ -283,7 +284,7 @@ class StyleTab(SettingsTab):
         self._zoom_slider = self._add_slider(
             self.tr("Zoom (%)", "Label of setting (must be short)"),
             50,
-            400,
+            250,
             self._zoom,
             self._on_zoom_changed,
             baseline=self._saved_zoom,
@@ -304,6 +305,19 @@ class StyleTab(SettingsTab):
             help=self.tr(
                 "Interface font. Leave at the system default for the best "
                 "integration with your desktop.",
+                "Description of a setting (tooltip)",
+            ),
+        )
+        self._font_scale_slider = self._add_slider(
+            self.tr("Font Scale (%)", "Label of setting (must be short)"),
+            80,
+            150,
+            self._font_scale,
+            self._on_font_scale_changed,
+            baseline=self._saved.font_scale,
+            help=self.tr(
+                "Multiplies every text size in the interface. "
+                "Unlike zoom, this affects only fonts, not layout.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -434,6 +448,12 @@ class StyleTab(SettingsTab):
         self._font_family = family
         self._notify_dirty()
 
+    def _on_font_scale_changed(self, value: int) -> None:
+        if abs(value - self._font_scale) < 1e-6:
+            return
+        self._font_scale = value
+        self._notify_dirty()
+
     def _on_preset_changed(self, text: str) -> None:
         if text == "Custom" or self._updating_from_preset:
             return
@@ -508,6 +528,7 @@ class StyleTab(SettingsTab):
     def _refresh_baselines(self) -> None:
         """Update every widget's baseline to the current saved state."""
         self._zoom_slider.set_baseline(self._saved_zoom)
+        self._font_scale_slider.set_baseline(self._saved.font_scale)
         self._font_row.set_baseline(self._saved_font_family)
         self._profiles_width_slider.set_baseline(self._saved.profiles_width)
         self._settings_width_slider.set_baseline(self._saved.settings_width)
@@ -533,6 +554,7 @@ class StyleTab(SettingsTab):
         """Revert the style attributes to the last applied state."""
         self._palette = copy.deepcopy(self._saved_palette)
         self._zoom = self._saved_zoom
+        self._font_scale = self._saved.font_scale
         self._font_family = self._saved_font_family
         self._profiles_width = self._saved.profiles_width
         self._settings_width = self._saved.settings_width
@@ -552,6 +574,7 @@ class StyleTab(SettingsTab):
 
         self._palette = palette_to_internal(preset)
         self._zoom = defaults.zoom
+        self._font_scale = defaults.font_scale
         self._font_family = defaults.font_family
         self._profiles_width = defaults.profiles_width
         self._settings_width = defaults.settings_width
@@ -572,6 +595,7 @@ class StyleTab(SettingsTab):
         return GUIStyleOverrides(
             palette=palette_to_stylesheet(self._palette),
             zoom=self._zoom,
+            font_scale=self._font_scale,
             font_family=self._font_family,
             profiles_width=self._profiles_width,
             settings_width=self._settings_width,
@@ -585,6 +609,7 @@ class StyleTab(SettingsTab):
         """Push the current local state into every widget, without emitting."""
         sliders = (
             (self._zoom_slider, self._zoom),
+            (self._font_scale_slider, self._font_scale),
             (self._profiles_width_slider, self._profiles_width),
             (self._settings_width_slider, self._settings_width),
             (self._tile_columns_slider, self._tile_columns),

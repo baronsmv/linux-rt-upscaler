@@ -179,7 +179,7 @@ def section_title_style(cfg: GUIConfig) -> str:
     """Uppercase section title inside a settings tab."""
     s = cfg.sidebar
     return f"""
-    font-size: {s.section_title_size}px;
+    font-size: {s.section_title_font_size}px;
     font-weight: bold;
     color: {cfg.palette.text_subtle};
     text-transform: uppercase;

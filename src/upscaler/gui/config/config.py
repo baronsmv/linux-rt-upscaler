@@ -83,7 +83,7 @@ class SidebarLayout:
         content_margin_v: Vertical margin inside a scrollable settings tab.
         content_spacing: Vertical gap between sections inside a tab.
         tab_font_size: Font size for tab labels and row labels.
-        section_title_size: Font size of section headings (e.g. "Overlay").
+        section_title_font_size: Font size of section headings (e.g. "Overlay").
         section_title_padding_top: Padding above a section heading.
         section_title_padding_bottom: Padding below a section heading.
         section_title_letter_spacing: Extra tracking applied to section titles.
@@ -107,7 +107,7 @@ class SidebarLayout:
     content_margin_v: int = 8
     content_spacing: int = 16
     tab_font_size: int = 18
-    section_title_size: int = 18
+    section_title_font_size: int = 18
     section_title_padding_top: int = 12
     section_title_padding_bottom: int = 4
     section_title_letter_spacing: int = 1
@@ -468,6 +468,7 @@ class GUIStyleOverrides:
     Attributes:
         palette: The active color palette.
         zoom: Interface zoom percentage (100 = native size).
+        font_scale: Interface scale factor for the font size.
         font_family: Interface font family. Empty string means the
             platform default.
         profiles_width: Logical width of the profiles sidebar (left),
@@ -482,6 +483,7 @@ class GUIStyleOverrides:
 
     palette: GUIPalette
     zoom: int = 100
+    font_scale: int = 100
     font_family: str = ""
     profiles_width: int = 380
     settings_width: int = 420
