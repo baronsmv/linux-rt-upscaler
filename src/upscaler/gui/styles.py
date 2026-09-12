@@ -1058,6 +1058,11 @@ def reset_submenu_style(cfg: GUIConfig) -> str:
         border-radius: 4px;
         padding: {f.menu_padding}px;
     }}
+    QMenu::separator {{
+        height: 1px;
+        background: {cfg.palette.border};
+        margin: {f.menu_padding}px 0px;
+    }}
     QMenu::item {{
         color: {cfg.palette.text};
         padding: {f.menu_item_padding_v}px {f.menu_item_padding_h}px;

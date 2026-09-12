@@ -260,13 +260,35 @@ class SettingsSidebar(IconSidebarBase):
         self._config_reset_menu.setStyleSheet(reset_submenu_style(cfg))
 
         self._style_reset_menu = QMenu(self._reset_btn)
-        self._style_reset_last_action = self._style_reset_menu.addAction(
-            self.tr("Reset to last applied", "Reset button")
+        self._style_reset_palette_action = self._style_reset_menu.addAction(
+            self.tr("Restore saved palette", "Reset menu")
         )
-        self._style_reset_auto_action = self._style_reset_menu.addAction(
-            self.tr("Restore Auto preset", "Reset button")
+        self._style_reset_menu.addSeparator()
+        self._style_reset_saved_action = self._style_reset_menu.addAction(
+            self.tr("Restore saved interface", "Reset menu")
+        )
+        self._style_reset_default_action = self._style_reset_menu.addAction(
+            self.tr("Restore default interface", "Reset menu")
+        )
+        self._style_reset_menu.addSeparator()
+        self._style_reset_all_action = self._style_reset_menu.addAction(
+            self.tr("Restore all to system defaults", "Reset menu")
         )
         self._style_reset_menu.setStyleSheet(reset_submenu_style(cfg))
+
+        # Actions
+        self._style_reset_palette_action.triggered.connect(
+            self._style_tab.restore_saved_palette
+        )
+        self._style_reset_saved_action.triggered.connect(
+            self._style_tab.restore_saved_interface
+        )
+        self._style_reset_default_action.triggered.connect(
+            self._style_tab.restore_default_interface
+        )
+        self._style_reset_all_action.triggered.connect(
+            self._style_tab.restore_all_defaults
+        )
 
         self._reset_btn.setMenu(self._config_reset_menu)
         button_layout.addWidget(self._reset_btn, 1)
@@ -316,20 +338,7 @@ class SettingsSidebar(IconSidebarBase):
             self._style_tab.ensure_built()
             self._save_btn.setText(self.tr("Apply style", "Apply button"))
             self._reset_btn.setText(self.tr("Reset style", "Reset button"))
-            # Swap menu
             self._reset_btn.setMenu(self._style_reset_menu)
-            # Connect style menu actions
-            try:
-                self._style_reset_last_action.triggered.disconnect()
-                self._style_reset_auto_action.triggered.disconnect()
-            except Exception:
-                pass
-            self._style_reset_last_action.triggered.connect(self._style_tab.reset_style)
-            self._style_reset_auto_action.triggered.connect(
-                self._style_tab.restore_auto_preset
-            )
-
-            # Update enabled state from style dirty flag
             self._update_style_footer_state()
         else:
             # === Normal config tab ===
@@ -340,24 +349,26 @@ class SettingsSidebar(IconSidebarBase):
             )
             self._reset_btn.setText(self.tr("Reset", "Reset button"))
             self._reset_btn.setMenu(self._config_reset_menu)
-            # Restore normal config dirty-state logic
-            self._check_dirty()  # existing method already sets enabled states
+            self._check_dirty()
 
     def _on_style_dirty_changed(self, dirty: bool):
         """Called whenever the Style tab's dirty state changes."""
         if self._is_style_tab_active():
             self._update_style_footer_state()
 
-    def _update_style_footer_state(self):
-        """Enable Apply / Reset buttons based solely on style default/dirty state."""
-        dirty = self._style_tab.is_dirty()
-        is_default = self._style_tab.is_default()
+    def _update_style_footer_state(self) -> None:
+        """Enable Apply / Reset buttons and menu actions based on dirty state."""
+        tab = self._style_tab
+        dirty = tab.is_dirty()
 
-        # Apply button is enabled only when there are unsaved changes
         self._save_btn.setEnabled(dirty)
-        self._reset_btn.setEnabled(dirty or not is_default)
+        self._reset_btn.setEnabled(dirty or not tab.is_default())
         self._reset_btn.setStyleSheet(reset_button_style(self.gui_config, active=dirty))
 
-        # Dropdown actions
-        self._style_reset_last_action.setEnabled(dirty)
-        self._style_reset_auto_action.setEnabled(not is_default)
+        # Each menu item is enabled only when it would change something
+        self._style_reset_palette_action.setEnabled(tab.palette_is_dirty())
+        self._style_reset_saved_action.setEnabled(tab.interface_is_dirty())
+        self._style_reset_default_action.setEnabled(
+            tab.interface_differs_from_defaults()
+        )
+        self._style_reset_all_action.setEnabled(not tab.is_default())

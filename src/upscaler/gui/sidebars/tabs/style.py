@@ -31,6 +31,27 @@ _ASPECT_RATIOS: Tuple[Tuple[str, float], ...] = (
 )
 
 
+def _interface_fields(o: GUIStyleOverrides) -> tuple:
+    """Return the interface (non-palette) fields of *o*, for comparison."""
+    return (
+        o.zoom,
+        o.font_scale,
+        o.font_family,
+        o.profiles_width,
+        o.settings_width,
+        o.tile_columns,
+        o.tile_aspect_ratio,
+        o.auto_refresh_ms,
+        o.tile_preview_interval_ms,
+    )
+
+
+def _default_interface_fields() -> tuple:
+    """Return the shipped defaults for the interface fields."""
+    d = GUIStyleOverrides(palette=PRESETS["Auto"])
+    return _interface_fields(d)
+
+
 def _aspect_to_name(ratio: float) -> str:
     """Return the preset name closest to *ratio*."""
     return min(_ASPECT_RATIOS, key=lambda item: abs(item[1] - ratio))[0]
@@ -517,12 +538,28 @@ class StyleTab(SettingsTab):
         self._tile_preview_interval_ms = value
         self._notify_dirty()
 
+    def palette_is_dirty(self) -> bool:
+        """Return True if the palette differs from the last applied state."""
+        return self._current_overrides().palette != self._saved.palette
+
+    def interface_is_dirty(self) -> bool:
+        """Return True if any interface field differs from the last applied state."""
+        return _interface_fields(self._current_overrides()) != _interface_fields(
+            self._saved
+        )
+
+    def interface_differs_from_defaults(self) -> bool:
+        """Return True if any interface field differs from the shipped defaults."""
+        return (
+            _interface_fields(self._current_overrides()) != _default_interface_fields()
+        )
+
     def is_dirty(self) -> bool:
         """Return True if any GUI value differs from the last applied state."""
         return self._current_overrides() != self._saved
 
     def is_default(self) -> bool:
-        """Return False if any GUI value differs from the default ones."""
+        """Return True if all GUI values are the default ones."""
         return self._current_overrides() == GUIStyleOverrides(palette=PRESETS["Auto"])
 
     def _refresh_baselines(self) -> None:
@@ -550,6 +587,47 @@ class StyleTab(SettingsTab):
         self._on_apply(overrides)
         self._notify_dirty()
 
+    def _sync_interface_widgets(self) -> None:
+        """Push the current interface state into the interface widgets."""
+        sliders = (
+            (self._zoom_slider, self._zoom),
+            (self._font_scale_slider, int(round(self._font_scale * 100))),
+            (self._profiles_width_slider, self._profiles_width),
+            (self._settings_width_slider, self._settings_width),
+            (self._tile_columns_slider, self._tile_columns),
+            (self._refresh_slider, self._auto_refresh_ms),
+            (self._preview_slider, self._tile_preview_interval_ms),
+        )
+        for slider, value in sliders:
+            slider.blockSignals(True)
+            slider.setValue(value)
+            slider.blockSignals(False)
+
+        self._aspect_combo.blockSignals(True)
+        self._aspect_combo.setCurrentText(_aspect_to_name(self._tile_aspect_ratio))
+        self._aspect_combo.blockSignals(False)
+
+        self._font_row.set_font_family(self._font_family)
+
+    def _sync_palette_widgets(self) -> None:
+        """Push the current palette into the palette widgets."""
+        self._preset_combo.blockSignals(True)
+        self._preset_combo.setCurrentText(
+            find_matching_preset(palette_to_stylesheet(self._palette))
+        )
+        self._preset_combo.blockSignals(False)
+
+        for field in fields(GUIPalette):
+            picker = self._picker_widgets[field.name]
+            picker.blockSignals(True)
+            picker.set_color(getattr(self._palette, field.name))
+            picker.blockSignals(False)
+
+    def _sync_widgets(self) -> None:
+        """Push the entire current state into every widget, without emitting."""
+        self._sync_interface_widgets()
+        self._sync_palette_widgets()
+
     def reset_style(self) -> None:
         """Revert the style attributes to the last applied state."""
         self._palette = copy.deepcopy(self._saved_palette)
@@ -567,8 +645,49 @@ class StyleTab(SettingsTab):
         self._refresh_baselines()
         self._notify_dirty()
 
-    def restore_auto_preset(self) -> None:
-        """Load the Auto preset and all defaults without applying."""
+    def restore_saved_palette(self) -> None:
+        """Revert only the palette to the last applied state."""
+        self._palette = copy.deepcopy(self._saved_palette)
+        self._sync_palette_widgets()
+        self._refresh_baselines()
+        self._notify_dirty()
+
+    def restore_saved_interface(self) -> None:
+        """Revert only the interface settings to the last applied state."""
+        self._zoom = self._saved.zoom
+        self._font_scale = self._saved.font_scale
+        self._font_family = self._saved.font_family
+        self._profiles_width = self._saved.profiles_width
+        self._settings_width = self._saved.settings_width
+        self._tile_columns = self._saved.tile_columns
+        self._tile_aspect_ratio = self._saved.tile_aspect_ratio
+        self._auto_refresh_ms = self._saved.auto_refresh_ms
+        self._tile_preview_interval_ms = self._saved.tile_preview_interval_ms
+
+        self._sync_interface_widgets()
+        self._refresh_baselines()
+        self._notify_dirty()
+
+    def restore_default_interface(self) -> None:
+        """Reset only the interface settings to the shipped defaults."""
+        defaults = GUIStyleOverrides(palette=self._palette)
+
+        self._zoom = defaults.zoom
+        self._font_scale = defaults.font_scale
+        self._font_family = defaults.font_family
+        self._profiles_width = defaults.profiles_width
+        self._settings_width = defaults.settings_width
+        self._tile_columns = defaults.tile_columns
+        self._tile_aspect_ratio = defaults.tile_aspect_ratio
+        self._auto_refresh_ms = defaults.auto_refresh_ms
+        self._tile_preview_interval_ms = defaults.tile_preview_interval_ms
+
+        self._sync_interface_widgets()
+        self._refresh_baselines()
+        self._notify_dirty()
+
+    def restore_all_defaults(self) -> None:
+        """Reset every style field to the shipped defaults."""
         preset = PRESETS["Auto"]
         defaults = GUIStyleOverrides(palette=preset)
 
@@ -604,40 +723,6 @@ class StyleTab(SettingsTab):
             auto_refresh_ms=self._auto_refresh_ms,
             tile_preview_interval_ms=self._tile_preview_interval_ms,
         )
-
-    def _sync_widgets(self) -> None:
-        """Push the current local state into every widget, without emitting."""
-        sliders = (
-            (self._zoom_slider, self._zoom),
-            (self._font_scale_slider, self._font_scale),
-            (self._profiles_width_slider, self._profiles_width),
-            (self._settings_width_slider, self._settings_width),
-            (self._tile_columns_slider, self._tile_columns),
-            (self._refresh_slider, self._auto_refresh_ms),
-            (self._preview_slider, self._tile_preview_interval_ms),
-        )
-        for slider, value in sliders:
-            slider.blockSignals(True)
-            slider.setValue(value)
-            slider.blockSignals(False)
-
-        self._aspect_combo.blockSignals(True)
-        self._aspect_combo.setCurrentText(_aspect_to_name(self._tile_aspect_ratio))
-        self._aspect_combo.blockSignals(False)
-
-        self._font_row.set_font_family(self._font_family)
-
-        self._preset_combo.blockSignals(True)
-        self._preset_combo.setCurrentText(
-            find_matching_preset(palette_to_stylesheet(self._palette))
-        )
-        self._preset_combo.blockSignals(False)
-
-        for field in fields(GUIPalette):
-            picker = self._picker_widgets[field.name]
-            picker.blockSignals(True)
-            picker.set_color(getattr(self._palette, field.name))
-            picker.blockSignals(False)
 
     @property
     def _saved_palette(self) -> GUIPalette:
