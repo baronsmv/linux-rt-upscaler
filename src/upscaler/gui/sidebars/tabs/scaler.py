@@ -36,7 +36,7 @@ class ScalingTab(SettingsTab):
 
     def _build_content(self) -> None:
         # ---- Sampler Selection ----
-        self._add_section(self.tr("Sampler Algorithm", "Settings section"))
+        self._add_section(self.tr("Sampler algorithm", "Settings section"))
         self._upsampler_combo = self._add_combo(
             self.tr("Upsampler", "Label of setting (must be short)"),
             list(UPSAMPLERS.keys()),
@@ -70,7 +70,7 @@ class ScalingTab(SettingsTab):
         )
 
         # ---- Sampler Options ----
-        self._add_section(self.tr("Sampler Options", "Settings section"))
+        self._add_section(self.tr("Sampler options", "Settings section"))
         self._blur = self._add_slider(
             self.tr("Blur", "Label of setting (must be short)"),
             1,
@@ -87,7 +87,7 @@ class ScalingTab(SettingsTab):
             ),
         )
         self._antiring = self._add_slider(
-            self.tr("Antiring Strength", "Label of setting (must be short)"),
+            self.tr("Antiring strength", "Label of setting (must be short)"),
             0,
             100,
             int(self._config.antiring_strength * 100),
@@ -103,9 +103,9 @@ class ScalingTab(SettingsTab):
         )
 
         # ---- Sampler Options ----
-        self._add_section(self.tr("Lanczos Options", "Settings section"))
+        self._add_section(self.tr("Lanczos options", "Settings section"))
         self._tight_cb = self._add_cb(
-            self.tr("Tight Antiring", "Label of setting (must be short)"),
+            self.tr("Tight antiring", "Label of setting (must be short)"),
             self._config.tight_antiring,
             self._on_tight_antiring,
             baseline=self.baseline_config.tight_antiring,
@@ -116,7 +116,7 @@ class ScalingTab(SettingsTab):
             ),
         )
         self._radius_override_cb = self._add_cb(
-            self.tr("Override Lanczos Radius", "Label of setting (must be short)"),
+            self.tr("Override Lanczos radius", "Label of setting (must be short)"),
             self._config.kernel_radius is not None,
             self._on_radius_override_toggle,
             baseline=self.baseline_config.kernel_radius is not None,

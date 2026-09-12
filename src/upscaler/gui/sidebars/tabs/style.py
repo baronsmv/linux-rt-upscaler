@@ -81,12 +81,12 @@ class StyleTab(SettingsTab):
         """Return the color category structure with translated strings."""
         return [
             {
-                "title": self.tr("Background & Surfaces", "Settings section"),
+                "title": self.tr("Background & surfaces", "Settings section"),
                 "fields": [
                     (
                         "background",
                         self.tr(
-                            "Primary Background", "Label of setting (must be short)"
+                            "Primary background", "Label of setting (must be short)"
                         ),
                         self.tr(
                             "Main background color of the application window and dialogs.",
@@ -95,7 +95,7 @@ class StyleTab(SettingsTab):
                     ),
                     (
                         "input",
-                        self.tr("Input Background", "Label of setting (must be short)"),
+                        self.tr("Input background", "Label of setting (must be short)"),
                         self.tr(
                             "Background color of text fields, combo boxes, and editable areas.",
                             "Description of a setting (tooltip)",
@@ -104,7 +104,7 @@ class StyleTab(SettingsTab):
                     (
                         "input_hover",
                         self.tr(
-                            "Input Background (hover)",
+                            "Input background (hover)",
                             "Label of setting (must be short)",
                         ),
                         self.tr(
@@ -115,7 +115,7 @@ class StyleTab(SettingsTab):
                     (
                         "input_disabled",
                         self.tr(
-                            "Input Background (disabled)",
+                            "Input background (disabled)",
                             "Label of setting (must be short)",
                         ),
                         self.tr(
@@ -126,7 +126,7 @@ class StyleTab(SettingsTab):
                     (
                         "button",
                         self.tr(
-                            "Button Background", "Label of setting (must be short)"
+                            "Button background", "Label of setting (must be short)"
                         ),
                         self.tr(
                             "Background color of buttons.",
@@ -136,7 +136,7 @@ class StyleTab(SettingsTab):
                     (
                         "button_hover",
                         self.tr(
-                            "Button Background (hover)",
+                            "Button background (hover)",
                             "Label of setting (must be short)",
                         ),
                         self.tr(
@@ -147,7 +147,7 @@ class StyleTab(SettingsTab):
                     (
                         "caption_background",
                         self.tr(
-                            "Caption Background", "Label of setting (must be short)"
+                            "Caption background", "Label of setting (must be short)"
                         ),
                         self.tr(
                             "Semi-transparent background color of the central grid window titles.",
@@ -157,11 +157,11 @@ class StyleTab(SettingsTab):
                 ],
             },
             {
-                "title": self.tr("Text & Icons", "Settings section"),
+                "title": self.tr("Text & icons", "Settings section"),
                 "fields": [
                     (
                         "text",
-                        self.tr("Primary Text", "Label of setting (must be short)"),
+                        self.tr("Primary text", "Label of setting (must be short)"),
                         self.tr(
                             "Text color of body text and labels.",
                             "Description of a setting (tooltip)",
@@ -170,7 +170,7 @@ class StyleTab(SettingsTab):
                     (
                         "text_hover",
                         self.tr(
-                            "Primary Text (hover)", "Label of setting (must be short)"
+                            "Primary text (hover)", "Label of setting (must be short)"
                         ),
                         self.tr(
                             "Text color when the mouse hovers over clickable items.",
@@ -179,7 +179,7 @@ class StyleTab(SettingsTab):
                     ),
                     (
                         "text_subtle",
-                        self.tr("Secondary Text", "Label of setting (must be short)"),
+                        self.tr("Secondary text", "Label of setting (must be short)"),
                         self.tr(
                             "Text color for secondary information, captions, and section headers.",
                             "Description of a setting (tooltip)",
@@ -187,7 +187,7 @@ class StyleTab(SettingsTab):
                     ),
                     (
                         "icon",
-                        self.tr("Icon Fill", "Label of setting (must be short)"),
+                        self.tr("Icon fill", "Label of setting (must be short)"),
                         self.tr(
                             "Fill color of sidebar and toolbar icons.",
                             "Description of a setting (tooltip)",
@@ -196,7 +196,7 @@ class StyleTab(SettingsTab):
                 ],
             },
             {
-                "title": self.tr("Borders & Separators", "Settings section"),
+                "title": self.tr("Borders & separators", "Settings section"),
                 "fields": [
                     (
                         "border",
@@ -217,7 +217,7 @@ class StyleTab(SettingsTab):
                 ],
             },
             {
-                "title": self.tr("Controls & Highlights", "Settings section"),
+                "title": self.tr("Controls & highlights", "Settings section"),
                 "fields": [
                     (
                         "control",
@@ -237,7 +237,7 @@ class StyleTab(SettingsTab):
                     ),
                     (
                         "reset",
-                        self.tr("Reset Button", "Label of setting (must be short)"),
+                        self.tr("Reset button", "Label of setting (must be short)"),
                         self.tr(
                             "Background color of the 'Reset' button.",
                             "Description of a setting (tooltip)",
@@ -246,7 +246,7 @@ class StyleTab(SettingsTab):
                     (
                         "reset_hover",
                         self.tr(
-                            "Reset Button (hover)", "Label of setting (must be short)"
+                            "Reset button (hover)", "Label of setting (must be short)"
                         ),
                         self.tr(
                             "'Reset' button background color on hover.",
@@ -280,7 +280,7 @@ class StyleTab(SettingsTab):
         self._picker_widgets: Dict[str, ColorPickerRow] = {}
 
         # ── Interface scale ───────────────────────────────────────
-        self._add_section(self.tr("Interface Scale", "Settings section"))
+        self._add_section(self.tr("Interface scale", "Settings section"))
         self._zoom_slider = self._add_slider(
             self.tr("Zoom (%)", "Label of setting (must be short)"),
             50,
@@ -309,7 +309,7 @@ class StyleTab(SettingsTab):
             ),
         )
         self._font_scale_slider = self._add_slider(
-            self.tr("Font Scale (%)", "Label of setting (must be short)"),
+            self.tr("Font scale (%)", "Label of setting (must be short)"),
             80,
             150,
             self._font_scale,
@@ -323,7 +323,7 @@ class StyleTab(SettingsTab):
         )
 
         # ── Preset selector ───────────────────────────────────────
-        self._add_section(self.tr("Palette Preset", "Settings section"))
+        self._add_section(self.tr("Palette preset", "Settings section"))
         self._preset_combo = self._add_combo(
             self.tr("Preset", "Label of setting (must be short)"),
             ["Custom"] + list(PRESETS.keys()),
@@ -396,7 +396,7 @@ class StyleTab(SettingsTab):
             ),
         )
         self._aspect_combo = self._add_combo(
-            self.tr("Aspect Ratio", "Label of setting (must be short)"),
+            self.tr("Aspect ratio", "Label of setting (must be short)"),
             [name for name, _ in _ASPECT_RATIOS],
             _aspect_to_name(self._tile_aspect_ratio),
             self._on_aspect_changed,

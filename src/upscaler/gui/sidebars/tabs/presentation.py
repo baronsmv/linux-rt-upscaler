@@ -33,7 +33,7 @@ class PresentationTab(SettingsTab):
         # ---- Overlay ----
         self._add_section(self.tr("Overlay", "Settings section"))
         self._overlay_combo = self._add_combo(
-            self.tr("Overlay Mode", "Label of setting (must be short)"),
+            self.tr("Overlay mode", "Label of setting (must be short)"),
             [e.value for e in OverlayMode],
             self._config.overlay_mode,
             self._on_overlay_mode,
@@ -50,7 +50,7 @@ class PresentationTab(SettingsTab):
             ),
         )
         self._geom_combo = self._add_combo(
-            self.tr("Output Geometry", "Label of setting (must be short)"),
+            self.tr("Output geometry", "Label of setting (must be short)"),
             ["fit", "stretch", "cover"],
             self._config.output_geometry,
             self._on_geometry_changed,
@@ -86,7 +86,7 @@ class PresentationTab(SettingsTab):
         else:
             bl_seconds = 2.0
         self._hide_cursor_timeout = self._add_slider(
-            self.tr("Hide Timeout (s)", "Label of setting (must be short)"),
+            self.tr("Hide timeout (s)", "Label of setting (must be short)"),
             0,
             10000,
             self._config.hide_cursor if self._config.hide_cursor is not None else 2000,
@@ -156,12 +156,12 @@ class PresentationTab(SettingsTab):
         self._add_section(self.tr("Offset", "Settings section"))
         for label, field, slot in [
             (
-                self.tr("X Offset", "Label of setting (must be short)"),
+                self.tr("X offset", "Label of setting (must be short)"),
                 "offset_x",
                 self._on_offset_x,
             ),
             (
-                self.tr("Y Offset", "Label of setting (must be short)"),
+                self.tr("Y offset", "Label of setting (must be short)"),
                 "offset_y",
                 self._on_offset_y,
             ),
@@ -187,7 +187,7 @@ class PresentationTab(SettingsTab):
             )
 
         # ---- Background Color ----
-        self._add_section(self.tr("Background Color", "Settings section"))
+        self._add_section(self.tr("Background color", "Settings section"))
         bg = normalize_to_hex(self._config.background_color)
         baseline_bg = normalize_to_hex(self.baseline_config.background_color)
         self._bg_picker = self._add_color_picker(

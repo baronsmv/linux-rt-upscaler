@@ -266,7 +266,7 @@ class TrayController(QObject):
         # Daemon Mode toggle
         # --------------------------------------------------------------
         daemon_action = self._menu.addAction(
-            self.tr("Daemon Mode", "Daemon mode toggle for tray icon menu")
+            self.tr("Daemon mode", "Daemon mode toggle for tray icon menu")
         )
         daemon_action.setCheckable(True)
         daemon_action.setChecked(daemon_active)
@@ -280,7 +280,7 @@ class TrayController(QObject):
         # Tray options
         # --------------------------------------------------------------
         close_to_tray_action = self._menu.addAction(
-            self.tr("Close to Tray", "Tray menu option")
+            self.tr("Close to tray", "Tray menu option")
         )
         close_to_tray_action.setCheckable(True)
         close_to_tray_action.setChecked(close_to_tray)
@@ -289,7 +289,7 @@ class TrayController(QObject):
         )
 
         minimize_to_tray_action = self._menu.addAction(
-            self.tr("Minimize to Tray", "Tray menu option")
+            self.tr("Minimize to tray", "Tray menu option")
         )
         minimize_to_tray_action.setCheckable(True)
         minimize_to_tray_action.setChecked(minimize_to_tray)
@@ -298,7 +298,7 @@ class TrayController(QObject):
         )
 
         start_hidden_action = self._menu.addAction(
-            self.tr("Start Hidden", "Tray menu option")
+            self.tr("Start hidden", "Tray menu option")
         )
         start_hidden_action.setCheckable(True)
         start_hidden_action.setChecked(
@@ -309,7 +309,7 @@ class TrayController(QObject):
         )
 
         keep_running_action = self._menu.addAction(
-            self.tr("Keep running after Exit hotkey", "Tray menu option")
+            self.tr("Keep running after exit", "Tray menu option")
         )
         keep_running_action.setCheckable(True)
         keep_running_action.setChecked(

@@ -151,7 +151,7 @@ class MainWindow(QMainWindow):
         # System tray toggle
         self.tray_toggle_btn = self._make_circular_button(
             "actions/tray_disabled",
-            self.tr("Enable/Disable System Tray", "Tray toggle button"),
+            self.tr("Enable/disable system tray", "Tray toggle button"),
             checkable=True,
             checked=bool(self.settings.value("tray/enabled", False, type=bool)),
         )
@@ -163,7 +163,7 @@ class MainWindow(QMainWindow):
         # About button
         self.about_btn = self._make_circular_button(
             "actions/about",
-            self.tr("About Real-Time Upscaler.", "About dialog button"),
+            self.tr("About Real-Time Upscaler", "About dialog button"),
         )
         self.about_btn.clicked.connect(self._show_about_dialog)
         filter_row.addWidget(self.about_btn)

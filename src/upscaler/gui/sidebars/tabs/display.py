@@ -79,7 +79,7 @@ class DisplayTab(SettingsTab):
         # ---- V-Sync ----
         self._add_section(self.tr("V-Sync", "Settings section"))
         self._present_combo = self._add_combo(
-            self.tr("Present Mode", "Label of setting (must be short)"),
+            self.tr("Presentation mode", "Label of setting (must be short)"),
             [e.value for e in VulkanPresentMode],
             self._config.vulkan_present_mode,
             self._on_present_mode,
@@ -124,9 +124,9 @@ class DisplayTab(SettingsTab):
         self._fps_slider.setEnabled(self._config.max_fps is not None)
 
         # ---- Scale Factor ----
-        self._add_section(self.tr("Scale Factor", "Settings section"))
+        self._add_section(self.tr("Scale factor", "Settings section"))
         self._auto_scale_cb = self._add_cb(
-            self.tr("Auto Scale", "Label of setting (must be short)"),
+            self.tr("Auto scale", "Label of setting (must be short)"),
             self._config.scale_factor is None,
             self._on_auto_scale_changed,
             baseline=self.baseline_config.scale_factor is None,
@@ -136,7 +136,7 @@ class DisplayTab(SettingsTab):
             ),
         )
         self._scale_slider = self._add_slider(
-            self.tr("Scale Factor", "Label of setting (must be short)"),
+            self.tr("Scale factor", "Label of setting (must be short)"),
             100,
             400,
             max(100, int((self._config.scale_factor or 1.0) * 100)),

@@ -32,7 +32,7 @@ class EffectsTab(SettingsTab):
         # ---- Debanding ----
         self._add_section(self.tr("Debanding", "Settings section"))
         self._deband_cb = self._add_cb(
-            self.tr("Enable Deband", "Label of setting (must be short)"),
+            self.tr("Enable deband", "Label of setting (must be short)"),
             self._config.deband_enabled,
             self._on_deband_enabled,
             baseline=self.baseline_config.deband_enabled,
@@ -58,7 +58,7 @@ class EffectsTab(SettingsTab):
         self._deband_str.setEnabled(self._config.deband_enabled)
 
         # ---- CAS ----
-        self._add_section(self.tr("CAS Sharpening", "Settings section"))
+        self._add_section(self.tr("CAS sharpening", "Settings section"))
         self._cas_cb = self._add_cb(
             self.tr("Enable CAS", "Label of setting (must be short)"),
             self._config.cas_enabled,
@@ -85,9 +85,9 @@ class EffectsTab(SettingsTab):
         self._cas_str.setEnabled(self._config.cas_enabled)
 
         # ---- Bloom ----
-        self._add_section(self.tr("Bloom (Glow)", "Settings section"))
+        self._add_section(self.tr("Bloom (glow)", "Settings section"))
         self._bloom_cb = self._add_cb(
-            self.tr("Enable Bloom", "Label of setting (must be short)"),
+            self.tr("Enable bloom", "Label of setting (must be short)"),
             self._config.bloom_enabled,
             self._on_bloom_enabled,
             baseline=self.baseline_config.bloom_enabled,
@@ -145,7 +145,7 @@ class EffectsTab(SettingsTab):
         # ---- Vignette ----
         self._add_section(self.tr("Vignette", "Settings section"))
         self._vignette_cb = self._add_cb(
-            self.tr("Enable Vignette", "Label of setting (must be short)"),
+            self.tr("Enable vignette", "Label of setting (must be short)"),
             self._config.vignette_enabled,
             self._on_vignette_enabled,
             baseline=self.baseline_config.vignette_enabled,
@@ -202,9 +202,9 @@ class EffectsTab(SettingsTab):
         self._vignette_falloff.setEnabled(self._config.vignette_enabled)
 
         # ---- Film Grain ----
-        self._add_section(self.tr("Film Grain", "Settings section"))
+        self._add_section(self.tr("Film grain", "Settings section"))
         self._grain_cb = self._add_cb(
-            self.tr("Enable Grain", "Label of setting (must be short)"),
+            self.tr("Enable grain", "Label of setting (must be short)"),
             self._config.grain_enabled,
             self._on_grain_enabled,
             baseline=self.baseline_config.grain_enabled,
@@ -245,7 +245,7 @@ class EffectsTab(SettingsTab):
         self._grain_size.setEnabled(self._config.grain_enabled)
 
         # ---- Color Grading (LUT) ----
-        self._add_section(self.tr("Color Grading (3D LUT)", "Settings section"))
+        self._add_section(self.tr("Color grading", "Settings section"))
         self._lut_cb = self._add_cb(
             self.tr("Enable LUT", "Label of setting (must be short)"),
             self._config.lut_enabled,

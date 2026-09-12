@@ -36,7 +36,7 @@ class GeneralTab(SettingsTab):
 
     def _build_content(self) -> None:
         # ---- Model & double upscale ----
-        self._add_section(self.tr("Upscaling Model", "Settings section"))
+        self._add_section(self.tr("Upscaling model", "Settings section"))
         self._add_named_slider(
             self.tr("Model", "Label of setting (must be short)"),
             UPSCALING_MODELS,
@@ -53,7 +53,7 @@ class GeneralTab(SettingsTab):
             ),
         )
         self._double_cb = self._add_cb(
-            self.tr("Double Upscale (4x)", "Label of setting (must be short)"),
+            self.tr("Double upscale (4x)", "Label of setting (must be short)"),
             self._config.double_upscale,
             self._on_double_changed,
             baseline=self.baseline_config.double_upscale,
@@ -67,9 +67,9 @@ class GeneralTab(SettingsTab):
         self._double_cb.setEnabled(self._config.model != "none")
 
         # ---- Focus Tracking ----
-        self._add_section(self.tr("Focus Tracking", "Settings section"))
+        self._add_section(self.tr("Focus tracking", "Settings section"))
         self._follow_focus_cb = self._add_cb(
-            self.tr("Follow Focus", "Label of setting (must be short)"),
+            self.tr("Follow focus", "Label of setting (must be short)"),
             self._config.follow_focus,
             self._on_follow_focus,
             baseline=self.baseline_config.follow_focus,
@@ -80,7 +80,7 @@ class GeneralTab(SettingsTab):
             ),
         )
         self._pause_focus_loss_cb = self._add_cb(
-            self.tr("Pause on Focus Loss", "Label of setting (must be short)"),
+            self.tr("Pause on focus loss", "Label of setting (must be short)"),
             self._config.pause_on_focus_loss,
             self._on_pause_focus_loss,
             baseline=self.baseline_config.pause_on_focus_loss,
@@ -95,19 +95,19 @@ class GeneralTab(SettingsTab):
         self._add_section(self.tr("Automatic Upscaling", "Settings section"))
         if self._profile_active:
             self._auto_cb = self._add_cb(
-                self.tr("Exclude from Daemon Mode", "Label of setting (must be short)"),
+                self.tr("Exclude from daemon mode", "Label of setting (must be short)"),
                 self._config.daemon_exclude,
                 self._on_daemon_exclude_changed,
                 baseline=self.baseline_config.daemon_exclude,
                 help=self.tr(
-                    "When Daemon Mode is active, "
+                    "When daemon mode is active, "
                     "this profile will not be used to automatically upscale matching windows.",
                     "Description of a setting (tooltip)",
                 ),
             )
         else:
             self._daemon_cb = self._add_cb(
-                self.tr("Daemon Mode", "Label of setting (must be short)"),
+                self.tr("Daemon mode", "Label of setting (must be short)"),
                 self._config.daemon,
                 self._on_daemon_changed,
                 baseline=self.baseline_config.daemon,

@@ -30,9 +30,9 @@ class AdvancedTab(SettingsTab):
 
     def _build_content(self) -> None:
         # ---- Tile-Based Processing ----
-        self._add_section(self.tr("Tile-Based Processing", "Settings section"))
+        self._add_section(self.tr("Tile-based processing", "Settings section"))
         self._tile_mode_cb = self._add_cb(
-            self.tr("Enable Tile Mode", "Label of setting (must be short)"),
+            self.tr("Enable tile mode", "Label of setting (must be short)"),
             self._config.use_tile_processing,
             self._on_tile_mode,
             baseline=self.baseline_config.use_tile_processing,
@@ -44,7 +44,7 @@ class AdvancedTab(SettingsTab):
             ),
         )
         self._damage_cb = self._add_cb(
-            self.tr("Damage Tracking", "Label of setting (must be short)"),
+            self.tr("Damage tracking", "Label of setting (must be short)"),
             self._config.use_damage_tracking,
             self._on_damage_tracking,
             baseline=self.baseline_config.use_damage_tracking,
@@ -55,7 +55,7 @@ class AdvancedTab(SettingsTab):
             ),
         )
         self._tile_size = self._add_slider(
-            self.tr("Tile Size", "Label of setting (must be short)"),
+            self.tr("Tile size", "Label of setting (must be short)"),
             16,
             128,
             self._config.tile_size,
@@ -70,7 +70,7 @@ class AdvancedTab(SettingsTab):
             ),
         )
         self._margin = self._add_slider(
-            self.tr("Context Margin", "Label of setting (must be short)"),
+            self.tr("Context margin", "Label of setting (must be short)"),
             4,
             24,
             self._config.tile_context_margin,
@@ -84,7 +84,7 @@ class AdvancedTab(SettingsTab):
             ),
         )
         self._max_layers = self._add_slider(
-            self.tr("Max Tiles per Frame", "Label of setting (must be short)"),
+            self.tr("Max tiles per frame", "Label of setting (must be short)"),
             4,
             32,
             self._config.max_tile_layers,
@@ -98,7 +98,7 @@ class AdvancedTab(SettingsTab):
             ),
         )
         self._area_thresh = self._add_slider(
-            self.tr("Area Threshold %", "Label of setting (must be short)"),
+            self.tr("Area threshold", "Label of setting (must be short)"),
             0,
             100,
             int(self._config.area_threshold * 100),
@@ -117,7 +117,7 @@ class AdvancedTab(SettingsTab):
         # ---- Timing ----
         self._add_section(self.tr("Timing", "Settings section"))
         self._frame_timeout = self._add_slider(
-            self.tr("Frame Timeout (ms)", "Label of setting (must be short)"),
+            self.tr("Frame timeout (ms)", "Label of setting (must be short)"),
             1,
             1000,
             max(1, self._config.frame_timeout // 1_000_000),
@@ -131,7 +131,7 @@ class AdvancedTab(SettingsTab):
             ),
         )
         self._add_slider(
-            self.tr("Daemon Poll (s)", "Label of setting (must be short)"),
+            self.tr("Daemon poll (s)", "Label of setting (must be short)"),
             1,
             100,
             int(self._config.daemon_poll_interval * 10),
@@ -144,7 +144,7 @@ class AdvancedTab(SettingsTab):
             ),
         )
         self._add_slider(
-            self.tr("Focus Poll (s)", "Label of setting (must be short)"),
+            self.tr("Focus poll (s)", "Label of setting (must be short)"),
             1,
             1000,
             int(self._config.focus_poll_interval * 100),
@@ -157,7 +157,7 @@ class AdvancedTab(SettingsTab):
             ),
         )
         self._add_slider(
-            self.tr("Pipeline Idle (s)"),
+            self.tr("Pipeline idle (s)"),
             1,
             1000,
             int(self._config.pipeline_poll_interval * 100),
@@ -173,7 +173,7 @@ class AdvancedTab(SettingsTab):
         # ---- Error Recovery ----
         self._add_section(self.tr("Error Recovery", "Settings section"))
         self._add_slider(
-            self.tr("Max Capture Failures", "Label of setting (must be short)"),
+            self.tr("Max capture failures", "Label of setting (must be short)"),
             1,
             100,
             self._config.max_capture_failures,
@@ -186,7 +186,7 @@ class AdvancedTab(SettingsTab):
             ),
         )
         self._add_slider(
-            self.tr("Capture Failure Delay (s)", "Label of setting (must be short)"),
+            self.tr("Capture failure delay (s)", "Label of setting (must be short)"),
             0,
             500,
             int(self._config.capture_failure_delay * 100),
@@ -199,7 +199,7 @@ class AdvancedTab(SettingsTab):
             ),
         )
         self._add_slider(
-            self.tr("Swapchain Debounce (s)", "Label of setting (must be short)"),
+            self.tr("Swapchain debounce (s)", "Label of setting (must be short)"),
             0,
             100,
             int(self._config.swapchain_debounce * 10),
