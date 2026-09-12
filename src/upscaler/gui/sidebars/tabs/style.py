@@ -341,7 +341,7 @@ class StyleTab(SettingsTab):
         )
 
         # ── Preset selector ───────────────────────────────────────
-        self._add_section(self.tr("Palette preset", "Settings section"))
+        self._add_section(self.tr("Palette", "Settings section"))
         self._preset_combo = self._add_combo(
             self.tr("Preset", "Label of setting (must be short)"),
             ["Custom"] + list(PRESETS.keys()),
@@ -591,7 +591,7 @@ class StyleTab(SettingsTab):
         """Push the current interface state into the interface widgets."""
         sliders = (
             (self._zoom_slider, self._zoom),
-            (self._font_scale_slider, int(round(self._font_scale * 100))),
+            (self._font_scale_slider, self._font_scale),
             (self._profiles_width_slider, self._profiles_width),
             (self._settings_width_slider, self._settings_width),
             (self._tile_columns_slider, self._tile_columns),
