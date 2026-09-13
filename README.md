@@ -59,11 +59,9 @@ After installation, the `upscale` and `upscale-gui` commands will be available g
 - [Configuration](https://baronsmv.github.io/linux-rt-upscaler/user/configuration/)
 - [API Reference](https://baronsmv.github.io/linux-rt-upscaler/api/overview/)
 
-## Roadmap
+## Future plans
 
-- [ ] GUI Profiles operations (drag & drop, duplicate)
-- [ ] Complete GUI Style settings (font size, spacing, etc.)
-- [ ] More SRCNN models ([FSRCNNX](https://github.com/igv/FSRCNN-TensorFlow/releases/tag/1.1) planned)
+- [ ] Broader model support. The upscaler currently uses [CuNNy](https://github.com/funnyplanter/CuNNy) models. Alternative SRCNN architectures are welcome if one offers a clear quality/performance advantage.
 - [ ] ~~Native Wayland upscaling~~ (not planned: see [Architecture Limitations](https://baronsmv.github.io/linux-rt-upscaler/developer/architecture/limitations/#native-wayland-is-not-supported))
 
 ## Acknowledgments
