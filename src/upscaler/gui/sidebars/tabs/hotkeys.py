@@ -100,20 +100,6 @@ class HotkeysTab(SettingsTab):
                     "Hotkey action description (tooltip)",
                 ),
             ),
-            "offset_left": (
-                self.tr("Pan left", "Hotkey action label"),
-                self.tr(
-                    "Move the content to the left.",
-                    "Hotkey action description (tooltip)",
-                ),
-            ),
-            "offset_right": (
-                self.tr("Pan right", "Hotkey action label"),
-                self.tr(
-                    "Move the content to the right.",
-                    "Hotkey action description (tooltip)",
-                ),
-            ),
             "offset_up": (
                 self.tr("Pan up", "Hotkey action label"),
                 self.tr(
@@ -125,6 +111,20 @@ class HotkeysTab(SettingsTab):
                 self.tr("Pan down", "Hotkey action label"),
                 self.tr(
                     "Move the content down.",
+                    "Hotkey action description (tooltip)",
+                ),
+            ),
+            "offset_left": (
+                self.tr("Pan left", "Hotkey action label"),
+                self.tr(
+                    "Move the content to the left.",
+                    "Hotkey action description (tooltip)",
+                ),
+            ),
+            "offset_right": (
+                self.tr("Pan right", "Hotkey action label"),
+                self.tr(
+                    "Move the content to the right.",
                     "Hotkey action description (tooltip)",
                 ),
             ),

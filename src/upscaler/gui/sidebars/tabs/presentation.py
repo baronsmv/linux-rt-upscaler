@@ -110,19 +110,6 @@ class PresentationTab(SettingsTab):
         # ---- Crop ----
         self._add_section(self.tr("Crop", "Settings section"))
         self._add_slider(
-            self.tr("Left", "Crop border label"),
-            0,
-            200,
-            self._config.crop_left,
-            self._on_crop_left,
-            baseline=self.baseline_config.crop_left,
-            field="crop_left",
-            help=self.tr(
-                "Pixels to crop from the left border of the target window.",
-                "Description of a setting (tooltip)",
-            ),
-        )
-        self._add_slider(
             self.tr("Top", "Crop border label"),
             0,
             200,
@@ -136,19 +123,6 @@ class PresentationTab(SettingsTab):
             ),
         )
         self._add_slider(
-            self.tr("Right", "Crop border label"),
-            0,
-            200,
-            self._config.crop_right,
-            self._on_crop_right,
-            baseline=self.baseline_config.crop_right,
-            field="crop_right",
-            help=self.tr(
-                "Pixels to crop from the right border of the target window.",
-                "Description of a setting (tooltip)",
-            ),
-        )
-        self._add_slider(
             self.tr("Bottom", "Crop border label"),
             0,
             200,
@@ -158,6 +132,32 @@ class PresentationTab(SettingsTab):
             field="crop_bottom",
             help=self.tr(
                 "Pixels to crop from the bottom border of the target window.",
+                "Description of a setting (tooltip)",
+            ),
+        )
+        self._add_slider(
+            self.tr("Left", "Crop border label"),
+            0,
+            200,
+            self._config.crop_left,
+            self._on_crop_left,
+            baseline=self.baseline_config.crop_left,
+            field="crop_left",
+            help=self.tr(
+                "Pixels to crop from the left border of the target window.",
+                "Description of a setting (tooltip)",
+            ),
+        )
+        self._add_slider(
+            self.tr("Right", "Crop border label"),
+            0,
+            200,
+            self._config.crop_right,
+            self._on_crop_right,
+            baseline=self.baseline_config.crop_right,
+            field="crop_right",
+            help=self.tr(
+                "Pixels to crop from the right border of the target window.",
                 "Description of a setting (tooltip)",
             ),
         )
@@ -236,20 +236,20 @@ class PresentationTab(SettingsTab):
         self._config.output_geometry = text
         self.config_changed.emit()
 
-    def _on_crop_left(self, value: int):
-        self._config.crop_left = value
-        self.config_changed.emit()
-
     def _on_crop_top(self, value: int):
         self._config.crop_top = value
         self.config_changed.emit()
 
-    def _on_crop_right(self, value: int):
-        self._config.crop_right = value
-        self.config_changed.emit()
-
     def _on_crop_bottom(self, value: int):
         self._config.crop_bottom = value
+        self.config_changed.emit()
+
+    def _on_crop_left(self, value: int):
+        self._config.crop_left = value
+        self.config_changed.emit()
+
+    def _on_crop_right(self, value: int):
+        self._config.crop_right = value
         self.config_changed.emit()
 
     def _on_offset_x(self, value: int):

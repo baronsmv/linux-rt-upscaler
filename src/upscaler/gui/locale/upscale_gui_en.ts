@@ -1091,49 +1091,49 @@
         </message>
         <message>
             <location filename="../sidebars/tabs/hotkeys.py" line="104"/>
-            <source>Pan left</source>
-            <comment>Hotkey action label</comment>
-            <translation type="unfinished"/>
-        </message>
-        <message>
-            <location filename="../sidebars/tabs/hotkeys.py" line="105"/>
-            <source>Move the content to the left.</source>
-            <comment>Hotkey action description (tooltip)</comment>
-            <translation type="unfinished"/>
-        </message>
-        <message>
-            <location filename="../sidebars/tabs/hotkeys.py" line="111"/>
-            <source>Pan right</source>
-            <comment>Hotkey action label</comment>
-            <translation type="unfinished"/>
-        </message>
-        <message>
-            <location filename="../sidebars/tabs/hotkeys.py" line="112"/>
-            <source>Move the content to the right.</source>
-            <comment>Hotkey action description (tooltip)</comment>
-            <translation type="unfinished"/>
-        </message>
-        <message>
-            <location filename="../sidebars/tabs/hotkeys.py" line="118"/>
             <source>Pan up</source>
             <comment>Hotkey action label</comment>
             <translation type="unfinished"/>
         </message>
         <message>
-            <location filename="../sidebars/tabs/hotkeys.py" line="119"/>
+            <location filename="../sidebars/tabs/hotkeys.py" line="105"/>
             <source>Move the content up.</source>
             <comment>Hotkey action description (tooltip)</comment>
             <translation type="unfinished"/>
         </message>
         <message>
-            <location filename="../sidebars/tabs/hotkeys.py" line="125"/>
+            <location filename="../sidebars/tabs/hotkeys.py" line="111"/>
             <source>Pan down</source>
             <comment>Hotkey action label</comment>
             <translation type="unfinished"/>
         </message>
         <message>
-            <location filename="../sidebars/tabs/hotkeys.py" line="126"/>
+            <location filename="../sidebars/tabs/hotkeys.py" line="112"/>
             <source>Move the content down.</source>
+            <comment>Hotkey action description (tooltip)</comment>
+            <translation type="unfinished"/>
+        </message>
+        <message>
+            <location filename="../sidebars/tabs/hotkeys.py" line="118"/>
+            <source>Pan left</source>
+            <comment>Hotkey action label</comment>
+            <translation type="unfinished"/>
+        </message>
+        <message>
+            <location filename="../sidebars/tabs/hotkeys.py" line="119"/>
+            <source>Move the content to the left.</source>
+            <comment>Hotkey action description (tooltip)</comment>
+            <translation type="unfinished"/>
+        </message>
+        <message>
+            <location filename="../sidebars/tabs/hotkeys.py" line="125"/>
+            <source>Pan right</source>
+            <comment>Hotkey action label</comment>
+            <translation type="unfinished"/>
+        </message>
+        <message>
+            <location filename="../sidebars/tabs/hotkeys.py" line="126"/>
+            <source>Move the content to the right.</source>
             <comment>Hotkey action description (tooltip)</comment>
             <translation type="unfinished"/>
         </message>
@@ -1299,49 +1299,49 @@
         </message>
         <message>
             <location filename="../sidebars/tabs/presentation.py" line="113"/>
-            <source>Left</source>
-            <comment>Crop border label</comment>
-            <translation type="unfinished"/>
-        </message>
-        <message>
-            <location filename="../sidebars/tabs/presentation.py" line="120"/>
-            <source>Pixels to crop from the left border of the target window.</source>
-            <comment>Description of a setting (tooltip)</comment>
-            <translation type="unfinished"/>
-        </message>
-        <message>
-            <location filename="../sidebars/tabs/presentation.py" line="126"/>
             <source>Top</source>
             <comment>Crop border label</comment>
             <translation type="unfinished"/>
         </message>
         <message>
-            <location filename="../sidebars/tabs/presentation.py" line="133"/>
+            <location filename="../sidebars/tabs/presentation.py" line="120"/>
             <source>Pixels to crop from the top border of the target window.</source>
             <comment>Description of a setting (tooltip)</comment>
             <translation type="unfinished"/>
         </message>
         <message>
-            <location filename="../sidebars/tabs/presentation.py" line="139"/>
-            <source>Right</source>
-            <comment>Crop border label</comment>
-            <translation type="unfinished"/>
-        </message>
-        <message>
-            <location filename="../sidebars/tabs/presentation.py" line="146"/>
-            <source>Pixels to crop from the right border of the target window.</source>
-            <comment>Description of a setting (tooltip)</comment>
-            <translation type="unfinished"/>
-        </message>
-        <message>
-            <location filename="../sidebars/tabs/presentation.py" line="152"/>
+            <location filename="../sidebars/tabs/presentation.py" line="126"/>
             <source>Bottom</source>
             <comment>Crop border label</comment>
             <translation type="unfinished"/>
         </message>
         <message>
-            <location filename="../sidebars/tabs/presentation.py" line="159"/>
+            <location filename="../sidebars/tabs/presentation.py" line="133"/>
             <source>Pixels to crop from the bottom border of the target window.</source>
+            <comment>Description of a setting (tooltip)</comment>
+            <translation type="unfinished"/>
+        </message>
+        <message>
+            <location filename="../sidebars/tabs/presentation.py" line="139"/>
+            <source>Left</source>
+            <comment>Crop border label</comment>
+            <translation type="unfinished"/>
+        </message>
+        <message>
+            <location filename="../sidebars/tabs/presentation.py" line="146"/>
+            <source>Pixels to crop from the left border of the target window.</source>
+            <comment>Description of a setting (tooltip)</comment>
+            <translation type="unfinished"/>
+        </message>
+        <message>
+            <location filename="../sidebars/tabs/presentation.py" line="152"/>
+            <source>Right</source>
+            <comment>Crop border label</comment>
+            <translation type="unfinished"/>
+        </message>
+        <message>
+            <location filename="../sidebars/tabs/presentation.py" line="159"/>
+            <source>Pixels to crop from the right border of the target window.</source>
             <comment>Description of a setting (tooltip)</comment>
             <translation type="unfinished"/>
         </message>
