@@ -177,6 +177,7 @@ class ProfileDialog(QDialog):
                 d.icon_button_icon_size,
                 d.icon_button_icon_size,
                 color=self._gui_config.palette.icon,
+                disabled_color=self._gui_config.palette.text_subtle,
             )
         )
         capture_win_btn.setIconSize(
@@ -396,8 +397,17 @@ class ProfileDialog(QDialog):
         button_size = self._gui_config.dialog.icon_button_size
         icon_size = self._gui_config.dialog.icon_button_icon_size
         icon_color = self._gui_config.palette.icon
+        disabled_color = self._gui_config.palette.text_subtle
         button = QToolButton()
-        button.setIcon(load_icon(icon_name, icon_size, icon_size, color=icon_color))
+        button.setIcon(
+            load_icon(
+                icon_name,
+                icon_size,
+                icon_size,
+                color=icon_color,
+                disabled_color=disabled_color,
+            )
+        )
         button.setStyleSheet(dialog_icon_button_style(self._gui_config))
         button.setToolTip(tooltip)
         button.setFixedSize(button_size, button_size)

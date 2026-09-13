@@ -241,6 +241,7 @@ class TrayController(QObject):
                     16,
                     16,
                     color=self._main_window.gui_config.palette.icon,
+                    disabled_color=self._main_window.gui_config.palette.text_subtle,
                 )
             )
             stop_action.triggered.connect(self._stop_upscaling)
@@ -257,7 +258,11 @@ class TrayController(QObject):
             action = self._menu.addAction(label)
             action.setIcon(
                 load_icon(
-                    icon_name, 16, 16, color=self._main_window.gui_config.palette.icon
+                    icon_name,
+                    16,
+                    16,
+                    color=self._main_window.gui_config.palette.icon,
+                    disabled_color=self._main_window.gui_config.palette.text_subtle,
                 )
             )
             action.triggered.connect(handler)
@@ -333,6 +338,7 @@ class TrayController(QObject):
                 16,
                 16,
                 color=self._main_window.gui_config.palette.icon,
+                disabled_color=self._main_window.gui_config.palette.text_subtle,
             )
         )
         exit_action.setShortcut(QKeySequence("Ctrl+Q"))

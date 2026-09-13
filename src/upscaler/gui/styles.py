@@ -935,11 +935,8 @@ def toolbar_button_style(cfg: GUIConfig) -> str:
         border: none;
         border-radius: {cfg.profile.toolbar_button_border_radius}px;
     }}
-    QPushButton:hover {{
+    QPushButton:hover:enabled {{
         background-color: {cfg.palette.button_hover};
-    }}
-    QPushButton:disabled {{
-        opacity: 0.4;
     }}
     """
 

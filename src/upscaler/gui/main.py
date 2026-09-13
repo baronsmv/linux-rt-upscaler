@@ -502,7 +502,15 @@ class MainWindow(QMainWindow):
         if checkable:
             btn.setCheckable(True)
             btn.setChecked(checked)
-        btn.setIcon(load_icon(icon_name, icon_size, icon_size, color=cfg.palette.icon))
+        btn.setIcon(
+            load_icon(
+                icon_name,
+                icon_size,
+                icon_size,
+                color=cfg.palette.icon,
+                disabled_color=cfg.palette.text_subtle,
+            )
+        )
         btn.setIconSize(QSize(icon_size, icon_size))
         btn.setFixedSize(size, size)
         btn.setToolTip(tooltip)
@@ -618,7 +626,11 @@ class MainWindow(QMainWindow):
         icon_size = self.gui_config.filter.button_icon_size
         self.tray_toggle_btn.setIcon(
             load_icon(
-                icon_name, icon_size, icon_size, color=self.gui_config.palette.icon
+                icon_name,
+                icon_size,
+                icon_size,
+                color=self.gui_config.palette.icon,
+                disabled_color=self.gui_config.palette.text_subtle,
             )
         )
 

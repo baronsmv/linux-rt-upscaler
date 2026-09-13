@@ -456,6 +456,7 @@ class ProfilesSidebar(QWidget):
                 cfg["icon_size"],
                 cfg["icon_size"],
                 color=self._gui_config.palette.icon,
+                disabled_color=self._gui_config.palette.text_subtle,
             )
         )
         btn.setIconSize(QSize(cfg["icon_size"], cfg["icon_size"]))

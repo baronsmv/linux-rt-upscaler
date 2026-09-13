@@ -33,7 +33,17 @@ def load_pixmap(
 
 
 def load_icon(
-    name: str, width: int = 24, height: int = 24, color: Optional[str] = None
+    name: str,
+    width: int = 24,
+    height: int = 24,
+    color: Optional[str] = None,
+    disabled_color: Optional[str] = None,
 ) -> QIcon:
     """Load an SVG icon as a QIcon, suitable for buttons, labels, etc."""
-    return QIcon(load_pixmap(name, width, height, color=color))
+    icon = QIcon(load_pixmap(name, width, height, color=color))
+    if disabled_color is not None:
+        icon.addPixmap(
+            load_pixmap(name, width, height, color=disabled_color),
+            QIcon.Disabled,
+        )
+    return icon

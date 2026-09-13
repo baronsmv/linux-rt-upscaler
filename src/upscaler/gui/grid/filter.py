@@ -70,6 +70,7 @@ class FilterBar(QWidget):
                 icon_size,
                 icon_size,
                 color=self._gui_config.palette.icon,
+                disabled_color=self._gui_config.palette.text_subtle,
             )
         )
         self._clear_button.setFlat(True)
