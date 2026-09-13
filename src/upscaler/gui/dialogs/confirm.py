@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Callable, TYPE_CHECKING
 
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QMessageBox, QWidget
@@ -8,13 +8,14 @@ from PySide6.QtWidgets import QMessageBox, QWidget
 from ..styles import message_box_style
 
 if TYPE_CHECKING:
-    from ..config import ConfigManager, GUIConfig
+    from ..config import GUIConfig
 
 
 def confirm_pending_changes(
     parent: QWidget,
     gui_config: GUIConfig,
-    config_manager: ConfigManager,
+    has_pending: Callable[[], bool],
+    save_pending: Callable[[], None],
     closing: bool = False,
 ) -> bool:
     """
@@ -22,14 +23,17 @@ def confirm_pending_changes(
 
     Parameters
     ----------
-    parent : QWidget
+    parent: QWidget
         Parent for the dialog. Typically the main window.
-    gui_config : GUIConfig
+    gui_config: GUIConfig
         Active GUI configuration, used for styling the dialog.
-    config_manager : ConfigManager
-        The manager whose dirty state is checked and whose ``save``
-        method is invoked if the user picks "Save".
-    closing : bool
+    has_pending: Callable[[], bool]
+        Returns True if there are unsaved changes. Called once, before
+        the dialog is shown.
+    save_pending: Callable[[], None]
+        Invoked when the user picks Save. Responsible for persisting
+        every pending change.
+    closing: bool
         True when the changes would be lost to application closure,
         False when they would be lost to a profile switch. Affects
         only the wording of the buttons and the informational text.
@@ -40,7 +44,7 @@ def confirm_pending_changes(
         True if the caller should proceed (Save or Discard chosen),
         False if the user canceled.
     """
-    if not config_manager.is_dirty():
+    if not has_pending():
         return True
 
     if closing:
@@ -95,7 +99,7 @@ def confirm_pending_changes(
     box.exec()
     clicked = box.clickedButton()
     if clicked is save_btn:
-        config_manager.save()
+        save_pending()
         return True
     if clicked is discard_btn:
         return True

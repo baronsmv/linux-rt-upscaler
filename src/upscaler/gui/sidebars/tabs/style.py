@@ -66,7 +66,7 @@ class StyleTab(SettingsTab):
         self,
         gui_config: GUIConfig,
         initial: GUIStyleOverrides,
-        on_apply: Callable[[GUIStyleOverrides], None],
+        on_apply: Callable[[GUIStyleOverrides, bool], None],
         system_font_family: str = "",
         parent: Optional[QWidget] = None,
     ) -> None:
@@ -578,12 +578,23 @@ class StyleTab(SettingsTab):
             baseline_hex = normalize_to_hex(getattr(self._saved_palette, name))
             self._picker_widgets[name].set_baseline(baseline_hex)
 
-    def apply_clicked(self) -> None:
-        """Persist the style attributes, then rebuild the GUI."""
+    def persist(self, rebuild: bool = False) -> None:
+        """
+        Record the current editing state and persist it.
+
+        Parameters
+        ----------
+        rebuild : bool
+            Passed through to the ``on_apply`` callback. True when the
+            caller wants the UI rebuilt to reflect the new values
+            (the Apply button). False when the caller will handle the
+            consequences itself: a profile switch, application
+            shutdown, or an upcoming rebuild for another reason.
+        """
         overrides = self._current_overrides()
         self._saved = overrides
         self._refresh_baselines()
-        self._on_apply(overrides)
+        self._on_apply(overrides, rebuild=rebuild)
         self._notify_dirty()
 
     def _sync_interface_widgets(self) -> None:

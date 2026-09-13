@@ -56,8 +56,10 @@ class ProfileActions:
         current = self._config_manager.active_profile_name or ""
         if name == current:
             return
+
+        mw = self._main_window
         if not confirm_pending_changes(
-            self._main_window, self._main_window.gui_config, self._config_manager
+            mw, mw.gui_config, mw.has_pending_changes, mw.save_pending_changes
         ):
             QTimer.singleShot(0, lambda n=current: self._sidebar.set_active_item(n))
             return

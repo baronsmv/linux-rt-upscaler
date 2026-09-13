@@ -41,7 +41,7 @@ class SettingsSidebar(IconSidebarBase):
     reset_settings = Signal()
     restore_defaults = Signal()
     daemon_toggled = Signal(bool)
-    style_applied = Signal(object)
+    style_applied = Signal(object, bool)
     config_invalidated = Signal()
 
     def __init__(
@@ -67,7 +67,7 @@ class SettingsSidebar(IconSidebarBase):
         self._bc = copy.deepcopy(baseline_config)
         self._system_defaults = Config()
         self._dirty = False
-        self._style_tab: Optional[StyleTab] = None
+        self.style_tab: Optional[StyleTab] = None
 
         parse_config(self._system_defaults)
         tab_args = gui_config, config, self._bc, global_baseline
@@ -130,7 +130,7 @@ class SettingsSidebar(IconSidebarBase):
         for tab, icon, tooltip in tabs:
             self.add_tab(tab, f"tabs/{icon}", tooltip)
             if isinstance(tab, StyleTab):
-                self._style_tab = tab
+                self.style_tab = tab
                 tab.style_dirty_changed.connect(self._on_style_dirty_changed)
             else:
                 tab.config_changed.connect(self._on_config_changed)
@@ -151,8 +151,10 @@ class SettingsSidebar(IconSidebarBase):
         """Any setting was modified; re-evaluate dirty state."""
         self._check_dirty()
 
-    def _on_style_apply(self, overrides: GUIStyleOverrides) -> None:
-        self.style_applied.emit(overrides)
+    def _on_style_apply(
+        self, overrides: GUIStyleOverrides, rebuild: bool = True
+    ) -> None:
+        self.style_applied.emit(overrides, rebuild)
 
     # ------------------------------------------------------------------
     #  Dirty-state logic
@@ -224,8 +226,10 @@ class SettingsSidebar(IconSidebarBase):
         behavior seamlessly when the Style tab is active without
         disconnecting/reconnecting signals.
 
-        - _on_footer_save: dispatches to StyleTab._apply_clicked() or save_settings
-        - _on_footer_reset: dispatches to StyleTab._reset_style()   or reset_settings
+        - _on_footer_save: dispatches to StyleTab.persist(rebuild=True)
+          or save_settings
+        - _on_footer_reset: dispatches to StyleTab.reset_style()
+          or reset_settings
         """
         cfg = self.gui_config
         f = cfg.footer
@@ -304,16 +308,16 @@ class SettingsSidebar(IconSidebarBase):
 
         # Actions
         self._style_reset_palette_action.triggered.connect(
-            self._style_tab.restore_saved_palette
+            self.style_tab.restore_saved_palette
         )
         self._style_reset_saved_action.triggered.connect(
-            self._style_tab.restore_saved_interface
+            self.style_tab.restore_saved_interface
         )
         self._style_reset_default_action.triggered.connect(
-            self._style_tab.restore_default_interface
+            self.style_tab.restore_default_interface
         )
         self._style_reset_all_action.triggered.connect(
-            self._style_tab.restore_all_defaults
+            self.style_tab.restore_all_defaults
         )
 
         self._reset_btn.setMenu(self._config_reset_menu)
@@ -347,21 +351,20 @@ class SettingsSidebar(IconSidebarBase):
     def _on_footer_save(self):
         """If the Style tab is active, apply style; otherwise save config."""
         if self._is_style_tab_active():
-            self._style_tab.apply_clicked()
+            self.style_tab.persist(rebuild=True)
         else:
             self.save_settings.emit()
 
     def _on_footer_reset(self):
         """If the Style tab is active, reset to last applied; otherwise reset config."""
         if self._is_style_tab_active():
-            self._style_tab.reset_style()
+            self.style_tab.reset_style()
         else:
             self.reset_settings.emit()
 
     def _is_style_tab_active(self) -> bool:
         return (
-            self._style_tab is not None
-            and self._stack.currentWidget() is self._style_tab
+            self.style_tab is not None and self._stack.currentWidget() is self.style_tab
         )
 
     def on_tab_changed(self, index: int):
@@ -402,7 +405,7 @@ class SettingsSidebar(IconSidebarBase):
 
     def _update_style_footer_state(self) -> None:
         """Enable Apply / Reset buttons and menu actions based on dirty state."""
-        tab = self._style_tab
+        tab = self.style_tab
         dirty = tab.is_dirty()
 
         self._save_btn.setEnabled(dirty)

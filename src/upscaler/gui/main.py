@@ -317,7 +317,10 @@ class MainWindow(QMainWindow):
             )
             if profile_name:
                 if not confirm_pending_changes(
-                    self, self.gui_config, self._config_manager
+                    self,
+                    self.gui_config,
+                    self.has_pending_changes,
+                    self.save_pending_changes,
                 ):
                     return
                 self._auto_applied_profile = profile_name
@@ -537,8 +540,30 @@ class MainWindow(QMainWindow):
         if daemon_was_active:
             QTimer.singleShot(0, self.daemon_ctrl.start)
 
-    def _on_style_applied(self, overrides: GUIStyleOverrides) -> None:
-        """Persist the new style, apply it, and rebuild the GUI."""
+    def has_pending_changes(self) -> bool:
+        if self._config_manager.is_dirty():
+            return True
+        tab = self.right_sidebar.style_tab
+        return tab is not None and tab.is_dirty()
+
+    def save_pending_changes(self) -> None:
+        # Style must be persisted first
+        style_tab = self.right_sidebar.style_tab
+        if style_tab is not None and style_tab.is_dirty():
+            style_tab.persist(rebuild=False)
+        if self._config_manager.is_dirty():
+            self._config_manager.save()
+
+    def _on_style_applied(
+        self, overrides: GUIStyleOverrides, rebuild: bool = True
+    ) -> None:
+        """
+        Persist new style overrides and apply them to the running UI.
+
+        When *rebuild* is True, replaces the widget tree so every
+        affected control re-reads the new values. Used by the Apply
+        button.
+        """
         save_gui_style(overrides)
 
         self._style_overrides = overrides
@@ -546,7 +571,8 @@ class MainWindow(QMainWindow):
         self._apply_font()
         QApplication.instance().setStyleSheet(tooltip_style(self.gui_config))
 
-        self._rebuild_ui()
+        if rebuild:
+            self._rebuild_ui()
 
     def _apply_font(self) -> None:
         family = self.gui_config.font_family or self._system_font_family
@@ -705,7 +731,11 @@ class MainWindow(QMainWindow):
     def request_quit(self) -> None:
         """Quit the application, prompting if there are unsaved changes."""
         if not confirm_pending_changes(
-            self, self.gui_config, self._config_manager, closing=True
+            self,
+            self.gui_config,
+            self.has_pending_changes,
+            self.save_pending_changes,
+            closing=True,
         ):
             return
         self._force_quit()
@@ -756,7 +786,11 @@ class MainWindow(QMainWindow):
 
             # Unsaved changes
             if not confirm_pending_changes(
-                self, self.gui_config, self._config_manager, closing=True
+                self,
+                self.gui_config,
+                self.has_pending_changes,
+                self.save_pending_changes,
+                closing=True,
             ):
                 event.ignore()
                 return
