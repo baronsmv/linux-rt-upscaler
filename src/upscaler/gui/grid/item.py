@@ -177,13 +177,13 @@ class WindowTileItem(QGraphicsObject):
 
     def _should_pop(self) -> bool:
         """Return True if the tile should appear popped out."""
-        if not self._grid_focused:
-            return False
-        return self._hover or self._selected
+        if self._hover:
+            return True
+        return self._selected and self._grid_focused
 
     def _show_hover(self) -> bool:
         """Return True if the hover border should be rendered."""
-        return self._grid_focused and self._hover
+        return self._hover
 
     def _update_animation_target(self) -> None:
         """
@@ -374,7 +374,7 @@ class WindowTileItem(QGraphicsObject):
         painter.restore()
 
         # Border
-        if self._selected:
+        if self._selected and self._grid_focused:
             pen = QPen(
                 QColor(self._gui_config.palette.control),
                 self._gui_config.tile.selection_border_width,
