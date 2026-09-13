@@ -33,7 +33,7 @@ class FontPickerDialog(QDialog):
         super().__init__(parent)
         self._cfg = cfg
 
-        self.setWindowTitle(self.tr("Select Font", "Font picker dialog title"))
+        self.setWindowTitle(self.tr("Select font", "Font picker dialog title"))
         self.setStyleSheet(dialog_style(cfg))
         self.setMinimumSize(360, 460)
 

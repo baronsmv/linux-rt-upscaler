@@ -45,7 +45,7 @@ class HotkeysTab(SettingsTab):
         """Return translated ``(label, tooltip)`` pairs per hotkey action."""
         return {
             "toggle_scaling": (
-                self.tr("Toggle overlay", "Hotkey action label"),
+                self.tr("Show/hide", "Hotkey action label"),
                 self.tr(
                     "Show or hide the upscaled overlay window.",
                     "Hotkey action description (tooltip)",
@@ -66,14 +66,14 @@ class HotkeysTab(SettingsTab):
                 ),
             ),
             "cycle_model": (
-                self.tr("Cycle model", "Hotkey action label"),
+                self.tr("Change model", "Hotkey action label"),
                 self.tr(
                     "Switch to the next SRCNN upscaling model.",
                     "Hotkey action description (tooltip)",
                 ),
             ),
             "cycle_geometry": (
-                self.tr("Cycle geometry", "Hotkey action label"),
+                self.tr("Change geometry", "Hotkey action label"),
                 self.tr(
                     "Cycle through output sizing modes (fit, stretch, cover).",
                     "Hotkey action description (tooltip)",

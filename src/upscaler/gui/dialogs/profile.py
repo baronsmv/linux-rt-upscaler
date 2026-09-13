@@ -65,9 +65,9 @@ class ProfileDialog(QDialog):
 
         is_duplicate = source_profile is not None
         self.setWindowTitle(
-            self.tr("New Profile", "Window title of the profile creator")
+            self.tr("New profile", "Window title of the profile creator")
             if is_duplicate or not profile_name
-            else self.tr("Profile Editor", "Window title of the profile editor")
+            else self.tr("Edit profile", "Window title of the profile editor")
         )
         self.setMinimumWidth(d.min_width)
         self.setStyleSheet(dialog_style(self._gui_config))

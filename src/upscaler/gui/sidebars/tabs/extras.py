@@ -30,8 +30,8 @@ class ExtrasTab(SettingsTab):
         )
 
     def _build_content(self) -> None:
-        # ---- Screenshot Location ----
-        self._add_section(self.tr("Screenshot location", "Settings section"))
+        # ---- Screenshot ----
+        self._add_section(self.tr("Screenshot", "Settings section"))
         self._add_path_picker(
             self.tr("Directory", "Label of setting (must be short)"),
             self._config.screenshot_dir,
