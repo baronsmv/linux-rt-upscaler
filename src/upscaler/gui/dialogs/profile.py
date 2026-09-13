@@ -475,7 +475,7 @@ class ProfileDialog(QDialog):
     def _select_icon_file(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            self.tr("Select Icon", "Select Icon dialog title"),
+            self.tr("Select icon", "Select icon dialog title"),
             "",
             "Images (*.png *.jpg *.jpeg *.bmp)",
         )

@@ -1660,8 +1660,8 @@ Leave a rule blank to ignore that property.</source>
     </message>
     <message>
       <location filename="../dialogs/profile.py" line="478" />
-      <source>Select Icon</source>
-      <comment>Select Icon dialog title</comment>
+      <source>Select icon</source>
+      <comment>Select icon dialog title</comment>
       <translation type="unfinished" />
     </message>
     <message>
