@@ -860,7 +860,7 @@ def message_box_style(cfg: GUIConfig) -> str:
     """Style for the QMessageBox that displays messages."""
     return f"""
     QMessageBox {{
-        background-color: {cfg.palette.button};
+        {background_rule(cfg.palette.background)}
         color: {cfg.palette.text};
         font-size: {cfg.dialog.label_font_size}px;
     }}
@@ -879,6 +879,7 @@ def message_box_style(cfg: GUIConfig) -> str:
     }}
     QMessageBox QPushButton:hover {{
         background-color: {cfg.palette.button_hover};
+        border-color: {cfg.palette.border_hover};
     }}
     QMessageBox QPushButton:pressed {{
         background-color: {cfg.palette.button_hover};
