@@ -70,6 +70,7 @@ class MainWindow(QMainWindow):
         self._tray_controller: Optional[TrayController] = None
         self.force_exit: bool = False
         self._auto_applied_profile: Optional[str] = None
+        self._session_starting = False
         self._stopping_manual_session: bool = False
         self._hide_gui_after_stop: bool = False
         self._start_hidden: bool = bool(
@@ -296,9 +297,9 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _on_window_selected(self, win_info: WindowInfo) -> None:
         """Auto-apply a matching profile, then start a one-shot pipeline."""
-        if self.manual_session is not None:
+        if self.manual_session is not None or self._session_starting:
             logger.warning(
-                "A manual session is already active; ignoring new selection."
+                "A manual session is already active or starting, ignoring..."
             )
             return
 
@@ -333,7 +334,8 @@ class MainWindow(QMainWindow):
                 self._config_manager.active_profile_name,
             )
 
-        QTimer.singleShot(0, lambda: self._start_pipeline(win_info))
+        self._session_starting = True
+        QTimer.singleShot(0, lambda w=win_info: self._start_pipeline(w))
 
     def _on_splitter_moved(self, pos: int, index: int) -> None:
         """Save sidebar visibility based on current splitter sizes."""
@@ -348,16 +350,21 @@ class MainWindow(QMainWindow):
         """Called when the overlay of a manual session is closed."""
         if self.force_exit:
             return
-        if self.settings.value("tray/enabled", False, type=bool):
+        tray_enabled = self.settings.value("tray/enabled", False, type=bool)
+        if self.manual_session is not None:
             self.stop_manual_session()
-        else:
-            if self.manual_session:
-                self.manual_session.shutdown()
-                self.manual_session = None
+        if not tray_enabled:
             QApplication.instance().quit()
 
     def _start_pipeline(self, win_info: WindowInfo) -> None:
         """Create a temporary pipeline session for the given window."""
+        self._session_starting = False
+        if self.force_exit:
+            return
+        if self.manual_session is not None:
+            logger.warning("Manual session already active; aborting new start.")
+            return
+
         logger.info("Starting upscale for: '%s'", win_info.title)
         self._hide_gui_after_stop = not (self.isVisible() and not self.isMinimized())
         self.grid_mgr.stop()
@@ -662,6 +669,7 @@ class MainWindow(QMainWindow):
         if self._stopping_manual_session:
             return
         self._stopping_manual_session = True
+        self._session_starting = False
         try:
             session = self.manual_session
             self.manual_session = None
@@ -754,6 +762,7 @@ class MainWindow(QMainWindow):
     def _force_quit(self) -> None:
         """Immediately shut down the application, ignoring tray preferences."""
         self.force_exit = True
+        self._session_starting = False
 
         # Stop any active manual session
         if self.manual_session is not None:
