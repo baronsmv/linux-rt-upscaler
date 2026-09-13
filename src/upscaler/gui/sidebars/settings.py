@@ -143,6 +143,22 @@ class SettingsSidebar(IconSidebarBase):
         self.layout().addWidget(footer)
 
         self._check_dirty()
+        QTimer.singleShot(0, self._prebuild_tabs)
+
+    def _prebuild_tabs(self) -> None:
+        """Build every lazy tab during idle periods, one per event-loop pass."""
+        pending = [
+            self._stack.widget(i)
+            for i in range(self._stack.count())
+            if isinstance(self._stack.widget(i), SettingsTab)
+            and not self._stack.widget(i)._built
+        ]
+        if not pending:
+            return
+        tab = pending.pop(0)
+        tab.ensure_built()
+        if pending:
+            QTimer.singleShot(50, self._prebuild_tabs)
 
     # ------------------------------------------------------------------
     #  Slots

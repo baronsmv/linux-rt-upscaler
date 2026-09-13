@@ -469,13 +469,13 @@ class MainWindow(QMainWindow):
         new_sidebar.reset_settings.connect(self._on_reset_settings)
         new_sidebar.restore_defaults.connect(self._on_restore_defaults)
         new_sidebar.style_applied.connect(self._on_style_applied)
+        new_sidebar.current_tab_index = tab_index
+        new_sidebar.on_tab_changed(tab_index)
         if idx != -1:
             self.splitter.replaceWidget(idx, new_sidebar)
             old.deleteLater()
         else:
             self.splitter.addWidget(new_sidebar)
-        new_sidebar.current_tab_index = tab_index
-        new_sidebar.on_tab_changed(tab_index)
         self.right_sidebar = new_sidebar
 
         # Update daemon base config so next match uses current GUI settings
