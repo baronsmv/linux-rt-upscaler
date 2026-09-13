@@ -311,31 +311,36 @@ class MainWindow(QMainWindow):
             self.daemon_ctrl.request_switch(win_info)
             return
 
-        # No daemon mode: auto-match only while Global is selected
-        if not self._config_manager.active_profile_name:  # Auto-match
-            profile_name, _ = find_matching_profile(
-                self._config_manager.profiles, win_info
-            )
-            if profile_name:
-                if not confirm_pending_changes(
-                    self,
-                    self.gui_config,
-                    self.has_pending_changes,
-                    self.save_pending_changes,
-                ):
-                    return
-                self._auto_applied_profile = profile_name
-                self._config_manager.set_active_profile(profile_name)
-                self.left_sidebar.set_active_item(profile_name)
-                logger.info("Auto-applied profile '%s'.", profile_name)
-        else:  # Manual profile
-            logger.info(
-                "Manual profile applied: '%s'.",
-                self._config_manager.active_profile_name,
-            )
-
         self._session_starting = True
-        QTimer.singleShot(0, lambda w=win_info: self._start_pipeline(w))
+
+        try:
+            # No daemon mode: auto-match only while Global is selected
+            if not self._config_manager.active_profile_name:  # Auto-match
+                profile_name, _ = find_matching_profile(
+                    self._config_manager.profiles, win_info
+                )
+                if profile_name:
+                    if not confirm_pending_changes(
+                        self,
+                        self.gui_config,
+                        self.has_pending_changes,
+                        self.save_pending_changes,
+                    ):
+                        self._session_starting = False
+                        return
+                    self._auto_applied_profile = profile_name
+                    self._config_manager.set_active_profile(profile_name)
+                    self.left_sidebar.set_active_item(profile_name)
+                    logger.info("Auto-applied profile '%s'.", profile_name)
+            else:  # Manual profile
+                logger.info(
+                    "Manual profile applied: '%s'.",
+                    self._config_manager.active_profile_name,
+                )
+            QTimer.singleShot(0, lambda w=win_info: self._start_pipeline(w))
+        except Exception:
+            self._session_starting = False
+            raise
 
     def _on_splitter_moved(self, pos: int, index: int) -> None:
         """Save sidebar visibility based on current splitter sizes."""
@@ -346,13 +351,12 @@ class MainWindow(QMainWindow):
         self.settings.setValue("gui/left_sidebar_hidden", left_hidden)
         self.settings.setValue("gui/right_sidebar_hidden", right_hidden)
 
-    def _on_manual_overlay_closed(self) -> None:
+    def _on_manual_overlay_closed(self, session: PipelineSession) -> None:
         """Called when the overlay of a manual session is closed."""
-        if self.force_exit:
+        if self.force_exit or self.manual_session is not session:
             return
         tray_enabled = self.settings.value("tray/enabled", False, type=bool)
-        if self.manual_session is not None:
-            self.stop_manual_session()
+        self.stop_manual_session()
         if not tray_enabled:
             QApplication.instance().quit()
 
@@ -400,9 +404,11 @@ class MainWindow(QMainWindow):
                 profile_name=profile_name_arg,
                 on_exit=self._on_exit_hotkey_pressed,
             )
-            self.manual_session.overlay.closed.connect(self._on_manual_overlay_closed)
+            self.manual_session.overlay.closed.connect(
+                lambda s=self.manual_session: self._on_manual_overlay_closed(s)
+            )
             self.manual_session.pipeline.finished.connect(
-                self._on_manual_pipeline_finished
+                lambda s=self.manual_session: self._on_manual_pipeline_finished(s)
             )
         except Exception as e:
             logger.exception("Failed to start pipeline")
@@ -656,8 +662,8 @@ class MainWindow(QMainWindow):
                 self._tray_controller.deleteLater()
                 self._tray_controller = None
 
-    def _on_manual_pipeline_finished(self) -> None:
-        if self.force_exit or self.manual_session is None:
+    def _on_manual_pipeline_finished(self, session: PipelineSession) -> None:
+        if self.force_exit or self.manual_session is not session:
             return
         if self.settings.value("tray/enabled", False, type=bool):
             self.stop_manual_session()
