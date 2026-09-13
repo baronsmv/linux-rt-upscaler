@@ -1,5 +1,7 @@
-from PySide6.QtGui import QFontMetrics
-from PySide6.QtWidgets import QMessageBox
+from __future__ import annotations
+
+from PySide6.QtGui import QFontMetrics, QIcon
+from PySide6.QtWidgets import QDialogButtonBox, QMessageBox
 
 
 def fit_message_box(box: QMessageBox) -> None:
@@ -18,3 +20,9 @@ def fit_message_box(box: QMessageBox) -> None:
         button.setMinimumWidth(metrics.horizontalAdvance(button.text()) + 32)
     box.layout().invalidate()
     box.adjustSize()
+
+
+def strip_button_box_icons(box: QDialogButtonBox) -> None:
+    """Remove the platform style's default icons from a QDialogButtonBox."""
+    for button in box.buttons():
+        button.setIcon(QIcon())

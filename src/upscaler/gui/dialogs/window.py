@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from ..icons import load_pixmap
 from ..styles import dialog_style, line_edit_style
+from ..utils import strip_button_box_icons
 from ...window import WindowInfo, list_windows, get_window_icon
 
 if TYPE_CHECKING:
@@ -67,6 +68,7 @@ class WindowPickerDialog(QDialog):
 
         # Buttons
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        strip_button_box_icons(buttons)
         buttons.accepted.connect(self._accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

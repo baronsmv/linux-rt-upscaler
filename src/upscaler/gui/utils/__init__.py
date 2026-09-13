@@ -11,7 +11,7 @@ from .color import (
     to_stylesheet_color,
 )
 from .scheme import scheme_is_light
-from .widgets import fit_message_box
+from .widgets import fit_message_box, strip_button_box_icons
 
 __all__ = [
     "NON_COLOR_KEYWORDS",
@@ -23,5 +23,6 @@ __all__ = [
     "qcolor_to_rgba_hex",
     "rgba_hex_to_qcolor",
     "scheme_is_light",
+    "strip_button_box_icons",
     "to_stylesheet_color",
 ]

@@ -36,6 +36,7 @@ from ..styles import (
     scroll_area_style,
     scrollbar_style,
 )
+from ..utils import strip_button_box_icons
 from ...window import get_window_icon
 
 if TYPE_CHECKING:
@@ -326,6 +327,7 @@ class ProfileDialog(QDialog):
         self._button_box = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
+        strip_button_box_icons(self._button_box)
         self._button_box.accepted.connect(self._validate_and_accept)
         self._button_box.rejected.connect(self.reject)
         btn_row.addWidget(self._button_box)

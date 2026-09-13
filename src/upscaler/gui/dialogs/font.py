@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..styles import dialog_style, line_edit_style
+from ..utils import strip_button_box_icons
 
 if TYPE_CHECKING:
     from ..config import GUIConfig
@@ -75,6 +76,7 @@ class FontPickerDialog(QDialog):
 
         # ---- Buttons ------------------------------------------------------
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        strip_button_box_icons(buttons)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
