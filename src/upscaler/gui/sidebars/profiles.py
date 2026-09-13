@@ -191,7 +191,7 @@ class ProfilesSidebar(QWidget):
         )
         self._edit_btn = self._make_tool_button(
             "actions/edit",
-            self.tr("Edit match criteria (Enter/F2)", "Profile edit action tooltip"),
+            self.tr("Edit profile (Enter/F2)", "Profile edit action tooltip"),
             self._emit_edit,
             btn_gui_config,
             enabled=False,

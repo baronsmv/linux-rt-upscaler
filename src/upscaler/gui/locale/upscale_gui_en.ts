@@ -1724,7 +1724,7 @@ Please choose a different name.</source>
     </message>
     <message>
       <location filename="../sidebars/profiles.py" line="194" />
-      <source>Edit match criteria (Enter/F2)</source>
+      <source>Edit profile (Enter/F2)</source>
       <comment>Profile edit action tooltip</comment>
       <translation type="unfinished" />
     </message>
