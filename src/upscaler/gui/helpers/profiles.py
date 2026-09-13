@@ -10,6 +10,8 @@ from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QMessageBox, QDialog
 
 from ..dialogs import ProfileDialog, confirm_pending_changes
+from ..styles import message_box_style
+from ..utils import fit_message_box
 
 if TYPE_CHECKING:
     from ..config import ConfigManager
@@ -245,27 +247,51 @@ class ProfileActions:
     def delete_profile(self, name: str) -> None:
         """Delete a profile after confirmation."""
         try:
-            reply = QMessageBox.question(
-                self._main_window,
+            box = QMessageBox(self._main_window)
+            box.setIcon(QMessageBox.Warning)
+            box.setWindowTitle(
                 QCoreApplication.translate(
-                    "ProfileActions",
-                    "Delete profile",
-                    "Delete window confirmation title",
-                ),
-                QCoreApplication.translate(
-                    "ProfileActions",
-                    "Delete profile '{0}'?",
-                    "Delete profile confirmation",
-                ).format(name),
-                QMessageBox.Yes | QMessageBox.No,
+                    "ProfileActions", "Delete profile", "Dialog title"
+                )
             )
-            if reply == QMessageBox.Yes:
-                self._remove_icon_file(name)
-                self._config_manager.delete_profile(name)
-                self._sidebar.update_profiles(self._config_manager.profiles)
-                self._sidebar.populate_list(active_name=None)
-                if self._config_manager.active_profile_name == name:
-                    self._config_manager.set_active_profile(None)
+            box.setText(
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "Delete the profile '{0}'?",
+                    "Dialog main text",
+                ).format(name)
+            )
+            box.setInformativeText(
+                QCoreApplication.translate(
+                    "ProfileActions",
+                    "This action cannot be undone.",
+                    "Dialog secondary text",
+                )
+            )
+
+            delete_btn = box.addButton(
+                QCoreApplication.translate("ProfileActions", "Delete", "Dialog button"),
+                QMessageBox.DestructiveRole,
+            )
+            cancel_btn = box.addButton(
+                QCoreApplication.translate("ProfileActions", "Cancel", "Dialog button"),
+                QMessageBox.RejectRole,
+            )
+            box.setDefaultButton(cancel_btn)
+            box.setEscapeButton(cancel_btn)
+            box.setStyleSheet(message_box_style(self._main_window.gui_config))
+            fit_message_box(box)
+
+            box.exec()
+            if box.clickedButton() is not delete_btn:
+                return
+
+            self._remove_icon_file(name)
+            self._config_manager.delete_profile(name)
+            self._sidebar.update_profiles(self._config_manager.profiles)
+            self._sidebar.populate_list(active_name=None)
+            if self._config_manager.active_profile_name == name:
+                self._config_manager.set_active_profile(None)
         except Exception:
             logger.exception("Failed to delete profile")
             QMessageBox.critical(
