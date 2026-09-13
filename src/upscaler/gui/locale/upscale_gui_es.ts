@@ -1717,7 +1717,7 @@ A profile is applied automatically when the upscaled window matches all the rule
 Profiles are checked top-to-bottom: the first match wins.
 Leave a rule blank to ignore that property.</source>
         <comment>Profile note</comment>
-        <translation>Los perfiles permiten cambiar la configuración para ventanas y configuraciones específicas.
+        <translation>Los perfiles permiten definir una configuración para ventanas y configuraciones específicas.
 Un perfil se aplica automáticamente cuando la ventana escalada cumple todas las reglas definidas aquí, o cuando se selecciona manualmente antes del escalado.
 Los perfiles se evalúan de arriba a abajo: la primera coincidencia gana.
 Deja una regla en blanco para ignorar esa propiedad.</translation>
@@ -1809,31 +1809,31 @@ Por favor, elige un nombre diferente.</translation>
         <location filename="../sidebars/profiles.py" line="201"/>
         <source>Delete profile (Del)</source>
         <comment>Profile delete action tooltip</comment>
-        <translation type="unfinished"></translation>
+        <translation>Eliminar perfil (Supr)</translation>
     </message>
     <message>
         <location filename="../sidebars/profiles.py" line="209"/>
         <source>Move up (Ctrl+Shift+Up)</source>
         <comment>Profile move up action tooltip</comment>
-        <translation type="unfinished"></translation>
+        <translation>Mover hacia arriba (Ctrl+Mayús+Arriba)</translation>
     </message>
     <message>
         <location filename="../sidebars/profiles.py" line="216"/>
         <source>Move down (Ctrl+Shift+Down)</source>
         <comment>Profile move down action tooltip</comment>
-        <translation type="unfinished"></translation>
+        <translation>Mover hacia abajo (Ctrl+Mayús+Abajo)</translation>
     </message>
     <message>
         <location filename="../sidebars/profiles.py" line="334"/>
         <source>Global</source>
         <comment>Global entry profile name</comment>
-        <translation type="unfinished"></translation>
+        <translation>Global</translation>
     </message>
     <message>
         <location filename="../sidebars/profiles.py" line="340"/>
         <source>When selected, the settings panel on the right edits the global configuration.</source>
         <comment>Global entry profile tooltip</comment>
-        <translation type="unfinished"></translation>
+        <translation>Si está seleccionado, el panel de configuración de la derecha modifica la configuración global.</translation>
     </message>
     <message>
         <location filename="../sidebars/profiles.py" line="350"/>
@@ -1841,13 +1841,15 @@ Por favor, elige un nombre diferente.</translation>
 
 You can create a profile to override settings for a specific window, matched by its title or size.</source>
         <comment>No profile message</comment>
-        <translation type="unfinished"></translation>
+        <translation>La configuración global se aplica a todas las ventanas.
+
+Puedes crear un perfil para definir la configuración de una ventana específica, coincidiendo por su título o tamaño.</translation>
     </message>
     <message>
         <location filename="../sidebars/profiles.py" line="398"/>
         <source>When selected, the settings panel on the right edits the settings overrides for &apos;{0}&apos;.</source>
         <comment>Profile selected tooltip</comment>
-        <translation type="unfinished"></translation>
+        <translation>Si está seleccionado, el panel de configuración de la derecha define la configuración específica para &apos;{0}&apos;.</translation>
     </message>
 </context>
 <context>
@@ -1856,19 +1858,19 @@ You can create a profile to override settings for a specific window, matched by 
         <location filename="../sidebars/tabs/scaler.py" line="32"/>
         <source>Scaling</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escalado</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="41"/>
         <source>Sampler algorithm</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Algoritmo de muestreo</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="43"/>
         <source>Upsampler</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Sobremuestrador</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="49"/>
@@ -1877,13 +1879,16 @@ You can create a profile to override settings for a specific window, matched by 
 • AMD FSR 1.0 — fast, best for 3D but may introduce artifacts on fine details
 • NVIDIA Image Scaling — oversharpens and introduces ringing, not recommended</source>
         <comment>Description of a setting (tooltip). Do not translate the filter names (Lanczos-2, Lanczos-3, FSR, NIS).</comment>
-        <translation type="unfinished"></translation>
+        <translation>Se aplica tras el escalado SRCNN para alcanzar el tamaño de salida deseado (ej., de 1440p a 4K).
+• Lanczos-2 — nítido; ideal para arte 2D y texto (recomendado).
+• AMD FSR 1.0 — rápido; ideal para 3D, aunque puede generar artefactos en detalles finos.
+• NVIDIA Image Scaling — tiene un contraste excesivo y provoca un efecto de halo (ringing), no recomendado.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="59"/>
         <source>Downsampler</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Submuestrador</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="67"/>
@@ -1891,19 +1896,21 @@ You can create a profile to override settings for a specific window, matched by 
 • Catmull-Rom (bicubic) — sharp and fast, excellent tradeoff for most cases (recommended)
 • Adaptive Lanczos — slower, best overall quality, handles extreme downscaling well</source>
         <comment>Description of a setting (tooltip). Do not translate the filter names (Catmull-Rom, Adaptive Lanczos).</comment>
-        <translation type="unfinished"></translation>
+        <translation>Se aplica tras el escalado SRCNN para reducir la imagen al tamaño de salida deseado (ej., de 1440p a 1080p).
+• Catmull-Rom (bicúbico) —  nítido y rápido, ofrece un equilibrio excelente para la mayoría de los casos (recomendado).
+• Lanczos adaptativo — más lento, pero con una mejor calidad en general; es ideal para submuestreos extremos.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="77"/>
         <source>Sampler options</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Opciones de muestreo</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="79"/>
         <source>Blur</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Desenfoque</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="87"/>
@@ -1911,7 +1918,9 @@ You can create a profile to override settings for a specific window, matched by 
 Lower values are sharper but may ring; higher values are smoother.
 Recommended range: 0.8 - 1.2.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ancho del núcleo (factor de desenfoque) para Lanczos y Catmull-Rom.
+Valores más bajos producen mayor nitidez, pero pueden generar artefactos; valores más altos producen mayor suavidad.
+Rango recomendado: 0,8 - 1,2.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="95"/>
