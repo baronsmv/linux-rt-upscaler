@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 from ...styles import (
     setting_highlight_background_style,
     setting_highlight_bar_style,
-    setting_highlight_label_style,
+    setting_label_style,
 )
 
 if TYPE_CHECKING:
@@ -68,11 +68,13 @@ class BaseRow(QWidget):
     # ------------------------------------------------------------------
     #  Subclass API
     # ------------------------------------------------------------------
-    def _init_label(self, text: str) -> QLabel:
+    def _init_label(self, text: str, tooltip: Optional[str] = None) -> QLabel:
         """Create a standard row label and add it to the content layout."""
         self._label = QLabel(text)
         self._label.setFixedHeight(self._gui_config.sidebar.row_height)
         self._label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        if tooltip:
+            self._label.setToolTip(tooltip)
         self._content_layout.addWidget(self._label)
         return self._label
 
@@ -103,10 +105,7 @@ class BaseRow(QWidget):
         self._apply_highlight_style(highlighted)
 
     def _apply_highlight_style(self, highlighted: bool) -> None:
-        """
-        Update the label color.
-        Disabled always wins: dimmed text, no highlight styling.
-        """
+        """Update the label color to reflect highlight state."""
         if self._label is None:
             return
         if not self.isEnabled():
@@ -116,9 +115,7 @@ class BaseRow(QWidget):
         else:
             color = self._gui_config.palette.text
 
-        self._label.setStyleSheet(
-            setting_highlight_label_style(self._gui_config, color=color)
-        )
+        self._label.setStyleSheet(setting_label_style(self._gui_config, color=color))
 
     def set_baseline(self, baseline: Any) -> None:
         self._baseline = baseline

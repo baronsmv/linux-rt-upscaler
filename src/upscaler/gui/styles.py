@@ -218,9 +218,15 @@ def setting_highlight_background_style(cfg: GUIConfig, highlighted: bool) -> str
     return "background-color: transparent;"
 
 
-def setting_highlight_label_style(cfg: GUIConfig, color: str) -> str:
+def setting_label_style(cfg: GUIConfig, color: str) -> str:
     """Label style that reflects highlight state."""
-    return f"color: {color}; font-size: {cfg.sidebar.tab_font_size}px;"
+    return f"""
+    QLabel {{
+        color: {color};
+        font-size: {cfg.sidebar.tab_font_size}px;
+    }}
+    {tooltip_style(cfg)}
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -308,6 +314,9 @@ def checkbox_style(
         font-size: {cfg.sidebar.tab_font_size}px;
         padding: {cfg.checkbox.padding_v}px 0;
     }}
+    QCheckBox:hover {{
+        color: {palette.text_hover};
+    }}
     QCheckBox::indicator {{
         width: {cfg.checkbox.indicator_size}px;
         height: {cfg.checkbox.indicator_size}px;
@@ -315,9 +324,16 @@ def checkbox_style(
         border-radius: {cfg.checkbox.indicator_radius}px;
         background-color: transparent;
     }}
+    QCheckBox::indicator:hover {{
+        border-color: {palette.action_hover};
+    }}
     QCheckBox::indicator:checked {{
         background-color: {palette.action};
         border-color: {palette.action};
+    }}
+    QCheckBox::indicator:checked:hover {{
+        background-color: {palette.action_hover};
+        border-color: {palette.action_hover};
     }}
     {tooltip_style(cfg)}
     """

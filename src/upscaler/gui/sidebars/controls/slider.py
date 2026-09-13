@@ -37,7 +37,7 @@ class SliderRow(BaseRow):
         self._scale_factor = scale_factor
 
         # Label
-        self._init_label(label)
+        self._init_label(label, tooltip)
 
         # Slider
         self._slider = QSlider(Qt.Horizontal)

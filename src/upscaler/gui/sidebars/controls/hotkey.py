@@ -281,7 +281,7 @@ class HotkeyRow(BaseRow):
             baseline=(sequence if baseline is None else baseline),
             parent=parent,
         )
-        self._init_label(label)
+        self._init_label(label, tooltip)
         self._content_layout.setStretchFactor(self._label, 1)
 
         self._button = HotkeyCaptureButton(cfg, sequence=sequence)

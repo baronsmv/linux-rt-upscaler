@@ -38,7 +38,7 @@ class ColorPickerRow(BaseRow):
             self._current_color = QColor(0, 0, 0, 255)
 
         # Label
-        self._init_label(label)
+        self._init_label(label, tooltip)
         self._content_layout.addStretch()
 
         if tooltip:

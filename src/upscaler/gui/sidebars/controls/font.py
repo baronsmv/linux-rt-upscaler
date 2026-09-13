@@ -47,7 +47,7 @@ class FontPickerRow(BaseRow):
         self._current = current
         self._system_family = system_family
 
-        self._init_label(label)
+        self._init_label(label, tooltip)
         self._content_layout.setStretchFactor(self._label, 1)
 
         # ---- Font-family button -------------------------------------------

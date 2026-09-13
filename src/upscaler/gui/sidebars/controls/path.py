@@ -39,7 +39,7 @@ class PathPickerRow(BaseRow):
         super().__init__(gui_config, baseline, parent)
 
         # Label
-        self._init_label(label)
+        self._init_label(label, tooltip)
 
         if tooltip:
             self.setToolTip(tooltip)
