@@ -73,7 +73,6 @@ class FilterBar(QWidget):
             )
         )
         self._clear_button.setFlat(True)
-        self._clear_button.setCursor(Qt.PointingHandCursor)
         self._clear_button.clicked.connect(self._line_edit.clear)
         self._clear_button.hide()
 

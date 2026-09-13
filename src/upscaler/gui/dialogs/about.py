@@ -136,7 +136,6 @@ class AboutDialog(QDialog):
         # Close button
         close_btn = QPushButton(self.tr("Close", "Close button"))
         close_btn.setFixedSize(a.close_button_width, a.close_button_height)
-        close_btn.setCursor(Qt.PointingHandCursor)
         close_btn.clicked.connect(self.accept)
         close_btn.setStyleSheet(close_dialog_button_style(gui_config))
 

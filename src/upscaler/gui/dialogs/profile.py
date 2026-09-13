@@ -402,7 +402,6 @@ class ProfileDialog(QDialog):
         button.setToolTip(tooltip)
         button.setFixedSize(button_size, button_size)
         button.setIconSize(QSize(icon_size, icon_size))
-        button.setCursor(Qt.PointingHandCursor)
         button.setAutoRaise(True)
         button.setEnabled(enabled)
         button.clicked.connect(callback)

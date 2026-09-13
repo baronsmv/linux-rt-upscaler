@@ -247,12 +247,7 @@ class ProfilesSidebar(QWidget):
 
         # --- Mouse cursor over list items ---
         if obj is self._list.viewport() and event.type() == QEvent.MouseMove:
-            pos = event.position().toPoint()
-            item = self._list.itemAt(pos)
-            if item is not None:
-                self._list.viewport().setCursor(Qt.PointingHandCursor)
-            else:
-                self._list.viewport().setCursor(Qt.ArrowCursor)
+            self._list.viewport().setCursor(Qt.ArrowCursor)
             return False  # don't consume the event
 
         # --- Keyboard shortcuts when the list widget has focus ---
@@ -466,7 +461,6 @@ class ProfilesSidebar(QWidget):
         btn.setIconSize(QSize(cfg["icon_size"], cfg["icon_size"]))
         btn.setToolTip(tooltip)
         btn.setFixedSize(cfg["size"], cfg["size"])
-        btn.setCursor(Qt.PointingHandCursor)
         btn.setFlat(True)
         btn.setEnabled(enabled)
         btn.clicked.connect(callback)

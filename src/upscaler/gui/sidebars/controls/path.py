@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QLineEdit,
@@ -63,7 +63,6 @@ class PathPickerRow(BaseRow):
         self._browse_btn.setToolTip(
             self.tr("Browse for directory.", "Path selector placeholder")
         )
-        self._browse_btn.setCursor(Qt.PointingHandCursor)
         self._browse_btn.clicked.connect(self._browse)
         self._content_layout.addWidget(self._browse_btn)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QColorDialog, QPushButton, QWidget
 
@@ -48,7 +48,6 @@ class ColorPickerRow(BaseRow):
         self._button.setFixedSize(
             gui_config.swatch.swatch_width, gui_config.swatch.swatch_height
         )
-        self._button.setCursor(Qt.PointingHandCursor)
         self._button.clicked.connect(self._pick_color)
         self._content_layout.addWidget(self._button)
 

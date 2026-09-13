@@ -44,7 +44,6 @@ class SliderRow(BaseRow):
         self._slider.setRange(min_val, max_val)
         self._slider.setValue(value)
         self._slider.setFixedHeight(gui_config.sidebar.row_height)
-        self._slider.setCursor(Qt.PointingHandCursor)
         self._slider.valueChanged.connect(self._on_value_changed)
         self._content_layout.addWidget(self._slider, stretch=1)
 

@@ -105,7 +105,6 @@ class HotkeyCaptureButton(QPushButton):
         self._conflict = False
         self._disabled_shortcuts: List[QShortcut] = []
 
-        self.setCursor(Qt.PointingHandCursor)
         self.setFocusPolicy(Qt.StrongFocus)
         self.setFixedHeight(cfg.sidebar.row_height)
         self.setStyleSheet(hotkey_button_style(cfg))
@@ -296,7 +295,6 @@ class HotkeyRow(BaseRow):
         self._clear_btn.setToolTip(
             self.tr("Clear binding", "Hotkey row clear button tooltip")
         )
-        self._clear_btn.setCursor(Qt.PointingHandCursor)
         self._clear_btn.setFixedSize(cfg.sidebar.row_height, cfg.sidebar.row_height)
         self._clear_btn.setStyleSheet(hotkey_clear_button_style(cfg))
         self._clear_btn.clicked.connect(self._on_clear_clicked)

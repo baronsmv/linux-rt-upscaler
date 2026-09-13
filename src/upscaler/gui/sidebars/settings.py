@@ -250,7 +250,6 @@ class SettingsSidebar(IconSidebarBase):
             if self._profile_active
             else self.tr("Save", "Save button")
         )
-        self._save_btn.setCursor(Qt.PointingHandCursor)
         self._save_btn.setFixedHeight(cfg.footer.button_height)
         self._save_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._save_btn.clicked.connect(self._on_footer_save)
@@ -262,7 +261,6 @@ class SettingsSidebar(IconSidebarBase):
         self._reset_btn.setText(self.tr("Reset", "Reset button"))
         self._reset_btn.setToolButtonStyle(Qt.ToolButtonTextOnly)
         self._reset_btn.setPopupMode(QToolButton.MenuButtonPopup)
-        self._reset_btn.setCursor(Qt.PointingHandCursor)
         self._reset_btn.setFixedHeight(cfg.footer.button_height)
         self._reset_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._reset_btn.clicked.connect(self._on_footer_reset)

@@ -505,7 +505,6 @@ class MainWindow(QMainWindow):
         btn.setIcon(load_icon(icon_name, icon_size, icon_size, color=cfg.palette.icon))
         btn.setIconSize(QSize(icon_size, icon_size))
         btn.setFixedSize(size, size)
-        btn.setCursor(Qt.PointingHandCursor)
         btn.setToolTip(tooltip)
         btn.setAutoRaise(True)
         btn.setStyleSheet(circular_button_style(cfg, icon_size=size))

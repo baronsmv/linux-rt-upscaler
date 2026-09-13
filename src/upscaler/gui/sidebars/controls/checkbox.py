@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QCheckBox, QWidget
 
 from .base import BaseRow
@@ -39,7 +39,6 @@ class CheckBox(BaseRow):
         # Checkbox
         self._checkbox = QCheckBox(text)
         self._checkbox.setChecked(checked)
-        self._checkbox.setCursor(Qt.PointingHandCursor)
         if tooltip:
             self._checkbox.setToolTip(tooltip)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Signal, QSize
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QWidget, QGridLayout, QPushButton, QButtonGroup
 
@@ -76,7 +76,6 @@ class IconTabBar(QWidget):
         btn.setToolTip(tooltip)
         btn.setCheckable(True)
         btn.setFlat(True)
-        btn.setCursor(Qt.PointingHandCursor)
         btn.setFixedSize(side, side)
         btn.setStyleSheet(icon_tab_button_style(self._gui_config))
 

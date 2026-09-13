@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -55,7 +55,6 @@ class FontPickerRow(BaseRow):
         self._button.setStyleSheet(hotkey_button_style(cfg))
         self._button.setFixedHeight(cfg.sidebar.row_height)
         self._button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._button.setCursor(Qt.PointingHandCursor)
         self._button.clicked.connect(self._open_picker)
         if tooltip:
             self._button.setToolTip(tooltip)
@@ -66,7 +65,6 @@ class FontPickerRow(BaseRow):
         self._reset_btn.setToolTip(
             self.tr("Reset to system font", "Font row reset tooltip")
         )
-        self._reset_btn.setCursor(Qt.PointingHandCursor)
         self._reset_btn.setFixedSize(cfg.sidebar.row_height, cfg.sidebar.row_height)
         self._reset_btn.setStyleSheet(hotkey_clear_button_style(cfg))
         self._reset_btn.clicked.connect(self._on_reset_clicked)
