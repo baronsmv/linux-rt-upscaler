@@ -11,10 +11,12 @@ from .color import (
     to_stylesheet_color,
 )
 from .scheme import scheme_is_light
+from .widgets import fit_message_box
 
 __all__ = [
     "NON_COLOR_KEYWORDS",
     "background_rule",
+    "fit_message_box",
     "normalized_color",
     "normalize_to_hex",
     "preset_color_to_internal",
