@@ -171,7 +171,15 @@ class ProfileDialog(QDialog):
             "\u2009\u2009" + self.tr("Capture window", "'Capture window' button")
         )
         capture_win_btn.setIcon(
-            load_icon("actions/capture", 20, 20, color=self._gui_config.palette.icon)
+            load_icon(
+                "actions/capture",
+                d.icon_button_icon_size,
+                d.icon_button_icon_size,
+                color=self._gui_config.palette.icon,
+            )
+        )
+        capture_win_btn.setIconSize(
+            QSize(d.icon_button_icon_size, d.icon_button_icon_size)
         )
         capture_win_btn.setToolTip(
             self.tr(
