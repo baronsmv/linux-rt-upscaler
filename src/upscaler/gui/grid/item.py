@@ -174,22 +174,9 @@ class WindowTileItem(QGraphicsObject):
         self.update()
         self._update_animation_target()
 
-    def _should_pop(self) -> bool:
-        """Return True if the tile should appear popped out."""
-        if self._hover:
-            return True
-        return self._selected and self._grid_focused
-
-    def _show_hover(self) -> bool:
-        """Return True if the hover border should be rendered."""
-        return self._hover
-
     def _update_animation_target(self) -> None:
-        """
-        Re-evaluate the desired scale and smoothly animate toward it.
-        Called whenever :attr:`_hover` or :attr:`_selected` changes.
-        """
-        target = self._gui_config.tile.pop_scale if self._should_pop() else 1.0
+        """Re-evaluate the pop target and animate toward it."""
+        target = self._gui_config.tile.pop_scale if self._hover else 1.0
         if target == self._target_scale:
             return
         self._target_scale = target
@@ -370,6 +357,15 @@ class WindowTileItem(QGraphicsObject):
         painter.setPen(QColor(self._gui_config.palette.text_hover))
         painter.drawText(text_rect, Qt.AlignCenter, title)
 
+        if self._selected and self._grid_focused:
+            color = QColor(self._gui_config.palette.control)
+            if not self._grid_focused:
+                color.setAlphaF(0.4)
+            pen = QPen(color, self._gui_config.tile.selection_border_width)
+            painter.setPen(pen)
+            painter.setBrush(Qt.NoBrush)
+            painter.drawPath(bg_path)
+
         painter.restore()
 
         # Border
@@ -378,7 +374,7 @@ class WindowTileItem(QGraphicsObject):
                 QColor(self._gui_config.palette.control),
                 self._gui_config.tile.selection_border_width,
             )
-        elif self._show_hover():
+        elif self._hover:
             pen = QPen(
                 QColor(self._gui_config.palette.control_hover),
                 self._gui_config.tile.hover_border_width,
