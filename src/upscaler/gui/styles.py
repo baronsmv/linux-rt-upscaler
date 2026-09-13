@@ -387,6 +387,7 @@ def color_dialog_style(cfg: GUIConfig) -> str:
         border: none;
         border-radius: 3px;
     }}
+    {scrollbar_style(cfg)}
     """
 
 
@@ -774,6 +775,7 @@ def dialog_style(cfg: GUIConfig) -> str:
         background-color: {cfg.palette.control};
         color: {cfg.palette.text_hover};
     }}
+    {scrollbar_style(cfg)}
     """
 
 

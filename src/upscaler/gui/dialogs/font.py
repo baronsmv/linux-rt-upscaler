@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..styles import dialog_style, line_edit_style, scrollbar_style
+from ..styles import dialog_style, line_edit_style
 
 if TYPE_CHECKING:
     from ..config import GUIConfig
@@ -51,7 +51,6 @@ class FontPickerDialog(QDialog):
         # ---- Family list --------------------------------------------------
         self._list = QListWidget()
         self._list.setUniformItemSizes(True)
-        self._list.verticalScrollBar().setStyleSheet(scrollbar_style(cfg))
         self._list.itemSelectionChanged.connect(self._update_preview)
         self._list.itemDoubleClicked.connect(lambda _: self.accept())
         layout.addWidget(self._list, 1)
