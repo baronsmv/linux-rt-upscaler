@@ -89,12 +89,16 @@ def scrollbar_style(cfg: GUIConfig) -> str:
     s = cfg.scrollbar
     return f"""
     QScrollBar:vertical {{
+        background: transparent;
         width: {s.width}px;
         margin: 0;
+        border: none;
     }}
     QScrollBar:horizontal {{
+        background: transparent;
         height: {s.width}px;
         margin: 0;
+        border: none;
     }}
     QScrollBar::handle:vertical {{
         background-color: {cfg.palette.handle};
@@ -106,25 +110,25 @@ def scrollbar_style(cfg: GUIConfig) -> str:
         border-radius: {s.radius}px;
         min-width: {s.handle_min_length}px;
     }}
-    QScrollBar::handle:vertical:hover {{
-        background-color: {cfg.palette.handle_hover};
-    }}
+    QScrollBar::handle:vertical:hover,
     QScrollBar::handle:horizontal:hover {{
         background-color: {cfg.palette.handle_hover};
     }}
     QScrollBar::add-line:vertical,
-    QScrollBar::sub-line:vertical {{
-        height: 0px;
-    }}
+    QScrollBar::sub-line:vertical,
     QScrollBar::add-line:horizontal,
     QScrollBar::sub-line:horizontal {{
+        background: none;
+        border: none;
         width: 0px;
+        height: 0px;
     }}
     QScrollBar::add-page:vertical,
     QScrollBar::sub-page:vertical,
     QScrollBar::add-page:horizontal,
     QScrollBar::sub-page:horizontal {{
-        background: transparent;
+        background: none;
+        border: none;
     }}
     """
 
