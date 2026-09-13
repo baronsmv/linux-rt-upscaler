@@ -786,9 +786,11 @@ def dialog_header_label_style(_: GUIConfig) -> str:
 
 def icon_preview_style(cfg: GUIConfig) -> str:
     """Style for icon preview in Profile Editor dialog."""
+    d = cfg.dialog
+    radius = max(2, d.icon_preview_size // 8)
     return f"""
     border: 1px solid {cfg.palette.border};
-    border-radius: 4px;
+    border-radius: {radius}px;
     """
 
 
@@ -810,15 +812,21 @@ def dialog_match_label_style(cfg: GUIConfig) -> str:
 
 
 def dialog_icon_button_style(cfg: GUIConfig) -> str:
-    """Style for icon button in Profile Editor dialog."""
+    """Style for icon buttons in the Profile Editor dialog."""
+    d = cfg.dialog
+    radius = max(2, d.icon_button_size // 5)
     return f"""
     QToolButton {{
         background-color: {cfg.palette.button};
-        border-color: {cfg.palette.border};
+        border: 1px solid {cfg.palette.border};
+        border-radius: {radius}px;
     }}
     QToolButton:hover {{
         background-color: {cfg.palette.button_hover};
         border-color: {cfg.palette.border_hover};
+    }}
+    QToolButton:pressed {{
+        background-color: {cfg.palette.button_hover};
     }}
     """
 
