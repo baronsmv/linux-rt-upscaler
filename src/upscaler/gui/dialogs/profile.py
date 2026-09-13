@@ -297,9 +297,9 @@ class ProfileDialog(QDialog):
             tooltip=(
                 self.tr(
                     "Match if the window height satisfies this condition:\n"
-                    f"• Exact: 1080\n"
-                    f"• Comparison: <600, >900, <=768, >=1440\n"
-                    f"• Range: 480-1080, 600..900, 720,1024",
+                    "• Exact: 1080\n"
+                    "• Comparison: <600, >900, <=768, >=1440\n"
+                    "• Range: 480-1080, 600..900, 720,1024",
                     "Match rule tooltip",
                 )
             ),
