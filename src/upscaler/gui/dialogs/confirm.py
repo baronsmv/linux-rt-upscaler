@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Callable, TYPE_CHECKING
 
 from PySide6.QtCore import QCoreApplication
-from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from ..styles import message_box_style
+from ..utils import fit_message_box
 
 if TYPE_CHECKING:
     from ..config import GUIConfig
@@ -96,16 +96,7 @@ def confirm_pending_changes(
     box.setDefaultButton(save_btn)
     box.setEscapeButton(cancel_btn)
     box.setStyleSheet(message_box_style(gui_config))
-
-    # Force a full style pass and recompute the size
-    box.ensurePolished()
-    for button in box.buttons():
-        button.ensurePolished()
-        metrics = QFontMetrics(button.font())
-        button.setMinimumWidth(metrics.horizontalAdvance(button.text()) + 32)
-    box.layout().invalidate()
-    box.adjustSize()
-
+    fit_message_box(box)
     box.exec()
 
     clicked = box.clickedButton()
