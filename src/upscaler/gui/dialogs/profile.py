@@ -41,6 +41,7 @@ from ...window import get_window_icon
 
 if TYPE_CHECKING:
     from ..config import GUIConfig
+    from ...window import WindowInfo
 
 
 class ProfileDialog(QDialog):
@@ -421,31 +422,24 @@ class ProfileDialog(QDialog):
     # ------------------------------------------------------------------
     #  Match rule auto-fill
     # ------------------------------------------------------------------
-    def _capture_full(self):
+    def _capture_full(self) -> None:
         picker = WindowPickerDialog(
             self._gui_config, self, exclude_handle=self._exclude_handle
         )
-        if picker.exec() == QDialog.Accepted:
-            win_info = picker.selected_window()
-            if not win_info:
-                return
+        if picker.exec() != QDialog.Accepted:
+            return
 
-            # Fill name if empty
-            if not self._name_edit.text().strip():
-                self._name_edit.setText(win_info.title)
+        win_info = picker.selected_window()
+        if not win_info:
+            return
 
-            # Fill icon
-            self._apply_icon_from_window(win_info)
+        self._name_edit.setText(win_info.title)
+        self._apply_icon_from_window(win_info)
+        self._match_title_contains.setText(win_info.title)
+        self._match_width.setText(str(win_info.width))
+        self._match_height.setText(str(win_info.height))
 
-            # Fill match rules (only if fields are empty)
-            if not self._match_title_contains.text().strip():
-                self._match_title_contains.setText(win_info.title)
-            if not self._match_width.text().strip():
-                self._match_width.setText(str(win_info.width))
-            if not self._match_height.text().strip():
-                self._match_height.setText(str(win_info.height))
-
-    def _apply_icon_from_window(self, win_info):
+    def _apply_icon_from_window(self, win_info: WindowInfo) -> None:
         icon_img = get_window_icon(
             win_info.handle, size=self._gui_config.profile.saved_icon_size
         )
