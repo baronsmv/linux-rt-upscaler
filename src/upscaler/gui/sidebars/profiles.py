@@ -144,6 +144,7 @@ class ProfilesSidebar(QWidget):
             )
         )
         self._list.setSpacing(gui_config.profile.profile_spacing)
+        self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._list.verticalScrollBar().setStyleSheet(scrollbar_style(gui_config))
         self._list.setDragEnabled(True)
