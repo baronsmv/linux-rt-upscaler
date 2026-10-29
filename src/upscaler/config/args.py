@@ -1128,7 +1128,10 @@ Minimum is 0.0. Default: %(default)s.""",
 
 Intended for development and evaluation.
 One row is recorded per processed frame (including idle)
-and written to CSV_PATH when the session ends.""",
+and written to CSV_PATH when the session ends.
+
+WARNING: Memory usage grows with session length, so keep
+sessions with this option short (e.g. 30 s).""",
     )
 
     # ----------------------------------------------------------------------

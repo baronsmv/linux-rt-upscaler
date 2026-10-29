@@ -401,7 +401,6 @@ class Pipeline(QObject):
                     -1,
                 )
             )
-            self._frame_index += 1
             if self._consecutive_capture_failures >= self.config.max_capture_failures:
                 logger.critical("Too many consecutive capture failures, shutting down")
                 self._running = False
@@ -460,7 +459,6 @@ class Pipeline(QObject):
                     -1,
                 )
             )
-            self._frame_index += 1
             return
 
         # Full render path, mark the state as clean for the next frame
@@ -559,7 +557,6 @@ class Pipeline(QObject):
                 -1,
             )
         )
-        self._frame_index += 1
 
     # ----------------------------------------------------------------------
     # Window change / resize handling
