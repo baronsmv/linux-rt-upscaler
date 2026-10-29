@@ -124,6 +124,8 @@ def create_pipeline_session(
         profiles=profiles,
         profile_name=profile_name,
     )
+    if config.bench_csv:
+        pipeline.enable_benchmarking(config.bench_csv)
     pipeline.start()
 
     # ---- Focus monitor ---------------------------------------------------

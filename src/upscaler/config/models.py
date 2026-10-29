@@ -141,6 +141,7 @@ class Config:
         swapchain_debounce: Minimum seconds between swapchain recreations.
         log_level: Logging verbosity (DEBUG, INFO, WARNING, ERROR).
         log_file: Optional log file path.
+        bench_csv: Optional CSV file path for benchmarking.
         config_file: Internal path of loaded config file.
         hotkeys: Mapping of action names to hotkey strings.
     """
@@ -268,6 +269,9 @@ class Config:
     # Logging (set via flags, not directly from CLI)
     log_level: str = "INFO"
     log_file: Optional[str] = None
+
+    # Benchmark
+    bench_csv: Optional[str] = None
 
     # Config file (not a configurable option, just used internally)
     config_file: Optional[str] = None

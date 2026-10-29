@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import copy
+import csv
 import logging
 import threading
 import time
 from enum import Enum, auto
 from queue import Empty, Queue
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import shiboken6
 from PySide6.QtCore import QObject, Signal
@@ -201,6 +202,11 @@ class Pipeline(QObject):
         # FPS counter
         self._next_frame_time: float = 0.0
 
+        # Benchmark instrumentation
+        self._bench: Optional[List[tuple]] = None
+        self._frame_index: int = 0
+        self._bench_csv_path: Optional[str] = None
+
         # Failure counter
         self._consecutive_capture_failures: int = 0
 
@@ -228,6 +234,9 @@ class Pipeline(QObject):
         # Wait for the thread to finish
         if self._thread is not None and self._thread.is_alive():
             self._thread.join(timeout=2.0)
+
+        # Flush benchmark records before tearing down resources
+        self._flush_bench_csv()
 
         # Release resources unconditionally
         if self._grabber:
@@ -359,17 +368,40 @@ class Pipeline(QObject):
     def _process_one_frame(self) -> None:
         """Capture one frame, upscale it, and present."""
         # --- Wait for the previous present to complete (GPU fence) ---------
+        t0 = time.perf_counter_ns()
         if not self._swapchain_manager.wait_for_last_present(
             timeout_ns=self.config.frame_timeout
         ):
             logger.warning("Frame fence wait timed out, possible GPU hang?")
+        t1 = time.perf_counter_ns()
 
         # --- 1. Capture ----------------------------------------------------
         try:
             frame, is_dirty, rects = self._grabber.grab()
+            t2 = time.perf_counter_ns()
         except RuntimeError as e:
             logger.error(f"Frame grab failed: {e}")
             self._consecutive_capture_failures += 1
+            self._record_bench(
+                (
+                    self._frame_index,
+                    t0,
+                    t1,
+                    -1,
+                    -1,
+                    -1,
+                    0,
+                    0,
+                    0,
+                    -1,
+                    -1,
+                    "capture_failed",
+                    0,
+                    self._consecutive_capture_failures,
+                    -1,
+                )
+            )
+            self._frame_index += 1
             if self._consecutive_capture_failures >= self.config.max_capture_failures:
                 logger.critical("Too many consecutive capture failures, shutting down")
                 self._running = False
@@ -409,6 +441,26 @@ class Pipeline(QObject):
             self.presenter.present_unchanged()
             rect = self.presenter.get_scaling_rect(self._scale_factor)
             self.overlay.update_scaling_rect.emit(*rect)
+            self._record_bench(
+                (
+                    self._frame_index,
+                    t0,
+                    t1,
+                    t2,
+                    -1,
+                    -1,
+                    0,
+                    1,
+                    int(needs_redraw),
+                    len(rects),
+                    0,
+                    "idle",
+                    0,
+                    0,
+                    -1,
+                )
+            )
+            self._frame_index += 1
             return
 
         # Full render path, mark the state as clean for the next frame
@@ -416,6 +468,8 @@ class Pipeline(QObject):
         self._last_present_state_hash = current_hash
 
         # --- 4. Upscale ----------------------------------------------------
+        n_tiles = 0
+        mode = "forced_full"
         if not self.upscaler_mgr.use_tile:
             # Full-frame mode
             self.upscaler_mgr.upload_full_frame(
@@ -429,6 +483,7 @@ class Pipeline(QObject):
         else:
             # Tile mode
             if self.upscaler_mgr.should_use_tile_mode(rects):
+                mode = "tile"
                 if self.config.double_upscale:
                     # Double upscale (4x): only tile coordinates
                     tile_coords = collect_dirty_tile_coords(
@@ -437,6 +492,7 @@ class Pipeline(QObject):
                         self.crop_height,
                         self.config.tile_size,
                     )
+                    n_tiles = len(tile_coords)
                     self.upscaler_mgr.process_tile_frame(tile_coords, rects, frame)
                 else:
                     # Single upscale (2x): full CPU extraction required
@@ -449,10 +505,12 @@ class Pipeline(QObject):
                         margin=self.config.tile_context_margin,
                         skip_interior=False,
                     )
+                    n_tiles = len(dirty_tiles)
                     self.upscaler_mgr.process_tile_frame(dirty_tiles, rects, frame)
                 src_tex = self.upscaler_mgr.get_output_texture()
             else:
                 # Too many dirty tiles, fall back to full-frame
+                mode = "fallback_full"
                 logger.debug("Tile threshold exceeded, using full-frame for this frame")
                 self.upscaler_mgr.upload_full_frame(
                     frame=frame,
@@ -465,17 +523,43 @@ class Pipeline(QObject):
 
         # --- 5. Present ----------------------------------------------------
         self.presenter.set_upscaled_source(src_tex)
+        t3 = time.perf_counter_ns()
         self.presenter.present()
+        t4 = time.perf_counter_ns()
 
         # --- 6. Update mouse mapping for event forwarding -------------------
         rect = self.presenter.get_scaling_rect(self._scale_factor)
         self.overlay.update_scaling_rect.emit(*rect)
 
         # --- 7. Handle swapchain recreation (overlay resize) ----------------
+        swapchain_recreated = False
         if self._swapchain_manager.needs_recreation():
             if self._swapchain_manager.is_out_of_date():
                 logger.debug("Swapchain out-of-date, recreating")
                 self._recreate_swapchain()
+                swapchain_recreated = True
+
+        # --- 8. Record benchmark entry --------------------------------------
+        self._record_bench(
+            (
+                self._frame_index,
+                t0,
+                t1,
+                t2,
+                t3,
+                t4,
+                int(is_dirty),
+                0,
+                int(needs_redraw),
+                len(rects),
+                n_tiles,
+                mode,
+                int(swapchain_recreated),
+                0,
+                -1,
+            )
+        )
+        self._frame_index += 1
 
     # ----------------------------------------------------------------------
     # Window change / resize handling
@@ -791,3 +875,53 @@ class Pipeline(QObject):
                 self.osd.show(text, duration)
         except Empty:
             pass
+
+    def enable_benchmarking(self, csv_path: str) -> None:
+        """Enable per-frame benchmark recording to ``csv_path``."""
+        if self._bench is not None:
+            raise RuntimeError("Benchmarking already enabled for this session")
+        self._bench = []
+        self._frame_index = 0
+        self._bench_csv_path = csv_path
+        logger.info("Benchmark recording enabled: '%s'", csv_path)
+
+    def _record_bench(self, row: tuple) -> None:
+        """Append a benchmark row if benchmarking is enabled."""
+        if self._bench is not None:
+            self._bench.append(row)
+            self._frame_index += 1
+
+    def _flush_bench_csv(self) -> None:
+        """Write accumulated per-frame benchmark records to a CSV file."""
+        if self._bench is None or not self._bench:
+            return
+        rows = list(self._bench)
+        path = self._bench_csv_path
+        if path is None:
+            return
+        try:
+            with open(path, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(
+                    [
+                        "frame",
+                        "t0",
+                        "t1",
+                        "t2",
+                        "t3",
+                        "t4",
+                        "is_dirty",
+                        "idle",
+                        "osd_redraw",
+                        "n_rects",
+                        "n_tiles",
+                        "mode",
+                        "swapchain_recreated",
+                        "capture_fails",
+                        "gpu_upscale_ns",
+                    ]
+                )
+                writer.writerows(rows)
+            logger.info("Wrote %d benchmark records to '%s'", len(rows), path)
+        except OSError as e:
+            logger.error("Failed to write benchmark CSV to '%s': %s", path, e)

@@ -1116,6 +1116,22 @@ Minimum is 0.0. Default: %(default)s.""",
     )
 
     # ----------------------------------------------------------------------
+    # Benchmark section
+    # ----------------------------------------------------------------------
+    benchmark_group = parser.add_argument_group("BENCHMARK OPTIONS")
+    benchmark_group.add_argument(
+        "--bench-csv",
+        type=str,
+        default=None,
+        metavar="CSV_PATH",
+        help="""Record per-frame timing data to a CSV file for evaluation.
+
+Intended for development and evaluation.
+One row is recorded per processed frame (including idle)
+and written to CSV_PATH when the session ends.""",
+    )
+
+    # ----------------------------------------------------------------------
     # Additional groups
     # ----------------------------------------------------------------------
     additional_groups = [
@@ -1129,6 +1145,7 @@ Minimum is 0.0. Default: %(default)s.""",
         vulkan_group,
         tile_group,
         error_group,
+        benchmark_group,
     ]
     for grp in additional_groups:
         grp.additional = True
