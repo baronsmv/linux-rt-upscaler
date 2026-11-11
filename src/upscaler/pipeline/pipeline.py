@@ -862,9 +862,14 @@ class Pipeline(QObject):
         logical_w, logical_h = pending
         phys_w = int(round(logical_w * self._scale_factor))
         phys_h = int(round(logical_h * self._scale_factor))
-        if phys_w <= 0 or phys_h <= 0:
-            return
-        if phys_w == self._screen_width and phys_h == self._screen_height:
+        if (
+            phys_w <= 0
+            or phys_h <= 0
+            or (
+                abs(phys_w - self._screen_width) <= 1
+                and abs(phys_h - self._screen_height) <= 1
+            )
+        ):
             return
 
         logger.debug(
