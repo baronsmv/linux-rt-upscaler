@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, List
+from typing import Any, List, Optional, Tuple
 
 from PySide6.QtCore import QEvent, Qt, QTimer, Signal, Slot, QSettings, QRect, QPoint
 from PySide6.QtGui import QCloseEvent
@@ -41,6 +41,7 @@ class OverlayWindow(QMainWindow):
     closed = Signal()
     request_show = Signal()
     request_hide = Signal()
+    resized = Signal(int, int)
 
     update_config = Signal(Config)
     update_geometry = Signal(WindowInfo)
@@ -58,6 +59,7 @@ class OverlayWindow(QMainWindow):
         """
         super().__init__()
         self._config = config
+        self._last_emitted_size: Optional[Tuple[int, int]] = None
         start_time = time.perf_counter()
         logger.debug(
             f"Initializing OverlayWindow: mode={config.overlay_mode}, "
@@ -259,7 +261,7 @@ class OverlayWindow(QMainWindow):
 
         if mode == OverlayMode.WINDOWED.value:
             self.setGeometry(x, y, width, height)
-            self.setFixedSize(width, height)
+            self.setMinimumSize(320, 240)
             logger.debug(
                 f"Overlay set to windowed mode at ({x},{y}) size {width}x{height}"
             )
@@ -365,6 +367,18 @@ class OverlayWindow(QMainWindow):
             self._start_keepalive()
         super().showEvent(event)
 
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if self._config.overlay_mode != OverlayMode.WINDOWED.value:
+            return
+        w = event.size().width()
+        h = event.size().height()
+        if w <= 0 or h <= 0 or self._last_emitted_size == (w, h):
+            return
+        self._last_emitted_size = (w, h)
+        logger.debug("Overlay resized: %dx%d (logical)", w, h)
+        self.resized.emit(w, h)
+
     def closeEvent(self, event: QCloseEvent) -> None:
         """
         Quit the application when the overlay window is closed.
@@ -426,9 +440,7 @@ class OverlayWindow(QMainWindow):
             self._geometry.overlay_height,
         )
         if self._config.overlay_mode == OverlayMode.WINDOWED.value:
-            self.setFixedSize(
-                self._geometry.overlay_width, self._geometry.overlay_height
-            )
+            self.setMinimumSize(320, 240)
         elif self._config.overlay_mode == OverlayMode.FULLSCREEN.value:
             self.showFullScreen()
 
