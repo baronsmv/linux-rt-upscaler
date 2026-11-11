@@ -189,6 +189,8 @@ class Pipeline(QObject):
         self._wake_event = threading.Event()
         self._stopped_event = threading.Event()
         self._config_lock = threading.Lock()
+        self._pending_overlay_resize: Optional[Tuple[int, int]] = None
+        self._overlay_resize_lock = threading.Lock()
 
         # Cross-thread queues
         self._switch_queue: Queue[Optional[WindowInfo]] = (
@@ -266,6 +268,13 @@ class Pipeline(QObject):
     def request_switch(self, new_win_info: WindowInfo) -> None:
         """Request a switch to a new target window (thread-safe)."""
         self._switch_queue.put(new_win_info)
+
+    def request_overlay_resize(self, logical_width: int, logical_height: int) -> None:
+        """Queue a request to resize the pipeline output."""
+        if logical_width <= 0 or logical_height <= 0:
+            return
+        with self._overlay_resize_lock:
+            self._pending_overlay_resize = (logical_width, logical_height)
 
     def recreate_upscaler(self) -> None:
         """Rebuild the upscaler manager (model change, crop resize)."""
@@ -717,6 +726,7 @@ class Pipeline(QObject):
             try:
                 # Process window switch requests
                 self._process_switch_requests()
+                self._process_overlay_resize()
 
                 # When not following focus or daemon, exit if target dies
                 if not self.config.follow_focus and not self.config.daemon:
@@ -837,6 +847,36 @@ class Pipeline(QObject):
                 self._switch_target(new_win)
         except Empty:
             pass
+
+    def _process_overlay_resize(self) -> None:
+        """Process pending resize overlay requests."""
+        with self._overlay_resize_lock:
+            pending = self._pending_overlay_resize
+            self._pending_overlay_resize = None
+
+        if pending is None:
+            return
+
+        logical_w, logical_h = pending
+        phys_w = int(round(logical_w * self._scale_factor))
+        phys_h = int(round(logical_h * self._scale_factor))
+        if phys_w <= 0 or phys_h <= 0:
+            return
+        if phys_w == self._screen_width and phys_h == self._screen_height:
+            return
+
+        logger.debug(
+            "Overlay resize: %dx%d logical -> %dx%d physical",
+            logical_w,
+            logical_h,
+            phys_w,
+            phys_h,
+        )
+        self._screen_width = phys_w
+        self._screen_height = phys_h
+        if self.osd is not None:
+            self.osd.set_screen_size(phys_w, phys_h)
+        self._recreate_swapchain()
 
     def _update_pause_state(self) -> bool:
         """Check window state and update pause reason. Returns True if paused."""
