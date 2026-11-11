@@ -275,6 +275,7 @@ class Pipeline(QObject):
             return
         with self._overlay_resize_lock:
             self._pending_overlay_resize = (logical_width, logical_height)
+        self._wake_event.set()
 
     def recreate_upscaler(self) -> None:
         """Rebuild the upscaler manager (model change, crop resize)."""
@@ -697,6 +698,7 @@ class Pipeline(QObject):
 
         if remaining > 0:
             if self._wake_event.wait(remaining):
+                self._wake_event.clear()
                 return True
 
             # Catch-up after a possible wake-up
