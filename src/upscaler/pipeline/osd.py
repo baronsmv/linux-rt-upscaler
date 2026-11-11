@@ -165,6 +165,12 @@ class OSDManager:
         self._expiry_time: float = 0.0
         self._needs_redraw = False
 
+    def set_screen_size(self, width: int, height: int) -> None:
+        """Update the reference screen size used for centering OSD messages."""
+        with self._lock:
+            self._screen_width = width
+            self._screen_height = height
+
     # ----------------------------------------------------------------------
     # Background CPU rendering
     # ----------------------------------------------------------------------
