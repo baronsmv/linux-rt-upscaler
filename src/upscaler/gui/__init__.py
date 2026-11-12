@@ -9,7 +9,6 @@ import signal
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
 from PySide6.QtWidgets import QApplication
 
 from .config import ConfigManager, GUIConfig, GUIPalette, PRESETS, load_gui_style
@@ -18,34 +17,9 @@ from .icons import load_icon
 from .main import MainWindow
 from .styles import message_box_style
 from ..config import parse_args, setup_logging, validate_overrides
-from ..utils import ConfigError
+from ..utils import ConfigError, install_translators
 
 LOCALE_DIR = Path(__file__).parent / "locale"
-
-
-def _install_translators(app: QApplication) -> None:
-    """Install the application translation and Qt's base translation."""
-    locale = QLocale.system()
-
-    # Try full locale first, then language only: de_DE -> de
-    candidates = []
-    name = locale.name()  # e.g. "de_DE"
-    if name:
-        candidates.append(name)
-    if "_" in name:
-        candidates.append(name.split("_")[0])
-
-    for candidate in candidates:
-        translator = QTranslator(app)
-        if translator.load(f"upscale_gui_{candidate}", str(LOCALE_DIR)):
-            app.installTranslator(translator)
-            break
-
-    # Load Qt's own translations for standard buttons/dialogs
-    qt_translator = QTranslator(app)
-    qt_translations_dir = QLibraryInfo.path(QLibraryInfo.TranslationsPath)
-    if qt_translator.load(f"qtbase_{locale.name()}", qt_translations_dir):
-        app.installTranslator(qt_translator)
 
 
 def main() -> None:
@@ -68,7 +42,7 @@ def main() -> None:
 
     # Qt application
     app = QApplication(sys.argv)
-    _install_translators(app)
+    install_translators(app)
     app.setWindowIcon(load_icon("app/app", 256, 256))
     app.setApplicationName("upscale-gui")
     app.setDesktopFileName("io.github.baronsmv.linux-rt-upscaler")

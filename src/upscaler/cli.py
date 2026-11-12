@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication
 
 from .config import setup_config
 from .pipeline import create_pipeline_session
-from .utils import ConfigError, WindowNotFound
+from .utils import ConfigError, WindowNotFound, install_translators
 from .window import WindowInfo
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,7 @@ def main() -> None:
     app = QApplication([])
     app.setApplicationName("upscaler-overlay")
     app.setApplicationDisplayName("Upscaler Overlay")
+    install_translators(app)
     logger.debug("Qt application initialized")
 
     # Launch pipeline session

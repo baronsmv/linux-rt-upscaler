@@ -25,6 +25,7 @@ from .hotkeys import (
     format_hotkey,
     parse_hotkey,
 )
+from .locale import install_translators
 from .screen import get_base_geometry, list_monitors
 
 __all__ = [
@@ -47,6 +48,7 @@ __all__ = [
     "exceptions",
     "format_hotkey",
     "get_base_geometry",
+    "install_translators",
     "list_monitors",
     "parse_hotkey",
     "parse_output_geometry",
