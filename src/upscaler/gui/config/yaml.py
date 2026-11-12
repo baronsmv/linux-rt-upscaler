@@ -29,9 +29,10 @@ def load_gui_style(
     Read the GUI style from YAML into a :class:`GUIStyleOverrides`.
 
     Missing or malformed values fall back to the dataclass defaults.
-    Numeric values are clamped to :data:`_OVERRIDE_BOUNDS` so a
-    hand-edited file cannot produce an unusable layout. The function
-    never raises: an unreadable file yields the defaults.
+    Numeric values that have an entry in :data:`_OVERRIDE_BOUNDS` are
+    clamped; numeric fields without bounds pass through unclamped.
+    Bool fields accept true/false plus common YAML string aliases.
+    The function never raises: an unreadable file yields the defaults.
     """
     defaults = GUIStyleOverrides(palette=PRESETS["Auto"])
     path = config_path or default_config_path("gui-config.yaml")
@@ -42,36 +43,15 @@ def load_gui_style(
         logger.warning("Failed to load GUI style, using defaults", exc_info=True)
         return defaults
 
-    return GUIStyleOverrides(
-        palette=_resolve_palette(general, defaults.palette),
-        zoom=_load_numeric("zoom", general.get("zoom"), defaults.zoom),
-        font_scale=_load_numeric(
-            "font_scale", general.get("font_scale"), defaults.font_scale
-        ),
-        font_family=str(general.get("font_family") or defaults.font_family),
-        profiles_width=_load_numeric(
-            "profiles_width", general.get("profiles_width"), defaults.profiles_width
-        ),
-        settings_width=_load_numeric(
-            "settings_width", general.get("settings_width"), defaults.settings_width
-        ),
-        tile_columns=_load_numeric(
-            "tile_columns", general.get("tile_columns"), defaults.tile_columns
-        ),
-        tile_aspect_ratio=_load_numeric(
-            "tile_aspect_ratio",
-            general.get("tile_aspect_ratio"),
-            defaults.tile_aspect_ratio,
-        ),
-        auto_refresh_ms=_load_numeric(
-            "auto_refresh_ms", general.get("auto_refresh_ms"), defaults.auto_refresh_ms
-        ),
-        tile_preview_interval_ms=_load_numeric(
-            "tile_preview_interval_ms",
-            general.get("tile_preview_interval_ms"),
-            defaults.tile_preview_interval_ms,
-        ),
-    )
+    kwargs: Dict[str, Any] = {}
+    for f in fields(GUIStyleOverrides):
+        if f.name == "palette":
+            kwargs["palette"] = _resolve_palette(general, defaults.palette)
+        else:
+            kwargs[f.name] = _load_field(
+                f.name, general.get(f.name), getattr(defaults, f.name)
+            )
+    return GUIStyleOverrides(**kwargs)
 
 
 def save_gui_style(
@@ -129,6 +109,62 @@ def _resolve_palette(general: Dict[str, Any], fallback: GUIPalette) -> GUIPalett
             logger.warning("Malformed palette in gui-config.yaml, using fallback")
 
     return fallback
+
+
+def _load_field(name: str, raw: Any, default: Any) -> Any:
+    """
+    Coerce *raw* to the type of *default*.
+
+    Numeric fields with an entry in :data:`_OVERRIDE_BOUNDS` are clamped to
+    that range; unbounded numerics are accepted as-is. Returns *default*
+    when *raw* is missing or cannot be converted.
+    """
+    if raw is None:
+        return default
+
+    if isinstance(default, bool):
+        return _load_bool(raw, default)
+
+    bounds = _OVERRIDE_BOUNDS.get(name)
+
+    if isinstance(default, int):
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return default
+        if bounds:
+            value = max(int(bounds[0]), min(int(bounds[1]), value))
+        return value
+
+    if isinstance(default, float):
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            return default
+        if bounds:
+            value = max(float(bounds[0]), min(float(bounds[1]), value))
+        return value
+
+    if isinstance(default, str):
+        return str(raw)
+
+    return default
+
+
+def _load_bool(raw: Any, default: bool) -> bool:
+    """Coerce *raw* to bool, accepting YAML truthy/falsy string aliases."""
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        lowered = raw.strip().lower()
+        if lowered in ("true", "yes", "on", "1"):
+            return True
+        if lowered in ("false", "no", "off", "0"):
+            return False
+        return default
+    if isinstance(raw, int):
+        return bool(raw)
+    return default
 
 
 def _load_numeric(name: str, raw: Any, default: Any) -> Any:
