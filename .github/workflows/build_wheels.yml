@@ -23,6 +23,22 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Install PySide6 tools (for lrelease)
+        run: python -m pip install PySide6-Essentials
+
+      - name: Compile translations
+        run: |
+          shopt -s nullglob
+          for ts in src/upscaler/gui/locale/upscale_gui_*.ts; do
+            base="$(basename "$ts" .ts)"
+            lang="${base#upscale_gui_}"
+            if [[ "$lang" == "en" ]]; then continue; fi
+            if [[ -f "${ts}.wip" ]]; then
+              echo "skip $lang (WIP)"; continue
+            fi
+            pyside6-lrelease "$ts" -qm "src/upscaler/gui/locale/upscale_gui_${lang}.qm"
+          done
+
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel
 
