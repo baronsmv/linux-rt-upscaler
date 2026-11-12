@@ -427,7 +427,9 @@ class WindowTileItem(QGraphicsObject):
             return
         self._badge_hit.setVisible(True)
         self._badge_hit.set_geometry(rect.x(), rect.y(), rect.width(), rect.height())
-        self._badge_hit.setToolTip(f"Profile: {self._matched_profile}")
+        self._badge_hit.setToolTip(
+            self.tr("Profile: {0}", "Badge tooltip").format(self._matched_profile)
+        )
 
     def paint(
         self,
