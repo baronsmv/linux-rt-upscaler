@@ -4,7 +4,7 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QWidget, QLineEdit, QPushButton, QLabel
 
 from ..icons import load_icon, load_pixmap
-from ..styles import filter_bar_style, line_edit_style
+from ..styles import filter_bar_style, filter_clear_button_style, line_edit_style
 
 
 class FilterBar(QWidget):
@@ -73,7 +73,9 @@ class FilterBar(QWidget):
                 disabled_color=self._gui_config.palette.text_subtle,
             )
         )
-        self._clear_button.setFlat(True)
+        self._clear_button.setStyleSheet(
+            filter_clear_button_style(self._gui_config, icon_size)
+        )
         self._clear_button.clicked.connect(self._line_edit.clear)
         self._clear_button.hide()
 

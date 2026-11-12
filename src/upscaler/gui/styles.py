@@ -980,6 +980,25 @@ def circular_button_style(cfg: GUIConfig, icon_size: int) -> str:
     """
 
 
+def filter_clear_button_style(cfg: GUIConfig, size: int) -> str:
+    """Circular flat button for the filter bar's clear icon."""
+    radius = max(0, (size - 1) // 2)
+    return f"""
+    QPushButton {{
+        border: none;
+        border-radius: {radius}px;
+        background-color: transparent;
+        padding: 0;
+    }}
+    QPushButton:hover {{
+        background-color: {cfg.palette.button_hover};
+    }}
+    QPushButton:pressed {{
+        background-color: {cfg.palette.button_hover};
+    }}
+    """
+
+
 def icon_tab_button_style(cfg: GUIConfig) -> str:
     """Style for individual icon buttons inside the IconTabBar."""
     s = cfg.sidebar
