@@ -41,8 +41,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _profile_initials(name: str) -> str:
-    """Two-character short label for a profile badge."""
+def _profile_initials(name: str, limit: int = 2) -> str:
+    """Short label for a profile badge, up to `limit` characters."""
     # Strip parenthetical clarifications
     stripped = re.sub(r"\([^)]*\)", "", name).strip()
     if stripped:
@@ -55,25 +55,28 @@ def _profile_initials(name: str) -> str:
     def first_alnum(s: str) -> str:
         return next((c for c in s if c.isalnum()), "")
 
-    # Multi-word → first letter of each of the first two words
+    # Multi-word, first letter of each word capped at `limit`
     if len(words) >= 2:
-        return (first_alnum(words[0]) + first_alnum(words[1])).upper()
+        return "".join(first_alnum(w) for w in words[:limit]).upper()
 
     # Single word
     alnum = "".join(c for c in words[0] if c.isalnum())
     if not alnum:
         return "?"
-    if len(alnum) == 2:
+
+    # Token fits within the limit
+    if len(alnum) <= limit:
         return alnum.upper()
 
+    # Uppercase acronym
     upper_run = 0
     for c in alnum:
         if c.isupper():
             upper_run += 1
         else:
             break
-    if upper_run >= 2:
-        return alnum[:2].upper()
+    if upper_run >= limit:
+        return alnum[:limit].upper()
 
     return alnum[0].upper()
 
