@@ -1014,9 +1014,9 @@ Desactiva esta opción para seleccionar manualmente una ventana de la cuadrícul
     </message>
     <message>
       <location filename="../sidebars/tabs/hotkeys.py" line="55" />
-      <source>Exit session</source>
+      <source>Exit</source>
       <comment>Hotkey action label</comment>
-      <translation>Cerrar sesión</translation>
+      <translation>Cerrar</translation>
     </message>
     <message>
       <location filename="../sidebars/tabs/hotkeys.py" line="56" />

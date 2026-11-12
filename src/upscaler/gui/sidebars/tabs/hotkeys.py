@@ -52,7 +52,7 @@ class HotkeysTab(SettingsTab):
                 ),
             ),
             "exit_app": (
-                self.tr("Exit session", "Hotkey action label"),
+                self.tr("Exit", "Hotkey action label"),
                 self.tr(
                     "Close the overlay and end the current upscaling session.",
                     "Hotkey action description (tooltip)",
