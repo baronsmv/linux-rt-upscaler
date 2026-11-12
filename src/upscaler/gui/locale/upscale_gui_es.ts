@@ -59,9 +59,9 @@
 Best for mostly static content, such as text editors or visual novels.
 When disabled, the entire frame is processed at once, better for video or fast-moving content.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation>Procesa sólo las partes del fotograma que han cambieado, usando pequeños bloques.
+        <translation type="unfinished">Procesa sólo las partes del fotograma que han cambiado, usando pequeños bloques.
 Esto es mejor para contenido más estático, como editores de texto o novelas visuales.
-Cuando deshabilitado, el fotograma entero es procesado, lo que es mejor para videos o contenido dinámico.</translation>
+Cuando está deshabilitado, el fotograma entero es procesado, lo que es mejor para videos o contenido dinámico.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="50"/>
@@ -91,7 +91,7 @@ Values that are multiples of 32 usually perform best.
 Recommended range: 32 - 128.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation>Tamaño (en píxeles) de cada uno de los bloques.
-Bloques más pequeños actualizan con más precisión pero usan más CPU.
+Bloques más pequeños se actualizan con más precisión pero usan más CPU.
 Valores múltiplos de 32 generalmente ofrecen mejor rendimiento.
 Rango recomendado: 32 - 128.</translation>
     </message>
@@ -108,7 +108,7 @@ Larger margins can improve quality at tile edges but increase processing.
 Recommended range: 4 - 24.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation>Píxeles adicionales alrededor de cada bloque para proporcionar más contexto a la red neuronal.
-Valores más amplios pueden mejorar la calidad en los bordes de los mosaicos, pero usan más GPU.
+Valores más amplios pueden mejorar la calidad en los bordes de los bloques, pero usan más GPU.
 Rango recomendado: 4 - 24.</translation>
     </message>
     <message>
@@ -162,7 +162,7 @@ Lower values reduce waiting time but may cause dropped frames.
 Recommended range: 17 (1/60 s) - 1000 (1 s).</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation>Tiempo máximo de espera para que la GPU termine un fotograma.
-Valores bajos reducen el tiempo de espera pero puedo omitir fotogramas.
+Valores bajos reducen el tiempo de espera pero pueden producirse omisiones de fotogramas.
 Rango recomendado: 17 (1/60 s) - 1000 (1 s).</translation>
     </message>
     <message>
@@ -181,7 +181,7 @@ Rango recomendado: 17 (1/60 s) - 1000 (1 s).</translation>
         <location filename="../sidebars/tabs/advanced.py" line="157"/>
         <source>Focus poll (s)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation>Sondeo de enfoque (s)</translation>
+        <translation>Sondeo de foco (s)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="165"/>
@@ -192,7 +192,7 @@ Rango recomendado: 17 (1/60 s) - 1000 (1 s).</translation>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="171"/>
         <source>Pipeline idle (s)</source>
-        <translation>Inactividad (s)</translation>
+        <translation>Inactividad del proceso(s)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/advanced.py" line="179"/>
@@ -353,8 +353,8 @@ Esto evita reconstrucciones innecesarias del pipeline de renderizado.</translati
         <source>GPU used for upscaling.
 Select &apos;{0}&apos; to automatically use the most powerful available GPU.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation>Tarjeta gráfica utilizada para el escalado.
-Selecciona &apos;{0}&apos; para utilizar automáticamente la GPU disponible más potente.</translation>
+        <translation>GPU utilizada para el escalado.
+Selecciona &apos;{0}&apos; para utilizar la GPU más potente disponible.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/display.py" line="84"/>
@@ -422,7 +422,7 @@ Para obtener mejores resultados, usa el modo de presentación &apos;mailbox&apos
         <location filename="../sidebars/tabs/display.py" line="141"/>
         <source>Automatically detect the correct scale factor based on the physical monitor resolution.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation>Detecta automáticamente el factor de escala correcto, basado en la resolutión del monitor físico.</translation>
+        <translation type="unfinished">Detecta automáticamente el factor de escala correcto, basado en la resolución del monitor físico.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/display.py" line="147"/>
@@ -436,7 +436,7 @@ Para obtener mejores resultados, usa el modo de presentación &apos;mailbox&apos
 Only available when Auto Scale is off.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation>Factor de escala manual, como un porcentaje (por ejemplo, 1.50 para una escala del 150%).
-Solo disponible cuando Auto-escala está desactivada.</translation>
+Solo disponible cuando Auto-escalado está desactivado.</translation>
     </message>
 </context>
 <context>
@@ -489,7 +489,7 @@ Rango recomendado: 0.10 - 0.30.</translation>
         <location filename="../sidebars/tabs/effects.py" line="65"/>
         <source>CAS sharpening</source>
         <comment>Settings section</comment>
-        <translation>Contraste CAS</translation>
+        <translation>Nitidez CAS</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/effects.py" line="67"/>
@@ -875,13 +875,13 @@ Consume más recursos de la GPU.</translation>
         <location filename="../sidebars/tabs/general.py" line="74"/>
         <source>Focus tracking</source>
         <comment>Settings section</comment>
-        <translation>Seguimiento del enfoque</translation>
+        <translation>Seguimiento del foco</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="76"/>
         <source>Follow focus</source>
         <comment>Label of setting (must be short)</comment>
-        <translation>Seguir enfoque</translation>
+        <translation>Seguir foco</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="81"/>
@@ -903,7 +903,7 @@ Useful when working with multiple windows.</source>
 Turn off to keep the overlay always visible.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation>Oculta la ventana de escalado cuando la ventana original pierde el foco, y vuelve a mostrarla cuando lo recupere.
-Desactive esta opción para mantener la ventana de escalado siempre visible.</translation>
+Desactiva esta opción para mantener la ventana de escalado siempre visible.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/general.py" line="101"/>
@@ -935,7 +935,7 @@ Desactive esta opción para mantener la ventana de escalado siempre visible.</tr
 Turn off to manually select a window from the grid.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation>Si esta opción está habilitada, un proceso en segundo plano escalará automáticamente cualquier ventana que coincida con un perfil.
-Desactive esta opción para seleccionar manualmente una ventana de la cuadrícula.</translation>
+Desactiva esta opción para seleccionar manualmente una ventana de la cuadrícula.</translation>
     </message>
 </context>
 <context>
@@ -1163,7 +1163,7 @@ Desactive esta opción para seleccionar manualmente una ventana de la cuadrícul
         <location filename="../main.py" line="167"/>
         <source>About Real-Time Upscaler</source>
         <comment>About dialog button</comment>
-        <translation>Acerca de Escalador en Tiempo Real.</translation>
+        <translation>Acerca de Escalador en Tiempo Real</translation>
     </message>
     <message>
         <location filename="../main.py" line="421"/>
@@ -1176,7 +1176,7 @@ Desactive esta opción para seleccionar manualmente una ventana de la cuadrícul
         <source>Could not start pipeline:
 {0}</source>
         <comment>Error starting pipeline</comment>
-        <translation>No se pudo inicializar el programa:
+        <translation>No se pudo iniciar el procesamiento:
 {0}</translation>
     </message>
     <message>
@@ -1200,31 +1200,31 @@ Desactive esta opción para seleccionar manualmente una ventana de la cuadrícul
         <location filename="../../pipeline/controller.py" line="294"/>
         <location filename="../../pipeline/pipeline.py" line="152"/>
         <source>Model: {0}</source>
-        <translation type="unfinished"></translation>
+        <translation>Modelo: {0}</translation>
     </message>
     <message>
         <location filename="../../pipeline/controller.py" line="191"/>
         <location filename="../../pipeline/pipeline.py" line="156"/>
         <source>Geometry: {0}</source>
-        <translation type="unfinished"></translation>
+        <translation>Geometría: {0}</translation>
     </message>
     <message>
         <location filename="../../pipeline/controller.py" line="323"/>
         <location filename="../../pipeline/pipeline.py" line="160"/>
         <source>Zoom: {0}</source>
-        <translation type="unfinished"></translation>
+        <translation>Zoom: {0}</translation>
     </message>
     <message>
         <location filename="../../pipeline/controller.py" line="218"/>
         <location filename="../../pipeline/pipeline.py" line="164"/>
         <source>View restored</source>
-        <translation type="unfinished"></translation>
+        <translation>Vista restaurada</translation>
     </message>
     <message>
         <location filename="../../pipeline/controller.py" line="423"/>
         <location filename="../../pipeline/pipeline.py" line="165"/>
         <source>Screenshot saved</source>
-        <translation type="unfinished"></translation>
+        <translation>Captura guardada</translation>
     </message>
     <message>
         <location filename="../../pipeline/controller.py" line="463"/>
@@ -1232,7 +1232,7 @@ Desactive esta opción para seleccionar manualmente una ventana de la cuadrícul
         <location filename="../../pipeline/controller.py" line="425"/>
         <location filename="../../pipeline/pipeline.py" line="166"/>
         <source>Screenshot failed</source>
-        <translation type="unfinished"></translation>
+        <translation>Captura fallida</translation>
     </message>
 </context>
 <context>
@@ -1404,13 +1404,13 @@ Un valor de 0.00 mantiene el cursor siempre oculto.</translation>
         <location filename="../sidebars/tabs/presentation.py" line="169"/>
         <source>X offset</source>
         <comment>Label of setting (must be short)</comment>
-        <translation>Eje X</translation>
+        <translation>Desplazamiento X</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="174"/>
         <source>Y offset</source>
         <comment>Label of setting (must be short)</comment>
-        <translation>Eje Y</translation>
+        <translation>Desplazamiento Y</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/presentation.py" line="188"/>
@@ -2675,7 +2675,7 @@ Lower values result in smoother previews but use more CPU.</source>
 Use Stop from the tray menu to return.</source>
         <comment>Tray message if a window was already being upscaled. {0} is the window title placeholder.</comment>
         <translation>Escalando: &apos;{0}&apos;.
-Utilice «Detener» en el menú de la bandeja para volver.</translation>
+Utiliza «Detener» en el menú de la bandeja para volver.</translation>
     </message>
     <message>
         <location filename="../helpers/tray.py" line="402"/>
@@ -2683,7 +2683,7 @@ Utilice «Detener» en el menú de la bandeja para volver.</translation>
 Use Stop from the tray menu to return.</source>
         <comment>Tray message if a window was already being upscaled and no window title was available to show.</comment>
         <translation>Escalado en curso.
-Utilice «Detener» en el menú de la bandeja para volver.</translation>
+Utiliza «Detener» en el menú de la bandeja para volver.</translation>
     </message>
 </context>
 <context>
@@ -2737,7 +2737,7 @@ Utilice «Detener» en el menú de la bandeja para volver.</translation>
         <location filename="../dialogs/window.py" line="151"/>
         <source>Select a window first.</source>
         <comment>No window selected warning</comment>
-        <translation>Seleccione una ventana primero.</translation>
+        <translation>Selecciona una ventana primero.</translation>
     </message>
 </context>
 <context>
@@ -2746,7 +2746,7 @@ Utilice «Detener» en el menú de la bandeja para volver.</translation>
         <location filename="../grid/item.py" line="431"/>
         <source>Profile: {0}</source>
         <comment>Badge tooltip</comment>
-        <translation type="unfinished"></translation>
+        <translation>Perfil: {0}</translation>
     </message>
 </context>
 </TS>
