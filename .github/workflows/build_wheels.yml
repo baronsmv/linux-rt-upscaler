@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        pyver: [ '310', '311', '312', '313', '314' ]
+        pyver: [ '310', '311', '312', '313', '314', '315' ]
     steps:
       - uses: actions/checkout@v5
 
@@ -59,7 +59,13 @@ jobs:
           CIBW_BUILD_VERBOSITY: 3
           CIBW_SKIP: "*-musllinux*"
           # Pre-install PySide6 with uv to avoid build problems with Python 3.14
-          CIBW_BEFORE_TEST: "pip install uv && uv pip install PySide6"
+          CIBW_BEFORE_TEST: >
+            if command -v dnf >/dev/null 2>&1; then
+              dnf install -y libxkbcommon libxkbcommon-x11 mesa-libGL mesa-libEGL dbus-libs fontconfig;
+            else
+              yum install -y libxkbcommon libxkbcommon-x11 mesa-libGL mesa-libEGL dbus-libs fontconfig;
+            fi
+            pip install uv && uv pip install PySide6
         run: python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v5
