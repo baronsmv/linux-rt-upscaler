@@ -296,7 +296,7 @@ class OSDManager:
             return 0, 0, 0, 0
         w, h = tex.width, tex.height
         x = (self._screen_width - w) // 2
-        y = (self._screen_height - h) // 2
+        y = int(self._screen_height * 0.08)
         return x, y, w, h
 
     def blend_active(self, screen_tex: Texture2D) -> None:
