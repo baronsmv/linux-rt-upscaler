@@ -327,7 +327,7 @@ class StyleTab(SettingsTab):
             self._on_font_scale_changed,
             baseline=self._saved.font_scale,
             help=self.tr(
-                "Multiplies every text size in the interface. "
+                "Multiplies every text size in the interface.\n"
                 "Unlike zoom, this affects only fonts, not layout.",
                 "Description of a setting (tooltip)",
             ),

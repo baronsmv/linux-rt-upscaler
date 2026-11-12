@@ -2453,9 +2453,11 @@ Los radios más altos reducen el aliasing, pero aumentan la carga de la GPU.</tr
     </message>
     <message>
       <location filename="../sidebars/tabs/style.py" line="329" />
-      <source>Multiplies every text size in the interface. Unlike zoom, this affects only fonts, not layout.</source>
+      <source>Multiplies every text size in the interface.
+Unlike zoom, this affects only fonts, not layout.</source>
       <comment>Description of a setting (tooltip)</comment>
-      <translation>Multiplica todos los tamaños de texto de la interfaz. A diferencia del zoom, solo afecta a las fuentes, no al diseño.</translation>
+      <translation>Multiplica todos los tamaños de texto de la interfaz.
+A diferencia del zoom, solo afecta a las fuentes, no al diseño.</translation>
     </message>
     <message>
       <location filename="../sidebars/tabs/style.py" line="336" />
