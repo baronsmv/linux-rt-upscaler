@@ -1773,7 +1773,7 @@ Deja una regla en blanco para ignorar esa propiedad.</translation>
       <location filename="../dialogs/profile.py" line="460" />
       <source>The selected window has no icon.</source>
       <comment>No icon warning</comment>
-      <translation>La ventana seleccionada no tiene icono.</translation>
+      <translation>La ventana seleccionada no tiene ícono.</translation>
     </message>
     <message>
       <location filename="../dialogs/profile.py" line="478" />
