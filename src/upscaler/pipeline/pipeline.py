@@ -411,6 +411,7 @@ class Pipeline(QObject):
         # --- 1. Capture ----------------------------------------------------
         try:
             frame, is_dirty, rects = self._grabber.grab()
+            capture_dirty = is_dirty
             t2 = time.perf_counter_ns()
         except RuntimeError as e:
             logger.error(f"Frame grab failed: {e}")
@@ -458,15 +459,15 @@ class Pipeline(QObject):
             return
         self.overlay.update_opacity.emit()
 
-        # --- 3. Idle frame detection ---------------------------------------
+        # --- 3. Idle / OSD-only / full render branch -----------------------
         current_hash = self._compute_present_state_hash()
-        idle = (
-            not is_dirty
-            and osd_tex is None
-            and not self._presenter_params_stale
+        state_stable = (
+            not self._presenter_params_stale
             and current_hash == self._last_present_state_hash
         )
-        if idle:
+
+        # Idle: nothing changed at all
+        if not is_dirty and state_stable:
             if self._swapchain_manager.needs_recreation():
                 logger.debug("Swapchain needs recreation, skipping idle present")
                 return
@@ -494,7 +495,39 @@ class Pipeline(QObject):
             )
             return
 
-        # Full render path, mark the state as clean for the next frame
+        # OSD changed, while source didn't
+        if not capture_dirty and needs_redraw and state_stable:
+            src_tex = self.upscaler_mgr.get_output_texture()
+            self.presenter.set_upscaled_source(src_tex)
+            t3 = time.perf_counter_ns()
+            self.presenter.present()
+            t4 = time.perf_counter_ns()
+
+            rect = self.presenter.get_scaling_rect(self._scale_factor)
+            self.overlay.update_scaling_rect.emit(*rect)
+
+            self._record_bench(
+                (
+                    self._frame_index,
+                    t0,
+                    t1,
+                    t2,
+                    t3,
+                    t4,
+                    0,
+                    0,
+                    int(needs_redraw),
+                    len(rects),
+                    0,
+                    "osd_only",
+                    0,
+                    0,
+                    -1,
+                )
+            )
+            return
+
+        # Full render (fall-through)
         self._presenter_params_stale = False
         self._last_present_state_hash = current_hash
 
