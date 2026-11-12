@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from typing import Optional, Tuple, TYPE_CHECKING
 
 from PySide6.QtCore import (
@@ -40,6 +41,43 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _profile_initials(name: str) -> str:
+    """Two-character short label for a profile badge."""
+    # Strip parenthetical clarifications
+    stripped = re.sub(r"\([^)]*\)", "", name).strip()
+    if stripped:
+        name = stripped
+
+    words = [w for w in name.split() if any(c.isalnum() for c in w)]
+    if not words:
+        return "?"
+
+    def first_alnum(s: str) -> str:
+        return next((c for c in s if c.isalnum()), "")
+
+    # Multi-word → first letter of each of the first two words
+    if len(words) >= 2:
+        return (first_alnum(words[0]) + first_alnum(words[1])).upper()
+
+    # Single word
+    alnum = "".join(c for c in words[0] if c.isalnum())
+    if not alnum:
+        return "?"
+    if len(alnum) == 2:
+        return alnum.upper()
+
+    upper_run = 0
+    for c in alnum:
+        if c.isupper():
+            upper_run += 1
+        else:
+            break
+    if upper_run >= 2:
+        return alnum[:2].upper()
+
+    return alnum[0].upper()
+
+
 class WindowTileItem(QGraphicsObject):
     """
     A single live-preview tile in the window-selection mosaic.
@@ -70,6 +108,7 @@ class WindowTileItem(QGraphicsObject):
     ) -> None:
         super().__init__(parent)
         self._win_info: WindowInfo = win_info
+        self.setToolTip(self._win_info.title)
         self._gui_config: GUIConfig = gui_config
         self._grid_focused: bool = True
         self._matched_profile: Optional[str] = None
@@ -87,6 +126,10 @@ class WindowTileItem(QGraphicsObject):
         self._selected = False
         self._scale = 1.0  # current scale (animated)
         self._target_scale = 1.0  # desired scale (1.0 or pop_scale)
+
+        # --- Badge -------
+        self._badge_label: Optional[str] = None
+        self._badge_font: Optional[QFont] = None
 
         # --- Animation ------------------------------------------------------
         self._anim = QPropertyAnimation(self, b"scale", self)
@@ -202,12 +245,25 @@ class WindowTileItem(QGraphicsObject):
         self._matched_profile = name
         self._profile_pixmap_path = icon_path
 
+        # Load the icon
         if icon_path and os.path.isfile(icon_path):
             self._profile_pixmap = QPixmap(icon_path)
             if self._profile_pixmap.isNull():
                 self._profile_pixmap = None
         else:
             self._profile_pixmap = None
+
+        # Build label + cached font
+        if name and self._profile_pixmap is None:
+            self._badge_label = _profile_initials(name)
+            family = self._gui_config.font_family
+            f = QFont(family) if family else QFont(QApplication.font())
+            f.setPointSize(12 if len(self._badge_label) == 1 else 10)
+            f.setBold(True)
+            self._badge_font = f
+        else:
+            self._badge_label = None
+            self._badge_font = None
 
         self.setToolTip(
             f"{self._win_info.title}\nProfile: {name}" if name else self._win_info.title
@@ -417,37 +473,39 @@ class WindowTileItem(QGraphicsObject):
 
         # Profile badge
         if self._matched_profile:
-            badge_size = 22
+            badge_h = 22
             badge_inset = 8
+
+            if self._profile_pixmap is not None:
+                badge_w = badge_h
+            elif self._badge_label is not None and len(self._badge_label) > 1:
+                badge_w = badge_h + 10
+            else:
+                badge_w = badge_h
+
             badge_rect = QRectF(
-                self._half_w - badge_size - badge_inset,
+                self._half_w - badge_w - badge_inset,
                 -self._half_h + badge_inset,
-                badge_size,
-                badge_size,
+                badge_w,
+                badge_h,
             )
 
             painter.setPen(Qt.NoPen)
             painter.setBrush(QColor(self._gui_config.palette.caption_background))
-            painter.drawEllipse(badge_rect)
+            painter.drawRoundedRect(badge_rect, badge_h / 2.0, badge_h / 2.0)
 
             if self._profile_pixmap is not None:
-                inner = badge_size - 8
+                inner = badge_h - 8
                 scaled = self._profile_pixmap.scaled(
                     inner, inner, Qt.KeepAspectRatio, Qt.SmoothTransformation
                 )
-                px = badge_rect.left() + (badge_size - scaled.width()) / 2.0
-                py = badge_rect.top() + (badge_size - scaled.height()) / 2.0
+                px = badge_rect.left() + (badge_w - scaled.width()) / 2.0
+                py = badge_rect.top() + (badge_h - scaled.height()) / 2.0
                 painter.drawPixmap(int(px), int(py), scaled)
             else:
-                family = self._gui_config.font_family
-                badge_font = QFont(family) if family else QFont(QApplication.font())
-                badge_font.setPointSize(10)
-                badge_font.setBold(True)
-                painter.setFont(badge_font)
+                painter.setFont(self._badge_font)
                 painter.setPen(QColor(self._gui_config.palette.text_hover))
-                painter.drawText(
-                    badge_rect, Qt.AlignCenter, self._matched_profile[:1].upper()
-                )
+                painter.drawText(badge_rect, Qt.AlignCenter, self._badge_label)
 
         painter.restore()
 

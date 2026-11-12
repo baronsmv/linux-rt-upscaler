@@ -225,11 +225,9 @@ class MainWindow(QMainWindow):
         # ------------------------------------------------------------------
         # Grid and filter
         self.filter_bar.filter_changed.connect(self.grid_mgr.populate)
-        self.filter_bar.filter_changed.connect(
-            lambda: QTimer.singleShot(0, self._refresh_profile_matches)
-        )
         self.filter_bar.focus_grid_requested.connect(self.grid_mgr.focus_grid)
         self.scene.window_selected.connect(self._on_window_selected)
+        self.scene.windows_changed.connect(self._refresh_profile_matches)
         self.scene.focus_filter_requested.connect(self.filter_bar.set_focus)
         self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
 
@@ -707,6 +705,9 @@ class MainWindow(QMainWindow):
         finally:
             self._stopping_manual_session = False
 
+        # Refresh badges before showing
+        self._refresh_profile_matches()
+
     def _refresh_profile_matches(self) -> None:
         """Update per-tile profile indicators."""
         if self._config_manager.active_profile_name is not None:
@@ -766,7 +767,6 @@ class MainWindow(QMainWindow):
         self.activateWindow()
         QTimer.singleShot(0, self.scene.schedule_relayout)
         QTimer.singleShot(0, self._focus_grid)
-        QTimer.singleShot(0, self._refresh_profile_matches)
         self.grid_mgr.start()
 
     def hide_gui(self) -> None:

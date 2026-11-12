@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import Dict, List, Optional, Set, TYPE_CHECKING
+from typing import Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal, QRectF, QTimer
 from PySide6.QtGui import QKeyEvent
@@ -41,10 +41,9 @@ class WindowGridScene(QGraphicsScene):
           built in.
     """
 
-    # Emitted when the user confirms a window (click or Enter / Space)
     window_selected = Signal(WindowInfo)
-    # Emitted when pressing Up on the first row (towards the search bar)
     focus_filter_requested = Signal()
+    windows_changed = Signal()
 
     _SCENE_MARGIN = 10  # extra padding around the grid block
 
@@ -126,6 +125,10 @@ class WindowGridScene(QGraphicsScene):
 
         self.tiles = new_tiles
         self._restore_selection()
+
+        # Notify when the set of visible windows change
+        if new_handles != old_handles:
+            self.windows_changed.emit()
 
         # Only relayout if the set of handles changed or the viewport grew/shrunk
         if self._needs_relayout(new_handles):
