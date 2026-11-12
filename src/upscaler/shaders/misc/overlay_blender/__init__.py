@@ -8,7 +8,7 @@ from ....vulkan import Buffer, Compute, Sampler, Texture2D, SAMPLER_FILTER_POINT
 logger = logging.getLogger(__name__)
 
 # Constant buffer layout: int2 overlayPos, int2 overlaySize -> 4 ints
-CB_SIZE = struct.calcsize("iiii")
+CB_SIZE = struct.calcsize("iiiiffff")
 
 DEFAULT_SHADER_PATH = os.path.join(os.path.dirname(__file__), "overlay_blend.spv")
 
@@ -85,6 +85,7 @@ class OverlayBlender:
         y: int,
         width: int,
         height: int,
+        opacity: float = 1.0,
     ) -> None:
         """
         Blend the overlay texture onto the screen texture.
@@ -104,7 +105,7 @@ class OverlayBlender:
         compute = self._get_compute(overlay_tex)
 
         # Upload position and size constants
-        cb_data = struct.pack("iiii", x, y, width, height)
+        cb_data = struct.pack("iiiiffff", x, y, width, height, opacity, 0.0, 0.0, 0.0)
         self.cb.upload(cb_data)
 
         # Dispatch compute groups (16x16 threads per group)

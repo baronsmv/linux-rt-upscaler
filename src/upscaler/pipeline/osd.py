@@ -12,6 +12,8 @@ from ..vulkan import Buffer, Compute, Texture2D
 
 logger = logging.getLogger(__name__)
 
+FADE_DURATION = 0.3  # seconds
+
 
 class TextRenderer:
     """
@@ -144,8 +146,12 @@ class OSDManager:
             screen_width, screen_height: Dimensions of the screen (for centering).
             blender: Optional OverlayBlender instance. If None, a default one is created.
         """
-        self._screen_width = screen_width
-        self._screen_height = screen_height
+        self._texts: Tuple[str, ...] = texts
+        self._rendered_height: int = screen_height
+        self._textures_stale: bool = False
+        self._current_opacity: float = 1.0
+        self._screen_width: int = screen_width
+        self._screen_height: int = screen_height
 
         # CPU rendering in background thread
         self._images: Dict[str, Image.Image] = {}
@@ -168,8 +174,11 @@ class OSDManager:
     def set_screen_size(self, width: int, height: int) -> None:
         """Update the reference screen size used for centering OSD messages."""
         with self._lock:
+            if (width, height) == (self._screen_width, self._screen_height):
+                return
             self._screen_width = width
             self._screen_height = height
+            self._textures_stale = True
 
     # ----------------------------------------------------------------------
     # Background CPU rendering
@@ -189,6 +198,37 @@ class OSDManager:
                 self._images[text] = img
         self._images_ready.set()
         logger.debug("OSD CPU rendering complete: %s images", len(self._images))
+
+    def _rerender_textures(self) -> None:
+        """Re-render all OSD textures for the current screen height."""
+        self._images_ready.wait()
+        logger.debug(
+            "OSD: re-rendering %d textures for %dx%d (was height %d)",
+            len(self._texts),
+            self._screen_width,
+            self._screen_height,
+            self._rendered_height,
+        )
+        renderer = TextRenderer(list(self._texts), screen_height=self._screen_height)
+        self._compute_cache.clear()
+        self._texture_cache.clear()
+        self._images.clear()
+
+        for text in self._texts:
+            img = renderer.get_image(text)
+            if img:
+                self._images[text] = img
+                try:
+                    self._texture_cache[text] = self._upload_image_to_texture(img)
+                except Exception as e:
+                    logger.error("Failed to re-upload OSD texture '%s': %s", text, e)
+
+        self._rendered_height = self._screen_height
+        self._textures_stale = False
+
+        # Re-resolve active texture against new uploads
+        if self._active_text is not None:
+            self._active_texture = self._texture_cache.get(self._active_text)
 
     # ----------------------------------------------------------------------
     # GPU texture preparation (must be called from pipeline thread)
@@ -245,13 +285,29 @@ class OSDManager:
             - needs_redraw: True if the OSD content changed this frame.
         """
         with self._lock:
-            # Check expiry
+            # Re-render stale textures when a message needs to be displayed
+            if self._textures_stale and self._active_text is not None:
+                self._rerender_textures()
+
             now = time.monotonic()
-            if self._expiry_time > 0 and now >= self._expiry_time:
-                self._active_text = None
-                self._active_texture = None
-                self._expiry_time = 0.0
-                self._needs_redraw = True
+
+            # Expiry + fade progression
+            if self._expiry_time > 0:
+                if now >= self._expiry_time:
+                    self._active_text = None
+                    self._active_texture = None
+                    self._expiry_time = 0.0
+                    self._current_opacity = 1.0
+                    self._needs_redraw = True
+                else:
+                    fade_start = self._expiry_time - FADE_DURATION
+                    if now >= fade_start:
+                        new_opacity = max(
+                            0.0, (self._expiry_time - now) / FADE_DURATION
+                        )
+                        if new_opacity != self._current_opacity:
+                            self._current_opacity = new_opacity
+                            self._needs_redraw = True
 
             # Lazy texture resolution (in case show() was called before prepare_textures)
             if self._active_text is not None and self._active_texture is None:
@@ -279,8 +335,9 @@ class OSDManager:
         """
         with self._lock:
             self._active_text = text
-            self._active_texture = None  # Resolved in update()
+            self._active_texture = None
             self._expiry_time = time.monotonic() + duration
+            self._current_opacity = 1.0
             self._needs_redraw = True
 
     def get_blend_params(self) -> Tuple[int, int, int, int]:
@@ -313,8 +370,10 @@ class OSDManager:
         if w <= 0 or h <= 0:
             return
 
-        # Update constants and blend
-        cb_data = struct.pack("iiii", x, y, w, h)
+        # 32 bytes: 4 ints (pos + size) + 4 floats (opacity + padding)
+        cb_data = struct.pack(
+            "iiiiffff", x, y, w, h, self._current_opacity, 0.0, 0.0, 0.0
+        )
         self._blender.cb.upload(cb_data)
 
         # Get or create compute pipeline for this overlay texture

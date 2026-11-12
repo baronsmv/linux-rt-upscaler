@@ -18,6 +18,7 @@ RWTexture2D<float4> Output : register(u0);
 cbuffer OverlayParams : register(b0) {
   int2 overlayPos;  // x, y in screen coordinates
   int2 overlaySize; // width, height
+  float4 fade;      // opacity, rest padding
 };
 
 [numthreads(16, 16, 1)] void main(uint3 id : SV_DispatchThreadID) {
@@ -28,7 +29,8 @@ cbuffer OverlayParams : register(b0) {
   float4 screenColor = ScreenTex[screenPos];
   float4 overlayColor = OverlayTex[id.xy];
 
-  // Premultiplied alpha blend
+  // Alpha blend
+  overlayColor.a *= fade.x;
   float3 blended = overlayColor.rgb * overlayColor.a +
                    screenColor.rgb * (1.0 - overlayColor.a);
   Output[screenPos] = float4(blended, 1.0);
