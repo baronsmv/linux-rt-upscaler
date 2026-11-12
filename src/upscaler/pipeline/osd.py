@@ -251,6 +251,7 @@ class OSDManager:
                 self._active_text = None
                 self._active_texture = None
                 self._expiry_time = 0.0
+                self._needs_redraw = True
 
             # Lazy texture resolution (in case show() was called before prepare_textures)
             if self._active_text is not None and self._active_texture is None:
