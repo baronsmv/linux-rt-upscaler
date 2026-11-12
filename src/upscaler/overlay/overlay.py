@@ -194,6 +194,7 @@ class OverlayWindow(QMainWindow):
                         "Restoring saved windowed size: %dx%d", final_w, final_h
                     )
         self.resize(final_w, final_h)
+        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
 
         # Store XID for debugging
         self.xid: int = int(self.winId())
@@ -287,6 +288,7 @@ class OverlayWindow(QMainWindow):
             return
 
         if mode == OverlayMode.WINDOWED.value:
+            flags |= Qt.WindowDoesNotAcceptFocus
             self.setGeometry(x, y, width, height)
             self.setMinimumSize(320, 240)
             logger.debug(
