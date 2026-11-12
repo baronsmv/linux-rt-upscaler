@@ -10,7 +10,7 @@ from queue import Empty, Queue
 from typing import Any, Dict, List, Optional, Tuple
 
 import shiboken6
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QCoreApplication, QObject, Signal
 
 from .controller import PipelineController
 from .osd import OSDManager
@@ -148,10 +148,23 @@ class Pipeline(QObject):
 
         # On-screen display (pre-render all possible messages)
         osd_texts = tuple(
-            [f"Model: {m}" for m in self.controller.available_models]
-            + [f"Geometry: {g}" for g in self.controller.available_geometries]
-            + [f"Zoom: {z}" for z in self.controller.available_zoom_levels]
-            + ["View restored", "Screenshot saved", "Screenshot failed"]
+            [
+                QCoreApplication.translate("OSD messages", "Model: {0}").format(m)
+                for m in self.controller.available_models
+            ]
+            + [
+                QCoreApplication.translate("OSD messages", "Geometry: {0}").format(g)
+                for g in self.controller.available_geometries
+            ]
+            + [
+                QCoreApplication.translate("OSD messages", "Zoom: {0}").format(z)
+                for z in self.controller.available_zoom_levels
+            ]
+            + [
+                QCoreApplication.translate("OSD messages", "View restored"),
+                QCoreApplication.translate("OSD messages", "Screenshot saved"),
+                QCoreApplication.translate("OSD messages", "Screenshot failed"),
+            ]
         )
         self.osd = OSDManager(osd_texts, self._screen_width, self._screen_height)
 

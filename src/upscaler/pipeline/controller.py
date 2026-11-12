@@ -8,6 +8,7 @@ from queue import Empty, Queue
 from typing import TYPE_CHECKING, Tuple
 
 from PIL import Image
+from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication
 
 from ..config import OUTPUT_GEOMETRIES, UPSCALING_MODELS, ZOOM_LEVELS
@@ -187,9 +188,10 @@ class PipelineController:
         self._pipeline.update_content_dimensions()
 
         # Show OSD message
-        self._pipeline.osd_queue.put(
-            (f"Geometry: {new_geometry}", self._pipeline.config.osd_duration)
+        message = QCoreApplication.translate("OSD messages", "Geometry: {0}").format(
+            new_geometry
         )
+        self._pipeline.osd_queue.put((message, self._osd_duration))
 
     def restore_view(self) -> None:
         """Restore the original output geometry, zoom, and pan offsets."""
@@ -213,9 +215,8 @@ class PipelineController:
         self.set_initial_zoom_index()
 
         # Show an OSD message
-        self._pipeline.osd_queue.put(
-            ("View restored", self._pipeline.config.osd_duration)
-        )
+        message = QCoreApplication.translate("OSD messages", "View restored")
+        self._pipeline.osd_queue.put((message, self._osd_duration))
 
     def process_requests(self) -> None:
         """
@@ -290,7 +291,10 @@ class PipelineController:
         )
 
         # Show OSD message
-        self._pipeline.osd_queue.put((f"Model: {new_model}", self._osd_duration))
+        message = QCoreApplication.translate("OSD messages", "Model: {0}").format(
+            new_model
+        )
+        self._pipeline.osd_queue.put((message, self._osd_duration))
 
     def _apply_zoom_change(self, forward: bool) -> None:
         total = len(self.available_zoom_levels)
@@ -316,9 +320,10 @@ class PipelineController:
         self._pipeline.update_content_dimensions()
 
         # Show OSD message
-        self._pipeline.osd_queue.put(
-            (f"Zoom: {new_zoom}", self._pipeline.config.osd_duration)
+        message = QCoreApplication.translate("OSD messages", "Zoom: {0}").format(
+            new_zoom
         )
+        self._pipeline.osd_queue.put((message, self._osd_duration))
 
     def _get_current_window_title(self) -> str:
         """
@@ -414,7 +419,11 @@ class PipelineController:
         except Exception as e:
             logger.error("Failed to save screenshot: %s", e, exc_info=True)
 
-        message = "Screenshot saved" if success else "Screenshot failed"
+        message = (
+            QCoreApplication.translate("OSD messages", "Screenshot saved")
+            if success
+            else QCoreApplication.translate("OSD messages", "Screenshot failed")
+        )
         pipeline.osd_queue.put((message, self._osd_duration))
 
     def _save_screenshot(self) -> None:
@@ -425,7 +434,10 @@ class PipelineController:
             src_tex = self._pipeline.upscaler_mgr.get_output_texture()
             if src_tex is None:
                 logger.warning("No output texture available for screenshot")
-                self._pipeline.osd_queue.put(("Screenshot failed", self._osd_duration))
+                message = QCoreApplication.translate(
+                    "OSD messages", "Screenshot failed"
+                )
+                self._pipeline.osd_queue.put((message, self._osd_duration))
                 return
 
             temp_tex = Texture2D(src_tex.width, src_tex.height)
@@ -448,7 +460,8 @@ class PipelineController:
             ).start()
         except Exception as e:
             logger.error(f"Failed to initiate screenshot: {e}", exc_info=True)
-            self._pipeline.osd_queue.put(("Screenshot failed", self._osd_duration))
+            message = QCoreApplication.translate("OSD messages", "Screenshot failed")
+            self._pipeline.osd_queue.put((message, self._osd_duration))
 
     def _sync_presenter_offset(self):
         # Presenter will update Lanczos constants on next frame using the new values
