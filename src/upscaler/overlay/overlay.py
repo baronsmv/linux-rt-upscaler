@@ -4,13 +4,24 @@ import logging
 import time
 from typing import Any, List, Optional, Tuple
 
-from PySide6.QtCore import QEvent, Qt, QTimer, Signal, Slot, QSettings, QRect, QPoint
+from PySide6.QtCore import (
+    QEvent,
+    Qt,
+    QTimer,
+    Signal,
+    Slot,
+    QSettings,
+    QRect,
+    QPoint,
+    QSize,
+)
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QApplication
 
 from .coordinates import CoordinateMapper
 from .events import X11EventForwarder
 from .opacity import OpacityController
+from .utils import is_relative_output_geometry, is_valid_overlay_size
 from ..config import OverlayMode, Config
 from ..utils import OverlayGeometry, compute_overlay_geometry, get_base_geometry
 from ..window import WindowInfo
@@ -93,6 +104,7 @@ class OverlayWindow(QMainWindow):
                 content_height=logical_h,
                 crop_width=phys_w,
                 crop_height=phys_h,
+                scale_factor=scale,
             )
             self.scale_mode = "fit"
             self._win_info = WindowInfo(0, phys_w, phys_h, "")
@@ -100,9 +112,6 @@ class OverlayWindow(QMainWindow):
             self._geometry = compute_overlay_geometry(config, win_info)
             self.scale_mode = self._geometry.scale_mode
             self._win_info = win_info
-
-        self.physical_width = self._geometry.physical_overlay_width
-        self.physical_height = self._geometry.physical_overlay_height
 
         # Transparency support (if background has alpha or we want click-through)
         if self._config.background_color[3] < 1.0:
@@ -173,8 +182,18 @@ class OverlayWindow(QMainWindow):
         # Opacity controller (dim overlay when mouse leaves target window)
         self._opacity_controller = OpacityController(self, win_info)
 
-        # Force final geometry after window flags are applied
-        self.resize(self._geometry.overlay_width, self._geometry.overlay_height)
+        # Restore saved size for relative specs only
+        final_w = self._geometry.overlay_width
+        final_h = self._geometry.overlay_height
+        if config.overlay_mode == OverlayMode.WINDOWED.value:
+            if is_relative_output_geometry(config.output_geometry):
+                saved = self._settings.value("overlay/windowed_size")
+                if isinstance(saved, QSize) and is_valid_overlay_size(saved):
+                    final_w, final_h = saved.width(), saved.height()
+                    logger.debug(
+                        "Restoring saved windowed size: %dx%d", final_w, final_h
+                    )
+        self.resize(final_w, final_h)
 
         # Store XID for debugging
         self.xid: int = int(self.winId())
@@ -205,6 +224,14 @@ class OverlayWindow(QMainWindow):
     # ----------------------------------------------------------------------
     # Properties
     # ----------------------------------------------------------------------
+
+    @property
+    def physical_width(self) -> int:
+        return int(round(self.width() * self._geometry.scale_factor))
+
+    @property
+    def physical_height(self) -> int:
+        return int(round(self.height() * self._geometry.scale_factor))
 
     @property
     def content_width(self) -> int:
@@ -371,8 +398,7 @@ class OverlayWindow(QMainWindow):
         super().resizeEvent(event)
         if self._config.overlay_mode != OverlayMode.WINDOWED.value:
             return
-        w = event.size().width()
-        h = event.size().height()
+        w, h = event.size().width(), event.size().height()
         if w <= 0 or h <= 0 or self._last_emitted_size == (w, h):
             return
         self._last_emitted_size = (w, h)
@@ -390,6 +416,7 @@ class OverlayWindow(QMainWindow):
         self._stop_keepalive()
         if self._config.overlay_mode == OverlayMode.WINDOWED.value:
             self._settings.setValue("overlay/windowed_position", self.pos())
+            self._settings.setValue("overlay/windowed_size", self.size())
         self.hide()
         self.closed.emit()
         event.ignore()
@@ -418,8 +445,6 @@ class OverlayWindow(QMainWindow):
         """Recompute overlay geometry after a window or monitor change."""
         self._win_info = win_info
         self._geometry = compute_overlay_geometry(self._config, win_info)
-        self.physical_width = self._geometry.physical_overlay_width
-        self.physical_height = self._geometry.physical_overlay_height
         self.scale_mode = self._geometry.scale_mode
         self._update_mapper()
 
@@ -444,6 +469,7 @@ class OverlayWindow(QMainWindow):
         elif self._config.overlay_mode == OverlayMode.FULLSCREEN.value:
             self.showFullScreen()
 
+        self._last_emitted_size = None
         logger.debug(
             f"Overlay geometry updated: {self._geometry.overlay_width}x{self._geometry.overlay_height}"
         )
@@ -462,6 +488,11 @@ class OverlayWindow(QMainWindow):
     def _update_scale_mode(self, mode: str) -> None:
         """Set the scaling mode (fit, stretch, cover) dynamically."""
         self.scale_mode = mode
+
+    @Slot(int, int)
+    def update_content_dims(self, w: int, h: int) -> None:
+        """Set the logical content size for the window."""
+        self._mapper.set_content_dimensions(w, h)
 
     # ----------------------------------------------------------------------
     # Mouse event forwarding

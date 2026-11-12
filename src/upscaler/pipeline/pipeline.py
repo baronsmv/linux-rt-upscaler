@@ -73,6 +73,7 @@ class Pipeline(QObject):
     """
 
     # Signals (emitted from pipeline thread, automatically queued to main thread)
+    overlay_content_updated = Signal(int, int)
     daemon_scan_start = Signal()
     daemon_target_acquired = Signal()
     finished = Signal()
@@ -116,10 +117,19 @@ class Pipeline(QObject):
             )
 
         # Physical size for swapchain and presenter
-        self._screen_width = overlay.physical_width
-        self._screen_height = overlay.physical_height
-        phys_content_w = int(overlay.content_width * self._scale_factor)
-        phys_content_h = int(overlay.content_height * self._scale_factor)
+        self._screen_width = int(round(overlay.width() * self._scale_factor))
+        self._screen_height = int(round(overlay.height() * self._scale_factor))
+        if self.crop_width > 0 and self.crop_height > 0:
+            phys_content_w, phys_content_h, _, _, _ = parse_output_geometry(
+                config.output_geometry,
+                self.crop_width,
+                self.crop_height,
+                self._screen_width,
+                self._screen_height,
+            )
+        else:
+            phys_content_w = self._screen_width
+            phys_content_h = self._screen_height
 
         # Controller for external commands (model / geometry / zoom / screenshot)
         self.controller = PipelineController(self)
@@ -596,6 +606,8 @@ class Pipeline(QObject):
 
     def update_content_dimensions(self) -> None:
         """Recalculate content dimensions based on overlay size and output geometry."""
+        if self.crop_width <= 0 or self.crop_height <= 0:
+            return
         new_cw, new_ch, _, _, _ = parse_output_geometry(
             self.config.output_geometry,
             self.crop_width,
@@ -605,6 +617,10 @@ class Pipeline(QObject):
         )
         self.presenter.content_width = new_cw
         self.presenter.content_height = new_ch
+        self.overlay_content_updated.emit(
+            int(round(new_cw / self._scale_factor)),
+            int(round(new_ch / self._scale_factor)),
+        )
 
     def _recreate_swapchain(self) -> None:
         """Recreate the swapchain and dependent resources (overlay resize)."""
@@ -617,6 +633,7 @@ class Pipeline(QObject):
             ):
                 self.presenter.resize(new_w, new_h)
             self._swapchain_manager.recreate(new_w, new_h)
+            self.osd.set_screen_size(new_w, new_h)
             self.update_content_dimensions()
             self.osd.clear_compute_cache()
             self._presenter_params_stale = True
@@ -855,7 +872,6 @@ class Pipeline(QObject):
         with self._overlay_resize_lock:
             pending = self._pending_overlay_resize
             self._pending_overlay_resize = None
-
         if pending is None:
             return
 
@@ -881,8 +897,6 @@ class Pipeline(QObject):
         )
         self._screen_width = phys_w
         self._screen_height = phys_h
-        if self.osd is not None:
-            self.osd.set_screen_size(phys_w, phys_h)
         self._recreate_swapchain()
 
     def _update_pause_state(self) -> bool:

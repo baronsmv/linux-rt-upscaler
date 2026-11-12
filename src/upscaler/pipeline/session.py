@@ -128,6 +128,8 @@ def create_pipeline_session(
         pipeline.enable_benchmarking(config.bench_csv)
     pipeline.start()
     overlay.resized.connect(pipeline.request_overlay_resize)
+    pipeline.overlay_content_updated.connect(overlay.update_content_dims)
+    pipeline.update_content_dimensions()
 
     # ---- Focus monitor ---------------------------------------------------
     if config.follow_focus:
