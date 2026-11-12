@@ -31,6 +31,7 @@ class OverlayGeometry:
         crop_height: Height of the cropped region from the target window.
         offset_x: Additional horizontal offset applied to the content (only in non-windowed modes).
         offset_y: Additional vertical offset applied to the content.
+        scale_factor: Scaling factor applied to the target window.
     """
 
     overlay_x: int = 0
@@ -48,6 +49,7 @@ class OverlayGeometry:
     crop_height: int = 0
     offset_x: int = 0
     offset_y: int = 0
+    scale_factor: float = 1.0
 
 
 def parse_output_geometry(
