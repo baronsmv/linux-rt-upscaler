@@ -59,7 +59,7 @@
 Best for mostly static content, such as text editors or visual novels.
 When disabled, the entire frame is processed at once, better for video or fast-moving content.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished">Procesa sólo las partes del fotograma que han cambiado, usando pequeños bloques.
+        <translation>Procesa sólo las partes del fotograma que han cambiado, usando pequeños bloques.
 Esto es mejor para contenido más estático, como editores de texto o novelas visuales.
 Cuando está deshabilitado, el fotograma entero es procesado, lo que es mejor para videos o contenido dinámico.</translation>
     </message>
@@ -422,7 +422,7 @@ Para obtener mejores resultados, usa el modo de presentación &apos;mailbox&apos
         <location filename="../sidebars/tabs/display.py" line="141"/>
         <source>Automatically detect the correct scale factor based on the physical monitor resolution.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished">Detecta automáticamente el factor de escala correcto, basado en la resolución del monitor físico.</translation>
+        <translation>Detecta automáticamente el factor de escala correcto, basado en la resolución del monitor físico.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/display.py" line="147"/>
@@ -1967,7 +1967,7 @@ Rango recomendado: 0,8 - 1,2.</translation>
         <location filename="../sidebars/tabs/scaler.py" line="95"/>
         <source>Antiring strength</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Intensidad de anti-ringing</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="103"/>
@@ -1975,52 +1975,57 @@ Rango recomendado: 0,8 - 1,2.</translation>
 Lower values preserve more detail but may allow ringing.
 Recommended range: 0.7 - 1.0.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Intensidad de la reducción de anillos (anti-ringing) (0.0 - 1.0) para Adaptive Lanczos y Catmull-Rom.
+Los valores más bajos conservan más detalle, pero pueden permitir la aparición de anillos.
+Rango recomendado: 0.7 - 1.0.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="112"/>
         <source>Lanczos options</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Opciones de Lanczos</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="114"/>
         <source>Tight antiring</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Anti-ringing estricto</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="119"/>
         <source>Use only the central 2x2 area for anti-ringing.
 Keeps thin text and line art sharp. Turn off if you see ringing on high-contrast edges.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Usa solo el área central de 2x2 para la reducción de anillos.
+Mantiene nítidos el texto fino y el arte lineal. Desactívalo si ves anillos en los bordes de alto contraste.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="126"/>
         <source>Override Lanczos radius</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Forzar el radio de Lanczos</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="131"/>
         <source>Force a specific Lanczos kernel radius instead of automatic selection.
 When off, the radius is chosen automatically (2 for upscaling, variable for downscaling).</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Fuerza un radio de núcleo Lanczos específico en lugar de la selección automática.
+Cuando está desactivado, el radio se elige automáticamente (2 para el escalado, variable para el submuestreo).</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="138"/>
         <source>Radius</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Radio</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/scaler.py" line="149"/>
         <source>Lanczos kernel radius (2 = standard Lanczos2, 3 = sharper 6-tap).
 Higher radii reduce aliasing but increase GPU load.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Radio del núcleo Lanczos (2 = Lanczos2 estándar, 3 = 6-tap más nítido).
+Los radios más altos reducen el aliasing, pero aumentan la carga de la GPU.</translation>
     </message>
 </context>
 <context>
@@ -2029,137 +2034,137 @@ Higher radii reduce aliasing but increase GPU load.</source>
         <location filename="../sidebars/settings.py" line="81"/>
         <source>General</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>General</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="86"/>
         <source>Scaling</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escalado</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="91"/>
         <source>Display</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Pantalla</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="96"/>
         <source>Presentation</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Presentación</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="101"/>
         <source>Effects</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Efectos</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="106"/>
         <source>Advanced</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Avanzado</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="111"/>
         <source>Extras</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Extras</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="116"/>
         <source>Hotkeys</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Teclas de acceso rápido</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="126"/>
         <source>GUI Style</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Estilo de la interfaz</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="407"/>
         <location filename="../sidebars/settings.py" line="265"/>
         <source>Save profile</source>
         <comment>Save button</comment>
-        <translation type="unfinished"></translation>
+        <translation>Guardar perfil</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="409"/>
         <location filename="../sidebars/settings.py" line="267"/>
         <source>Save</source>
         <comment>Save button</comment>
-        <translation type="unfinished"></translation>
+        <translation>Guardar</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="411"/>
         <location filename="../sidebars/settings.py" line="277"/>
         <source>Reset</source>
         <comment>Reset button</comment>
-        <translation type="unfinished"></translation>
+        <translation>Restablecer</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="287"/>
         <source>Revert this tab</source>
         <comment>Reset menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Revertir esta pestaña</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="290"/>
         <source>Clear this tab profile overrides</source>
         <comment>Reset menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Borrar los cambios del perfil en esta pestaña</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="292"/>
         <source>Restore this tab defaults</source>
         <comment>Reset menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Restaurar los valores predeterminados de esta pestaña</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="296"/>
         <source>Clear all profile overrides</source>
         <comment>Reset menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Borrar todas los cambios del perfil</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="319"/>
         <location filename="../sidebars/settings.py" line="298"/>
         <source>Restore all to system defaults</source>
         <comment>Reset menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Restaurar todo a los valores predeterminados del sistema</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="308"/>
         <source>Restore saved palette</source>
         <comment>Reset menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Restaurar la paleta guardada</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="312"/>
         <source>Restore saved interface</source>
         <comment>Reset menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Restaurar la interfaz guardada</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="315"/>
         <source>Restore default interface</source>
         <comment>Reset menu</comment>
-        <translation type="unfinished"></translation>
+        <translation>Restaurar la interfaz predeterminada</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="401"/>
         <source>Apply style</source>
         <comment>Apply button</comment>
-        <translation type="unfinished"></translation>
+        <translation>Aplicar estilo</translation>
     </message>
     <message>
         <location filename="../sidebars/settings.py" line="402"/>
         <source>Reset style</source>
         <comment>Reset button</comment>
-        <translation type="unfinished"></translation>
+        <translation>Restablecer estilo</translation>
     </message>
 </context>
 <context>
@@ -2168,437 +2173,441 @@ Higher radii reduce aliasing but increase GPU load.</source>
         <location filename="../sidebars/tabs/style.py" line="97"/>
         <source>GUI Style</source>
         <comment>Name of a settings tab</comment>
-        <translation type="unfinished"></translation>
+        <translation>Estilo de la interfaz</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="110"/>
         <source>Background &amp; surfaces</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Fondo y superficies</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="114"/>
         <source>Primary background</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Fondo principal</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="117"/>
         <source>Main background color of the application window and dialogs.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de fondo principal de la ventana de la aplicación y los diálogos.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="124"/>
         <source>Input background</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Fondo de los campos de entrada</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="125"/>
         <source>Background color of text fields, combo boxes, and editable areas.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de fondo de los campos de texto, cuadros combinados y áreas editables.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="132"/>
         <source>Input background (hover)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Fondo de los campos de entrada (hover)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="136"/>
         <source>Background color when the mouse hovers over an input field.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de fondo cuando el ratón pasa por encima de un campo de entrada.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="143"/>
         <source>Input background (disabled)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Fondo de los campos de entrada (deshabilitado)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="147"/>
         <source>Background color for disabled (greyed-out) input fields.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de fondo para los campos de entrada deshabilitados (atenuados).</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="154"/>
         <source>Button background</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Fondo de los botones</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="157"/>
         <source>Background color of buttons.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de fondo de los botones.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="164"/>
         <source>Button background (hover)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Fondo de los botones (hover)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="168"/>
         <source>Background color of a button when the mouse hovers over it.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de fondo de un botón al pasar el ratón por encima.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="175"/>
         <source>Caption background</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Fondo del rótulo</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="178"/>
         <source>Semi-transparent background color of the central grid window titles.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de fondo semitransparente de los títulos de las ventanas de la cuadrícula central.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="186"/>
         <source>Text &amp; icons</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Texto e íconos</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="190"/>
         <source>Primary text</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Texto principal</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="191"/>
         <source>Text color of body text and labels.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color del texto del cuerpo y las etiquetas.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="198"/>
         <source>Primary text (hover)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Texto principal (hover)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="201"/>
         <source>Text color when the mouse hovers over clickable items.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color del texto cuando el ratón pasa por encima de elementos clicables.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="208"/>
         <source>Secondary text</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Texto secundario</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="209"/>
         <source>Text color for secondary information, captions, and section headers.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color del texto para información secundaria, rótulos y encabezados de sección.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="216"/>
         <source>Icon fill</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Relleno de los íconos</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="217"/>
         <source>Fill color of sidebar and toolbar icons.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de relleno de los íconos de la barra lateral y la barra de herramientas.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="225"/>
         <source>Borders &amp; separators</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Bordes y separadores</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="229"/>
         <source>Border</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Borde</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="230"/>
         <source>Border color for input fields, buttons, and panels.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color del borde de los campos de entrada, botones y paneles.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="237"/>
         <source>Border (hover)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Borde (hover)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="238"/>
         <source>Border color when hovering over interactive elements.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color del borde al pasar el ratón por encima de elementos interactivos.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="246"/>
         <source>Controls &amp; highlights</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Controles y resaltados</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="250"/>
         <source>Accent</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Acento</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="251"/>
         <source>Primary accent color for checkboxes, sliders and other interactive controls.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de acento principal para las casillas de verificación, los deslizadores y otros controles interactivos.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="258"/>
         <source>Accent (hover)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Acento (hover)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="259"/>
         <source>Accent color when the mouse hovers over an interactive control.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de acento cuando el ratón pasa por encima de un control interactivo.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="266"/>
         <source>Reset button</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Botón de restablecer</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="267"/>
         <source>Background color of the &apos;Reset&apos; button.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de fondo del botón &apos;Restablecer&apos;.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="274"/>
         <source>Reset button (hover)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Botón de restablecer (hover)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="277"/>
         <source>&apos;Reset&apos; button background color on hover.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de fondo del botón &apos;Restablecer&apos; al pasar el ratón.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="284"/>
         <source>Handle</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Tirador</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="285"/>
         <source>Fill color of scrollbar handles and other small controls.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de relleno de los tiradores de las barras de desplazamiento y otros controles pequeños.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="292"/>
         <source>Handle (hover)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Tirador (hover)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="293"/>
         <source>Fill color of scrollbar handles when hovered.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Color de relleno de los tiradores de las barras de desplazamiento al pasar el ratón.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="309"/>
         <source>Interface</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Interfaz</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="311"/>
         <source>Zoom (%)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Zoom (%)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="317"/>
         <source>Scales the entire interface.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escala toda la interfaz.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="323"/>
         <source>Font scale (%)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Escala de la fuente (%)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="329"/>
         <source>Multiplies every text size in the interface. Unlike zoom, this affects only fonts, not layout.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Multiplica todos los tamaños de texto de la interfaz. A diferencia del zoom, solo afecta a las fuentes, no al diseño.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="336"/>
         <source>Font family</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Familia de fuentes</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="341"/>
         <source>Font used across the entire interface.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Fuente utilizada en toda la interfaz.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="348"/>
         <source>Palette</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Paleta</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="350"/>
         <source>Preset</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Preajuste</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="354"/>
         <source>Select a pre-built color scheme for the GUI.</source>
         <comment>Description of a setting (tooltip). Preset names are not translated.</comment>
-        <translation type="unfinished"></translation>
+        <translation>Selecciona un esquema de color predefinido para la interfaz.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="380"/>
         <source>Sidebars</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Barras laterales</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="382"/>
         <source>Profiles sidebar width</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ancho de la barra lateral de perfiles</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="388"/>
         <source>Width in pixels of the left profiles sidebar.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ancho en píxeles de la barra lateral izquierda de perfiles.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="394"/>
         <source>Settings sidebar width</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ancho de la barra lateral de configuración</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="400"/>
         <source>Width in pixels of the right settings sidebar.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Ancho en píxeles de la barra lateral derecha de configuración.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="407"/>
         <source>Window Grid</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Cuadrícula de ventanas</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="409"/>
         <source>Columns</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Columnas</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="415"/>
         <source>Number of window preview tiles per row.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Número de vistas previas de ventanas por fila.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="421"/>
         <source>Aspect ratio</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Relación de aspecto</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="426"/>
         <source>Shape of each window preview tile.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Forma de cada vista previa de ventana.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="432"/>
         <source>Show window title</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Mostrar el título de la ventana</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="436"/>
         <source>Display the window title on each tile.
 When hidden, the title appears as a tooltip on hover.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Muestra el título de la ventana en cada vista previa.
+Cuando está oculto, el título aparece en un tooltip al pasar el ratón.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="443"/>
         <source>Show profile indicator</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Mostrar indicador de perfil</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="447"/>
         <source>Display a small badge on tiles whose window matches a profile.
 Only shown when no profile is manually selected (Global).</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Muestra una pequeña insignia en las vistas previas cuya ventana coincide con un perfil.
+Solo se muestra cuando no hay ningún perfil seleccionado manualmente (Global).</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="455"/>
         <source>Performance</source>
         <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
+        <translation>Rendimiento</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="457"/>
         <source>Refresh (ms)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Actualización (ms)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="463"/>
         <source>How often the window list is rescanned for new or closed windows.
 Lower values are more responsive but use more CPU.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Con qué frecuencia se vuelve a examinar la lista de ventanas en busca de ventanas nuevas o cerradas.
+Los valores más bajos responden más rápido, pero consumen más CPU.</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="470"/>
         <source>Preview (ms)</source>
         <comment>Label of setting (must be short)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Vista previa (ms)</translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="476"/>
         <source>How often each tile&apos;s live preview is refreshed.
 Lower values result in smoother previews but use more CPU.</source>
         <comment>Description of a setting (tooltip)</comment>
-        <translation type="unfinished"></translation>
+        <translation>Con qué frecuencia se actualiza la vista previa en vivo de cada ventana.
+Los valores más bajos producen vistas previas más fluidas, pero consumen más CPU.</translation>
     </message>
 </context>
 <context>
