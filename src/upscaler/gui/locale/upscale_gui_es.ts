@@ -2553,7 +2553,7 @@ A diferencia del zoom, solo afecta a las fuentes, no al diseño.</translation>
       <location filename="../sidebars/tabs/style.py" line="432" />
       <source>Show window title</source>
       <comment>Label of setting (must be short)</comment>
-      <translation>Mostrar el título de la ventana</translation>
+      <translation>Mostrar título de la ventana</translation>
     </message>
     <message>
       <location filename="../sidebars/tabs/style.py" line="436" />
