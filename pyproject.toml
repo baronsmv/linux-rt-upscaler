@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "linux-rt-upscaler"
-version = "1.1.4"
+version = "1.1.5"
 description = "A real-time SRCNN upscaler for any X-Window."
 readme = "README.md"
 authors = [
@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Multimedia :: Graphics :: Capture",
     "Topic :: System :: Hardware :: Hardware Drivers",
 ]
