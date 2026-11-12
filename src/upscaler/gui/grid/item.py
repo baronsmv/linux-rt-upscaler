@@ -265,9 +265,7 @@ class WindowTileItem(QGraphicsObject):
             self._badge_label = None
             self._badge_font = None
 
-        self.setToolTip(
-            f"{self._win_info.title}\nProfile: {name}" if name else self._win_info.title
-        )
+        self.setToolTip(f"Profile: {name}" if name else self._win_info.title)
         self.update()
 
     # ------------------------------------------------------------------
