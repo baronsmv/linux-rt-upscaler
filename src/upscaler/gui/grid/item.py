@@ -40,6 +40,32 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+BADGE_HEIGHT = 22
+BADGE_INSET = 8
+BADGE_EXTRA_WIDTH = 10
+
+
+class _BadgeHitArea(QGraphicsItem):
+    """Invisible child item scoping the profile tooltip to the badge region."""
+
+    def __init__(self, parent: QGraphicsItem) -> None:
+        super().__init__(parent)
+        self.setAcceptedMouseButtons(Qt.NoButton)
+        self.setAcceptHoverEvents(False)
+        self._rect = QRectF()
+
+    def set_geometry(self, x: float, y: float, w: float, h: float) -> None:
+        """Move/resize in parent-local coordinates. w or h ≤ 0 disables hit-testing."""
+        self.prepareGeometryChange()
+        self.setPos(x, y)
+        self._rect = QRectF(0.0, 0.0, w, h)
+
+    def boundingRect(self) -> QRectF:
+        return self._rect
+
+    def paint(self, painter, option, widget=None) -> None:
+        pass
+
 
 def _profile_initials(name: str, limit: int = 2) -> str:
     """Short label for a profile badge, up to `limit` characters."""
@@ -111,7 +137,6 @@ class WindowTileItem(QGraphicsObject):
     ) -> None:
         super().__init__(parent)
         self._win_info: WindowInfo = win_info
-        self.setToolTip(self._win_info.title)
         self._gui_config: GUIConfig = gui_config
         self._grid_focused: bool = True
         self._matched_profile: Optional[str] = None
@@ -152,6 +177,7 @@ class WindowTileItem(QGraphicsObject):
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, True)
 
+        self._badge_hit = _BadgeHitArea(self)
         self._init_grabber()
         self._timer.start()
 
@@ -186,6 +212,7 @@ class WindowTileItem(QGraphicsObject):
         self._target_scale = 1.0
         self._max_bounding_rect = self._compute_max_bounding_rect()
         self._scaled_pixmap = None
+        self._sync_badge_hit()
         self.update()
         self._update_animation_target()
 
@@ -268,7 +295,7 @@ class WindowTileItem(QGraphicsObject):
             self._badge_label = None
             self._badge_font = None
 
-        self.setToolTip(f"Profile: {name}" if name else self._win_info.title)
+        self._sync_badge_hit()
         self.update()
 
     # ------------------------------------------------------------------
@@ -370,6 +397,34 @@ class WindowTileItem(QGraphicsObject):
     # ------------------------------------------------------------------
     #  Painting
     # ------------------------------------------------------------------
+
+    def _badge_rect(self) -> Optional[QRectF]:
+        """Local-coord rect of the badge, or None when no badge is shown."""
+        if not self._matched_profile:
+            return None
+        if self._profile_pixmap is not None:
+            badge_w = BADGE_HEIGHT
+        elif self._badge_label is not None and len(self._badge_label) > 1:
+            badge_w = BADGE_HEIGHT + BADGE_EXTRA_WIDTH
+        else:
+            badge_w = BADGE_HEIGHT
+        return QRectF(
+            self._half_w - badge_w - BADGE_INSET,
+            -self._half_h + BADGE_INSET,
+            badge_w,
+            BADGE_HEIGHT,
+        )
+
+    def _sync_badge_hit(self) -> None:
+        """Position the tooltip hit area over the badge (or hide it)."""
+        rect = self._badge_rect()
+        if rect is None:
+            self._badge_hit.setVisible(False)
+            self._badge_hit.setToolTip("")
+            return
+        self._badge_hit.setVisible(True)
+        self._badge_hit.set_geometry(rect.x(), rect.y(), rect.width(), rect.height())
+        self._badge_hit.setToolTip(f"Profile: {self._matched_profile}")
 
     def paint(
         self,
@@ -473,23 +528,10 @@ class WindowTileItem(QGraphicsObject):
             painter.drawPath(bg_path)
 
         # Profile badge
-        if self._matched_profile:
-            badge_h = 22
-            badge_inset = 8
-
-            if self._profile_pixmap is not None:
-                badge_w = badge_h
-            elif self._badge_label is not None and len(self._badge_label) > 1:
-                badge_w = badge_h + 10
-            else:
-                badge_w = badge_h
-
-            badge_rect = QRectF(
-                self._half_w - badge_w - badge_inset,
-                -self._half_h + badge_inset,
-                badge_w,
-                badge_h,
-            )
+        badge_rect = self._badge_rect()
+        if badge_rect is not None:
+            badge_h = badge_rect.height()
+            badge_w = badge_rect.width()
 
             painter.setPen(Qt.NoPen)
             painter.setBrush(QColor(self._gui_config.palette.caption_background))
