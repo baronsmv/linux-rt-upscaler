@@ -154,6 +154,9 @@ class OverlayWindow(QMainWindow):
         # Configure coordinate mapper with initial values
         self._update_mapper()
 
+        # Prevent the window from taking focus on show
+        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
+
         # Set up the Qt window according to mode
         self._setup_window(self._geometry, config.overlay_mode)
 
@@ -194,7 +197,6 @@ class OverlayWindow(QMainWindow):
                         "Restoring saved windowed size: %dx%d", final_w, final_h
                     )
         self.resize(final_w, final_h)
-        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
 
         # Store XID for debugging
         self.xid: int = int(self.winId())
@@ -278,10 +280,10 @@ class OverlayWindow(QMainWindow):
         flags = Qt.Window
 
         if mode == OverlayMode.FULLSCREEN.value:
-            flags |= Qt.FramelessWindowHint
+            flags |= Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
             self.setWindowFlags(flags)
             self.setGeometry(x, y, width, height)
-            self.showFullScreen()
+            self.show()
             logger.debug(
                 f"Overlay set to fullscreen on screen at ({x},{y}) size {width}x{height}"
             )
