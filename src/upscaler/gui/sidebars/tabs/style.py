@@ -339,8 +339,7 @@ class StyleTab(SettingsTab):
             self._on_font_changed,
             baseline=self._saved_font_family,
             help=self.tr(
-                "Interface font. Leave at the system default for the best "
-                "integration with your desktop.",
+                "Font used across the entire interface.",
                 "Description of a setting (tooltip)",
             ),
         )

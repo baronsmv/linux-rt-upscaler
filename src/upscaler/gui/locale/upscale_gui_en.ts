@@ -2333,7 +2333,7 @@ Higher radii reduce aliasing but increase GPU load.</source>
     </message>
     <message>
       <location filename="../sidebars/tabs/style.py" line="335" />
-      <source>Interface font. Leave at the system default for the best integration with your desktop.</source>
+      <source>Font used across the entire interface.</source>
       <comment>Description of a setting (tooltip)</comment>
       <translation type="unfinished" />
     </message>
