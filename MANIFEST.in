@@ -2,6 +2,7 @@ include README.md
 include LICENSE
 recursive-include src/upscaler/capture/lib *.c *.h
 recursive-include src/upscaler/gui/icons *.svg
+recursive-include src/upscaler/gui/locale *.qm
 recursive-include src/upscaler/shaders *.spv
 recursive-include src/upscaler/srcnn *.json *.spv
 recursive-include src/upscaler/vulkan/lib *.cpp *.h
