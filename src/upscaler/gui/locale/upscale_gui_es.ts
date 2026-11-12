@@ -1166,13 +1166,13 @@ Desactive esta opción para seleccionar manualmente una ventana de la cuadrícul
         <translation>Acerca de Escalador en Tiempo Real.</translation>
     </message>
     <message>
-        <location filename="../main.py" line="417"/>
+        <location filename="../main.py" line="421"/>
         <source>Error</source>
         <comment>Error starting pipeline</comment>
         <translation>Error</translation>
     </message>
     <message>
-        <location filename="../main.py" line="418"/>
+        <location filename="../main.py" line="422"/>
         <source>Could not start pipeline:
 {0}</source>
         <comment>Error starting pipeline</comment>
@@ -1180,18 +1180,59 @@ Desactive esta opción para seleccionar manualmente una ventana de la cuadrícul
 {0}</translation>
     </message>
     <message>
-        <location filename="../main.py" line="614"/>
+        <location filename="../main.py" line="620"/>
         <source>Save Error</source>
         <comment>Error while saving configuration</comment>
         <translation>Error al guardar</translation>
     </message>
     <message>
-        <location filename="../main.py" line="615"/>
+        <location filename="../main.py" line="621"/>
         <source>Could not save:
 {0}</source>
         <comment>Error while saving configuration</comment>
         <translation>No se pudo guardar:
 {0}</translation>
+    </message>
+</context>
+<context>
+    <name>OSD message</name>
+    <message>
+        <location filename="../../pipeline/controller.py" line="294"/>
+        <location filename="../../pipeline/pipeline.py" line="152"/>
+        <source>Model: {0}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../pipeline/controller.py" line="191"/>
+        <location filename="../../pipeline/pipeline.py" line="156"/>
+        <source>Geometry: {0}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../pipeline/controller.py" line="323"/>
+        <location filename="../../pipeline/pipeline.py" line="160"/>
+        <source>Zoom: {0}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../pipeline/controller.py" line="218"/>
+        <location filename="../../pipeline/pipeline.py" line="164"/>
+        <source>View restored</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../pipeline/controller.py" line="423"/>
+        <location filename="../../pipeline/pipeline.py" line="165"/>
+        <source>Screenshot saved</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../pipeline/controller.py" line="461"/>
+        <location filename="../../pipeline/controller.py" line="437"/>
+        <location filename="../../pipeline/controller.py" line="425"/>
+        <location filename="../../pipeline/pipeline.py" line="166"/>
+        <source>Screenshot failed</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1736,8 +1777,8 @@ Deja una regla en blanco para ignorar esa propiedad.</translation>
     </message>
     <message>
         <location filename="../dialogs/profile.py" line="478"/>
-        <source>Select Icon</source>
-        <comment>Select Icon dialog title</comment>
+        <source>Select icon</source>
+        <comment>Select icon dialog title</comment>
         <translation>Selecciona un ícono</translation>
     </message>
     <message>
@@ -2124,410 +2165,436 @@ Higher radii reduce aliasing but increase GPU load.</source>
 <context>
     <name>StyleTab</name>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="91"/>
+        <location filename="../sidebars/tabs/style.py" line="97"/>
         <source>GUI Style</source>
         <comment>Name of a settings tab</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="104"/>
+        <location filename="../sidebars/tabs/style.py" line="110"/>
         <source>Background &amp; surfaces</source>
         <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="108"/>
+        <location filename="../sidebars/tabs/style.py" line="114"/>
         <source>Primary background</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="111"/>
+        <location filename="../sidebars/tabs/style.py" line="117"/>
         <source>Main background color of the application window and dialogs.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="118"/>
+        <location filename="../sidebars/tabs/style.py" line="124"/>
         <source>Input background</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="119"/>
+        <location filename="../sidebars/tabs/style.py" line="125"/>
         <source>Background color of text fields, combo boxes, and editable areas.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="126"/>
+        <location filename="../sidebars/tabs/style.py" line="132"/>
         <source>Input background (hover)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="130"/>
+        <location filename="../sidebars/tabs/style.py" line="136"/>
         <source>Background color when the mouse hovers over an input field.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="137"/>
+        <location filename="../sidebars/tabs/style.py" line="143"/>
         <source>Input background (disabled)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="141"/>
+        <location filename="../sidebars/tabs/style.py" line="147"/>
         <source>Background color for disabled (greyed-out) input fields.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="148"/>
+        <location filename="../sidebars/tabs/style.py" line="154"/>
         <source>Button background</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="151"/>
+        <location filename="../sidebars/tabs/style.py" line="157"/>
         <source>Background color of buttons.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="158"/>
+        <location filename="../sidebars/tabs/style.py" line="164"/>
         <source>Button background (hover)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="162"/>
+        <location filename="../sidebars/tabs/style.py" line="168"/>
         <source>Background color of a button when the mouse hovers over it.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="169"/>
+        <location filename="../sidebars/tabs/style.py" line="175"/>
         <source>Caption background</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="172"/>
+        <location filename="../sidebars/tabs/style.py" line="178"/>
         <source>Semi-transparent background color of the central grid window titles.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="180"/>
+        <location filename="../sidebars/tabs/style.py" line="186"/>
         <source>Text &amp; icons</source>
         <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="184"/>
+        <location filename="../sidebars/tabs/style.py" line="190"/>
         <source>Primary text</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="185"/>
+        <location filename="../sidebars/tabs/style.py" line="191"/>
         <source>Text color of body text and labels.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="192"/>
+        <location filename="../sidebars/tabs/style.py" line="198"/>
         <source>Primary text (hover)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="195"/>
+        <location filename="../sidebars/tabs/style.py" line="201"/>
         <source>Text color when the mouse hovers over clickable items.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="202"/>
+        <location filename="../sidebars/tabs/style.py" line="208"/>
         <source>Secondary text</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="203"/>
+        <location filename="../sidebars/tabs/style.py" line="209"/>
         <source>Text color for secondary information, captions, and section headers.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="210"/>
+        <location filename="../sidebars/tabs/style.py" line="216"/>
         <source>Icon fill</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="211"/>
+        <location filename="../sidebars/tabs/style.py" line="217"/>
         <source>Fill color of sidebar and toolbar icons.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="219"/>
+        <location filename="../sidebars/tabs/style.py" line="225"/>
         <source>Borders &amp; separators</source>
         <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="223"/>
+        <location filename="../sidebars/tabs/style.py" line="229"/>
         <source>Border</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="224"/>
+        <location filename="../sidebars/tabs/style.py" line="230"/>
         <source>Border color for input fields, buttons, and panels.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="231"/>
+        <location filename="../sidebars/tabs/style.py" line="237"/>
         <source>Border (hover)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="232"/>
+        <location filename="../sidebars/tabs/style.py" line="238"/>
         <source>Border color when hovering over interactive elements.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="240"/>
+        <location filename="../sidebars/tabs/style.py" line="246"/>
         <source>Controls &amp; highlights</source>
         <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="244"/>
+        <location filename="../sidebars/tabs/style.py" line="250"/>
         <source>Accent</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="245"/>
+        <location filename="../sidebars/tabs/style.py" line="251"/>
         <source>Primary accent color for checkboxes, sliders and other interactive controls.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="252"/>
+        <location filename="../sidebars/tabs/style.py" line="258"/>
         <source>Accent (hover)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="253"/>
+        <location filename="../sidebars/tabs/style.py" line="259"/>
         <source>Accent color when the mouse hovers over an interactive control.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="260"/>
+        <location filename="../sidebars/tabs/style.py" line="266"/>
         <source>Reset button</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="261"/>
+        <location filename="../sidebars/tabs/style.py" line="267"/>
         <source>Background color of the &apos;Reset&apos; button.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="268"/>
+        <location filename="../sidebars/tabs/style.py" line="274"/>
         <source>Reset button (hover)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="271"/>
+        <location filename="../sidebars/tabs/style.py" line="277"/>
         <source>&apos;Reset&apos; button background color on hover.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="278"/>
+        <location filename="../sidebars/tabs/style.py" line="284"/>
         <source>Handle</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="279"/>
+        <location filename="../sidebars/tabs/style.py" line="285"/>
         <source>Fill color of scrollbar handles and other small controls.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="286"/>
+        <location filename="../sidebars/tabs/style.py" line="292"/>
         <source>Handle (hover)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="287"/>
+        <location filename="../sidebars/tabs/style.py" line="293"/>
         <source>Fill color of scrollbar handles when hovered.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="303"/>
+        <location filename="../sidebars/tabs/style.py" line="309"/>
         <source>Interface</source>
         <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="305"/>
+        <location filename="../sidebars/tabs/style.py" line="311"/>
         <source>Zoom (%)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="311"/>
+        <location filename="../sidebars/tabs/style.py" line="317"/>
         <source>Scales the entire interface.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="317"/>
+        <location filename="../sidebars/tabs/style.py" line="323"/>
         <source>Font scale (%)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="323"/>
+        <location filename="../sidebars/tabs/style.py" line="329"/>
         <source>Multiplies every text size in the interface. Unlike zoom, this affects only fonts, not layout.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="330"/>
+        <location filename="../sidebars/tabs/style.py" line="336"/>
         <source>Font family</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="335"/>
+        <location filename="../sidebars/tabs/style.py" line="341"/>
         <source>Font used across the entire interface.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="343"/>
+        <location filename="../sidebars/tabs/style.py" line="348"/>
         <source>Palette</source>
         <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="345"/>
+        <location filename="../sidebars/tabs/style.py" line="350"/>
         <source>Preset</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="349"/>
+        <location filename="../sidebars/tabs/style.py" line="354"/>
         <source>Select a pre-built color scheme for the GUI.</source>
         <comment>Description of a setting (tooltip). Preset names are not translated.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="375"/>
+        <location filename="../sidebars/tabs/style.py" line="380"/>
         <source>Sidebars</source>
         <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="377"/>
+        <location filename="../sidebars/tabs/style.py" line="382"/>
         <source>Profiles sidebar width</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="383"/>
+        <location filename="../sidebars/tabs/style.py" line="388"/>
         <source>Width in pixels of the left profiles sidebar.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="389"/>
+        <location filename="../sidebars/tabs/style.py" line="394"/>
         <source>Settings sidebar width</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="395"/>
+        <location filename="../sidebars/tabs/style.py" line="400"/>
         <source>Width in pixels of the right settings sidebar.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="402"/>
+        <location filename="../sidebars/tabs/style.py" line="407"/>
         <source>Window Grid</source>
         <comment>Settings section</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="404"/>
+        <location filename="../sidebars/tabs/style.py" line="409"/>
         <source>Columns</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="410"/>
+        <location filename="../sidebars/tabs/style.py" line="415"/>
         <source>Number of window preview tiles per row.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="416"/>
+        <location filename="../sidebars/tabs/style.py" line="421"/>
         <source>Aspect ratio</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="421"/>
+        <location filename="../sidebars/tabs/style.py" line="426"/>
         <source>Shape of each window preview tile.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="428"/>
-        <source>Performance</source>
-        <comment>Settings section</comment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../sidebars/tabs/style.py" line="430"/>
-        <source>Refresh (ms)</source>
+        <location filename="../sidebars/tabs/style.py" line="432"/>
+        <source>Show window title</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../sidebars/tabs/style.py" line="436"/>
+        <source>Display the window title on each tile.
+When hidden, the title appears as a tooltip on hover.</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="443"/>
+        <source>Show profile indicator</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="447"/>
+        <source>Display a small badge on tiles whose window matches a profile.
+Only shown when no profile is manually selected (Global).</source>
+        <comment>Description of a setting (tooltip)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="455"/>
+        <source>Performance</source>
+        <comment>Settings section</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="457"/>
+        <source>Refresh (ms)</source>
+        <comment>Label of setting (must be short)</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../sidebars/tabs/style.py" line="463"/>
         <source>How often the window list is rescanned for new or closed windows.
 Lower values are more responsive but use more CPU.</source>
         <comment>Description of a setting (tooltip)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="443"/>
+        <location filename="../sidebars/tabs/style.py" line="470"/>
         <source>Preview (ms)</source>
         <comment>Label of setting (must be short)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../sidebars/tabs/style.py" line="449"/>
+        <location filename="../sidebars/tabs/style.py" line="476"/>
         <source>How often each tile&apos;s live preview is refreshed.
 Lower values result in smoother previews but use more CPU.</source>
         <comment>Description of a setting (tooltip)</comment>
@@ -2671,6 +2738,15 @@ Utilice «Detener» en el menú de la bandeja para volver.</translation>
         <source>Select a window first.</source>
         <comment>No window selected warning</comment>
         <translation>Seleccione una ventana primero.</translation>
+    </message>
+</context>
+<context>
+    <name>WindowTileItem</name>
+    <message>
+        <location filename="../grid/item.py" line="431"/>
+        <source>Profile: {0}</source>
+        <comment>Badge tooltip</comment>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 </TS>
