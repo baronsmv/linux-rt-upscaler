@@ -69,7 +69,7 @@ class WindowGridScene(QGraphicsScene):
         self._interactive: bool = True
 
         # --- Tile storage ----------------------------------------------------
-        self._tiles: List[WindowTileItem] = []  # ordered grid order
+        self.tiles: List[WindowTileItem] = []  # ordered grid order
         self._tile_by_handle: Dict[int, WindowTileItem] = {}  # handle -> tile
         self._selected_handle: Optional[int] = None
 
@@ -124,7 +124,7 @@ class WindowGridScene(QGraphicsScene):
                 self._tile_by_handle[win.handle] = tile
             new_tiles.append(tile)
 
-        self._tiles = new_tiles
+        self.tiles = new_tiles
         self._restore_selection()
 
         # Only relayout if the set of handles changed or the viewport grew/shrunk
@@ -141,7 +141,7 @@ class WindowGridScene(QGraphicsScene):
 
         for handle in list(self._tile_by_handle.keys()):
             self._remove_tile(handle)
-        self._tiles.clear()
+        self.tiles.clear()
         self._selected_handle = None
 
     def selected_window(self) -> Optional[WindowInfo]:
@@ -154,16 +154,25 @@ class WindowGridScene(QGraphicsScene):
 
     def focus_first_tile(self) -> None:
         """Set the selection to the first tile in the grid, if any."""
-        if self._tiles:
-            self._set_selected_handle(self._tiles[0].window_info.handle)
+        if self.tiles:
+            self._set_selected_handle(self.tiles[0].window_info.handle)
 
     def set_interactive(self, interactive: bool) -> None:
         """Called by the view when grid focus is gained or lost."""
         if self._interactive == interactive:
             return
         self._interactive = interactive
-        for tile in self._tiles:
+        for tile in self.tiles:
             tile.set_grid_focused(interactive)
+
+    # ------------------------------------------------------------------
+    #  Profiles match
+    # ------------------------------------------------------------------
+
+    def set_profile_matches(self, matches: Dict[int, Optional[str]]) -> None:
+        """Set the auto-matched profile name per window handle."""
+        for handle, tile in self._tile_by_handle.items():
+            tile.set_matched_profile(matches.get(handle))
 
     # ------------------------------------------------------------------
     #  Layout
@@ -184,7 +193,7 @@ class WindowGridScene(QGraphicsScene):
         ratio of each tile is derived from the default ``tile.width``
         and ``tile.height``.
         """
-        tiles = self._tiles
+        tiles = self.tiles
         if not tiles:
             self.setSceneRect(QRectF())
             return
@@ -374,7 +383,7 @@ class WindowGridScene(QGraphicsScene):
 
     def _move_selection(self, key: int) -> None:
         """Move the selection highlight in response to an arrow key."""
-        tiles = self._tiles
+        tiles = self.tiles
         if not tiles:
             return
 

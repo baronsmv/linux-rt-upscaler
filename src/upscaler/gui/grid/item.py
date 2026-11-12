@@ -71,6 +71,7 @@ class WindowTileItem(QGraphicsObject):
         self._win_info: WindowInfo = win_info
         self._gui_config: GUIConfig = gui_config
         self._grid_focused: bool = True
+        self._matched_profile: Optional[str] = None
 
         # --- Geometry -------------------------------------------------------
         self._half_w = gui_config.tile.width / 2.0
@@ -184,6 +185,17 @@ class WindowTileItem(QGraphicsObject):
         self._anim.setStartValue(self._scale)
         self._anim.setEndValue(target)
         self._anim.start()
+
+    # ------------------------------------------------------------------
+    #  Profiles match
+    # ------------------------------------------------------------------
+
+    def set_matched_profile(self, name: Optional[str]) -> None:
+        """Set the auto-matched profile name (Global mode only)."""
+        if self._matched_profile == name:
+            return
+        self._matched_profile = name
+        self.update()
 
     # ------------------------------------------------------------------
     #  Selection state (managed by WindowGridScene)
@@ -303,9 +315,8 @@ class WindowTileItem(QGraphicsObject):
         radius = self._gui_config.tile.radius
 
         # Shadow
-        shadow_rect = base
         shadow_path = QPainterPath()
-        shadow_path.addRoundedRect(shadow_rect, radius, radius)
+        shadow_path.addRoundedRect(base, radius, radius)
         painter.setOpacity(0.12)
         painter.fillPath(shadow_path, QColor(0, 0, 0))
         painter.setOpacity(1.0)
@@ -324,8 +335,7 @@ class WindowTileItem(QGraphicsObject):
         painter.save()
         painter.setClipPath(bg_path)
 
-        # Title
-        title = self._win_info.title
+        # --- Font setup (must come before measuring) ---------------------
         family = self._gui_config.font_family
         font = QFont(family) if family else QFont(QApplication.font())
         font.setPointSize(self._gui_config.tile.title_font_size)
@@ -334,37 +344,54 @@ class WindowTileItem(QGraphicsObject):
         painter.setFont(font)
         painter.setRenderHint(QPainter.TextAntialiasing, True)
 
-        # Measure text
+        # --- Compose title + optional profile suffix ---------------------
+        title = self._win_info.title
+        suffix = f" · {self._matched_profile}" if self._matched_profile else ""
+
         fm = painter.fontMetrics()
-        text_width = fm.horizontalAdvance(title)
-        text_height = fm.height()
+        pill_padding = 8
+        max_content_w = int(w - 20) - 2 * pill_padding
 
-        # Pill dimensions (with horizontal padding)
-        pill_w = min(text_width + 16, w - 20)  # cap at tile width
-        pill_h = text_height + 6
+        title_w = fm.horizontalAdvance(title)
+        suffix_w = fm.horizontalAdvance(suffix)
+
+        # Elide title first if combined width overflows
+        if title_w + suffix_w > max_content_w and suffix_w > 0:
+            min_title_w = 40
+            title = fm.elidedText(
+                title, Qt.ElideRight, max(min_title_w, max_content_w - suffix_w)
+            )
+            title_w = fm.horizontalAdvance(title)
+            # If still overflowing, elide the suffix
+            if title_w + suffix_w > max_content_w:
+                avail_for_suffix = max_content_w - title_w
+                suffix = fm.elidedText(suffix, Qt.ElideRight, avail_for_suffix)
+                suffix_w = fm.horizontalAdvance(suffix)
+
+        content_w = title_w + suffix_w
+        pill_w = min(content_w + 2 * pill_padding, w - 20)
+        pill_h = fm.height() + 6
         pill_x = -pill_w / 2.0
-        pill_y = h / 2 - pill_h - 6  # bottom of tile, with margin
+        pill_y = h / 2 - pill_h - 6
         pill_rect = QRectF(pill_x, pill_y, pill_w, pill_h)
-        pill_radius = 4
 
-        # Draw pill background
+        # --- Draw pill ----------------------------------------------------
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(self._gui_config.palette.caption_background))
-        painter.drawRoundedRect(pill_rect, pill_radius, pill_radius)
+        painter.drawRoundedRect(pill_rect, 4, 4)
 
-        # Draw text centered in pill
-        text_rect = pill_rect.adjusted(8, 0, -8, 0)
+        # Vertically centered baseline inside the pill
+        text_x = pill_rect.left() + pill_padding
+        baseline_y = pill_rect.center().y() + (fm.ascent() - fm.descent()) / 2.0
+
+        # Title (text_hover)
         painter.setPen(QColor(self._gui_config.palette.text_hover))
-        painter.drawText(text_rect, Qt.AlignCenter, title)
+        painter.drawText(int(text_x), int(baseline_y), title)
 
-        if self._selected and self._grid_focused:
-            color = QColor(self._gui_config.palette.control)
-            if not self._grid_focused:
-                color.setAlphaF(0.4)
-            pen = QPen(color, self._gui_config.tile.selection_border_width)
-            painter.setPen(pen)
-            painter.setBrush(Qt.NoBrush)
-            painter.drawPath(bg_path)
+        # Suffix (text_subtle), continues where title ended
+        if suffix:
+            painter.setPen(QColor(self._gui_config.palette.text_subtle))
+            painter.drawText(int(text_x + title_w), int(baseline_y), suffix)
 
         painter.restore()
 

@@ -4,7 +4,7 @@ import copy
 import gc
 import logging
 import os
-from typing import Optional, TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, Qt, QTimer, QSettings, QSize, QStandardPaths, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -225,6 +225,9 @@ class MainWindow(QMainWindow):
         # ------------------------------------------------------------------
         # Grid and filter
         self.filter_bar.filter_changed.connect(self.grid_mgr.populate)
+        self.filter_bar.filter_changed.connect(
+            lambda: QTimer.singleShot(0, self._refresh_profile_matches)
+        )
         self.filter_bar.focus_grid_requested.connect(self.grid_mgr.focus_grid)
         self.scene.window_selected.connect(self._on_window_selected)
         self.scene.focus_filter_requested.connect(self.filter_bar.set_focus)
@@ -232,6 +235,9 @@ class MainWindow(QMainWindow):
 
         # Profile
         self.left_sidebar.profile_selected.connect(self.profile_act.select_profile)
+        self.left_sidebar.profile_selected.connect(
+            lambda _name: QTimer.singleShot(0, self._refresh_profile_matches)
+        )
         self.left_sidebar.add_profile_requested.connect(self.profile_act.add_profile)
         self.left_sidebar.duplicate_profile_requested.connect(
             self.profile_act.duplicate_profile
@@ -498,6 +504,8 @@ class MainWindow(QMainWindow):
             parse_config(merged_base)
             self.daemon_ctrl.update_base_config(merged_base)
 
+        self._refresh_profile_matches()
+
     def _make_circular_button(
         self,
         icon_name: str,
@@ -699,6 +707,19 @@ class MainWindow(QMainWindow):
         finally:
             self._stopping_manual_session = False
 
+    def _refresh_profile_matches(self) -> None:
+        """Update per-tile profile indicators."""
+        if self._config_manager.active_profile_name is not None:
+            self.scene.set_profile_matches({})
+            return
+
+        matches: Dict[int, Optional[str]] = {}
+        for tile in self.scene.tiles:
+            win = tile.window_info
+            name, _ = find_matching_profile(self._config_manager.profiles, win)
+            matches[win.handle] = name
+        self.scene.set_profile_matches(matches)
+
     def set_daemon_mode(self, enabled: bool) -> None:
         """Enable or disable daemon mode, updating config and GUI."""
         self._config_manager.persistent_config.daemon = enabled
@@ -743,6 +764,7 @@ class MainWindow(QMainWindow):
         self.activateWindow()
         QTimer.singleShot(0, self.scene.schedule_relayout)
         QTimer.singleShot(0, self._focus_grid)
+        QTimer.singleShot(0, self._refresh_profile_matches)
         self.grid_mgr.start()
 
     def hide_gui(self) -> None:
