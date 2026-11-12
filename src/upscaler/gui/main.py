@@ -4,7 +4,7 @@ import copy
 import gc
 import logging
 import os
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING, Tuple
 
 from PySide6.QtCore import QEvent, Qt, QTimer, QSettings, QSize, QStandardPaths, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -713,11 +713,13 @@ class MainWindow(QMainWindow):
             self.scene.set_profile_matches({})
             return
 
-        matches: Dict[int, Optional[str]] = {}
+        matches: Dict[int, Tuple[str, Optional[str]]] = {}
         for tile in self.scene.tiles:
             win = tile.window_info
             name, _ = find_matching_profile(self._config_manager.profiles, win)
-            matches[win.handle] = name
+            if name:
+                icon_path = self._config_manager.profiles.get(name, {}).get("icon")
+                matches[win.handle] = (name, icon_path)
         self.scene.set_profile_matches(matches)
 
     def set_daemon_mode(self, enabled: bool) -> None:

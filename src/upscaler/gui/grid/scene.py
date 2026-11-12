@@ -169,10 +169,17 @@ class WindowGridScene(QGraphicsScene):
     #  Profiles match
     # ------------------------------------------------------------------
 
-    def set_profile_matches(self, matches: Dict[int, Optional[str]]) -> None:
-        """Set the auto-matched profile name per window handle."""
+    def set_profile_matches(
+        self, matches: Dict[int, Tuple[str, Optional[str]]]
+    ) -> None:
+        """
+        Set the matched profile per window handle.
+
+        Values are (profile_name, icon_path_or_None). An empty dict clears all.
+        """
         for handle, tile in self._tile_by_handle.items():
-            tile.set_matched_profile(matches.get(handle))
+            name, icon_path = matches.get(handle, (None, None))
+            tile.set_matched_profile(name, icon_path)
 
     # ------------------------------------------------------------------
     #  Layout

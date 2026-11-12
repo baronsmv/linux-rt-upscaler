@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Optional, Tuple, TYPE_CHECKING
 
 from PySide6.QtCore import (
@@ -72,6 +73,8 @@ class WindowTileItem(QGraphicsObject):
         self._gui_config: GUIConfig = gui_config
         self._grid_focused: bool = True
         self._matched_profile: Optional[str] = None
+        self._profile_pixmap: Optional[QPixmap] = None
+        self._profile_pixmap_path: Optional[str] = None
 
         # --- Geometry -------------------------------------------------------
         self._half_w = gui_config.tile.width / 2.0
@@ -190,11 +193,25 @@ class WindowTileItem(QGraphicsObject):
     #  Profiles match
     # ------------------------------------------------------------------
 
-    def set_matched_profile(self, name: Optional[str]) -> None:
-        """Set the auto-matched profile name (Global mode only)."""
-        if self._matched_profile == name:
+    def set_matched_profile(
+        self, name: Optional[str], icon_path: Optional[str] = None
+    ) -> None:
+        """Set the matched profile for the corner badge (None clears it)."""
+        if self._matched_profile == name and self._profile_pixmap_path == icon_path:
             return
         self._matched_profile = name
+        self._profile_pixmap_path = icon_path
+
+        if icon_path and os.path.isfile(icon_path):
+            self._profile_pixmap = QPixmap(icon_path)
+            if self._profile_pixmap.isNull():
+                self._profile_pixmap = None
+        else:
+            self._profile_pixmap = None
+
+        self.setToolTip(
+            f"{self._win_info.title}\nProfile: {name}" if name else self._win_info.title
+        )
         self.update()
 
     # ------------------------------------------------------------------
@@ -335,7 +352,8 @@ class WindowTileItem(QGraphicsObject):
         painter.save()
         painter.setClipPath(bg_path)
 
-        # --- Font setup (must come before measuring) ---------------------
+        # Title
+        title = self._win_info.title
         family = self._gui_config.font_family
         font = QFont(family) if family else QFont(QApplication.font())
         font.setPointSize(self._gui_config.tile.title_font_size)
@@ -344,54 +362,37 @@ class WindowTileItem(QGraphicsObject):
         painter.setFont(font)
         painter.setRenderHint(QPainter.TextAntialiasing, True)
 
-        # --- Compose title + optional profile suffix ---------------------
-        title = self._win_info.title
-        suffix = f" · {self._matched_profile}" if self._matched_profile else ""
-
+        # Measure text
         fm = painter.fontMetrics()
-        pill_padding = 8
-        max_content_w = int(w - 20) - 2 * pill_padding
+        text_width = fm.horizontalAdvance(title)
+        text_height = fm.height()
 
-        title_w = fm.horizontalAdvance(title)
-        suffix_w = fm.horizontalAdvance(suffix)
-
-        # Elide title first if combined width overflows
-        if title_w + suffix_w > max_content_w and suffix_w > 0:
-            min_title_w = 40
-            title = fm.elidedText(
-                title, Qt.ElideRight, max(min_title_w, max_content_w - suffix_w)
-            )
-            title_w = fm.horizontalAdvance(title)
-            # If still overflowing, elide the suffix
-            if title_w + suffix_w > max_content_w:
-                avail_for_suffix = max_content_w - title_w
-                suffix = fm.elidedText(suffix, Qt.ElideRight, avail_for_suffix)
-                suffix_w = fm.horizontalAdvance(suffix)
-
-        content_w = title_w + suffix_w
-        pill_w = min(content_w + 2 * pill_padding, w - 20)
-        pill_h = fm.height() + 6
+        # Pill dimensions (with horizontal padding)
+        pill_w = min(text_width + 16, w - 20)  # cap at tile width
+        pill_h = text_height + 6
         pill_x = -pill_w / 2.0
-        pill_y = h / 2 - pill_h - 6
+        pill_y = h / 2 - pill_h - 6  # bottom of tile, with margin
         pill_rect = QRectF(pill_x, pill_y, pill_w, pill_h)
+        pill_radius = 4
 
-        # --- Draw pill ----------------------------------------------------
+        # Draw pill background
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(self._gui_config.palette.caption_background))
-        painter.drawRoundedRect(pill_rect, 4, 4)
+        painter.drawRoundedRect(pill_rect, pill_radius, pill_radius)
 
-        # Vertically centered baseline inside the pill
-        text_x = pill_rect.left() + pill_padding
-        baseline_y = pill_rect.center().y() + (fm.ascent() - fm.descent()) / 2.0
-
-        # Title (text_hover)
+        # Draw text centered in pill
+        text_rect = pill_rect.adjusted(8, 0, -8, 0)
         painter.setPen(QColor(self._gui_config.palette.text_hover))
-        painter.drawText(int(text_x), int(baseline_y), title)
+        painter.drawText(text_rect, Qt.AlignCenter, title)
 
-        # Suffix (text_subtle), continues where title ended
-        if suffix:
-            painter.setPen(QColor(self._gui_config.palette.text_subtle))
-            painter.drawText(int(text_x + title_w), int(baseline_y), suffix)
+        if self._selected and self._grid_focused:
+            color = QColor(self._gui_config.palette.control)
+            if not self._grid_focused:
+                color.setAlphaF(0.4)
+            pen = QPen(color, self._gui_config.tile.selection_border_width)
+            painter.setPen(pen)
+            painter.setBrush(Qt.NoBrush)
+            painter.drawPath(bg_path)
 
         painter.restore()
 
@@ -413,6 +414,40 @@ class WindowTileItem(QGraphicsObject):
             painter.setPen(pen)
             painter.setBrush(Qt.NoBrush)
             painter.drawPath(bg_path)
+
+        # Profile badge
+        if self._matched_profile:
+            badge_size = 22
+            badge_inset = 8
+            badge_rect = QRectF(
+                self._half_w - badge_size - badge_inset,
+                -self._half_h + badge_inset,
+                badge_size,
+                badge_size,
+            )
+
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(self._gui_config.palette.caption_background))
+            painter.drawEllipse(badge_rect)
+
+            if self._profile_pixmap is not None:
+                inner = badge_size - 8
+                scaled = self._profile_pixmap.scaled(
+                    inner, inner, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                )
+                px = badge_rect.left() + (badge_size - scaled.width()) / 2.0
+                py = badge_rect.top() + (badge_size - scaled.height()) / 2.0
+                painter.drawPixmap(int(px), int(py), scaled)
+            else:
+                family = self._gui_config.font_family
+                badge_font = QFont(family) if family else QFont(QApplication.font())
+                badge_font.setPointSize(10)
+                badge_font.setBold(True)
+                painter.setFont(badge_font)
+                painter.setPen(QColor(self._gui_config.palette.text_hover))
+                painter.drawText(
+                    badge_rect, Qt.AlignCenter, self._matched_profile[:1].upper()
+                )
 
         painter.restore()
 
