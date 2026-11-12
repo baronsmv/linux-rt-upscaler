@@ -1147,6 +1147,12 @@ def about_dialog_link_style(cfg: GUIConfig) -> str:
 # ---------------------------------------------------------------------------
 #  Window grid
 # ---------------------------------------------------------------------------
-def graphics_view_style(_: GUIConfig) -> str:
-    """Transparent, borderless QGraphicsView."""
-    return "background-color: transparent; border: none;"
+def graphics_view_style(cfg: GUIConfig) -> str:
+    """Transparent, borderless QGraphicsView, with styled tooltips for tiles."""
+    return f"""
+    QGraphicsView {{
+        background-color: transparent;
+        border: none;
+    }}
+    {tooltip_style(cfg)}
+    """
