@@ -59,11 +59,12 @@ jobs:
           CIBW_BUILD_VERBOSITY: 3
           CIBW_SKIP: "*-musllinux*"
           # Pre-install PySide6 with uv to avoid build problems with Python 3.14
-          CIBW_BEFORE_TEST: >
+          CIBW_BEFORE_TEST: |
+            set -e
             if command -v dnf >/dev/null 2>&1; then
-              dnf install -y libxkbcommon libxkbcommon-x11 mesa-libGL mesa-libEGL dbus-libs fontconfig;
+              dnf install -y libxkbcommon libxkbcommon-x11 mesa-libGL mesa-libEGL dbus-libs fontconfig
             else
-              yum install -y libxkbcommon libxkbcommon-x11 mesa-libGL mesa-libEGL dbus-libs fontconfig;
+              yum install -y libxkbcommon libxkbcommon-x11 mesa-libGL mesa-libEGL dbus-libs fontconfig
             fi
             pip install uv && uv pip install PySide6
         run: python -m cibuildwheel --output-dir wheelhouse
