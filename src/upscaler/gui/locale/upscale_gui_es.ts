@@ -1195,7 +1195,7 @@ Desactive esta opción para seleccionar manualmente una ventana de la cuadrícul
     </message>
 </context>
 <context>
-    <name>OSD message</name>
+    <name>OSD messages</name>
     <message>
         <location filename="../../pipeline/controller.py" line="294"/>
         <location filename="../../pipeline/pipeline.py" line="152"/>
@@ -1227,7 +1227,7 @@ Desactive esta opción para seleccionar manualmente una ventana de la cuadrícul
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../pipeline/controller.py" line="461"/>
+        <location filename="../../pipeline/controller.py" line="463"/>
         <location filename="../../pipeline/controller.py" line="437"/>
         <location filename="../../pipeline/controller.py" line="425"/>
         <location filename="../../pipeline/pipeline.py" line="166"/>
