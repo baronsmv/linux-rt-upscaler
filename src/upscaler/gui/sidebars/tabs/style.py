@@ -41,6 +41,8 @@ def _interface_fields(o: GUIStyleOverrides) -> tuple:
         o.settings_width,
         o.tile_columns,
         o.tile_aspect_ratio,
+        o.show_title,
+        o.show_profile,
         o.auto_refresh_ms,
         o.tile_preview_interval_ms,
     )
@@ -83,6 +85,8 @@ class StyleTab(SettingsTab):
         self._settings_width = initial.settings_width
         self._tile_columns = initial.tile_columns
         self._tile_aspect_ratio = initial.tile_aspect_ratio
+        self._show_title = initial.show_title
+        self._show_profile = initial.show_profile
         self._auto_refresh_ms = initial.auto_refresh_ms
         self._tile_preview_interval_ms = initial.tile_preview_interval_ms
 
@@ -423,6 +427,28 @@ class StyleTab(SettingsTab):
                 "Description of a setting (tooltip)",
             ),
         )
+        self._show_title_checkbox = self._add_cb(
+            self.tr("Show window title", "Label of setting (must be short)"),
+            self._show_title,
+            self._on_show_title_changed,
+            baseline=self._saved.show_title,
+            help=self.tr(
+                "Display the window title on each tile.\n"
+                "When hidden, the title appears as a tooltip on hover.",
+                "Description of a setting (tooltip)",
+            ),
+        )
+        self._show_profile_checkbox = self._add_cb(
+            self.tr("Show profile indicator", "Label of setting (must be short)"),
+            self._show_profile,
+            self._on_profile_changed,
+            baseline=self._saved.show_profile,
+            help=self.tr(
+                "Display a small badge on tiles whose window matches a profile.\n"
+                "Only shown when no profile is manually selected (Global).",
+                "Description of a setting (tooltip)",
+            ),
+        )
 
         # ── Performance ────────────────────────────────────
         self._add_section(self.tr("Performance", "Settings section"))
@@ -525,6 +551,16 @@ class StyleTab(SettingsTab):
         self._tile_aspect_ratio = ratio
         self._notify_dirty()
 
+    def _on_show_title_changed(self, state: int) -> None:
+        enabled = bool(state)
+        self._show_title = enabled
+        self._notify_dirty()
+
+    def _on_profile_changed(self, state: int) -> None:
+        enabled = bool(state)
+        self._show_profile = enabled
+        self._notify_dirty()
+
     def _on_refresh_changed(self, value: int) -> None:
         if value == self._auto_refresh_ms:
             return
@@ -570,6 +606,8 @@ class StyleTab(SettingsTab):
         self._settings_width_slider.set_baseline(self._saved.settings_width)
         self._tile_columns_slider.set_baseline(self._saved.tile_columns)
         self._aspect_combo.set_baseline(_aspect_to_name(self._saved.tile_aspect_ratio))
+        self._show_title_checkbox.set_baseline(self._saved.show_title)
+        self._show_profile_checkbox.set_baseline(self._saved.show_profile)
         self._refresh_slider.set_baseline(self._saved.auto_refresh_ms)
         self._preview_slider.set_baseline(self._saved.tile_preview_interval_ms)
 
@@ -613,6 +651,15 @@ class StyleTab(SettingsTab):
             slider.setValue(value)
             slider.blockSignals(False)
 
+        checkboxes = (
+            (self._show_title_checkbox, self._show_title),
+            (self._show_profile_checkbox, self._show_profile),
+        )
+        for checkbox, value in checkboxes:
+            checkbox.blockSignals(True)
+            checkbox.setChecked(value)
+            checkbox.blockSignals(False)
+
         self._aspect_combo.blockSignals(True)
         self._aspect_combo.setCurrentText(_aspect_to_name(self._tile_aspect_ratio))
         self._aspect_combo.blockSignals(False)
@@ -648,6 +695,8 @@ class StyleTab(SettingsTab):
         self._settings_width = self._saved.settings_width
         self._tile_columns = self._saved.tile_columns
         self._tile_aspect_ratio = self._saved.tile_aspect_ratio
+        self._show_title = self._saved.show_title
+        self._show_profile = self._saved.show_profile
         self._auto_refresh_ms = self._saved.auto_refresh_ms
         self._tile_preview_interval_ms = self._saved.tile_preview_interval_ms
 
@@ -671,6 +720,8 @@ class StyleTab(SettingsTab):
         self._settings_width = self._saved.settings_width
         self._tile_columns = self._saved.tile_columns
         self._tile_aspect_ratio = self._saved.tile_aspect_ratio
+        self._show_title = self._saved.show_title
+        self._show_profile = self._saved.show_profile
         self._auto_refresh_ms = self._saved.auto_refresh_ms
         self._tile_preview_interval_ms = self._saved.tile_preview_interval_ms
 
@@ -689,6 +740,8 @@ class StyleTab(SettingsTab):
         self._settings_width = defaults.settings_width
         self._tile_columns = defaults.tile_columns
         self._tile_aspect_ratio = defaults.tile_aspect_ratio
+        self._show_title = defaults.show_title
+        self._show_profile = defaults.show_profile
         self._auto_refresh_ms = defaults.auto_refresh_ms
         self._tile_preview_interval_ms = defaults.tile_preview_interval_ms
 
@@ -709,6 +762,8 @@ class StyleTab(SettingsTab):
         self._settings_width = defaults.settings_width
         self._tile_columns = defaults.tile_columns
         self._tile_aspect_ratio = defaults.tile_aspect_ratio
+        self._show_title = defaults.show_title
+        self._show_profile = defaults.show_profile
         self._auto_refresh_ms = defaults.auto_refresh_ms
         self._tile_preview_interval_ms = defaults.tile_preview_interval_ms
 
@@ -730,6 +785,8 @@ class StyleTab(SettingsTab):
             settings_width=self._settings_width,
             tile_columns=self._tile_columns,
             tile_aspect_ratio=self._tile_aspect_ratio,
+            show_title=self._show_title,
+            show_profile=self._show_profile,
             auto_refresh_ms=self._auto_refresh_ms,
             tile_preview_interval_ms=self._tile_preview_interval_ms,
         )

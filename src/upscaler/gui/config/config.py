@@ -22,6 +22,8 @@ class TileLayout:
         hover_border_width: Border width (px) when the tile is hovered.
         title_font_size: Font size for the tile title.
         title_font_bold: Whether the title is rendered in bold.
+        show_title: Whether to draw the window title on tiles.
+        show_profile: Whether to draw the profile-match badge on tiles.
     """
 
     width: int = 340
@@ -38,6 +40,8 @@ class TileLayout:
     hover_border_width: int = 2
     title_font_size: int = 12
     title_font_bold: bool = True
+    show_title: bool = True
+    show_profile: bool = True
 
 
 @dataclass(frozen=True)
@@ -477,6 +481,8 @@ class GUIStyleOverrides:
             before zoom scaling.
         tile_columns: Number of columns in the window grid.
         tile_aspect_ratio: Tile aspect ratio (width / height).
+        show_title: Whether to draw the window title on tiles.
+        show_profile: Whether to draw the profile-match badge on tiles.
         auto_refresh_ms: Window list refresh interval (ms).
         tile_preview_interval_ms: Tile thumbnail update interval (ms).
     """
@@ -489,5 +495,7 @@ class GUIStyleOverrides:
     settings_width: int = 440
     tile_columns: int = 3
     tile_aspect_ratio: float = 4 / 3
+    show_title: bool = True
+    show_profile: bool = True
     auto_refresh_ms: int = 2000
     tile_preview_interval_ms: int = 60

@@ -32,6 +32,8 @@ _EXEMPT: Dict[type, frozenset[str]] = {
             "pop_duration",
             "columns",
             "title_font_bold",
+            "show_title",
+            "show_profile",
         }
     ),
     SidebarLayout: frozenset[str]({"icon_columns"}),
@@ -54,6 +56,8 @@ def _apply_style_overrides(cfg: GUIConfig, overrides: GUIStyleOverrides) -> GUIC
             cfg.tile,
             columns=overrides.tile_columns,
             aspect_ratio=overrides.tile_aspect_ratio,
+            show_title=overrides.show_title,
+            show_profile=overrides.show_profile,
         ),
         sidebar=replace(
             cfg.sidebar,

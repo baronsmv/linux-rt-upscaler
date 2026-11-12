@@ -181,6 +181,9 @@ class WindowTileItem(QGraphicsObject):
         self._init_grabber()
         self._timer.start()
 
+        if not gui_config.tile.show_title:
+            self.setToolTip(self._win_info.title)
+
     # ------------------------------------------------------------------
     #  Geometry helpers
     # ------------------------------------------------------------------
@@ -400,7 +403,7 @@ class WindowTileItem(QGraphicsObject):
 
     def _badge_rect(self) -> Optional[QRectF]:
         """Local-coord rect of the badge, or None when no badge is shown."""
-        if not self._matched_profile:
+        if not self._gui_config.tile.show_profile or not self._matched_profile:
             return None
         if self._profile_pixmap is not None:
             badge_w = BADGE_HEIGHT
@@ -461,52 +464,41 @@ class WindowTileItem(QGraphicsObject):
             py = (h - self._scaled_pixmap.height()) / 2.0
             painter.drawPixmap(int(-w / 2 + px), int(-h / 2 + py), self._scaled_pixmap)
 
-        painter.save()
-        painter.setClipPath(bg_path)
+        if self._gui_config.tile.show_title:
+            painter.save()
+            painter.setClipPath(bg_path)
 
-        # Title
-        title = self._win_info.title
-        family = self._gui_config.font_family
-        font = QFont(family) if family else QFont(QApplication.font())
-        font.setPointSize(self._gui_config.tile.title_font_size)
-        font.setBold(self._gui_config.tile.title_font_bold)
-        font.setHintingPreference(QFont.PreferFullHinting)
-        painter.setFont(font)
-        painter.setRenderHint(QPainter.TextAntialiasing, True)
+            # Title
+            title = self._win_info.title
+            family = self._gui_config.font_family
+            font = QFont(family) if family else QFont(QApplication.font())
+            font.setPointSize(self._gui_config.tile.title_font_size)
+            font.setBold(self._gui_config.tile.title_font_bold)
+            font.setHintingPreference(QFont.PreferFullHinting)
+            painter.setFont(font)
+            painter.setRenderHint(QPainter.TextAntialiasing, True)
 
-        # Measure text
-        fm = painter.fontMetrics()
-        text_width = fm.horizontalAdvance(title)
-        text_height = fm.height()
+            fm = painter.fontMetrics()
+            text_width = fm.horizontalAdvance(title)
+            text_height = fm.height()
 
-        # Pill dimensions (with horizontal padding)
-        pill_w = min(text_width + 16, w - 20)  # cap at tile width
-        pill_h = text_height + 6
-        pill_x = -pill_w / 2.0
-        pill_y = h / 2 - pill_h - 6  # bottom of tile, with margin
-        pill_rect = QRectF(pill_x, pill_y, pill_w, pill_h)
-        pill_radius = 4
+            pill_w = min(text_width + 16, w - 20)
+            pill_h = text_height + 6
+            pill_x = -pill_w / 2.0
+            pill_y = h / 2 - pill_h - 6
+            pill_rect = QRectF(pill_x, pill_y, pill_w, pill_h)
+            pill_radius = 4
 
-        # Draw pill background
-        painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(self._gui_config.palette.caption_background))
-        painter.drawRoundedRect(pill_rect, pill_radius, pill_radius)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(self._gui_config.palette.caption_background))
+            painter.drawRoundedRect(pill_rect, pill_radius, pill_radius)
 
-        # Draw text centered in pill
-        text_rect = pill_rect.adjusted(8, 0, -8, 0)
-        painter.setPen(QColor(self._gui_config.palette.text_hover))
-        painter.drawText(text_rect, Qt.AlignCenter, title)
+            text_rect = pill_rect.adjusted(8, 0, -8, 0)
+            elided = fm.elidedText(title, Qt.ElideRight, int(text_rect.width()))
+            painter.setPen(QColor(self._gui_config.palette.text_hover))
+            painter.drawText(text_rect, Qt.AlignCenter, elided)
 
-        if self._selected and self._grid_focused:
-            color = QColor(self._gui_config.palette.control)
-            if not self._grid_focused:
-                color.setAlphaF(0.4)
-            pen = QPen(color, self._gui_config.tile.selection_border_width)
-            painter.setPen(pen)
-            painter.setBrush(Qt.NoBrush)
-            painter.drawPath(bg_path)
-
-        painter.restore()
+            painter.restore()
 
         # Border
         if self._selected and self._grid_focused:
