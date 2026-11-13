@@ -1166,13 +1166,13 @@ Desactiva esta opción para seleccionar manualmente una ventana de la cuadrícul
       <translation>Acerca de Escalador en Tiempo Real</translation>
     </message>
     <message>
-      <location filename="../main.py" line="421" />
+      <location filename="../main.py" line="462" />
       <source>Error</source>
       <comment>Error starting pipeline</comment>
       <translation>Error</translation>
     </message>
     <message>
-      <location filename="../main.py" line="422" />
+      <location filename="../main.py" line="463" />
       <source>Could not start pipeline:
 {0}</source>
       <comment>Error starting pipeline</comment>
@@ -1180,13 +1180,13 @@ Desactiva esta opción para seleccionar manualmente una ventana de la cuadrícul
 {0}</translation>
     </message>
     <message>
-      <location filename="../main.py" line="620" />
+      <location filename="../main.py" line="661" />
       <source>Save Error</source>
       <comment>Error while saving configuration</comment>
       <translation>Error al guardar</translation>
     </message>
     <message>
-      <location filename="../main.py" line="621" />
+      <location filename="../main.py" line="662" />
       <source>Could not save:
 {0}</source>
       <comment>Error while saving configuration</comment>
@@ -1448,104 +1448,104 @@ Admite transparencia.</translation>
   <context>
     <name>ProfileActions</name>
     <message>
-      <location filename="../helpers/profiles.py" line="237" />
-      <location filename="../helpers/profiles.py" line="154" />
-      <location filename="../helpers/profiles.py" line="102" />
+      <location filename="../helpers/profiles.py" line="246" />
+      <location filename="../helpers/profiles.py" line="163" />
+      <location filename="../helpers/profiles.py" line="111" />
       <source>Error</source>
       <comment>Error dialog title</comment>
       <translation>Error</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="105" />
+      <location filename="../helpers/profiles.py" line="114" />
       <source>Could not add profile.</source>
       <comment>Error while adding profile</comment>
       <translation>No se pudo añadir el perfil.</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="157" />
+      <location filename="../helpers/profiles.py" line="166" />
       <source>Could not duplicate profile.</source>
       <comment>Error while duplicating profile</comment>
       <translation>No se pudo duplicar el perfil.</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="166" />
+      <location filename="../helpers/profiles.py" line="175" />
       <source>{0} (copy)</source>
       <comment>Suggested name for a duplicated profile. {0} is the source name.</comment>
       <translation>{0} (copia)</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="175" />
+      <location filename="../helpers/profiles.py" line="184" />
       <source>{0} (copy {1})</source>
       <comment>Suggested name for a duplicated profile when the plain 'copy' name is taken. {0} is the source name, {1} is a counter.</comment>
       <translation>{0} (copia {1})</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="204" />
+      <location filename="../helpers/profiles.py" line="213" />
       <source>Duplicate name</source>
       <comment>Error dialog title</comment>
       <translation>Nombre duplicado</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="207" />
+      <location filename="../helpers/profiles.py" line="216" />
       <source>A profile named '{0}' already exists.</source>
       <comment>Error while adding profile</comment>
       <translation>Ya existe un perfil llamado '{0}'.</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="240" />
+      <location filename="../helpers/profiles.py" line="249" />
       <source>Could not edit profile.</source>
       <comment>Error while editing profile</comment>
       <translation>No se pudo editar el perfil.</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="253" />
+      <location filename="../helpers/profiles.py" line="262" />
       <source>Delete profile</source>
       <comment>Dialog title</comment>
       <translation>Eliminar perfil</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="258" />
+      <location filename="../helpers/profiles.py" line="267" />
       <source>Delete the profile '{0}'?</source>
       <comment>Dialog main text</comment>
       <translation>¿Eliminar el perfil '{0}'?</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="265" />
+      <location filename="../helpers/profiles.py" line="274" />
       <source>This action cannot be undone.</source>
       <comment>Dialog secondary text</comment>
       <translation>Esta acción no se puede deshacer.</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="273" />
+      <location filename="../helpers/profiles.py" line="282" />
       <source>Delete</source>
       <comment>Dialog button</comment>
       <translation>Eliminar</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="277" />
+      <location filename="../helpers/profiles.py" line="286" />
       <source>Cancel</source>
       <comment>Dialog button</comment>
       <translation>Cancelar</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="361" />
-      <location filename="../helpers/profiles.py" line="337" />
-      <location filename="../helpers/profiles.py" line="318" />
-      <location filename="../helpers/profiles.py" line="299" />
+      <location filename="../helpers/profiles.py" line="370" />
+      <location filename="../helpers/profiles.py" line="346" />
+      <location filename="../helpers/profiles.py" line="327" />
+      <location filename="../helpers/profiles.py" line="308" />
       <source>Error</source>
       <comment>Error window title</comment>
       <translation>Error</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="302" />
+      <location filename="../helpers/profiles.py" line="311" />
       <source>Could not delete profile.</source>
       <comment>Error while deleting profile</comment>
       <translation>No se pudo eliminar el perfil.</translation>
     </message>
     <message>
-      <location filename="../helpers/profiles.py" line="364" />
-      <location filename="../helpers/profiles.py" line="340" />
-      <location filename="../helpers/profiles.py" line="321" />
+      <location filename="../helpers/profiles.py" line="373" />
+      <location filename="../helpers/profiles.py" line="349" />
+      <location filename="../helpers/profiles.py" line="330" />
       <source>Could not reorder profiles.</source>
       <comment>Error while reordering profiles</comment>
       <translation>No se pudo reordenar los perfiles.</translation>
@@ -1764,55 +1764,55 @@ Los perfiles se evalúan de arriba a abajo: la primera coincidencia gana.
 Deja una regla en blanco para ignorar esa propiedad.</translation>
     </message>
     <message>
-      <location filename="../dialogs/profile.py" line="459" />
+      <location filename="../dialogs/profile.py" line="461" />
       <source>No icon</source>
       <comment>No icon warning</comment>
       <translation>Sin ícono</translation>
     </message>
     <message>
-      <location filename="../dialogs/profile.py" line="460" />
+      <location filename="../dialogs/profile.py" line="462" />
       <source>The selected window has no icon.</source>
       <comment>No icon warning</comment>
       <translation>La ventana seleccionada no tiene ícono.</translation>
     </message>
     <message>
-      <location filename="../dialogs/profile.py" line="478" />
+      <location filename="../dialogs/profile.py" line="480" />
       <source>Select icon</source>
       <comment>Select icon dialog title</comment>
       <translation>Selecciona un ícono</translation>
     </message>
     <message>
-      <location filename="../dialogs/profile.py" line="487" />
+      <location filename="../dialogs/profile.py" line="489" />
       <source>Invalid image</source>
       <comment>Invalid image warning</comment>
       <translation>Imagen no válida</translation>
     </message>
     <message>
-      <location filename="../dialogs/profile.py" line="488" />
+      <location filename="../dialogs/profile.py" line="490" />
       <source>Could not load the selected file.</source>
       <comment>Invalid image warning</comment>
       <translation>No se pudo cargar el archivo seleccionado.</translation>
     </message>
     <message>
-      <location filename="../dialogs/profile.py" line="527" />
+      <location filename="../dialogs/profile.py" line="529" />
       <source>Missing name</source>
       <comment>Warning while saving a profile without name</comment>
       <translation>Nombre faltante</translation>
     </message>
     <message>
-      <location filename="../dialogs/profile.py" line="528" />
+      <location filename="../dialogs/profile.py" line="530" />
       <source>Profile name cannot be empty.</source>
       <comment>Warning while saving a profile without name</comment>
       <translation>El nombre del perfil no puede estar vacío.</translation>
     </message>
     <message>
-      <location filename="../dialogs/profile.py" line="540" />
+      <location filename="../dialogs/profile.py" line="542" />
       <source>Duplicate name</source>
       <comment>Warning while saving a profile with an existing name</comment>
       <translation>Nombre duplicado</translation>
     </message>
     <message>
-      <location filename="../dialogs/profile.py" line="544" />
+      <location filename="../dialogs/profile.py" line="546" />
       <source>A profile named '{0}' already exists.
 Please choose a different name.</source>
       <comment>Warning while saving a profile with an existing name</comment>
@@ -2754,7 +2754,25 @@ Utiliza «Detener» en el menú de la bandeja para volver.</translation>
   <context>
     <name>WindowTileItem</name>
     <message>
-      <location filename="../grid/item.py" line="431" />
+      <location filename="../grid/item.py" line="392" />
+      <source>Open in window</source>
+      <comment>Menu action</comment>
+      <translation>Abrir en ventana</translation>
+    </message>
+    <message>
+      <location filename="../grid/item.py" line="395" />
+      <source>Create profile for this window</source>
+      <comment>Menu action</comment>
+      <translation>Crear perfil para esta ventana</translation>
+    </message>
+    <message>
+      <location filename="../grid/item.py" line="397" />
+      <source>Copy window info</source>
+      <comment>Menu action</comment>
+      <translation>Copiar información de la ventana</translation>
+    </message>
+    <message>
+      <location filename="../grid/item.py" line="512" />
       <source>Profile: {0}</source>
       <comment>Badge tooltip</comment>
       <translation>Perfil: {0}</translation>

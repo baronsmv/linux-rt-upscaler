@@ -389,10 +389,12 @@ class WindowTileItem(QGraphicsObject):
         menu = QMenu()
         menu.setStyleSheet(dropdown_submenu_style(self._gui_config))
 
-        open_action = menu.addAction(self.tr("Open in window"))
+        open_action = menu.addAction(self.tr("Open in window", "Menu action"))
         menu.addSeparator()
-        create_action = menu.addAction(self.tr("Create profile for this window"))
-        copy_action = menu.addAction(self.tr("Copy window info"))
+        create_action = menu.addAction(
+            self.tr("Create profile for this window", "Menu action")
+        )
+        copy_action = menu.addAction(self.tr("Copy window info", "Menu action"))
 
         # Hold the pop while the menu is visible
         self._menu_open = True
