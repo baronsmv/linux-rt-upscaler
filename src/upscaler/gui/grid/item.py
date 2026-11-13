@@ -515,8 +515,7 @@ class WindowTileItem(QGraphicsObject):
 
     def _more_button_rect(self) -> Optional[QRectF]:
         """Local-coord rect of the more-options button, or None when hidden."""
-        keyboard_active = self._grid_focused and self._selected
-        if not (self._pop_active() or keyboard_active):
+        if not self._pop_active():
             return None
         return QRectF(
             self._half_w - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
