@@ -13,6 +13,8 @@ from PySide6.QtCore import (
     Property,
     QPropertyAnimation,
     QEasingCurve,
+    QPoint,
+    QPointF,
 )
 from PySide6.QtGui import (
     QPainter,
@@ -46,6 +48,11 @@ logger = logging.getLogger(__name__)
 BADGE_HEIGHT = 22
 BADGE_INSET = 8
 BADGE_EXTRA_WIDTH = 10
+
+MORE_BUTTON_SIZE = 22
+MORE_BUTTON_INSET = 8
+MORE_ICON_DOT_RADIUS = 1.5
+MORE_ICON_DOT_SPACING = 4.0
 
 
 class _BadgeHitArea(QGraphicsItem):
@@ -145,6 +152,7 @@ class WindowTileItem(QGraphicsObject):
         self._win_info: WindowInfo = win_info
         self._gui_config: GUIConfig = gui_config
         self._grid_focused: bool = True
+        self._more_button_hovered: bool = False
         self._matched_profile: Optional[str] = None
         self._profile_pixmap: Optional[QPixmap] = None
         self._profile_pixmap_path: Optional[str] = None
@@ -330,12 +338,30 @@ class WindowTileItem(QGraphicsObject):
         self.set_hover(True)
         super().hoverEnterEvent(event)
 
+    def hoverMoveEvent(self, event) -> None:
+        rect = self._more_button_rect()
+        hovered = rect is not None and rect.contains(event.pos())
+        if hovered != self._more_button_hovered:
+            self._more_button_hovered = hovered
+            self.update()
+        super().hoverMoveEvent(event)
+
     def hoverLeaveEvent(self, event) -> None:
+        if self._more_button_hovered:
+            self._more_button_hovered = False
+            self.unsetCursor()
+            self.update()
         self.set_hover(False)
         super().hoverLeaveEvent(event)
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.LeftButton:
+            rect = self._more_button_rect()
+            if rect is not None and rect.contains(event.pos()):
+                screen_pos = self._local_to_global(rect.center())
+                self._show_context_menu_at(screen_pos)
+                event.accept()
+                return
             self.clicked.emit(self._win_info)
         super().mousePressEvent(event)
 
@@ -346,6 +372,20 @@ class WindowTileItem(QGraphicsObject):
             super().keyPressEvent(event)
 
     def contextMenuEvent(self, event: QGraphicsSceneContextMenuEvent) -> None:
+        """Right-click on the tile opens the menu at the cursor."""
+        self._show_context_menu_at(event.screenPos())
+
+    def _local_to_global(self, local_pos: QPointF) -> QPoint:
+        """Convert an item-local point to a global screen point."""
+        scene_pos = self.mapToScene(local_pos)
+        views = self.scene().views() if self.scene() else []
+        if not views:
+            return QPoint(int(local_pos.x()), int(local_pos.y()))
+        view = views[0]
+        return view.mapToGlobal(view.mapFromScene(scene_pos))
+
+    def _show_context_menu_at(self, screen_pos: QPoint) -> None:
+        """Build and show the context menu at the given global position."""
         menu = QMenu()
         menu.setStyleSheet(dropdown_submenu_style(self._gui_config))
 
@@ -354,7 +394,7 @@ class WindowTileItem(QGraphicsObject):
         create_action = menu.addAction(self.tr("Create profile for this window"))
         copy_action = menu.addAction(self.tr("Copy window info"))
 
-        chosen = menu.exec(event.screenPos())
+        chosen = menu.exec(screen_pos)
         if chosen is open_action:
             self.open_in_window_requested.emit(self._win_info)
         elif chosen is create_action:
@@ -454,6 +494,17 @@ class WindowTileItem(QGraphicsObject):
             self.tr("Profile: {0}", "Badge tooltip").format(self._matched_profile)
         )
 
+    def _more_button_rect(self) -> Optional[QRectF]:
+        """Local-coord rect of the more-options button, or None when not hovered."""
+        if not self._hover:
+            return None
+        return QRectF(
+            self._half_w - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
+            self._half_h - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
+            MORE_BUTTON_SIZE,
+            MORE_BUTTON_SIZE,
+        )
+
     def paint(
         self,
         painter: QPainter,
@@ -507,9 +558,19 @@ class WindowTileItem(QGraphicsObject):
             text_width = fm.horizontalAdvance(title)
             text_height = fm.height()
 
-            pill_w = min(text_width + 16, w - 20)
+            left_margin = 10
+            right_margin = 10 + MORE_BUTTON_SIZE + MORE_BUTTON_INSET + 4
+            max_w = w - left_margin - right_margin
+            natural_w = text_width + 16
+
+            if natural_w <= max_w:
+                pill_w = natural_w
+                pill_x = -pill_w / 2.0
+            else:
+                pill_w = max_w
+                pill_x = -w / 2.0 + left_margin
+
             pill_h = text_height + 6
-            pill_x = -pill_w / 2.0
             pill_y = h / 2 - pill_h - 6
             pill_rect = QRectF(pill_x, pill_y, pill_w, pill_h)
             pill_radius = 4
@@ -566,6 +627,29 @@ class WindowTileItem(QGraphicsObject):
                 painter.setFont(self._badge_font)
                 painter.setPen(QColor(self._gui_config.palette.text_hover))
                 painter.drawText(badge_rect, Qt.AlignCenter, self._badge_label)
+
+        # More-options button
+        button_rect = self._more_button_rect()
+        if button_rect is not None:
+            # Background
+            bg_color = QColor(
+                self._gui_config.palette.control
+                if self._more_button_hovered
+                else self._gui_config.palette.caption_background
+            )
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(bg_color)
+            painter.drawEllipse(button_rect)
+
+            # Icon
+            painter.setBrush(QColor(self._gui_config.palette.text_hover))
+            center = button_rect.center()
+            for offset in (-MORE_ICON_DOT_SPACING, 0.0, MORE_ICON_DOT_SPACING):
+                painter.drawEllipse(
+                    QPointF(center.x(), center.y() + offset),
+                    MORE_ICON_DOT_RADIUS,
+                    MORE_ICON_DOT_RADIUS,
+                )
 
         painter.restore()
 
