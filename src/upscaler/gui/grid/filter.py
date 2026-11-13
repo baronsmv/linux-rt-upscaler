@@ -172,6 +172,9 @@ class FilterBar(QWidget):
             if key_event.key() == Qt.Key_Down:
                 self.focus_grid_requested.emit()
                 return True
+            if key_event.key() == Qt.Key_Escape and self._line_edit.text():
+                self._line_edit.clear()
+                return True
         return super().eventFilter(obj, event)
 
     # ------------------------------------------------------------------
