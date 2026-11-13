@@ -45,14 +45,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-BADGE_HEIGHT = 22
-BADGE_INSET = 8
-BADGE_EXTRA_WIDTH = 10
-
-MORE_BUTTON_SIZE = 22
-MORE_BUTTON_INSET = 8
-MORE_ICON_DOT_RADIUS = 1.5
-MORE_ICON_DOT_SPACING = 4.0
+_BADGE_EXTRA_WIDTH_RATIO = 10 / 22
+_DOT_RADIUS_RATIO = 1.5 / 22
+_DOT_SPACING_RATIO = 4.0 / 22
 
 
 class _BadgeHitArea(QGraphicsItem):
@@ -487,17 +482,19 @@ class WindowTileItem(QGraphicsObject):
         """Local-coord rect of the badge, or None when no badge is shown."""
         if not self._gui_config.tile.show_profile or not self._matched_profile:
             return None
+        size = self._gui_config.tile.overlay_size
+        inset = self._gui_config.tile.overlay_inset
         if self._profile_pixmap is not None:
-            badge_w = BADGE_HEIGHT
+            badge_w = size
         elif self._badge_label is not None and len(self._badge_label) > 1:
-            badge_w = BADGE_HEIGHT + BADGE_EXTRA_WIDTH
+            badge_w = size + round(size * _BADGE_EXTRA_WIDTH_RATIO)
         else:
-            badge_w = BADGE_HEIGHT
+            badge_w = size
         return QRectF(
-            self._half_w - badge_w - BADGE_INSET,
-            -self._half_h + BADGE_INSET,
+            self._half_w - badge_w - inset,
+            -self._half_h + inset,
             badge_w,
-            BADGE_HEIGHT,
+            size,
         )
 
     def _sync_badge_hit(self) -> None:
@@ -517,24 +514,23 @@ class WindowTileItem(QGraphicsObject):
         """Local-coord rect of the more-options button, or None when hidden."""
         if not self._pop_active():
             return None
+        size = self._gui_config.tile.overlay_size
+        inset = self._gui_config.tile.overlay_inset
         return QRectF(
-            self._half_w - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
-            self._half_h - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
-            MORE_BUTTON_SIZE,
-            MORE_BUTTON_SIZE,
+            self._half_w - size - inset,
+            self._half_h - size - inset,
+            size,
+            size,
         )
 
     def show_context_menu_keyboard(self) -> None:
-        """Open the context menu from a keyboard shortcut (Menu / Shift+F10).
-
-        Positioned at the more-options button regardless of its current
-        visibility, so the menu always appears where the button would be.
-        """
+        size = self._gui_config.tile.overlay_size
+        inset = self._gui_config.tile.overlay_inset
         rect = QRectF(
-            self._half_w - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
-            self._half_h - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
-            MORE_BUTTON_SIZE,
-            MORE_BUTTON_SIZE,
+            self._half_w - size - inset,
+            self._half_h - size - inset,
+            size,
+            size,
         )
         self._show_context_menu_at(self._local_to_global(rect.center()))
 
@@ -592,7 +588,12 @@ class WindowTileItem(QGraphicsObject):
             text_height = fm.height()
 
             left_margin = 10
-            right_margin = 10 + MORE_BUTTON_SIZE + MORE_BUTTON_INSET + 4
+            right_margin = (
+                10
+                + self._gui_config.tile.overlay_size
+                + self._gui_config.tile.overlay_inset
+                + 4
+            )
             max_w = w - left_margin - right_margin
             natural_w = text_width + 16
 
@@ -675,13 +676,14 @@ class WindowTileItem(QGraphicsObject):
             painter.drawEllipse(button_rect)
 
             # Icon
+            size = self._gui_config.tile.overlay_size
+            dot_radius = max(1.0, size * _DOT_RADIUS_RATIO)
+            dot_spacing = size * _DOT_SPACING_RATIO
             painter.setBrush(QColor(self._gui_config.palette.text_hover))
             center = button_rect.center()
-            for offset in (-MORE_ICON_DOT_SPACING, 0.0, MORE_ICON_DOT_SPACING):
+            for offset in (-dot_spacing, 0.0, dot_spacing):
                 painter.drawEllipse(
-                    QPointF(center.x(), center.y() + offset),
-                    MORE_ICON_DOT_RADIUS,
-                    MORE_ICON_DOT_RADIUS,
+                    QPointF(center.x(), center.y() + offset), dot_radius, dot_radius
                 )
 
         painter.restore()

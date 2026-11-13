@@ -11,6 +11,8 @@ class TileLayout:
         width: Default tile width in pixels.
         height: Default tile height in pixels.
         radius: Corner radius of the tile rectangle.
+        overlay_size: Base size in pixels for tile overlay controls.
+        overlay_inset: Inset in pixels from the tile edge for overlay controls.
         aspect_ratio: Width/height ratio used to compute height from width.
         spacing: Minimum pixel space between tiles.
         spacing_ratio: Spacing as a fraction of tile width (overrides fixed spacing if > 0).
@@ -29,6 +31,8 @@ class TileLayout:
     width: int = 340
     height: int = 260
     radius: int = 12
+    overlay_size: int = 22
+    overlay_inset: int = 8
     aspect_ratio: float = 4 / 3
     spacing: int = 12
     spacing_ratio: float = 0.075
