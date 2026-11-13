@@ -2754,25 +2754,25 @@ Utiliza «Detener» en el menú de la bandeja para volver.</translation>
   <context>
     <name>WindowTileItem</name>
     <message>
-      <location filename="../grid/item.py" line="392" />
+      <location filename="../grid/item.py" line="400" />
       <source>Open in window</source>
       <comment>Menu action</comment>
       <translation>Abrir en ventana</translation>
     </message>
     <message>
-      <location filename="../grid/item.py" line="395" />
+      <location filename="../grid/item.py" line="403" />
       <source>Create profile for this window</source>
       <comment>Menu action</comment>
       <translation>Crear perfil para esta ventana</translation>
     </message>
     <message>
-      <location filename="../grid/item.py" line="397" />
+      <location filename="../grid/item.py" line="405" />
       <source>Copy window info</source>
       <comment>Menu action</comment>
       <translation>Copiar información de la ventana</translation>
     </message>
     <message>
-      <location filename="../grid/item.py" line="512" />
+      <location filename="../grid/item.py" line="520" />
       <source>Profile: {0}</source>
       <comment>Badge tooltip</comment>
       <translation>Perfil: {0}</translation>
