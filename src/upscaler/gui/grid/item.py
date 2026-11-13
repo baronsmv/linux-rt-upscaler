@@ -28,10 +28,13 @@ from PySide6.QtWidgets import (
     QApplication,
     QGraphicsObject,
     QGraphicsItem,
+    QGraphicsSceneContextMenuEvent,
+    QMenu,
     QStyleOptionGraphicsItem,
     QWidget,
 )
 
+from ..styles import dropdown_submenu_style
 from ...capture import FrameGrabber
 from ...window import WindowInfo
 
@@ -124,6 +127,9 @@ class WindowTileItem(QGraphicsObject):
     """
 
     clicked = Signal(WindowInfo)
+    open_in_window_requested = Signal(WindowInfo)
+    create_profile_requested = Signal(WindowInfo)
+    copy_info_requested = Signal(WindowInfo)
 
     # ------------------------------------------------------------------
     #  Initialisation
@@ -338,6 +344,23 @@ class WindowTileItem(QGraphicsObject):
             self.clicked.emit(self._win_info)
         else:
             super().keyPressEvent(event)
+
+    def contextMenuEvent(self, event: QGraphicsSceneContextMenuEvent) -> None:
+        menu = QMenu()
+        menu.setStyleSheet(dropdown_submenu_style(self._gui_config))
+
+        open_action = menu.addAction(self.tr("Open in window"))
+        menu.addSeparator()
+        create_action = menu.addAction(self.tr("Create profile for this window"))
+        copy_action = menu.addAction(self.tr("Copy window info"))
+
+        chosen = menu.exec(event.screenPos())
+        if chosen is open_action:
+            self.open_in_window_requested.emit(self._win_info)
+        elif chosen is create_action:
+            self.create_profile_requested.emit(self._win_info)
+        elif chosen is copy_action:
+            self.copy_info_requested.emit(self._win_info)
 
     # ------------------------------------------------------------------
     #  Capture logic

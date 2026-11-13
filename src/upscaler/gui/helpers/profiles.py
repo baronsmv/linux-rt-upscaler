@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from ..config import ConfigManager
     from ..main import MainWindow
     from ..sidebars import ProfilesSidebar
+    from ...window import WindowInfo
 
 logger = logging.getLogger(__name__)
 
@@ -74,14 +75,21 @@ class ProfileActions:
         else:
             logger.info("Global settings selected (auto-match enabled)")
 
-    def add_profile(self) -> None:
-        """Open the Add Profile dialog and process the result."""
+    def add_profile(self, prefill_window: Optional[WindowInfo] = None) -> None:
+        """Open the Add Profile dialog and process the result.
+
+        If *prefill_window* is given, the dialog's match rules and name field
+        are populated from that window, matching the effect of the dialog's
+        own "Capture window" button.
+        """
         try:
             dlg = ProfileDialog(
                 self._main_window.gui_config,
                 profiles=self._config_manager.profiles,
                 parent=self._main_window,
             )
+            if prefill_window is not None:
+                dlg.prefill_from_window(prefill_window)
             if dlg.exec() == QDialog.Accepted:
                 name = dlg.profile_name()
                 match = dlg.match_criteria()
@@ -95,6 +103,7 @@ class ProfileActions:
                 self._config_manager.set_active_profile(name)
                 self._sidebar.update_profiles(self._config_manager.profiles)
                 self._sidebar.populate_list(active_name=name)
+                self._main_window.refresh_profile_matches()
         except Exception:
             logger.exception("Failed to add profile")
             QMessageBox.critical(

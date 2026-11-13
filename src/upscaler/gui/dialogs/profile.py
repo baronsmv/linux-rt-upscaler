@@ -428,11 +428,13 @@ class ProfileDialog(QDialog):
         )
         if picker.exec() != QDialog.Accepted:
             return
-
         win_info = picker.selected_window()
         if not win_info:
             return
+        self.prefill_from_window(win_info)
 
+    def prefill_from_window(self, win_info: WindowInfo) -> None:
+        """Populate name, icon, and match rules from *win_info*."""
         self._name_edit.setText(win_info.title)
         self._apply_icon_from_window(win_info)
         self._match_title_contains.setText(win_info.title)

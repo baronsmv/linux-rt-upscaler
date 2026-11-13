@@ -27,7 +27,7 @@ from .tabs import (
     ScalingTab,
     StyleTab,
 )
-from ..styles import reset_button_style, reset_submenu_style, save_button_style
+from ..styles import reset_button_style, dropdown_submenu_style, save_button_style
 from ...config import Config, parse_config
 
 if TYPE_CHECKING:
@@ -299,7 +299,7 @@ class SettingsSidebar(IconSidebarBase):
         )
         self._restore_action = self._config_reset_menu.addAction(restore_text)
         self._restore_action.triggered.connect(self.restore_defaults.emit)
-        self._config_reset_menu.setStyleSheet(reset_submenu_style(cfg))
+        self._config_reset_menu.setStyleSheet(dropdown_submenu_style(cfg))
         self._tab_revert_action.triggered.connect(self._on_tab_revert)
         self._tab_defaults_action.triggered.connect(self._on_tab_defaults)
 
@@ -318,7 +318,7 @@ class SettingsSidebar(IconSidebarBase):
         self._style_reset_all_action = self._style_reset_menu.addAction(
             self.tr("Restore all to system defaults", "Reset menu")
         )
-        self._style_reset_menu.setStyleSheet(reset_submenu_style(cfg))
+        self._style_reset_menu.setStyleSheet(dropdown_submenu_style(cfg))
 
         # Actions
         self._style_reset_palette_action.triggered.connect(

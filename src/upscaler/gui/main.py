@@ -7,7 +7,7 @@ import os
 from typing import Dict, Optional, TYPE_CHECKING, Tuple
 
 from PySide6.QtCore import QEvent, Qt, QTimer, QSettings, QSize, QStandardPaths, Signal
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QKeySequence, QGuiApplication, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -33,7 +33,7 @@ from .sidebars import ProfilesSidebar, SettingsSidebar
 from .styles import circular_button_style, tooltip_style
 from .utils import background_rule
 from .widgets import StyledSplitter
-from ..config import apply_overrides, find_matching_profile, parse_config
+from ..config import OverlayMode, apply_overrides, find_matching_profile, parse_config
 from ..pipeline import create_pipeline_session
 from ..window import activate_window
 
@@ -227,14 +227,17 @@ class MainWindow(QMainWindow):
         self.filter_bar.filter_changed.connect(self.grid_mgr.populate)
         self.filter_bar.focus_grid_requested.connect(self.grid_mgr.focus_grid)
         self.scene.window_selected.connect(self._on_window_selected)
-        self.scene.windows_changed.connect(self._refresh_profile_matches)
+        self.scene.open_in_window_requested.connect(self._on_open_in_window)
+        self.scene.create_profile_requested.connect(self._on_create_profile_for_window)
+        self.scene.copy_info_requested.connect(self._on_copy_window_info)
+        self.scene.windows_changed.connect(self.refresh_profile_matches)
         self.scene.focus_filter_requested.connect(self.filter_bar.set_focus)
         self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
 
         # Profile
         self.left_sidebar.profile_selected.connect(self.profile_act.select_profile)
         self.left_sidebar.profile_selected.connect(
-            lambda _name: QTimer.singleShot(0, self._refresh_profile_matches)
+            lambda _name: QTimer.singleShot(0, self.refresh_profile_matches)
         )
         self.left_sidebar.add_profile_requested.connect(self.profile_act.add_profile)
         self.left_sidebar.duplicate_profile_requested.connect(
@@ -300,19 +303,27 @@ class MainWindow(QMainWindow):
     # Pipeline launch
     # ------------------------------------------------------------------
     def _on_window_selected(self, win_info: WindowInfo) -> None:
-        """Auto-apply a matching profile, then start a one-shot pipeline."""
-        if self.manual_session is not None or self._session_starting:
-            logger.warning(
-                "A manual session is already active or starting, ignoring..."
-            )
-            return
-
-        # Daemon mode: always auto-matches
+        """Handle left-click on a tile: daemon-aware, standard overlay mode."""
         if self.daemon_ctrl.active:
             self.grid_mgr.stop()
             self.hide()
             activate_window(win_info.handle)
             self.daemon_ctrl.request_switch(win_info)
+            return
+        self._begin_upscale(win_info, overlay_mode=None)
+
+    def _on_open_in_window(self, win_info: WindowInfo) -> None:
+        """Right-click 'Open in window': start a session in windowed mode."""
+        if self.daemon_ctrl.active:
+            logger.info("Open-in-window ignored: daemon mode is active")
+            return
+        self._begin_upscale(win_info, overlay_mode=OverlayMode.WINDOWED.value)
+
+    def _begin_upscale(self, win_info: WindowInfo, overlay_mode: Optional[str]) -> None:
+        if self.manual_session is not None or self._session_starting:
+            logger.warning(
+                "A manual session is already active or starting, ignoring..."
+            )
             return
 
         self._session_starting = True
@@ -341,10 +352,36 @@ class MainWindow(QMainWindow):
                     "Manual profile applied: '%s'.",
                     self._config_manager.active_profile_name,
                 )
-            QTimer.singleShot(0, lambda w=win_info: self._start_pipeline(w))
+            QTimer.singleShot(
+                0,
+                lambda w=win_info, m=overlay_mode: self._start_pipeline(w, m),
+            )
         except Exception:
             self._session_starting = False
             raise
+
+    @staticmethod
+    def _on_copy_window_info(win_info: WindowInfo) -> None:
+        """Copy window title, size, and handle to the clipboard."""
+        text = (
+            f"{win_info.title}\n"
+            f"{win_info.width}x{win_info.height}\n"
+            f"{win_info.handle:#x}"
+        )
+        QGuiApplication.clipboard().setText(text)
+
+    def _on_create_profile_for_window(self, win_info: WindowInfo) -> None:
+        """Open the profile editor prefilled from the given window."""
+        if self._session_starting or self.manual_session is not None:
+            return
+        if not confirm_pending_changes(
+            self,
+            self.gui_config,
+            self.has_pending_changes,
+            self.save_pending_changes,
+        ):
+            return
+        self.profile_act.add_profile(prefill_window=win_info)
 
     def _on_splitter_moved(self, pos: int, index: int) -> None:
         """Save sidebar visibility based on current splitter sizes."""
@@ -364,7 +401,9 @@ class MainWindow(QMainWindow):
         if not tray_enabled:
             QApplication.instance().quit()
 
-    def _start_pipeline(self, win_info: WindowInfo) -> None:
+    def _start_pipeline(
+        self, win_info: WindowInfo, overlay_mode_override: Optional[str] = None
+    ) -> None:
         """Create a temporary pipeline session for the given window."""
         self._session_starting = False
         if self.force_exit:
@@ -382,6 +421,8 @@ class MainWindow(QMainWindow):
         # Copy configuration
         eff_gui_config = copy.deepcopy(self._config_manager.effective_config)
         eff_gui_config.daemon = False
+        if overlay_mode_override is not None:
+            eff_gui_config.overlay_mode = overlay_mode_override
         parse_config(eff_gui_config)
 
         # Build a clean base config for future follow-focus window matches
@@ -502,7 +543,7 @@ class MainWindow(QMainWindow):
             parse_config(merged_base)
             self.daemon_ctrl.update_base_config(merged_base)
 
-        self._refresh_profile_matches()
+        self.refresh_profile_matches()
 
     def _make_circular_button(
         self,
@@ -706,9 +747,9 @@ class MainWindow(QMainWindow):
             self._stopping_manual_session = False
 
         # Refresh badges before showing
-        self._refresh_profile_matches()
+        self.refresh_profile_matches()
 
-    def _refresh_profile_matches(self) -> None:
+    def refresh_profile_matches(self) -> None:
         """Update per-tile profile indicators."""
         if self._config_manager.active_profile_name is not None:
             self.scene.set_profile_matches({})

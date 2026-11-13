@@ -1095,8 +1095,8 @@ def reset_button_style(cfg: GUIConfig, active: bool) -> str:
     """
 
 
-def reset_submenu_style(cfg: GUIConfig) -> str:
-    """Style for the dropdown menu of the Reset button."""
+def dropdown_submenu_style(cfg: GUIConfig) -> str:
+    """Style for the dropdown menus."""
     f = cfg.footer
     return f"""
     QMenu {{
