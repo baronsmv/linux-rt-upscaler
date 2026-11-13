@@ -364,9 +364,9 @@ class MainWindow(QMainWindow):
     def _on_copy_window_info(win_info: WindowInfo) -> None:
         """Copy window title, size, and handle to the clipboard."""
         text = (
-            f"{win_info.title}\n"
-            f"{win_info.width}x{win_info.height}\n"
-            f"{win_info.handle:#x}"
+            f"Title:  {win_info.title}\n"
+            f"Size:   {win_info.width}x{win_info.height}\n"
+            f"Handle: {win_info.handle:#x}"
         )
         QGuiApplication.clipboard().setText(text)
 
