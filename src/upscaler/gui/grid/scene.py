@@ -118,6 +118,7 @@ class WindowGridScene(QGraphicsScene):
         for win in windows:
             if win.handle in self._tile_by_handle:
                 tile = self._tile_by_handle[win.handle]
+                tile.set_window_info(win)
             else:
                 tile = WindowTileItem(win, self._gui_config)
                 tile.clicked.connect(self._on_tile_clicked)
@@ -260,7 +261,7 @@ class WindowGridScene(QGraphicsScene):
 
         # Update tile sizes (resize if changed)
         for tile in tiles:
-            cur_w, cur_h = tile.tile_size()
+            cur_w, cur_h = tile.tile_size
             if abs(cur_w - tile_w) > 1 or abs(cur_h - tile_h) > 1:
                 tile.set_tile_size(tile_w, tile_h)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import (
     Qt,
@@ -155,7 +155,7 @@ class WindowTileItem(QGraphicsObject):
         # --- Geometry -------------------------------------------------------
         self._half_w = gui_config.tile.width / 2.0
         self._half_h = gui_config.tile.height / 2.0
-        self._tile_size = (gui_config.tile.width, gui_config.tile.height)
+        self.tile_size = (gui_config.tile.width, gui_config.tile.height)
         self._max_bounding_rect = self._compute_max_bounding_rect()
 
         # --- State (hover & selection determine the animation target) -------
@@ -212,15 +212,23 @@ class WindowTileItem(QGraphicsObject):
     def boundingRect(self) -> QRectF:
         return self._max_bounding_rect
 
-    def tile_size(self) -> Tuple[float, float]:
-        return self._tile_size
+    def set_window_info(self, win_info: WindowInfo) -> None:
+        """Update the target window's metadata (title, dimensions)."""
+        if (
+            win_info.title == self._win_info.title
+            and win_info.width == self._win_info.width
+            and win_info.height == self._win_info.height
+        ):
+            return
+        self._win_info = win_info
+        self.update()
 
     def set_tile_size(self, width: float, height: float) -> None:
         """Resize the tile. Stops animation, resets scale, clears cache."""
         self._anim.stop()
         self._half_w = width / 2.0
         self._half_h = height / 2.0
-        self._tile_size = (width, height)
+        self.tile_size = (width, height)
         self._scale = 1.0
         self._target_scale = 1.0
         self._max_bounding_rect = self._compute_max_bounding_rect()
@@ -455,8 +463,8 @@ class WindowTileItem(QGraphicsObject):
         for i in range(3, len(data), 4):
             data[i] = 255
 
-        avail_w = max(1, int(self._tile_size[0]) - 8)
-        avail_h = max(1, int(self._tile_size[1]) - 8)
+        avail_w = max(1, int(self.tile_size[0]) - 8)
+        avail_h = max(1, int(self.tile_size[1]) - 8)
         self._scaled_pixmap = QPixmap.fromImage(
             QImage(
                 bytes(data),
