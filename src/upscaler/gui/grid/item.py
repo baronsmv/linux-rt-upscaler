@@ -165,6 +165,7 @@ class WindowTileItem(QGraphicsObject):
 
         # --- State (hover & selection determine the animation target) -------
         self._hover = False
+        self._menu_open = False
         self._selected = False
         self._scale = 1.0  # current scale (animated)
         self._target_scale = 1.0  # desired scale (1.0 or pop_scale)
@@ -260,6 +261,10 @@ class WindowTileItem(QGraphicsObject):
         self.update()
         self._update_animation_target()
 
+    def _pop_active(self) -> bool:
+        """True when the tile should render in its popped state."""
+        return self._hover or self._menu_open
+
     def set_grid_focused(self, focused: bool) -> None:
         """Tell the tile whether the owning grid currently has focus."""
         if self._grid_focused == focused:
@@ -270,7 +275,7 @@ class WindowTileItem(QGraphicsObject):
 
     def _update_animation_target(self) -> None:
         """Re-evaluate the pop target and animate toward it."""
-        target = self._gui_config.tile.pop_scale if self._hover else 1.0
+        target = self._gui_config.tile.pop_scale if self._pop_active() else 1.0
         if target == self._target_scale:
             return
         self._target_scale = target
@@ -394,7 +399,21 @@ class WindowTileItem(QGraphicsObject):
         create_action = menu.addAction(self.tr("Create profile for this window"))
         copy_action = menu.addAction(self.tr("Copy window info"))
 
-        chosen = menu.exec(screen_pos)
+        # Hold the pop while the menu is visible
+        self._menu_open = True
+        self._update_animation_target()
+        self.update()
+
+        try:
+            chosen = menu.exec(screen_pos)
+        finally:
+            self._menu_open = False
+            if self.isUnderMouse():
+                self.set_hover(True)
+            else:
+                self.set_hover(False)
+                self.update()
+
         if chosen is open_action:
             self.open_in_window_requested.emit(self._win_info)
         elif chosen is create_action:
@@ -497,7 +516,7 @@ class WindowTileItem(QGraphicsObject):
     def _more_button_rect(self) -> Optional[QRectF]:
         """Local-coord rect of the more-options button, or None when hidden."""
         keyboard_active = self._grid_focused and self._selected
-        if not (self._hover or keyboard_active):
+        if not (self._pop_active() or keyboard_active):
             return None
         return QRectF(
             self._half_w - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
