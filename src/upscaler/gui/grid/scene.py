@@ -378,6 +378,14 @@ class WindowGridScene(QGraphicsScene):
         All other keys are passed to the base class.
         """
         key = event.key()
+
+        if key == Qt.Key_Menu or (
+            key == Qt.Key_F10 and event.modifiers() & Qt.ShiftModifier
+        ):
+            self._open_selected_tile_menu()
+            event.accept()
+            return
+
         if key in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space):
             sw = self.selected_window()
             if sw:
@@ -396,6 +404,14 @@ class WindowGridScene(QGraphicsScene):
             return
 
         super().keyPressEvent(event)
+
+    def _open_selected_tile_menu(self) -> None:
+        """Show the context menu for the currently selected tile, if any."""
+        if self._selected_handle is None:
+            return
+        tile = self._tile_by_handle.get(self._selected_handle)
+        if tile is not None:
+            tile.show_context_menu_keyboard()
 
     def _move_selection(self, key: int) -> None:
         """Move the selection highlight in response to an arrow key."""

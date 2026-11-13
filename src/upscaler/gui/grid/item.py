@@ -495,8 +495,9 @@ class WindowTileItem(QGraphicsObject):
         )
 
     def _more_button_rect(self) -> Optional[QRectF]:
-        """Local-coord rect of the more-options button, or None when not hovered."""
-        if not self._hover:
+        """Local-coord rect of the more-options button, or None when hidden."""
+        keyboard_active = self._grid_focused and self._selected
+        if not (self._hover or keyboard_active):
             return None
         return QRectF(
             self._half_w - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
@@ -504,6 +505,20 @@ class WindowTileItem(QGraphicsObject):
             MORE_BUTTON_SIZE,
             MORE_BUTTON_SIZE,
         )
+
+    def show_context_menu_keyboard(self) -> None:
+        """Open the context menu from a keyboard shortcut (Menu / Shift+F10).
+
+        Positioned at the more-options button regardless of its current
+        visibility, so the menu always appears where the button would be.
+        """
+        rect = QRectF(
+            self._half_w - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
+            self._half_h - MORE_BUTTON_SIZE - MORE_BUTTON_INSET,
+            MORE_BUTTON_SIZE,
+            MORE_BUTTON_SIZE,
+        )
+        self._show_context_menu_at(self._local_to_global(rect.center()))
 
     def paint(
         self,
