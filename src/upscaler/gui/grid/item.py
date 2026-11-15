@@ -165,6 +165,12 @@ class WindowTileItem(QGraphicsObject):
         self._scale = 1.0  # current scale (animated)
         self._target_scale = 1.0  # desired scale (1.0 or pop_scale)
 
+        # --- More-button opacity ---------------------------------------------
+        self._button_opacity_value = 0.0
+        self._button_anim = QPropertyAnimation(self, b"buttonOpacity", self)
+        self._button_anim.setDuration(gui_config.tile.pop_duration)
+        self._button_anim.setEasingCurve(QEasingCurve.OutCubic)
+
         # --- Badge -------
         self._badge_label: Optional[str] = None
         self._badge_font: Optional[QFont] = None
@@ -261,12 +267,37 @@ class WindowTileItem(QGraphicsObject):
             return
         self._hover = hover
         self.setZValue(1 if hover else 0)
+        self._update_button_opacity()
         self.update()
         self._update_animation_target()
 
     def _pop_active(self) -> bool:
         """True when the tile should render in its popped state."""
         return self._hover or self._menu_open
+
+    def get_button_opacity(self) -> float:
+        return self._button_opacity_value
+
+    def set_button_opacity(self, value: float) -> None:
+        if self._button_opacity_value != value:
+            self._button_opacity_value = value
+            self.update()
+
+    buttonOpacity = Property(float, get_button_opacity, set_button_opacity)
+
+    def _button_opacity(self) -> float:
+        """Current more-button opacity (0.0 to 1.0)."""
+        return self._button_opacity_value
+
+    def _update_button_opacity(self) -> None:
+        """Drive the button's fade toward the current pop state."""
+        target = 1.0 if self._pop_active() else 0.0
+        if target == self._button_opacity_value:
+            return
+        self._button_anim.stop()
+        self._button_anim.setStartValue(self._button_opacity_value)
+        self._button_anim.setEndValue(target)
+        self._button_anim.start()
 
     def set_grid_focused(self, focused: bool) -> None:
         """Tell the tile whether the owning grid currently has focus."""
@@ -406,6 +437,7 @@ class WindowTileItem(QGraphicsObject):
 
         # Hold the pop while the menu is visible
         self._menu_open = True
+        self._update_button_opacity()
         self._update_animation_target()
         self.update()
 
@@ -413,6 +445,7 @@ class WindowTileItem(QGraphicsObject):
             chosen = menu.exec(screen_pos)
         finally:
             self._menu_open = False
+            self._update_button_opacity()
             if self.isUnderMouse():
                 self.set_hover(True)
             else:
@@ -522,7 +555,7 @@ class WindowTileItem(QGraphicsObject):
 
     def _more_button_rect(self) -> Optional[QRectF]:
         """Local-coord rect of the more-options button, or None when hidden."""
-        if not self._pop_active():
+        if not (self._pop_active() or self._button_opacity_value > 0.01):
             return None
         size = self._gui_config.tile.overlay_size
         inset = self._gui_config.tile.overlay_inset
@@ -675,22 +708,27 @@ class WindowTileItem(QGraphicsObject):
         # More-options button
         button_rect = self._more_button_rect()
         if button_rect is not None:
+            opacity = self._button_opacity_value
+
             # Background
             bg_color = QColor(
                 self._gui_config.palette.control
                 if self._more_button_hovered
                 else self._gui_config.palette.caption_background
             )
+            bg_color.setAlphaF(bg_color.alphaF() * opacity)
             painter.setPen(Qt.NoPen)
             painter.setBrush(bg_color)
             painter.drawEllipse(button_rect)
 
             # Icon
+            dot = QColor(self._gui_config.palette.text_hover)
+            dot.setAlphaF(dot.alphaF() * opacity)
+            painter.setBrush(dot)
+            center = button_rect.center()
             size = self._gui_config.tile.overlay_size
             dot_radius = max(1.0, size * _DOT_RADIUS_RATIO)
             dot_spacing = size * _DOT_SPACING_RATIO
-            painter.setBrush(QColor(self._gui_config.palette.text_hover))
-            center = button_rect.center()
             for offset in (-dot_spacing, 0.0, dot_spacing):
                 painter.drawEllipse(
                     QPointF(center.x(), center.y() + offset), dot_radius, dot_radius
