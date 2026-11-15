@@ -445,11 +445,11 @@ class WindowTileItem(QGraphicsObject):
             chosen = menu.exec(screen_pos)
         finally:
             self._menu_open = False
-            self._update_button_opacity()
             if self.isUnderMouse():
                 self.set_hover(True)
             else:
                 self.set_hover(False)
+            self._update_button_opacity()
             self._update_animation_target()
             self.update()
 
