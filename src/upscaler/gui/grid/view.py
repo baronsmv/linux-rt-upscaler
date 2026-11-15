@@ -99,5 +99,7 @@ class WindowGridView(QGraphicsView):
     # ------------------------------------------------------------------
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        # All keys are forwarded to the scene for navigation
+        if event.key() in (Qt.Key_Tab, Qt.Key_Backtab):
+            super().keyPressEvent(event)
+            return
         self._scene.keyPressEvent(event)
