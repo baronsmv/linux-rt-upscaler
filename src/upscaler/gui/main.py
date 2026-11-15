@@ -230,6 +230,7 @@ class MainWindow(QMainWindow):
         self.scene.open_in_window_requested.connect(self._on_open_in_window)
         self.scene.create_profile_requested.connect(self._on_create_profile_for_window)
         self.scene.copy_info_requested.connect(self._on_copy_window_info)
+        self.scene.profile_badge_clicked.connect(self._on_profile_badge_clicked)
         self.scene.windows_changed.connect(self.refresh_profile_matches)
         self.scene.focus_filter_requested.connect(self.filter_bar.set_focus)
         self._view.focus_filter_requested.connect(self.filter_bar.set_focus)
@@ -369,6 +370,10 @@ class MainWindow(QMainWindow):
             f"Handle: {win_info.handle:#x}"
         )
         QGuiApplication.clipboard().setText(text)
+
+    def _on_profile_badge_clicked(self, profile_name: str) -> None:
+        """Reveal the given profile in the left sidebar with a brief flash."""
+        self.left_sidebar.reveal_profile(profile_name)
 
     def _on_create_profile_for_window(self, win_info: WindowInfo) -> None:
         """Open the profile editor prefilled from the given window."""

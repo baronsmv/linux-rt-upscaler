@@ -132,6 +132,7 @@ class WindowTileItem(QGraphicsObject):
     open_in_window_requested = Signal(WindowInfo)
     create_profile_requested = Signal(WindowInfo)
     copy_info_requested = Signal(WindowInfo)
+    profile_badge_clicked = Signal(str)
 
     # ------------------------------------------------------------------
     #  Initialisation
@@ -388,17 +389,21 @@ class WindowTileItem(QGraphicsObject):
     def hoverLeaveEvent(self, event) -> None:
         if self._more_button_hovered:
             self._more_button_hovered = False
-            self.unsetCursor()
             self.update()
         self.set_hover(False)
         super().hoverLeaveEvent(event)
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.LeftButton:
-            rect = self._more_button_rect()
-            if rect is not None and rect.contains(event.pos()):
-                screen_pos = self._local_to_global(rect.center())
+            more_rect = self._more_button_rect()
+            if more_rect is not None and more_rect.contains(event.pos()):
+                screen_pos = self._local_to_global(more_rect.center())
                 self._show_context_menu_at(screen_pos)
+                event.accept()
+                return
+            badge_rect = self._badge_rect()
+            if badge_rect is not None and badge_rect.contains(event.pos()):
+                self.profile_badge_clicked.emit(self._matched_profile)
                 event.accept()
                 return
             self.clicked.emit(self._win_info)

@@ -1,12 +1,22 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Dict, List, Optional
 
-from PySide6.QtCore import QEvent, Qt, QSize, QTimer, Signal
+from PySide6.QtCore import (
+    QEasingCurve,
+    QEvent,
+    QPropertyAnimation,
+    QSize,
+    Qt,
+    QTimer,
+    Signal,
+)
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -26,6 +36,8 @@ from ..styles import (
     separator_style,
     toolbar_button_style,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class _ProfileListWidget(QListWidget):
@@ -438,6 +450,19 @@ class ProfilesSidebar(QWidget):
         """Replace the internal profiles dict (used after reordering)."""
         self._profiles = profiles
 
+    def reveal_profile(self, name: str) -> None:
+        """Scroll to *name* in the sidebar and flash its row.
+
+        Does nothing if the profile is not present (e.g., deleted between
+        the badge render and the click). The flash is a transient overlay
+        that never changes selection, activation, or config state.
+        """
+        item = self._find_item_by_name(name)
+        if item is None:
+            return
+        self._list.scrollToItem(item, QListWidget.PositionAtCenter)
+        QTimer.singleShot(0, lambda i=item: self._flash_item(i))
+
     # ------------------------------------------------------------------
     #  Private helpers
     # ------------------------------------------------------------------
@@ -468,6 +493,56 @@ class ProfilesSidebar(QWidget):
         btn.clicked.connect(callback)
         btn.setStyleSheet(toolbar_button_style(self._gui_config))
         return btn
+
+    def _find_item_by_name(self, name: str) -> Optional[QListWidgetItem]:
+        for i in range(self._list.count()):
+            item = self._list.item(i)
+            if item is not None and item.data(Qt.UserRole) == name:
+                return item
+        return None
+
+    def _flash_item(self, item: QListWidgetItem) -> None:
+        """Overlay a fading accent highlight on *item*.
+
+        Uses a transient child widget on the viewport so it never touches
+        the item's QSS-styled background (which would override any attempt
+        to change via `setBackground()`).
+        """
+        rect = self._list.visualItemRect(item)
+        if rect.isEmpty():
+            return
+
+        flash = QWidget(self._list.viewport())
+        flash.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        flash.setAttribute(Qt.WA_StyledBackground, True)
+        flash.setStyleSheet(
+            f"background-color: {self._gui_config.palette.control};"
+            f"border-radius: {self._gui_config.profile.profile_border_radius}px;"
+        )
+        flash.setGeometry(rect)
+
+        effect = QGraphicsOpacityEffect(flash)
+        effect.setOpacity(0.0)
+        flash.setGraphicsEffect(effect)
+
+        flash.show()
+        flash.raise_()
+
+        fade_in = QPropertyAnimation(effect, b"opacity", flash)
+        fade_in.setDuration(120)
+        fade_in.setStartValue(0.0)
+        fade_in.setEndValue(0.4)
+        fade_in.setEasingCurve(QEasingCurve.OutCubic)
+
+        fade_out = QPropertyAnimation(effect, b"opacity", flash)
+        fade_out.setDuration(280)
+        fade_out.setStartValue(0.4)
+        fade_out.setEndValue(0.0)
+        fade_out.setEasingCurve(QEasingCurve.InCubic)
+
+        fade_in.finished.connect(fade_out.start)
+        fade_out.finished.connect(flash.deleteLater)
+        fade_in.start()
 
     # ------------------------------------------------------------------
     #  Slots

@@ -45,6 +45,7 @@ class WindowGridScene(QGraphicsScene):
     open_in_window_requested = Signal(WindowInfo)
     create_profile_requested = Signal(WindowInfo)
     copy_info_requested = Signal(WindowInfo)
+    profile_badge_clicked = Signal(str)
     focus_filter_requested = Signal()
     windows_changed = Signal()
 
@@ -125,6 +126,7 @@ class WindowGridScene(QGraphicsScene):
                 tile.open_in_window_requested.connect(self.open_in_window_requested)
                 tile.create_profile_requested.connect(self.create_profile_requested)
                 tile.copy_info_requested.connect(self.copy_info_requested)
+                tile.profile_badge_clicked.connect(self.profile_badge_clicked)
                 tile.set_grid_focused(self._interactive)
                 self.addItem(tile)
                 self._tile_by_handle[win.handle] = tile
