@@ -450,7 +450,8 @@ class WindowTileItem(QGraphicsObject):
                 self.set_hover(True)
             else:
                 self.set_hover(False)
-                self.update()
+            self._update_animation_target()
+            self.update()
 
         if chosen is open_action:
             self.open_in_window_requested.emit(self._win_info)
