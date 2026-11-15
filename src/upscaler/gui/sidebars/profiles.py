@@ -446,6 +446,10 @@ class ProfilesSidebar(QWidget):
 
         self._list.blockSignals(False)
 
+    def focus_list(self) -> None:
+        """Move keyboard focus to the profile list (F6 target)."""
+        self._list.setFocus()
+
     def update_profiles(self, profiles: dict) -> None:
         """Replace the internal profiles dict (used after reordering)."""
         self._profiles = profiles

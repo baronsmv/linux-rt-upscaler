@@ -106,6 +106,8 @@ class MainWindow(QMainWindow):
         # Shortcuts
         QShortcut(QKeySequence("Ctrl+F"), self, lambda: self.filter_bar.set_focus())
         QShortcut(QKeySequence("Ctrl+Q"), self, self.request_quit)
+        QShortcut(QKeySequence("F6"), self, self._cycle_panel_forward)
+        QShortcut(QKeySequence("Shift+F6"), self, self._cycle_panel_backward)
 
         self._config_manager.config_changed.connect(self._on_config_changed)
         QApplication.instance().aboutToQuit.connect(self._cleanup_before_quit)
@@ -299,6 +301,52 @@ class MainWindow(QMainWindow):
         if self.scene.selected_window() is None:
             self.scene.focus_first_tile()
         self._view.setFocus()
+
+    def _cycle_panel_forward(self) -> None:
+        self._cycle_panel(+1)
+
+    def _cycle_panel_backward(self) -> None:
+        self._cycle_panel(-1)
+
+    def _cycle_panel(self, direction: int) -> None:
+        """Cycle keyboard focus between the three main panels (F6 / Shift+F6)."""
+        panels = [
+            (self.left_sidebar, self.left_sidebar.focus_list),
+            (self._view, self._focus_grid),
+            (self.right_sidebar, self.right_sidebar.focus_default),
+        ]
+
+        # Skip collapsed panels
+        reachable = [
+            (panel, action)
+            for panel, action in panels
+            if panel.isVisible() and panel.width() > 0
+        ]
+        if not reachable:
+            return
+
+        focused = QApplication.focusWidget()
+        current = -1
+        if focused is not None:
+            for i, (panel, _) in enumerate(reachable):
+                if panel is focused or panel.isAncestorOf(focused):
+                    current = i
+                    break
+            # Filter bar
+            if current == -1 and (
+                self.filter_bar is focused or self.filter_bar.isAncestorOf(focused)
+            ):
+                for i, (panel, _) in enumerate(reachable):
+                    if panel is self._view:
+                        current = i
+                        break
+
+        if current == -1:
+            next_index = 0 if direction > 0 else len(reachable) - 1
+        else:
+            next_index = (current + direction) % len(reachable)
+
+        reachable[next_index][1]()
 
     # ------------------------------------------------------------------
     # Pipeline launch

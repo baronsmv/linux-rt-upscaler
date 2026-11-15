@@ -412,6 +412,10 @@ class SettingsSidebar(IconSidebarBase):
             self._reset_btn.setMenu(self._config_reset_menu)
             self._check_dirty()
 
+    def focus_default(self) -> None:
+        """Move keyboard focus to the tab bar (F6 target)."""
+        self._tab_bar.setFocus()
+
     def _on_style_dirty_changed(self, dirty: bool):
         """Called whenever the Style tab's dirty state changes."""
         if self._is_style_tab_active():
