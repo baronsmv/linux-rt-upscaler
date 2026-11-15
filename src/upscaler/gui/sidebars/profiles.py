@@ -460,7 +460,7 @@ class ProfilesSidebar(QWidget):
         item = self._find_item_by_name(name)
         if item is None:
             return
-        self._list.scrollToItem(item, QListWidget.PositionAtCenter)
+        self._list.scrollToItem(item, QListWidget.EnsureVisible)
         QTimer.singleShot(0, lambda i=item: self._flash_item(i))
 
     # ------------------------------------------------------------------
