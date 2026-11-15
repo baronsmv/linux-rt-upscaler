@@ -114,6 +114,7 @@ def create_pipeline_session(
     # For non-daemon modes, show the overlay immediately
     if not config.daemon:
         overlay.show()
+        overlay.raise_()
 
     # ---- Pipeline --------------------------------------------------------
     pipeline = Pipeline(
