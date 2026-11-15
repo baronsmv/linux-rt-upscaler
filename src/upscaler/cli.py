@@ -42,8 +42,8 @@ def main() -> None:
 
     # Create the Qt application
     app = QApplication([])
-    app.setApplicationName("upscaler-overlay")
-    app.setApplicationDisplayName("Upscaler Overlay")
+    app.setApplicationName("upscaler-gui")
+    app.setDesktopFileName("io.github.baronsmv.linux-rt-upscaler")
     install_translators(app)
     logger.debug("Qt application initialized")
 

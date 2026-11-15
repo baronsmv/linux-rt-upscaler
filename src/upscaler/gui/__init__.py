@@ -42,10 +42,9 @@ def main() -> None:
 
     # Qt application
     app = QApplication(sys.argv)
-    install_translators(app)
-    app.setWindowIcon(load_icon("app/app", 256, 256))
-    app.setApplicationName("upscale-gui")
+    app.setApplicationName("upscaler-gui")
     app.setDesktopFileName("io.github.baronsmv.linux-rt-upscaler")
+    install_translators(app)
 
     # Single-instance manager
     manager = InstanceManager("linux-rt-upscaler-gui")

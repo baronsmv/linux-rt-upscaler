@@ -5,6 +5,7 @@ import time
 from typing import Any, List, Optional, Tuple
 
 from PySide6.QtCore import (
+    QCoreApplication,
     QEvent,
     Qt,
     QTimer,
@@ -71,6 +72,13 @@ class OverlayWindow(QMainWindow):
         super().__init__()
         self._config = config
         self._last_emitted_size: Optional[Tuple[int, int]] = None
+
+        self.setWindowTitle(
+            QCoreApplication.translate(
+                "MainWindow", "Real-Time Upscaler", "Name of the application"
+            )
+        )
+
         start_time = time.perf_counter()
         logger.debug(
             f"Initializing OverlayWindow: mode={config.overlay_mode}, "

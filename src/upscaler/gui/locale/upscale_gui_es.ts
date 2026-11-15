@@ -1148,31 +1148,32 @@ Desactiva esta opción para seleccionar manualmente una ventana de la cuadrícul
   <context>
     <name>MainWindow</name>
     <message>
+      <location filename="../../overlay/overlay.py" line="202" />
       <location filename="../main.py" line="96" />
       <source>Real-Time Upscaler</source>
       <comment>Name of the application</comment>
       <translation>Escalador en Tiempo Real</translation>
     </message>
     <message>
-      <location filename="../main.py" line="155" />
+      <location filename="../main.py" line="157" />
       <source>Enable/disable system tray</source>
       <comment>Tray toggle button</comment>
       <translation>Habilitar/Deshabilitar la bandeja del sistema</translation>
     </message>
     <message>
-      <location filename="../main.py" line="167" />
+      <location filename="../main.py" line="169" />
       <source>About Real-Time Upscaler</source>
       <comment>About dialog button</comment>
       <translation>Acerca de Escalador en Tiempo Real</translation>
     </message>
     <message>
-      <location filename="../main.py" line="462" />
+      <location filename="../main.py" line="515" />
       <source>Error</source>
       <comment>Error starting pipeline</comment>
       <translation>Error</translation>
     </message>
     <message>
-      <location filename="../main.py" line="463" />
+      <location filename="../main.py" line="516" />
       <source>Could not start pipeline:
 {0}</source>
       <comment>Error starting pipeline</comment>
@@ -1180,13 +1181,13 @@ Desactiva esta opción para seleccionar manualmente una ventana de la cuadrícul
 {0}</translation>
     </message>
     <message>
-      <location filename="../main.py" line="661" />
+      <location filename="../main.py" line="714" />
       <source>Save Error</source>
       <comment>Error while saving configuration</comment>
       <translation>Error al guardar</translation>
     </message>
     <message>
-      <location filename="../main.py" line="662" />
+      <location filename="../main.py" line="715" />
       <source>Could not save:
 {0}</source>
       <comment>Error while saving configuration</comment>
@@ -1823,61 +1824,61 @@ Por favor, elige un nombre diferente.</translation>
   <context>
     <name>ProfilesSidebar</name>
     <message>
-      <location filename="../sidebars/profiles.py" line="119" />
+      <location filename="../sidebars/profiles.py" line="131" />
       <source>Profiles</source>
       <comment>Profiles sidebar title</comment>
       <translation>Perfiles</translation>
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="181" />
+      <location filename="../sidebars/profiles.py" line="193" />
       <source>Add profile (Ctrl+N)</source>
       <comment>Profile add action tooltip</comment>
       <translation>Añadir perfil (Ctrl+N)</translation>
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="187" />
+      <location filename="../sidebars/profiles.py" line="199" />
       <source>Duplicate profile (Ctrl+D)</source>
       <comment>Profile duplicate action tooltip</comment>
       <translation>Duplicar perfil (Ctrl+D)</translation>
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="194" />
+      <location filename="../sidebars/profiles.py" line="206" />
       <source>Edit profile (Enter/F2)</source>
       <comment>Profile edit action tooltip</comment>
       <translation>Editar perfil (Intro/F2)</translation>
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="201" />
+      <location filename="../sidebars/profiles.py" line="213" />
       <source>Delete profile (Del)</source>
       <comment>Profile delete action tooltip</comment>
       <translation>Eliminar perfil (Supr)</translation>
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="209" />
+      <location filename="../sidebars/profiles.py" line="221" />
       <source>Move up (Ctrl+Shift+Up)</source>
       <comment>Profile move up action tooltip</comment>
       <translation>Mover hacia arriba (Ctrl+Mayús+Arriba)</translation>
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="216" />
+      <location filename="../sidebars/profiles.py" line="228" />
       <source>Move down (Ctrl+Shift+Down)</source>
       <comment>Profile move down action tooltip</comment>
       <translation>Mover hacia abajo (Ctrl+Mayús+Abajo)</translation>
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="334" />
+      <location filename="../sidebars/profiles.py" line="346" />
       <source>Global</source>
       <comment>Global entry profile name</comment>
       <translation>Global</translation>
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="340" />
+      <location filename="../sidebars/profiles.py" line="352" />
       <source>When selected, the settings panel on the right edits the global configuration.</source>
       <comment>Global entry profile tooltip</comment>
       <translation>Si está seleccionado, el panel de configuración de la derecha modifica la configuración global.</translation>
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="350" />
+      <location filename="../sidebars/profiles.py" line="362" />
       <source>Global settings apply to all windows.
 
 You can create a profile to override settings for a specific window, matched by its title or size.</source>
@@ -1887,7 +1888,7 @@ You can create a profile to override settings for a specific window, matched by 
 Puedes crear un perfil para definir la configuración de una ventana específica, coincidiendo por su título o tamaño.</translation>
     </message>
     <message>
-      <location filename="../sidebars/profiles.py" line="398" />
+      <location filename="../sidebars/profiles.py" line="410" />
       <source>When selected, the settings panel on the right edits the settings overrides for '{0}'.</source>
       <comment>Profile selected tooltip</comment>
       <translation>Si está seleccionado, el panel de configuración de la derecha define la configuración específica para '{0}'.</translation>
@@ -2754,25 +2755,25 @@ Utiliza «Detener» en el menú de la bandeja para volver.</translation>
   <context>
     <name>WindowTileItem</name>
     <message>
-      <location filename="../grid/item.py" line="400" />
+      <location filename="../grid/item.py" line="436" />
       <source>Open in window</source>
       <comment>Menu action</comment>
       <translation>Abrir en ventana</translation>
     </message>
     <message>
-      <location filename="../grid/item.py" line="403" />
+      <location filename="../grid/item.py" line="439" />
       <source>Create profile for this window</source>
       <comment>Menu action</comment>
       <translation>Crear perfil para esta ventana</translation>
     </message>
     <message>
-      <location filename="../grid/item.py" line="405" />
+      <location filename="../grid/item.py" line="441" />
       <source>Copy window info</source>
       <comment>Menu action</comment>
       <translation>Copiar información de la ventana</translation>
     </message>
     <message>
-      <location filename="../grid/item.py" line="520" />
+      <location filename="../grid/item.py" line="559" />
       <source>Profile: {0}</source>
       <comment>Badge tooltip</comment>
       <translation>Perfil: {0}</translation>

@@ -1,10 +1,13 @@
 [Desktop Entry]
 Categories=Graphics;GTK;Qt;
 Comment=Upscale any X-Window
+Comment[es]=Escala cualquier ventana X
 Exec=EXEC_PATH_PLACEHOLDER
 GenericName=Real-Time Upscaler
+GenericName[es]=Escalador en Tiempo Real
 Icon=io.github.baronsmv.linux-rt-upscaler
 Name=Real-Time Upscaler
+Name[es]=Escalador en Tiempo Real
 NoDisplay=false
 Path=
 PrefersNonDefaultGPU=false
