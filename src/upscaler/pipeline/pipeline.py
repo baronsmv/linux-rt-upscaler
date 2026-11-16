@@ -987,15 +987,39 @@ class Pipeline(QObject):
         if self._bench is not None:
             raise RuntimeError("Benchmarking already enabled for this session")
         self._bench = []
+        self._bench_first_t0_ns = None
+        self._bench_warmup_ns = int(round(self.config.bench_warmup * 1_000_000_000))
         self._frame_index = 0
         self._bench_csv_path = csv_path
-        logger.info("Benchmark recording enabled: '%s'", csv_path)
+        logger.info(
+            "Benchmark recording enabled: '%s' (warmup=%.2fs)",
+            csv_path,
+            self.config.bench_warmup,
+        )
 
     def _record_bench(self, row: tuple) -> None:
         """Append a benchmark row if benchmarking is enabled."""
-        if self._bench is not None:
-            self._bench.append(row)
-            self._frame_index += 1
+        if self._bench is None:
+            return
+
+        # Track the session's first t0 for time-based warmup accounting
+        t0 = row[1]
+        if t0 is not None and t0 >= 0 and self._bench_first_t0_ns is None:
+            self._bench_first_t0_ns = t0
+
+        # Compute the warmup flag (time elapsed since first frame)
+        warmup = 0
+        if (
+            self._bench_warmup_ns > 0
+            and self._bench_first_t0_ns is not None
+            and t0 is not None
+            and t0 >= 0
+            and (t0 - self._bench_first_t0_ns) < self._bench_warmup_ns
+        ):
+            warmup = 1
+
+        self._bench.append(row + (warmup,))
+        self._frame_index += 1
 
     def _flush_bench_csv(self) -> None:
         """Write accumulated per-frame benchmark records to a CSV file."""
@@ -1025,6 +1049,7 @@ class Pipeline(QObject):
                         "swapchain_recreated",
                         "capture_fails",
                         "gpu_upscale_ns",
+                        "warmup",
                     ]
                 )
                 writer.writerows(rows)

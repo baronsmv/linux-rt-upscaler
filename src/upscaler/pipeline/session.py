@@ -3,6 +3,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional
 
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
 
@@ -180,7 +181,7 @@ def create_pipeline_session(
 
     hotkey_manager.start()
 
-    return PipelineSession(
+    session = PipelineSession(
         config=config,
         window_info=win_info,
         overlay=overlay,
@@ -189,3 +190,22 @@ def create_pipeline_session(
         daemon_monitor=daemon_monitor if config.daemon else None,
         hotkey_manager=hotkey_manager,
     )
+
+    # Auto-stop for benchmarking
+    if config.bench_duration and config.bench_duration > 0:
+        duration_ms = max(100, int(round(config.bench_duration * 1000)))
+
+        def _stop_benchmark():
+            logger.info(
+                "Benchmark duration reached (%.2fs), shutting down session",
+                config.bench_duration,
+            )
+            try:
+                session.shutdown()
+            finally:
+                app.quit()
+
+        QTimer.singleShot(duration_ms, _stop_benchmark)
+        logger.debug("Benchmark auto-stop armed for %.2fs", config.bench_duration)
+
+    return session
