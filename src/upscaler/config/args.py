@@ -1133,6 +1133,28 @@ and written to CSV_PATH when the session ends.
 WARNING: Memory usage grows with session length, so keep
 sessions with this option short (e.g. 30 s).""",
     )
+    benchmark_group.add_argument(
+        "--bench-duration",
+        type=float,
+        default=DEFAULT_CONFIG.bench_duration,
+        metavar="SECONDS",
+        help="""Auto-stop the session after SECONDS and flush the CSV.
+Requires --bench-csv. Disabled by default.""",
+    )
+    benchmark_group.add_argument(
+        "--bench-warmup",
+        type=float,
+        default=DEFAULT_CONFIG.bench_warmup,
+        metavar="SECONDS",
+        help="""Mark the first SECONDS of benchmark data as warmup.
+
+Warmup frames are still recorded in the CSV, but they are
+flagged with warmup=1 so that analysis can exclude them.
+Requires --bench-csv. Recommended value for benchmarks:
+2.5 - 3.0.
+
+Default: %(default)s (no warmup, all frames included).""",
+    )
 
     # ----------------------------------------------------------------------
     # Additional groups
@@ -1201,6 +1223,12 @@ sessions with this option short (e.g. 30 s).""",
     unknown_args = _warn_and_filter(unknown_args)
     if unknown_args:
         parser.error(f"unrecognized arguments: {' '.join(unknown_args)}")
+
+    # Benchmark flags require --bench-csv
+    if args.bench_duration is not None and args.bench_csv is None:
+        parser.error("--bench-duration requires --bench-csv")
+    if args.bench_warmup and args.bench_csv is None:
+        parser.error("--bench-warmup requires --bench-csv")
 
     # Listings
     if args.list_windows:

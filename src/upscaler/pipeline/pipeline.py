@@ -228,7 +228,9 @@ class Pipeline(QObject):
         self._next_frame_time: float = 0.0
 
         # Benchmark instrumentation
-        self._bench: Optional[List[tuple]] = None
+        self._bench: Optional[List[Tuple]] = None
+        self._bench_first_t0_ns: Optional[int] = None
+        self._bench_warmup_ns: int = 0
         self._frame_index: int = 0
         self._bench_csv_path: Optional[str] = None
 
