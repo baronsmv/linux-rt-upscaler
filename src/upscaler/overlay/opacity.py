@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Optional
+from typing import Optional, Tuple
 
 import xcffib
 import xcffib.xproto
@@ -144,7 +144,7 @@ class OpacityController(QObject):
 
     def _get_target_root_geometry(
         self,
-    ) -> tuple[Optional[int], Optional[int], int, int]:
+    ) -> Tuple[Optional[int], Optional[int], int, int]:
         """
         Get the target window's geometry (x, y, width, height) in root (screen) coordinates.
 

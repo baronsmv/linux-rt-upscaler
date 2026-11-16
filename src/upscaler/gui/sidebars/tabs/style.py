@@ -33,7 +33,7 @@ _ASPECT_RATIOS: Tuple[Tuple[str, float], ...] = (
 )
 
 
-def _interface_fields(o: GUIStyleOverrides) -> tuple:
+def _interface_fields(o: GUIStyleOverrides) -> Tuple:
     """Return the interface (non-palette) fields of *o*, for comparison."""
     return (
         o.zoom,
@@ -50,7 +50,7 @@ def _interface_fields(o: GUIStyleOverrides) -> tuple:
     )
 
 
-def _default_interface_fields() -> tuple:
+def _default_interface_fields() -> Tuple:
     """Return the shipped defaults for the interface fields."""
     d = GUIStyleOverrides(palette=PRESETS["Auto"])
     return _interface_fields(d)

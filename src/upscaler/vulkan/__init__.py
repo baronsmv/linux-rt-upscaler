@@ -471,7 +471,7 @@ class Device:
 
     def create_swapchain(
         self,
-        window_handle: tuple,
+        window_handle: Tuple,
         format: int,
         num_buffers: int,
         width: int,

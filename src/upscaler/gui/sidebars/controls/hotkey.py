@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Set, TYPE_CHECKING
+from typing import Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, Qt, Signal
 from PySide6.QtGui import QShortcut
@@ -238,7 +238,7 @@ class HotkeyCaptureButton(QPushButton):
         }.get(key, 0)
 
     @staticmethod
-    def _modifier_names(flags) -> tuple[str, ...]:
+    def _modifier_names(flags) -> Tuple[str, ...]:
         names = []
         if flags & Qt.ControlModifier:
             names.append("Ctrl")

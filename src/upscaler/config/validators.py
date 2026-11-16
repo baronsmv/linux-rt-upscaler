@@ -260,6 +260,9 @@ _VALIDATORS: Dict[str, Tuple] = {
     "max_capture_failures": (validate_number, 1),
     "capture_failure_delay": (validate_number, 0.0),
     "swapchain_debounce": (validate_number, 0.0),
+    # Benchmark
+    "bench_duration": (validate_number, 0, None, False),
+    "bench_warmup": (validate_number, 0),
 }
 
 

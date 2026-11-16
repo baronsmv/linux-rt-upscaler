@@ -272,6 +272,8 @@ class Config:
 
     # Benchmark
     bench_csv: Optional[str] = None
+    bench_duration: Optional[float] = None
+    bench_warmup: float = 0.0
 
     # Config file (not a configurable option, just used internally)
     config_file: Optional[str] = None
