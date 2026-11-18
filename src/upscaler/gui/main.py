@@ -469,7 +469,6 @@ class MainWindow(QMainWindow):
         self._hide_gui_after_stop = not (self.isVisible() and not self.isMinimized())
         self.grid_mgr.stop()
         activate_window(win_info.handle)
-        self.hide()
 
         # Copy configuration
         eff_gui_config = copy.deepcopy(self._config_manager.effective_config)
@@ -518,6 +517,8 @@ class MainWindow(QMainWindow):
                 ).format(e),
             )
             QApplication.instance().quit()
+
+        QTimer.singleShot(100, self.hide)
 
     def _create_right_sidebar(self) -> SettingsSidebar:
         """Build a SettingsSidebar reflecting the current config state."""
