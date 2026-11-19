@@ -1,6 +1,12 @@
-from typing import List, Tuple, Union
+from __future__ import annotations
+
+from dataclasses import fields
+from typing import List, Tuple, Union, TYPE_CHECKING
 
 from PySide6.QtGui import QColor
+
+if TYPE_CHECKING:
+    from ..config import GUIPalette
 
 NON_COLOR_KEYWORDS = frozenset[str]({"", "none", "transparent"})
 
@@ -79,3 +85,10 @@ def normalized_color(color: str) -> str:
         return qc.name(QColor.HexRgb).lower()
     else:
         return qc.name(QColor.HexArgb).lower()
+
+
+def palettes_equal(a: GUIPalette, b: GUIPalette) -> bool:
+    return all(
+        normalized_color(getattr(a, f.name)) == normalized_color(getattr(b, f.name))
+        for f in fields(GUIPalette)
+    )
