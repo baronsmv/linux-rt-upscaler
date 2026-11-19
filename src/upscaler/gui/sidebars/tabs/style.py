@@ -16,7 +16,7 @@ from ...config import (
     palette_to_internal,
     palette_to_stylesheet,
 )
-from ...utils import normalize_to_hex
+from ...utils import normalize_to_hex, normalized_color
 
 if TYPE_CHECKING:
     from ..controls import ColorPickerRow
@@ -59,6 +59,13 @@ def _default_interface_fields() -> Tuple:
 def _aspect_to_name(ratio: float) -> str:
     """Return the preset name closest to *ratio*."""
     return min(_ASPECT_RATIOS, key=lambda item: abs(item[1] - ratio))[0]
+
+
+def _palettes_equal(a: GUIPalette, b: GUIPalette) -> bool:
+    return all(
+        normalized_color(getattr(a, f.name)) == normalized_color(getattr(b, f.name))
+        for f in fields(GUIPalette)
+    )
 
 
 class StyleTab(SettingsTab):
@@ -576,7 +583,9 @@ class StyleTab(SettingsTab):
 
     def palette_is_dirty(self) -> bool:
         """Return True if the palette differs from the last applied state."""
-        return self._current_overrides().palette != self._saved.palette
+        return not _palettes_equal(
+            self._current_overrides().palette, self._saved.palette
+        )
 
     def interface_is_dirty(self) -> bool:
         """Return True if any interface field differs from the last applied state."""
@@ -592,11 +601,18 @@ class StyleTab(SettingsTab):
 
     def is_dirty(self) -> bool:
         """Return True if any GUI value differs from the last applied state."""
-        return self._current_overrides() != self._saved
+        cur = self._current_overrides()
+        return not _palettes_equal(cur.palette, self._saved.palette) or (
+            _interface_fields(cur) != _interface_fields(self._saved)
+        )
 
     def is_default(self) -> bool:
         """Return True if all GUI values are the default ones."""
-        return self._current_overrides() == GUIStyleOverrides(palette=PRESETS["Auto"])
+        cur = self._current_overrides()
+        default = GUIStyleOverrides(palette=PRESETS["Auto"])
+        return _palettes_equal(cur.palette, default.palette) and (
+            _interface_fields(cur) == _interface_fields(default)
+        )
 
     def _refresh_baselines(self) -> None:
         """Update every widget's baseline to the current saved state."""
