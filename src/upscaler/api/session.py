@@ -8,7 +8,15 @@ import copy
 import logging
 from typing import Any, Dict, Optional
 
-from PySide6.QtCore import QEventLoop, QObject, QThread, QTimer, Signal
+from PySide6.QtCore import (
+    QCoreApplication,
+    QEventLoop,
+    QObject,
+    Qt,
+    QThread,
+    QTimer,
+    Signal,
+)
 from PySide6.QtWidgets import QApplication
 
 from ..config import Config, finalize_config, load_config, setup_logging
@@ -246,6 +254,7 @@ class UpscalerSession(QObject):
         # Ensure QApplication exists
         app = QApplication.instance()
         if app is None:
+            QCoreApplication.setAttribute(Qt.AA_DisableSessionManager)
             app = QApplication([])
             self._app_owned = True
             logger.debug("Created QApplication for session")

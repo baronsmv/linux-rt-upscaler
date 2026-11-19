@@ -9,6 +9,7 @@ import signal
 import sys
 import time
 
+from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtWidgets import QApplication
 
 from .config import setup_config
@@ -41,6 +42,7 @@ def main() -> None:
         win_info = WindowInfo(0, 0, 0, "daemon-pending")
 
     # Create the Qt application
+    QCoreApplication.setAttribute(Qt.AA_DisableSessionManager)
     app = QApplication([])
     app.setApplicationName("upscaler-gui")
     app.setDesktopFileName("io.github.baronsmv.linux-rt-upscaler")

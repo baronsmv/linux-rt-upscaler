@@ -9,6 +9,7 @@ import signal
 import sys
 from pathlib import Path
 
+from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtWidgets import QApplication
 
 from .config import ConfigManager, GUIConfig, GUIPalette, PRESETS, load_gui_style
@@ -41,6 +42,7 @@ def main() -> None:
     config_manager = ConfigManager(config_path, cli_overrides=overrides)
 
     # Qt application
+    QCoreApplication.setAttribute(Qt.AA_DisableSessionManager)
     app = QApplication(sys.argv)
     app.setApplicationName("upscaler-gui")
     app.setDesktopFileName("io.github.baronsmv.linux-rt-upscaler")
